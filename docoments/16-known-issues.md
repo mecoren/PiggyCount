@@ -115,13 +115,23 @@ LazyDatabase _openConnection() {
 }
 ```
 
-- **风险**：
-  - root 过的 Android 设备 / 已越狱 iOS 设备 / 备份提取场景下，所有账本数据可直接被读取
-  - 全局 Grep `sqlcipher|SQLCipher|encrypted.*database` 在 `lib/` 中**零匹配**
-- **建议修复**：
-  1. 引入 [sqlcipher_flutter_libs](https://pub.dev/packages/sqlcipher_flutter_libs) 替代默认 SQLite
-  2. 数据库密钥通过 flutter_secure_storage 存储
-  3. 老用户首次启动时迁移明文数据库到加密版本
+- **风险**：root 过的 Android 设备 / 已越狱 iOS 设备 / 备份提取场景下，账本数据可直接被读取
+  （库文件是明文 SQLite）。
+- **现状（2026-10-05 更新：已实现，opt-in）**：
+  - 整库加密（SQLCipher）已落地：密钥进系统安全区、开库前每条连接 `PRAGMA key`、
+    **明文 ⇄ 密文双向**原子迁移（临时文件 + 校验 + 原子替换 + 中断回退）、健康探测适配、
+    密钥丢失引导（R5）、六态开关 UI。需求/设计见 `prd/sqlcipher_db_encryption/`，
+    实现与实测证据见其 `design.md` §7。
+  - **默认关闭**：不显式开启就不生成密钥，行为与加密前逐字一致。这是刻意的 ——
+    凭空建钥会让"库看起来该加密、文件其实还是明文"成为默认状态。
+  - **Android 目前不能开启**：`sqlite3` 的 hook 在 `source: sqlcipher` 下产出的
+    `libsqlcipher.so` **没有被复制进 APK**（实测：APK 内只有 `sqlite3_flutter_libs`
+    打的上游 `libsqlite3.so`），需要自备 `android/app/src/main/jniLibs/`。取库脚本、
+    配方与真机取证见 design §7；是否随包分发那 ~16.5MB 第三方二进制（许可/制品决定）
+    未定，因此 `pubspec.yaml` 保持 `source: system`。
+  - **iOS 未验证**：本机无 macOS，留给 CI 首次跑通时验证（同样需要自带库）。
+- **注意**：整库加密只保护**本机落盘**；云端备份/快照的加密是另一条链路（E2EE，
+  见 4.2 节与 `lib/domain/encryption/`），两者不要混为一谈。
 
 ---
 

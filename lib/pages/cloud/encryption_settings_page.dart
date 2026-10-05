@@ -14,6 +14,7 @@ import '../../widgets/ui/dialog.dart';
 import '../../widgets/ui/piggy_header.dart';
 import '../../widgets/ui/piggy_spinner.dart';
 import '../../widgets/ui/toast.dart';
+import 'widgets/local_db_encryption_section.dart';
 
 /// 加密设置页 — 设置 / 修改 / 重置同步加密密码
 ///
@@ -339,6 +340,9 @@ class _EncryptionSettingsPageState
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // 整库加密（本地库文件）—— 与下方的云端 E2EE 是两件独立的事
+            const LocalDbEncryptionSection(),
+            const SizedBox(height: 12),
             // 状态展示
             SectionCard(
               borderColor: Theme.of(context).colorScheme.primary,
@@ -392,7 +396,7 @@ class _EncryptionSettingsPageState
                             color: isEnabled
                                 ? PiggyTokens.success(context)
                                 : Colors.grey,
-                            fontSize: 12,
+                            fontSize: PiggyTextTokens.fs12,
                             fontWeight: FontWeight.w500,
                           ),
                         ),

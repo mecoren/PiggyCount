@@ -5,6 +5,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import 'encryption/database_key_service.dart';
+import 'encryption/db_encryption_settings.dart';
 import '../services/system/logger_service.dart';
 
 /// 本地 SQLite 库健康状态。
@@ -18,6 +20,15 @@ enum DbHealth {
   /// 连「是一个数据库」都不成立：非 SQLite 文件、被截断、IO/权限错误、
   /// 或被其他进程独占。
   unreadable,
+
+  /// **库已加密而本机没有密钥**（R5）。
+  ///
+  /// 为什么必须与 [unreadable] 分开：文件层面两者一模一样（前 16 字节都不是
+  /// 明文 SQLite 头），但处置动作**正好相反** —— 损坏库可以隔离重置（数据已废），
+  /// 而加密库隔离掉，等于把**将来万一能解开**的唯一副本搬走。判据是
+  /// `DbEncryptionSettings.wasEverEnabled()`（本机曾启用过加密），而不是"非明文
+  /// 就一律算加密"，否则真正的垃圾文件会被误报成"加密缺钥"。
+  keyUnavailable,
 }
 
 /// 健康探测结果。面向开发者诊断，不含用户内容。
@@ -65,7 +76,13 @@ class DatabaseHealthService {
   /// 只读探测。**不修改**数据库文件。
   ///
   /// [path] 仅用于测试注入；生产调用不带参数。
-  static Future<DbHealthResult> check({String? path}) async {
+  /// [encryptionKey] 整库加密启用时的那把钥匙（hex）；省略则自动从安全区读。
+  /// 加密库不带钥匙探测会得到 `file is not a database` → 被判成 [DbHealth.unreadable]，
+  /// 于是**一把健康的加密库会弹「数据可能已损坏」**（见 requirements 验收 7）。
+  static Future<DbHealthResult> check({
+    String? path,
+    String? encryptionKey,
+  }) async {
     final String dbPath;
     try {
       dbPath = path ?? await resolveDbPath();
@@ -81,6 +98,28 @@ class DatabaseHealthService {
       return DbHealthResult(DbHealth.ok, dbPath: dbPath);
     }
 
+    // 密钥在**主 isolate**取好（安全区走平台通道），只把 String 送进探测
+    // isolate。安全区不可用时按"无密钥"继续：探测失败也只会走下面的
+    // "不判定"分支，不会误报损坏。
+    var key = encryptionKey;
+    if (key == null) {
+      try {
+        key = await const DatabaseKeyService().loadKey();
+      } catch (e) {
+        logger.warning('DbHealth', '读取整库加密密钥失败，按无密钥探测: $e');
+      }
+    }
+
+    // R5：文件不是明文 SQLite + 本机无密钥 + **本机曾启用过加密** → 这是「密钥
+    // 不可得」，不是「库损坏」。连探测都不必做：探测只会得到 "file is not a
+    // database"，而那正是要避免的错误解释（它会把用户推向隔离一个加密库）。
+    if (key == null &&
+        !_hasSqliteHeader(dbPath) &&
+        await const DbEncryptionSettings().wasEverEnabled()) {
+      logger.warning('DbHealth', '库已加密但本机无密钥，按 R5（密钥不可得）上报，不判损坏');
+      return DbHealthResult(DbHealth.keyUnavailable, dbPath: dbPath);
+    }
+
     // 放到后台 isolate 执行：`quick_check` 要逐页做结构校验，实测约
     // 4.5ms/MB（0.6MB≈4ms / 3MB≈15ms / 9.6MB≈44ms），且**随数据增长无上界**。
     // 跑在 UI isolate 上就是「数据越多、启动掉帧越久」——这类无上界成本必须
@@ -89,7 +128,7 @@ class DatabaseHealthService {
     // 探测体刻意不落日志、不碰平台通道：后台 isolate 里没有
     // BackgroundIsolateBinaryMessenger，logger 的 MethodChannel 会失败。
     // 判定与日志一律回到主 isolate 做。
-    final probe = await _probeOffMain(dbPath);
+    final probe = await _probeOffMain(dbPath, key);
     if (probe == null) {
       // isolate 起不来（平台限制/资源紧张）不该被判成库损坏
       return DbHealthResult(DbHealth.ok, dbPath: dbPath);
@@ -103,6 +142,16 @@ class DatabaseHealthService {
     // 2) 探测跑通但 quick_check 报了非 ok → 页级损坏
     if (error == null) {
       return DbHealthResult(DbHealth.corrupted, dbPath: dbPath, detail: quickCheck);
+    }
+    // 2.5) 文件不是明文 SQLite（= 已加密）且我们**已注入密钥**，却仍然报错：
+    //      这最可能是密钥不匹配，或只读打开 WAL 库的限制 —— 都**不是**库损坏的
+    //      正面证据。误报代价不对称（会把健康库推给「数据可能已损坏」，甚至诱导
+    //      用户把还能恢复的数据隔离走），故按"不判定"处理，仅留痕。
+    //      注意：`error == null && quickCheck != 'ok'` 已被上面第 2 条拦下 ——
+    //      那种情况说明密钥**是对的**（否则根本读不到页），才算页级损坏。
+    if (key != null && !headerOk) {
+      logger.warning('DbHealth', '加密库探测未通过，不判定损坏（疑密钥不匹配）: $error');
+      return DbHealthResult(DbHealth.ok, dbPath: dbPath, detail: error);
     }
     // 3) 连接已建立却不可用：SQLite 接受了这个文件却无法使用它 → 正面证据。
     //    头合法说明它曾是合法库（页级损坏）；头非法说明它根本不是库。
@@ -132,9 +181,9 @@ class DatabaseHealthService {
   /// isolate 无法启动时返回 null（调用方按「不判定」处理）——探测是旁路
   /// 观察能力，它自己的失败绝不能升级成对用户数据的判断。
   static Future<(bool, bool, String?, String?)?> _probeOffMain(
-      String dbPath) async {
+      String dbPath, String? key) async {
     try {
-      return await Isolate.run(() => _probeSync(dbPath));
+      return await Isolate.run(() => _probeSync(dbPath, key));
     } catch (e) {
       logger.warning('DbHealth', '后台健康探测无法执行，跳过本次判定: $e');
       return null;
@@ -147,13 +196,23 @@ class DatabaseHealthService {
   /// 为什么返回值要拆这么细：SQLite 的 `open` 是**惰性**的——对「不是数据库」
   /// 的文件也会成功返回，直到执行第一条语句才报 `SQLITE_NOTADB`。因此
   /// 「open 失败」与「open 成功但语句失败」的含义完全不同，必须分开上报。
-  static (bool, bool, String?, String?) _probeSync(String dbPath) {
+  static (bool, bool, String?, String?) _probeSync(String dbPath, String? key) {
     final headerOk = _hasSqliteHeader(dbPath);
     Database? db;
     var opened = false;
     try {
       db = sqlite3.open(dbPath, mode: OpenMode.readOnly);
       opened = true;
+      // 整库加密：密钥必须在任何读写之前生效，否则第一条语句就报
+      // "file is not a database"（这正是要避免的误报来源）。
+      //
+      // **只对非明文文件注入**：明文库上打 key 会让 SQLCipher 拿它当密文库读，
+      // 于是把一个**健康的明文库**判成 corrupted —— 而这恰好发生在"用户刚开启
+      // 加密、明文→密文迁移还没跑"的那个瞬间（开库前的一次启动探测）。误报
+      // 代价不对称：全屏「数据可能已损坏」甚至诱导用户隔离数据，故这里必须精准。
+      if (key != null && !headerOk) {
+        db.execute("PRAGMA key = \"x'$key'\"");
+      }
       final rows = db.select('PRAGMA quick_check');
       if (rows.isEmpty) {
         return (true, headerOk, null, 'quick_check returned no rows');

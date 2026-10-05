@@ -3,6 +3,8 @@ import 'dart:ui' show Locale;
 
 import 'package:drift/drift.dart';
 import '../l10n/app_localizations.dart';
+import 'encryption/db_encryption_migration.dart';
+import 'encryption/sqlcipher_capability.dart';
 import '../services/data/category_service.dart';
 import '../services/data/seed_service.dart';
 import '../services/system/logger_service.dart';
@@ -702,11 +704,14 @@ class PiggyDatabase extends _$PiggyDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
         // M18（B10）连接级 PRAGMA 显式化。库跑在 `_openConnection` 起的**第二个
-        // isolate**里，而 PRAGMA 是 per-connection 的 —— 只有挂在 beforeOpen
-        // （drift 每次打开这条连接都会走）才真正抵达那条连接。两条备选路都不通：
-        // `NativeDatabase(file, setup:)` 与 `createInBackground` 互斥；改用
-        // `DatabaseConnection.custom` + 手动 spawn 会绕开 database_health_service
-        // 的 quick_check 通路。
+        // isolate**里，而 PRAGMA 是 per-connection 的 —— 挂在 beforeOpen（drift
+        // 每次打开这条连接都会走）即可覆盖每条连接。
+        // 2026-10-05 更正一条旧注释：`setup` 与 `createInBackground` **并不互斥** ——
+        // drift 2.35.0 的 createInBackground 就有 `DatabaseSetup? setup` 形参（官方
+        // 注释即"给 SQLCipher 设密钥"用的）。本仓仍用 beforeOpen 是**分工**问题：
+        // `setup` 在 drift 就绪之前执行、拿不到库对象；`beforeOpen` 拿到库后跑，
+        // 语义正好。`DatabaseConnection.custom` + 手动 spawn 仍不采用 —— 它会绕开
+        // database_health_service 的 quick_check 通路。
         beforeOpen: (detail) async {
           // WAL：写放大从"每改一页复制整页回滚日志"降成追加 -wal，读也不再被写挡。
           // **synchronous 保持默认 FULL**：WAL+FULL 仍然每次提交 fsync，掉电不丢最后
@@ -2049,7 +2054,30 @@ LazyDatabase _openConnection() {
       logger.debug('db', '检查锁文件时出错: $e');
     }
 
-    return NativeDatabase.createInBackground(file);
+    // 启动即记录引擎身份。本仓库踩过的最坏状态（"以为加密了、其实明文落盘"）
+    // 之所以能藏住，就是因为没人知道设备上跑的到底是哪个引擎 —— 一行日志把它
+    // 变成可查证的事实。
+    logger.info('db', 'SQLite 引擎: ${SqlCipherCapability.describe()}');
+
+    // 整库加密（P0，见 `prd/sqlcipher_db_encryption/`）：开库前先定密钥，
+    // 必要时做一次性明文→密文迁移。两件都必须在**建立连接之前**完成 ——
+    // 迁移会替换库文件，连接已经打开就晚了。
+    // 密钥缺省（绝大多数现有安装）时这行不产生任何行为变化。
+    final key = await const DbEncryptionMigration()
+        .prepareKeyForOpen(dbPath: file.path);
+
+    return NativeDatabase.createInBackground(
+      file,
+      setup: (raw) {
+        // PRAGMA key 必须是该连接执行的**第一条**语句（SQLCipher 要求密钥在任何
+        // 读写之前生效）；drift 的 setup 在 open 之后、drift 就绪之前执行，位置
+        // 正好。该回调会被发给后台 isolate，所以只捕获 String（可跨 isolate，
+        // 不捕获任何对象）。key 为 null 时完全不执行 —— 与加密前逐字一致。
+        if (key != null) {
+          raw.execute("PRAGMA key = \"x'$key'\"");
+        }
+      },
+    );
   });
 }
 

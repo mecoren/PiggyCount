@@ -99,6 +99,36 @@ void main() {
     expect(find.textContaining('完整性校验'), findsNothing);
   });
 
+  // ↓ R5（2026-10-05 新增）：加密库缺钥
+  //
+  // 回归点：加密库 + 本机无密钥原先走 `unreadable` 分支，于是用户看到
+  // 「数据可能已损坏」并拿到"隔离重置"的出口 —— 那会让他把**唯一可能被解开**
+  // 的密文当废数据搬走/丢掉。
+  testWidgets('密钥不可得 → 走 R5 文案，不得借用「损坏」口径', (tester) async {
+    await pumpOverlay(tester, health: DbHealth.keyUnavailable);
+
+    expect(find.text('本地数据库已加密，但本机找不到密钥'), findsOneWidget);
+    expect(find.textContaining('只是本机解不开'), findsOneWidget);
+    // 关键：不能让用户以为数据已废
+    expect(find.text('本地数据库异常'), findsNothing);
+    expect(find.textContaining('完整性校验'), findsNothing);
+    // 出口仍在：先导出留存，再（二次确认的）重置
+    expect(find.text('导出加密文件（留存）'), findsOneWidget);
+    expect(find.text('导出损坏文件'), findsNothing,
+        reason: '文件没坏，说"损坏"会让用户以为导出的是废文件因而不留档');
+    expect(find.text('重置本地数据库'), findsOneWidget);
+  });
+
+  testWidgets('密钥不可得 → 重置确认换成「移走唯一副本」的说法', (tester) async {
+    await pumpOverlay(tester, health: DbHealth.keyUnavailable);
+
+    await tester.tap(find.text('重置本地数据库'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('本机数据无从解开'), findsOneWidget);
+    expect(find.textContaining('完整性校验'), findsNothing);
+  });
+
   testWidgets('「稍后处理」→ 本会话隐藏', (tester) async {
     await pumpOverlay(tester, health: DbHealth.corrupted);
     expect(find.text('本地数据库异常'), findsOneWidget);

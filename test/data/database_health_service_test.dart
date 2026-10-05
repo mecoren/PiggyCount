@@ -4,7 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:piggycount/data/database_health_service.dart';
+import 'package:piggycount/data/encryption/database_key_service.dart';
+import 'package:piggycount/data/encryption/db_encryption_settings.dart';
 
 /// DatabaseHealthService 的探测与保留语义（审计 P1-6）。
 ///
@@ -19,6 +23,12 @@ void main() {
 
   setUp(() async {
     tmp = await Directory.systemTemp.createTemp('dbhealth_test');
+    SharedPreferences.setMockInitialValues({});
+    DatabaseKeyService.testSecureStore = <String, String>{};
+  });
+
+  tearDown(() {
+    DatabaseKeyService.testSecureStore = null;
   });
 
   tearDown(() async {
@@ -119,6 +129,56 @@ void main() {
       final r = await DatabaseHealthService.check(path: path);
       expect(r.health, DbHealth.ok,
           reason: 'health=${r.health} detail=${r.detail}');
+    });
+  });
+
+  group('密钥不可得（R5，2026-10-05）', () {
+    // 判据是"**本机曾启用过加密**"，而不是"非明文就一律算加密"：
+    // 后者会把真正的垃圾文件误报成加密问题，而前者不会。
+    test('非明文 + 无密钥 + 曾启用过 → keyUnavailable（不判损坏）', () async {
+      final path = p.join(tmp.path, 'enc.sqlite');
+      // 密文库在文件层面就是"非明文 SQLite 头"的随机字节
+      File(path).writeAsBytesSync(List<int>.filled(8192, 0x2A));
+      await const DbEncryptionSettings().markEverEnabled();
+
+      final r = await DatabaseHealthService.check(path: path);
+
+      expect(r.health, DbHealth.keyUnavailable);
+      expect(r.isHealthy, isFalse, reason: '不可读就不是"健康"，只是原因不同');
+      expect(r.dbPath, path);
+    });
+
+    test('非明文 + 无密钥 + 没启用过 → 仍是 unreadable（审计 P1-6 语义原样保留）',
+        () async {
+      final path = p.join(tmp.path, 'garbage_r5.sqlite');
+      File(path).writeAsStringSync('this is definitely not a sqlite file');
+
+      final r = await DatabaseHealthService.check(path: path);
+
+      expect(r.health, DbHealth.unreadable,
+          reason: '没有加密史的"非明文"就是垃圾文件，不能解释成加密问题');
+    });
+
+    test('曾启用过但库是明文 → 照常 ok（标记本身不该影响健康判定）', () async {
+      final path = makeHealthyDb();
+      await const DbEncryptionSettings().markEverEnabled();
+
+      final r = await DatabaseHealthService.check(path: path);
+
+      expect(r.health, DbHealth.ok);
+    });
+
+    test('关闭加密成功后会撤掉标记 → 再出问题回到损坏口径', () async {
+      final path = p.join(tmp.path, 'enc2.sqlite');
+      File(path).writeAsBytesSync(List<int>.filled(8192, 0x2A));
+      await const DbEncryptionSettings().markEverEnabled();
+      expect((await DatabaseHealthService.check(path: path)).health,
+          DbHealth.keyUnavailable);
+
+      await const DbEncryptionSettings().clearEverEnabled();
+
+      expect((await DatabaseHealthService.check(path: path)).health,
+          DbHealth.unreadable);
     });
   });
 

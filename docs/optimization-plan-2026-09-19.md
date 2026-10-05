@@ -15,31 +15,36 @@
 **存档**（设计定稿、本轮不动代码）/ **未落地**（欠的是外部条件，不是活儿）。
 每行只给一句话，理由与 file:line 全在指向的那一节里。
 
+> **2026-10-05 追加**：下表状态已按后续「加固批次」回填（M2 / M12 / M13 / M18 / M19 /
+> U1 / U2-b），追加部分的落地证据与门禁测试见 `prd/README.md` 的
+> 「本轮（2026-10-05 加固批次）」表与 `prd/mem_baseline_and_leaks/design.md` 的
+> 「2026-10-05 追加」节。
+
 | 编号 | 一句话 | 状态 | 记录 |
 |---|---|---|---|
 | M10 | `_getImageInfo()` 的 `codec`/`image` 不释放（14.7MB/张） | 已收口 | B7 |
 | M11 | 5 处 `toImage(pixelRatio:2/3)` 位图不释放（8-15MB/张） | 已收口（6/6 产生点） | B7 |
 | M11 附 | 顺带加 `targetWidth: 256` 降采样 | **判为不做**：宽高进同步 payload，触线上格式 | B7 |
-| M12 | `Image.asset` 12 个调用点裸解原图（4MB / 11.5MB 每张） | 已收口；PNG 本体重编码留 **TODO-M12b** | B8 |
+| M12 | `Image.asset` 12 个调用点裸解原图（4MB / 11.5MB 每张） | 已收口；PNG 本体重编码（**TODO-M12b**）**2026-10-05 定论维持不做**：二进制资产变更 + 需目视复核，且与海报 `cacheWidth: 256` / `precacheImage` 缓存键同值耦合 | B8、`prd/mem_baseline_and_leaks/design.md` |
 | M20 | 图标全表在 `build()` 内重建（268 个 `_IconData`） | 已收口 | B8 |
 | M21 | 列表 key 拼 ListView 下标，滚动即抖 | 已收口；真机滑动删除回归**未落地**（无设备） | B8 = U3 |
 | M14 | 两处全表进 Dart 求余额/趋势 | 已收口（SQL 聚合下沉，新旧逐值相等） | B9 |
 | M15 | 导入 `List<int>` 逐字节摊平（10MB 账单 → 80MB） | 已收口；`csv_parser` 四次全量复制、`xlsx` 整本常驻 = **同批跟进未做** | B9 |
 | M16 | `List<int>` 当 provider family key（永不回收） | **部分**：两处 key 换 `join(',')`；`tag_providers` 批量 `autoDispose` 判为不做 | B9 |
 | M17 | 日志 release 也入队 debug、每 2s 全量 `jsonEncode` | 已收口 | B9 |
-| M19 | `_discoveredPayloads` 缓存解密后整本账本、无上限 | 已收口；`transactions_json.dart` 导出侧全量 = **同批未做** | B9 |
-| M18 | SQLite 无显式 PRAGMA（WAL / cache / mmap） | 已收口 + 回读断言；`cache_size`/`mmap_size` 的取舍**未落地**（等 B6 数字） | B10 |
-| M2 | 首页无 LIMIT 全账本三连 LEFT JOIN | 存档：M2-a/b 两步设计定稿 | B11 |
-| M13 | 归档 Tar+Gzip 全内存（500 张 ≈ 450MB 峰值） | 存档：`archive` 磁盘到磁盘路径已核到源码行 | B11 |
+| M19 | `_discoveredPayloads` 缓存解密后整本账本、无上限 | 已收口；**2026-10-05 定论：8MB/16MB 阈值维持估式**（取真实分布需真机 + 真实云账号，阈值相对"防 N 本明文常驻"已保守）；`transactions_json.dart` 导出侧全量 = **同批未做** | B9、`transactions_sync_manager.dart` 注释 |
+| M18 | SQLite 无显式 PRAGMA（WAL / cache / mmap） | 已收口 + 回读断言；**2026-10-05 定论：`cache_size`/`mmap_size` 维持不设**（拿内存换读盘，与降内存主线反向；无读盘瓶颈实测。复访：L 档基线显示读盘主导耗时）。附：更正旧注释——`createInBackground` **有** `setup` 形参，二者并不互斥 | B10、`db.dart` `beforeOpen` 注释 |
+| M2 | 首页无 LIMIT 全账本三连 LEFT JOIN | **M2-a 已落地（2026-10-05）**：`watchTransactionWindow`（keyset + LIMIT）+ `getDailyTotalsInRange`（日合计下沉 SQL）+ 列表注入/触底加载 + 首页切流 + `jumpToMonth` 降级。**M2-b（物化 `daily_totals` + 删首页全量 fallback）判为不做**（无实测支撑 + 派生状态要维护 11 条写路径），结论与复访条件见 design.md | B11、`prd/mem_baseline_and_leaks/design.md` |
+| M13 | 归档 Tar+Gzip 全内存（500 张 ≈ 450MB 峰值） | **已收口（2026-10-05）**：附件导出改磁盘到磁盘流式（`TarEncoder` + `InputFileStream` 逐文件写 tar、再流式 gzip），云备份 ZIP 改 `ZipFileEncoder` 流式；条目顺序/名称与旧格式逐字一致。出口测试含系统 `tar tzf` 外部可读 | B11、`test/services/archive_streaming_roundtrip_test.dart` |
 | M22 | —— | **编号未启用**：批准版写 "M10-M22" 是上界占位，实际收口到 M21 | 本节 |
 | B6 | 内存基线脚本 + 应用侧 30s 心跳 | 脚本与心跳已收口；**表内 RSS 数字全部未落地**（无设备） | B6 |
 | F1-a | 软删除 / 回收站（v44 `deleted_transactions`） | 已收口（迁移测试 + 页面级回归） | F1-a |
 | F1-b | 退款关联 `refund_of_id` + 报销状态 | **本轮不做**：前置是 CT-1 变更日志可靠性 | F1-a 末 |
 | F2 | 任意区间 + 环比/同比 + 标签维度报表 | 已收口（12 例：9 数据层 + 3 页面级） | F2 |
 | F3 | 预算结转 / 超支推送 / 规则引擎 / 模板 / Excel 导出 | 未开始：Q1 多选未选，README 的"超支提醒"宣称已删除 | D 批、F2 末 |
-| U1 | 硬编码字号收敛到令牌 | **交的是 ratchet 门禁**（340/209 钉死），收敛本身未落地 | U1/U2 |
+| U1 | 硬编码字号收敛到令牌 | **2026-10-05 收敛完成**：新增 `PiggyTextTokens.fs*` **纯字号刻度**（只给数值，不带 color/字重/行高 → 零视觉变更），506 处字面量、94 个文件全部迁移，ratchet 基线由 347/212 压到 **0/0** | `test/styles/font_size_token_ratchet_test.dart` |
 | U2-a | 图表进语义树（柱状 + 折线 + `hideAmounts` 隐私口径） | 已收口（3 例） | U1/U2 |
-| U2-b | 文字对比度 ≥4.5:1 | 测了没改：亮色 `textTertiary` 2.18/2.41 不合格 | U1/U2 |
+| U2-b | 文字对比度 ≥4.5:1 | **2026-10-05 已重排亮色色阶达标**：`textSecondary` `#4B5563`（6.48/7.18）、`textTertiary` `#5F6B7A`（4.65/5.15）、`iconTertiary` α0.45（3.27/3.32，非文本 3:1）；`scripts/contrast_check.py` 升为 **CI 门禁**（不合格退出码 1） | `test/styles/contrast_token_test.dart`、`.github/workflows/analyze.yml` |
 | U2-c | 读屏实测 / 热区 ≥48×48 / 大字号不破 | 未落地：三者都要真机 | U1/U2 |
 | U3 | = M21 | 已收口 | B8 |
 
@@ -436,6 +441,14 @@ grouper 增"只合并、不删检"的窗口追加路径，`jumpToMonth` 未命�
 M2-b 物化 `daily_totals(day_key, ledger_id, income, expense, cnt)` 后删掉 `home_page.dart` 的全量 fallback
 （`:55`、`:632`、`:962` 三处 fallback 注释即其足迹）。
 
+> **M2-b 已取消（2026-10-05）**：M2-a 落地后，日/月合计由 `getDailyTotalsInRange`
+> 在**窗口区间上现算**（SQL 侧 `GROUP BY`），首页不再持有全量行 —— M2-b 想省的
+> "每次重算"已经变成"每次只算窗口内那几天的聚合"，收益消失。
+> 再引入一张物化表意味着：新表 + 新迁移（onCreate/onUpgrade 双路测试）+ 写入侧
+> 一致性维护（跨设备同步时的重算规则），换不到可测收益 —— 按 YAGNI 取消，
+> 前置的"B6 真机 M/L 档数字"也不再是它的门禁。若将来真机数字显示窗口聚合成为
+> 瓶颈，再按本文原方案重启（本段保留原始设计以免重走）。
+
 **外部教训照抄**（Firefly III）：派生 running-balance 在 2.3 万条上批量编辑超时（#11531）、
 1.4 万条报表缺索引（#11620）→ 派生列必须**可关、可批量重算、有索引**。
 **前置**：B6 的 M/L 档真机数字。M2 是本轮唯一"随账本增长"的那类问题（M10-M21 都已是常数级收口），
@@ -730,6 +743,88 @@ U2 按方案落地"图表"这一层，"金额"这一层判为**不需要补**。
 - 单文件：`test/widgets/chart_semantics_test.dart` `00:01 +3: All tests passed!`
   （`.workbuddy/gates/b13_u2_chart3.txt`）；`test/styles/font_size_token_ratchet_test.dart` 绿
   （`.workbuddy/gates/b13_u1_ratchet2.txt`）+ 负向红（`b13_u1_ratchet_negative.txt`）。
+
+### P0/P1 加固批次 · SQLCipher + 性能三基线 + 无障碍收敛 + B11 落地 + 安全三项（2026-10-05，代码侧收口 / 真机项挂账）
+
+本批把 `prd/README.md` 里剩余 P0/P1 一次性推完。各方向的详细设计与实测表在
+`prd/sqlcipher_db_encryption/design.md`（§7 是逐项状态）与
+`docs/evidence/perf-baseline-2026-10-05.md`；此处只记**交付物 / 门禁 / 挂账**。
+
+#### 交付物
+
+- **SQLCipher 整库加密（P0）**：密钥层 `lib/data/encryption/database_key_service.dart`；引擎能力
+  探测 `lib/data/encryption/sqlcipher_capability.dart`；明文 ⇄ 密文迁移
+  `lib/data/encryption/db_encryption_migration.dart`（含三种中断态恢复、R6 反解、关闭失败回退）；
+  开关编排与六态状态机 `lib/data/encryption/local_db_encryption_service.dart`；开库接线
+  `lib/data/db.dart`（`NativeDatabase.createInBackground(setup: PRAGMA key)`）；健康探测适配
+  `lib/data/database_health_service.dart`（新增 `DbHealth.keyUnavailable`）；R5 分流
+  `lib/widgets/biz/database_recovery_overlay.dart`；开关 UI
+  `lib/pages/cloud/widgets/local_db_encryption_section.dart`；取库脚本
+  `scripts/fetch_sqlcipher_android_libs.py`；真机探针 `tool/db_encryption_device_probe.dart`。
+- **安全三项**：AI 发送二次确认 `lib/ai/privacy/ai_send_confirm.dart` + 工厂二道关
+  `lib/ai/providers/ai_provider_factory.dart`；备注敏感标记
+  `lib/services/security/sensitive_note_service.dart` + `lib/utils/sensitive_data_masker.dart`；
+  备份强制加密 `lib/cloud/backup/cloud_backup_service.dart` 入口硬门禁。
+- **B11**：M13 归档流式 `lib/services/attachment_export_import_service.dart` +
+  `lib/cloud/backup/cloud_backup_service.dart`（`_packBackupZip`）；M2-a 首页窗口
+  `lib/data/repositories/local/local_transaction_repository.dart`（`watchTransactionWindow` /
+  `getDailyTotalsInRange`）+ `lib/providers/home_tx_window_providers.dart` +
+  `lib/pages/main/home_page.dart`；**M2-b 取消**，理由见本文件 M2 段（M2-a 的窗口内现算已消除其收益）。
+- **无障碍**：字号收敛 —— `test/styles/font_size_token_ratchet_test.dart` 基线 **549 → 0**；
+  亮色文字色阶重排 + `scripts/contrast_check.py` 升级为门禁 + `test/styles/contrast_token_test.dart`。
+- **性能**：`scripts/profile_cold_start.py`（冷启动 + 切页）、`scripts/profile_frames.py`、
+  `scripts/profile_memory.py`；应用侧采集器 `lib/services/platform/perf_metrics_collector.dart` +
+  仅 debug 可见的仪表盘 `lib/pages/maintenance/dev_perf_dashboard_page.dart`。
+
+#### 门禁
+
+- `flutter analyze` → `No issues found!`（`.workbuddy/gates/p0p1_analyze.txt`）。
+- `flutter test` 全量 → **`02:59 +1842 ~29: All tests passed!`（0 失败）**，
+  证据 `.workbuddy/gates/p0p1_testfull.txt`。
+- SQLCipher 链路（临时把 hook 切到 `source: sqlcipher` 后跑）→ `00:14 +77: All tests passed!`
+  （`.workbuddy/gates/p0p1_sqlcipher_tests.txt`：迁移 / 反解 / 状态机 / 加密库健康探测 / R5 弹窗）。
+- 真机（Android 15 模拟器，走非 UI 探针）→ `[DbProbe] PROBE DONE (ok)`：16.6MB 库加密后文件头
+  `d6 f2 d2 d4 …`（非明文）、`transactions=40008` 完好、关闭后回到明文且行数不变
+  （命令与逐项观测见 `prd/sqlcipher_db_encryption/design.md` §7.2）。
+
+#### 顺带清掉的三条长期红灯（`entity_reference_guard_test.dart`）
+
+那三条**不是本批引入**，但一直红着；本批查清并清零，其中**一条是真缺陷**：
+
+1. **`getAccountRefCounts` 运行期必抛（真缺陷）**：SQL 写的是两个裸 `?`
+   （`account_id = ? OR to_account_id = ?`），`variables` 只传了一个 ⇒ drift 抛
+   `Invalid argument (parameters): Expected 2 parameters, got 1`。也就是说
+   **账号删除前的引用守卫在生产里根本跑不通**（调用方拿到的是异常而不是引用数）。
+   按本文件既有风格改成编号占位符 `?1` 复用同一变量（与其它"两侧引用"查询一致）。
+2. **两条 `migrateCategoryTransactions` 用例的前提在当前不变式下不可达**：分类名不变式是
+   「同 kind 内全局唯一」（仓库层是分类的唯一写入方 + 每次写入都过检查），所以"目标父下
+   已有同名子分类"这个状态只能**绕过检查直接插入**来构造。测试改用直接插入（**断言一条
+   没弱化**），实现里的合并分支则明确标注为**防御分支**（历史数据 / 将来放宽不变式）。
+   其中一条原本**根本没建**目标同名子分类，等于合并分支从未被触发。
+3. **"只登记 categoryId 真变了的预算"那条断言本身不可观测**：tracker 把 action 归一
+   （create/update → upsert，审计 T5）且同 `(entity_type, entity_sync_id, action)` 用
+   `insertOrIgnore` 静默合并 ⇒ 预算在 `createBudget` 时已登记过，迁移后再登记是**同一键**、
+   **必然没有新行**（这是设计如此：push 时从 DB 重建 payload，合并不丢数据）。断言换成
+   三条可观测且更贴实质的：被改写预算的 `categoryId` 指向**存活的同名子分类** / 未改写
+   预算的 `categoryId` **原样不动**（这才是"改写范围"）/ tracker 内容代际回调确有触发，
+   且该预算仍有待推送变更（对端最终拿得到新 `categoryId`）。
+
+#### 踩到的坑（写给下批）
+
+- **`flutter test` 的输出不要经管道落盘**：本批一次全量跑出 8 例 `did not complete`
+  （`app_lock_service_test` 的计时类用例），单独复跑该文件 `+9: All tests passed!`，
+  改 `--reporter=silent --file-reporter expanded:<file>` 重跑后 `did not complete: 0`。
+  即管道背压会把计时敏感用例推过超时 → 假失败。**门禁证据一律用 `--file-reporter`。**
+- **MuMu 模拟器渲染不出 Flutter 画面**：窗口 / surface 都在、无锁屏、Dart 日志齐全，但整屏纯黑、
+  `dumpsys gfxinfo` 只有 3 帧（关 Impeller 无效）→ 依赖真机截图的验证改走日志断言的探针入口，
+  反而更强（跑的是生产代码路径）。
+
+#### 挂账（无真机；按约定不得用模拟器值或算式顶替）
+
+- 冷启动 / 切页 / FPS 三基线数字与阈值校准；大字号、热区 ≥48×48、TalkBack/VoiceOver 读屏。
+  拿到设备照 `docs/evidence/device-checklist-2026-10-05.md` 跑并回填。
+- SQLCipher：Android 是否随包分发 `jniLibs` 里那 ~16.5MB 第三方二进制（许可 / 制品决定）；
+  iOS 首次 CI 验证。
 
 
 

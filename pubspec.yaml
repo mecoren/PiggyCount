@@ -24,6 +24,11 @@ dependencies:
   flutter_riverpod: ^2.5.1
   collection: ^1.18.0
   drift: ^2.20.2
+  # **必须保留**（2026-10-05 实测结论）：它是 Android 上唯一真正进 APK 的
+  # SQLite native 库。移除它会让 APK 的 `lib/x86_64/` 只剩 libflutter.so 等，
+  # 一个 SQLite 库都没有 → 应用起不来。
+  # 详见下方 hooks 段落的长注释（hook 的 sqlcipher 资产在 Android 打包环节
+  # 没有被复制进产物，整库加密因此**尚不能在 Android 生效**）。
   sqlite3_flutter_libs: ^0.5.24
   # 直声明：DatabaseHealthService 用只读连接跑 PRAGMA quick_check 探测损坏
   # （drift 未暴露「先校验再迁移」的钩子）。此前仅经 drift 传递可用，属隐式
@@ -120,15 +125,49 @@ dependency_overrides:
   # 要动的话必须连主包一起升并回归裁剪流程,故暂留。见 prd 遗留清单。
   image_cropper_platform_interface: 7.1.0
 
-# sqlite3 3.x 默认会在构建时通过 Dart hooks 从 GitHub 下载预编译的
-# libsqlite3.so。在无法访问 github.com 的构建环境(如国内网络)中会直接失败。
-# 本项目已依赖 sqlite3_flutter_libs,它会通过 Gradle 把 libsqlite3.so 打包进
-# APK/iPA,因此让 sqlite3 改用运行时动态查找(system)即可跳过构建期下载,
-# 且不会产生重复的 SQLite 库。
+# sqlite3 3.x 通过 Dart hooks 提供多套 native 构建：默认 `sqlite3`，另有
+# `sqlite3mc`（SQLite3MultipleCiphers）与 `sqlcipher`（整库加密用）。
+#
+# ⚠️ 2026-10-05 实测：`source: sqlcipher` **在 Windows 单测里生效**（hook 会从
+# GitHub release 取 `sqlcipher.dll`，实测 SQLCipher 语义全部通过），但在
+# **Android 上不生效**：
+#   1. hook 确实解析到了 sqlcipher —— 构建期清单
+#      `.dart_tool/flutter_build/<hash>/native_assets.json` 写着
+#      `"android_x64": {"package:sqlite3/src/ffi/libsqlite3.g.dart":["absolute","libsqlcipher.so"]}`；
+#   2. 但 **APK 里没有 libsqlcipher.so**。保留 `sqlite3_flutter_libs` 时只有它打的
+#      上游 `lib/x86_64/libsqlite3.so`（二进制内无 `sqlcipher`/`cipher_export`
+#      字样）；把该插件移除后，APK 的 `lib/x86_64/` 干脆一个 SQLite 库都不剩。
+#   → 即"hook 的 native 资产没被复制进 Android 产物"。Android 上因此仍跑普通
+#   SQLite，`PRAGMA key` 会被当未知 pragma **静默忽略**。
+#
+# ⚠️ 结论：**整库加密暂时不能在 Android 生效**，所以这里保持 `source: system`
+# （= 与加密前逐字一致的行为），加密代码与测试留在仓库里、由运行时能力探测
+# （`test/support/sqlcipher_support.dart` 的 `PRAGMA cipher_version`）决定是否启用。
+# 要让 Android 也用上 SQLCipher，需要走「自带 native 库 + `source: system`
+# `name: sqlcipher`」（见 `prd/sqlcipher_db_encryption/design.md` §2/§7），
+# 那是独立一段工作。
+#
+# 老约束仍然成立：`source: system` 是为了避免构建期去 GitHub 下预编译件
+# （部分国内网络会失败）。改用它之外的值前，请先在**真机/模拟器**上确认
+# `native_assets.json` 里的资产真的进了 APK。
 hooks:
   user_defines:
     sqlite3:
       source: system
+      # ── 让 Android 用上 SQLCipher 的**已验证**配方（本次未启用，见下）──
+      # ① python scripts/fetch_sqlcipher_android_libs.py
+      #    → 校验 sha256 后把 libsqlcipher.so 落到
+      #      android/app/src/main/jniLibs/{arm64-v8a,armeabi-v7a,x86_64}/
+      # ② 打开下面这一行（`source: system` 时 hook 支持 `name_$targetOS` 指定库名，
+      #    见 sqlite3 包的 lib/src/hook/compile/description.dart:44-49）
+      #      name_android: sqlcipher
+      # 已实测通过（2026-10-05，Android 15 x86_64 模拟器）：APK 内出现
+      # lib/x86_64/libsqlcipher.so（5.67MB、含 cipher_export），运行态日志
+      # `SQLite 引擎: SQLCipher 4.18.0 community (SQLite 3.53.4)`。
+      # **没开**的原因不是技术：jniLibs 里那 ~16.5MB 第三方二进制是入库还是构建期
+      # 下载，属许可/制品决定（design.md §7）。在此之前保持 Android 跑上游
+      # SQLite —— 反正没有开关 UI 就产生不了密钥，而"有密钥但引擎不支持"已被
+      # DbEncryptionUnsupportedException 硬拦（不会静默写明文）。
 
 # adaptive_* 三个素材由 scripts/gen_icons_from_image.py 生成(从用户提供的源图抠图);
 # monochrome 是 Android 13+ themed icon(Pixel 动态图标)的单色镂空层,见 issue #186。

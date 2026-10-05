@@ -63,6 +63,9 @@ class _DatabaseRecoveryOverlayState
 
     final l10n = AppLocalizations.of(context);
     final isCorrupted = health.health == DbHealth.corrupted;
+    // R5：库已加密但本机无密钥。它与"损坏"共用这块全屏面板（症状都是"打不开"），
+    // 但文案与出口必须不同 —— 这里**绝不能**让用户以为数据已经废了。
+    final isKeyUnavailable = health.health == DbHealth.keyUnavailable;
 
     return Positioned.fill(
       child: Material(
@@ -84,15 +87,19 @@ class _DatabaseRecoveryOverlayState
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      l10n.dbHealthCorruptTitle,
+                      isKeyUnavailable
+                          ? l10n.dbHealthKeyLostTitle
+                          : l10n.dbHealthCorruptTitle,
                       textAlign: TextAlign.center,
                       style: PiggyTextTokens.strongTitle(context),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      isCorrupted
-                          ? l10n.dbHealthCorruptBodyCorrupted
-                          : l10n.dbHealthCorruptBodyUnreadable,
+                      isKeyUnavailable
+                          ? l10n.dbHealthKeyLostBody
+                          : (isCorrupted
+                              ? l10n.dbHealthCorruptBodyCorrupted
+                              : l10n.dbHealthCorruptBodyUnreadable),
                       style: PiggyTextTokens.body(context)
                           .copyWith(color: PiggyTokens.textSecondary(context)),
                     ),
@@ -122,6 +129,10 @@ class _DatabaseRecoveryOverlayState
   /// 必须先做），再重置（二次确认），最后才是「稍后处理」。
   Widget _buildActions(BuildContext context, AppLocalizations l10n) {
     final iconColor = PiggyTokens.iconPrimary(context);
+    // 加密库缺钥时文件**没有**坏，说「导出损坏文件」是误导（用户会以为拿到的
+    // 是废文件，反而不留档）。换成一个如实说明用途的标签。
+    final keyLost = ref.watch(dbHealthProvider).valueOrNull?.health ==
+        DbHealth.keyUnavailable;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -132,7 +143,8 @@ class _DatabaseRecoveryOverlayState
           icon: _busyOp == _BusyOp.export
               ? PiggySpinner(size: 18, color: iconColor)
               : const Icon(Icons.ios_share_outlined),
-          label: Text(l10n.dbHealthActionExport),
+          label: Text(
+              keyLost ? l10n.dbHealthKeyLostActionExport : l10n.dbHealthActionExport),
         ),
         const SizedBox(height: 8),
         FilledButton.icon(
@@ -167,7 +179,12 @@ class _DatabaseRecoveryOverlayState
         ),
         const SizedBox(height: 8),
         Text(
-          l10n.dbHealthResetConfirmMessage,
+          // 密钥不可得时，"重置"的含义完全不同：不是丢掉废数据，而是把唯一
+          // 可能被解开的密文移走。必须换一套说法，否则用户以为是同一件事。
+          ref.watch(dbHealthProvider).valueOrNull?.health ==
+                  DbHealth.keyUnavailable
+              ? l10n.dbHealthKeyLostResetConfirm
+              : l10n.dbHealthResetConfirmMessage,
           style: PiggyTextTokens.body(context)
               .copyWith(color: PiggyTokens.textSecondary(context)),
         ),
