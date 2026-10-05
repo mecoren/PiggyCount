@@ -21,6 +21,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   bool _isError = false;
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
+  String? _lockoutMessage;
 
   @override
   void initState() {
@@ -56,6 +57,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
     if (_pin.length >= 4) return;
     setState(() {
       _isError = false;
+      _lockoutMessage = null;
       _pin += number;
     });
     if (_pin.length == 4) {
@@ -72,13 +74,37 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   }
 
   Future<void> _verifyPin() async {
-    final success = await AppLockService.verifyPin(_pin);
+    final locked = await AppLockService.isLockedOut();
+    if (!mounted) return;
+    if (locked) {
+      final remaining = await AppLockService.getLockoutRemaining();
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      setState(() {
+        _isError = true;
+        _lockoutMessage =
+            l10n.appLockLockedOut(remaining.inSeconds.clamp(1, 3600));
+        _pin = '';
+      });
+      return;
+    }
+    final enteredPin = _pin;
+    final success = await AppLockService.verifyPin(enteredPin);
+    if (!mounted) return;
     if (success) {
       _unlock();
     } else {
-      setState(() {
-        _isError = true;
-      });
+      final remaining = await AppLockService.getLockoutRemaining();
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      if (mounted) {
+        setState(() {
+          _isError = true;
+          _lockoutMessage = remaining > Duration.zero
+              ? l10n.appLockLockedOut(remaining.inSeconds.clamp(1, 3600))
+              : null;
+        });
+      }
       await Future.delayed(const Duration(milliseconds: 500));
       if (mounted) {
         setState(() {
@@ -125,17 +151,27 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
               filledCount: _pin.length,
               isError: _isError,
             ),
+            if (_lockoutMessage != null) ...[
+              SizedBox(height: 12.0.scaled(context, ref)),
+              Text(
+                _lockoutMessage!,
+                style: TextStyle(
+                  fontSize: 13.0.scaled(context, ref),
+                  color: PiggyTokens.error(context),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
             const Spacer(flex: 1),
             // 数字键盘
             Padding(
-              padding: EdgeInsets.symmetric(
-                  horizontal: 40.0.scaled(context, ref)),
+              padding:
+                  EdgeInsets.symmetric(horizontal: 40.0.scaled(context, ref)),
               child: NumberPad(
                 onNumberTap: _onNumberTap,
                 onDelete: _onDelete,
                 showBiometric: showBiometric,
-                onBiometric:
-                    showBiometric ? _authenticateWithBiometrics : null,
+                onBiometric: showBiometric ? _authenticateWithBiometrics : null,
               ),
             ),
             SizedBox(height: 32.0.scaled(context, ref)),

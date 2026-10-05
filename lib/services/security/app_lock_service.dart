@@ -1,6 +1,7 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/encryption/argon2_key_derivation.dart';
@@ -12,6 +13,46 @@ class AppLockService {
   static const _keyBiometricEnabled = 'app_lock_biometric_enabled';
   static const _keyTimeoutSeconds = 'app_lock_timeout_seconds';
   static const _keyLastBackgroundTime = 'app_lock_last_background_time';
+  static const _keyFailedCount = 'app_lock_failed_count';
+  static const _keyLockoutUntil = 'app_lock_lockout_until_ms';
+
+  /// 失败退避阈值：5次后锁30秒，10次后锁5分钟，成功即清零。
+  static const int kLockoutAfterAttempts = 5;
+  static const int kExtendedLockoutAfterAttempts = 10;
+  static const Duration kLockoutDuration = Duration(seconds: 30);
+  static const Duration kExtendedLockoutDuration = Duration(minutes: 5);
+
+  static final FlutterSecureStorage _secure = const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+
+  /// 测试注入：内存安全存储（避免平台通道），置非空即启用。
+  @visibleForTesting
+  static Map<String, String>? testSecureStore;
+
+  static Future<String?> _secureRead(String key) async {
+    final testStore = testSecureStore;
+    if (testStore != null) return testStore[key];
+    return _secure.read(key: key);
+  }
+
+  static Future<void> _secureWrite(String key, String value) async {
+    final testStore = testSecureStore;
+    if (testStore != null) {
+      testStore[key] = value;
+      return;
+    }
+    await _secure.write(key: key, value: value);
+  }
+
+  static Future<void> _secureDelete(String key) async {
+    final testStore = testSecureStore;
+    if (testStore != null) {
+      testStore.remove(key);
+      return;
+    }
+    await _secure.delete(key: key);
+  }
 
   static final LocalAuthentication _localAuth = LocalAuthentication();
 
@@ -44,13 +85,39 @@ class AppLockService {
     return '${base64.encode(salt)}:${base64.encode(hash)}';
   }
 
-  /// 设置 PIN 码（Argon2id + salt）
+  /// 设置 PIN 码（Argon2id + salt，哈希进安全存储）
   static Future<void> setPin(String pin) async {
-    final prefs = await SharedPreferences.getInstance();
     final hashed = await _hashPinSecure(pin);
-    await prefs.setString(_keyPinHash, hashed);
+    await _secureWrite(_keyPinHash, hashed);
+    // 清理历史明文残留
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyPinHash);
     await prefs.setBool(_keyEnabled, true);
+    await _clearFailures(prefs);
     logger.info('AppLock', 'PIN已设置');
+  }
+
+  /// 从安全存储读 PIN 哈希；旧版本明文在 prefs，读到即迁移。
+  static Future<String?> _readPinHash() async {
+    try {
+      final secure = await _secureRead(_keyPinHash);
+      if (secure != null) return secure;
+    } catch (e) {
+      logger.warning('AppLock', '安全存储读取失败，尝试明文迁移路径: $e');
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final legacy = prefs.getString(_keyPinHash);
+    if (legacy != null) {
+      try {
+        await _secureWrite(_keyPinHash, legacy);
+        await prefs.remove(_keyPinHash);
+        logger.info('AppLock', 'PIN 哈希已从明文迁移到安全存储');
+      } catch (e) {
+        logger.warning('AppLock', 'PIN 迁移到安全存储失败: $e');
+      }
+      return legacy;
+    }
+    return null;
   }
 
   /// 验证 PIN 码
@@ -58,21 +125,33 @@ class AppLockService {
   /// 支持两种格式：
   /// - 新格式 `base64(salt):base64(hash)`：Argon2id 派生 + 常量时间比较
   /// - 旧格式（纯 SHA-256 hex）：验证成功后自动升级为新格式
+  /// 失败退避：5次后锁30秒，10次后锁5分钟；锁定期内直接返回 false。
   static Future<bool> verifyPin(String pin) async {
     final prefs = await SharedPreferences.getInstance();
-    final savedHash = prefs.getString(_keyPinHash);
+    if (await isLockedOut()) return false;
+    final savedHash = await _readPinHash();
     if (savedHash == null) return false;
 
     if (savedHash.contains(':')) {
       // 新格式: base64(salt):base64(hash)
       final parts = savedHash.split(':');
-      if (parts.length != 2) return false;
+      if (parts.length != 2) {
+        await _recordFailure(prefs);
+        return false;
+      }
       try {
         final salt = Uint8List.fromList(base64.decode(parts[0]));
         final hash = await _argon2.deriveKey(password: pin, salt: salt);
-        return _constantTimeEquals(base64.encode(hash), parts[1]);
+        final ok = _constantTimeEquals(base64.encode(hash), parts[1]);
+        if (ok) {
+          await _clearFailures(prefs);
+        } else {
+          await _recordFailure(prefs);
+        }
+        return ok;
       } catch (e) {
         logger.warning('AppLock', 'PIN 验证异常: $e');
+        await _recordFailure(prefs);
         return false;
       }
     }
@@ -83,7 +162,52 @@ class AppLockService {
       logger.info('AppLock', 'PIN 已从 SHA-256 升级为 Argon2id');
       return true;
     }
+    await _recordFailure(prefs);
     return false;
+  }
+
+  /// 当前失败次数（成功即清零）
+  static Future<int> getFailedAttempts() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyFailedCount) ?? 0;
+  }
+
+  /// 剩余锁定时间；未锁定返回 Duration.zero
+  static Future<Duration> getLockoutRemaining() async {
+    final prefs = await SharedPreferences.getInstance();
+    final until = prefs.getInt(_keyLockoutUntil);
+    if (until == null) return Duration.zero;
+    final remaining = until - DateTime.now().millisecondsSinceEpoch;
+    if (remaining <= 0) return Duration.zero;
+    return Duration(milliseconds: remaining);
+  }
+
+  /// 是否处于锁定退避期
+  static Future<bool> isLockedOut() async {
+    final remaining = await getLockoutRemaining();
+    return remaining > Duration.zero;
+  }
+
+  static Future<void> _recordFailure(SharedPreferences prefs) async {
+    final count = (prefs.getInt(_keyFailedCount) ?? 0) + 1;
+    await prefs.setInt(_keyFailedCount, count);
+    if (count >= kExtendedLockoutAfterAttempts) {
+      await prefs.setInt(
+        _keyLockoutUntil,
+        DateTime.now().millisecondsSinceEpoch +
+            kExtendedLockoutDuration.inMilliseconds,
+      );
+    } else if (count >= kLockoutAfterAttempts) {
+      await prefs.setInt(
+        _keyLockoutUntil,
+        DateTime.now().millisecondsSinceEpoch + kLockoutDuration.inMilliseconds,
+      );
+    }
+  }
+
+  static Future<void> _clearFailures(SharedPreferences prefs) async {
+    await prefs.remove(_keyFailedCount);
+    await prefs.remove(_keyLockoutUntil);
   }
 
   /// 常量时间字符串比较，防止侧信道时序攻击
@@ -99,9 +223,11 @@ class AppLockService {
   /// 清除 PIN 码并禁用锁定
   static Future<void> clearPin() async {
     final prefs = await SharedPreferences.getInstance();
+    await _secureDelete(_keyPinHash);
     await prefs.remove(_keyPinHash);
     await prefs.setBool(_keyEnabled, false);
     await prefs.setBool(_keyBiometricEnabled, false);
+    await _clearFailures(prefs);
     logger.info('AppLock', 'PIN已清除，应用锁已禁用');
   }
 
@@ -113,8 +239,8 @@ class AppLockService {
 
   /// 是否有已保存的 PIN
   static Future<bool> hasPin() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyPinHash) != null;
+    final hash = await _readPinHash();
+    return hash != null;
   }
 
   /// 是否已启用生物识别
@@ -170,8 +296,7 @@ class AppLockService {
     final timeoutSeconds = prefs.getInt(_keyTimeoutSeconds) ?? 0;
     if (timeoutSeconds == 0) return true; // 立即锁定
 
-    final elapsed =
-        DateTime.now().millisecondsSinceEpoch - lastBgTime;
+    final elapsed = DateTime.now().millisecondsSinceEpoch - lastBgTime;
     return elapsed >= timeoutSeconds * 1000;
   }
 

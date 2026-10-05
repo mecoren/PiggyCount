@@ -269,6 +269,8 @@
   "aiStrategyCloudFirstDesc": "優先使用雲端 API，失敗後降級到本機",
   "aiStrategyCloudOnly": "僅雲端",
   "aiStrategyCloudOnlyDesc": "只使用雲端 API，不下載模型",
+  "aiDesensitizeTitle": "帳戶名去敏",
+  "aiDesensitizeSubtitle": "傳送給 AI 的帳戶名以編號替代（如 account_1），按名稱指定帳戶時辨識可能不準",
   "aiStrategyLocalFirst": "本機優先（推薦）",
   "aiStrategyLocalOnly": "僅本機",
   "aiStrategySwitched": "已切換: {strategy}",
@@ -876,6 +878,10 @@
   "cloudS3SecretKeyHint": "您的 Secret Access Key",
   "cloudS3SecretKeyLabel": "Secret Key",
   "cloudS3UseSSLLabel": "使用 HTTPS",
+  "cloudUrlMustBeHttps": "位址必須使用 HTTPS，明文傳輸會洩漏憑據",
+  "cloudS3InsecureWarning": "已關閉 SSL，金鑰與資料將以明文傳輸",
+  "cloudInsecureConfirmTitle": "確認使用不安全連線？",
+  "cloudInsecureConfirmMessage": "關閉 SSL 後，金鑰與帳本資料將以明文傳輸，可能被竊聽，僅建議在可信內網中繼續",
   "cloudSaveFailed": "儲存失敗",
   "cloudMultiDeviceWarningTitle": "多裝置使用提醒",
   "cloudMultiDeviceWarningMessage": "換裝置前記得先上傳，到新裝置後先下載再記帳。不要同時在兩台裝置上記同一個帳本。點擊查看詳情 →",
@@ -2701,6 +2707,14 @@
   "appLockSetNewPin": "請設定新密碼",
   "appLockConfirmPin": "請再次輸入密碼",
   "appLockEnterPin": "請輸入密碼",
+  "appLockLockedOut": "密碼錯誤過多，請 {seconds} 秒後再試",
+  "@appLockLockedOut": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "appLockPinSetSuccess": "密碼設定成功",
   "appLockDisabled": "應用鎖已關閉",
   "appLockBiometric": "生物辨識解鎖",
@@ -2711,6 +2725,11 @@
   "appLockTimeout1Min": "1分鐘後",
   "appLockTimeout5Min": "5分鐘後",
   "appLockTimeout15Min": "15分鐘後",
+  "appLockWipeTitle": "連續輸錯清除資料",
+  "appLockWipeSubtitle": "開啟後，密碼連續輸錯20次將刪除本機全部賬本、附件與設定，不可恢復",
+  "appLockWipeConfirmTitle": "清除全部本地資料？",
+  "appLockWipeConfirmMessage": "將刪除本機全部賬本、附件與設定，不可恢復（雲端備份不受影響）。確認繼續？",
+  "appLockWipedMessage": "已清除全部本地資料，請重啟應用",
   "creditCardSettings": "信用卡設定",
   "accountTabValuation": "估值帳戶",
   "creditCardDaysRequired": "請選擇帳單日和還款日",
@@ -3095,6 +3114,7 @@
   "startupSyncRecoveryFailedHint": "密鑰啟用失敗，同步未恢復。請確認密碼後重試，或到同步設定重新操作。",
   "backupNowTitle": "立即備份",
   "backupNowSubtitle": "將全部賬本與附件打包為一份當日備份，存入 piggycount-bak",
+  "backupPlaintextWarning": "未開啟端到端加密，備份以明文存放於雲端",
   "backupNoLedgers": "沒有可備份的賬本。",
   "backupRunningStatus": "正在建立備份…",
   "backupPackingProgress": "正在打包賬本 {done}/{total}…",

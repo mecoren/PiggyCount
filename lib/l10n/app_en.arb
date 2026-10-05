@@ -1454,6 +1454,10 @@
   "cloudS3BucketLabel": "Bucket Name",
   "cloudS3BucketHint": "e.g. my-bucket",
   "cloudS3UseSSLLabel": "Use HTTPS",
+  "cloudUrlMustBeHttps": "URL must use HTTPS, credentials leak over plaintext",
+  "cloudS3InsecureWarning": "SSL is off, keys and data transfer in plaintext",
+  "cloudInsecureConfirmTitle": "Use insecure connection?",
+  "cloudInsecureConfirmMessage": "Without SSL, keys and ledger data transfer in plaintext and can be eavesdropped. Continue only on a trusted network",
   "cloudS3PortLabel": "Port (optional)",
   "cloudS3PortHint": "Leave blank for default",
   "cloudSupabaseBucketLabel": "Storage Bucket Name",
@@ -2154,6 +2158,8 @@
   "aiStrategyLocalOnly": "Local Only",
   "aiStrategyCloudOnly": "Cloud Only",
   "aiStrategyCloudOnlyDesc": "Use cloud API only, no model download",
+  "aiDesensitizeTitle": "Desensitize account names",
+  "aiDesensitizeSubtitle": "Account names sent to AI are replaced with IDs (e.g. account_1); naming an account explicitly may match less accurately",
   "aiStrategyUnavailable": "Local model in training, coming soon",
   "aiStrategySwitched": "Switched to: {strategy}",
   "@aiStrategySwitched": {
@@ -3119,6 +3125,14 @@
   "appLockSetNewPin": "Set new PIN",
   "appLockConfirmPin": "Confirm PIN",
   "appLockEnterPin": "Enter PIN",
+  "appLockLockedOut": "Too many wrong attempts, try again in {seconds}s",
+  "@appLockLockedOut": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "appLockPinSetSuccess": "PIN set successfully",
   "appLockDisabled": "App Lock disabled",
   "appLockBiometric": "Biometric Unlock",
@@ -3129,6 +3143,11 @@
   "appLockTimeout1Min": "After 1 minute",
   "appLockTimeout5Min": "After 5 minutes",
   "appLockTimeout15Min": "After 15 minutes",
+  "appLockWipeTitle": "Wipe on repeated failures",
+  "appLockWipeSubtitle": "When on, 20 consecutive wrong PINs erase all local ledgers, attachments and settings. Irreversible.",
+  "appLockWipeConfirmTitle": "Erase all local data?",
+  "appLockWipeConfirmMessage": "This deletes all local ledgers, attachments and settings. This cannot be undone (cloud backups are unaffected). Continue?",
+  "appLockWipedMessage": "All local data erased. Please restart the app.",
   "creditCardSettings": "Credit Card Settings",
   "accountTabValuation": "Valuation",
   "creditCardDaysRequired": "Please select billing & due dates",
@@ -3701,6 +3720,7 @@
   },
   "backupNowTitle": "Back Up Now",
   "backupNowSubtitle": "Pack all ledgers and attachments into one daily backup in piggycount-bak",
+  "backupPlaintextWarning": "End-to-end encryption is off, backups are stored in plaintext on the cloud",
   "backupNoLedgers": "There are no ledgers to back up.",
   "backupRunningStatus": "Creating backup…",
   "backupPackingProgress": "Packing ledger {done}/{total}…",

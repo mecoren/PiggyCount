@@ -3212,6 +3212,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudS3UseSSLLabel => '使用 HTTPS';
 
   @override
+  String get cloudUrlMustBeHttps => '地址必须使用 HTTPS，明文传输会泄露凭据';
+
+  @override
+  String get cloudS3InsecureWarning => '已关闭 SSL，密钥与数据将以明文传输';
+
+  @override
+  String get cloudInsecureConfirmTitle => '确认使用不安全连接？';
+
+  @override
+  String get cloudInsecureConfirmMessage =>
+      '关闭 SSL 后，密钥与账本数据将以明文传输，可能被窃听，仅建议在可信内网中继续';
+
+  @override
   String get cloudS3PortLabel => '端口（可选）';
 
   @override
@@ -4740,6 +4753,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get aiStrategyCloudOnlyDesc => '只使用云端API，不下载模型';
+
+  @override
+  String get aiDesensitizeTitle => '账户名脱敏';
+
+  @override
+  String get aiDesensitizeSubtitle =>
+      '发给 AI 的账户名替换为编号（如 account_1），按名称指定账户时识别可能不准';
 
   @override
   String get aiStrategyUnavailable => '本地模型训练中，敬请期待';
@@ -6712,6 +6732,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appLockEnterPin => '请输入密码';
 
   @override
+  String appLockLockedOut(int seconds) {
+    return '密码错误过多，请 $seconds 秒后再试';
+  }
+
+  @override
   String get appLockPinSetSuccess => '密码设置成功';
 
   @override
@@ -6740,6 +6765,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appLockTimeout15Min => '15分钟后';
+
+  @override
+  String get appLockWipeTitle => '连续输错清除数据';
+
+  @override
+  String get appLockWipeSubtitle => '开启后，密码连续输错20次将删除本机全部账本、附件与设置，不可恢复';
+
+  @override
+  String get appLockWipeConfirmTitle => '清除全部本地数据？';
+
+  @override
+  String get appLockWipeConfirmMessage =>
+      '将删除本机全部账本、附件与设置，不可恢复（云端备份不受影响）。确认继续？';
+
+  @override
+  String get appLockWipedMessage => '已清除全部本地数据，请重启应用';
 
   @override
   String get creditCardSettings => '信用卡设置';
@@ -7696,6 +7737,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get backupNowSubtitle => '将全部账本与附件打包为一份当日备份，存入 piggycount-bak';
+
+  @override
+  String get backupPlaintextWarning => '未开启端到端加密，备份以明文存放于云端';
 
   @override
   String get backupNoLedgers => '没有可备份的账本。';
@@ -11456,6 +11500,19 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get cloudS3UseSSLLabel => '使用 HTTPS';
 
   @override
+  String get cloudUrlMustBeHttps => '位址必須使用 HTTPS，明文傳輸會洩漏憑據';
+
+  @override
+  String get cloudS3InsecureWarning => '已關閉 SSL，金鑰與資料將以明文傳輸';
+
+  @override
+  String get cloudInsecureConfirmTitle => '確認使用不安全連線？';
+
+  @override
+  String get cloudInsecureConfirmMessage =>
+      '關閉 SSL 後，金鑰與帳本資料將以明文傳輸，可能被竊聽，僅建議在可信內網中繼續';
+
+  @override
   String get cloudS3PortLabel => '連接埠（選填）';
 
   @override
@@ -12984,6 +13041,13 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get aiStrategyCloudOnlyDesc => '只使用雲端 API，不下載模型';
+
+  @override
+  String get aiDesensitizeTitle => '帳戶名去敏';
+
+  @override
+  String get aiDesensitizeSubtitle =>
+      '傳送給 AI 的帳戶名以編號替代（如 account_1），按名稱指定帳戶時辨識可能不準';
 
   @override
   String get aiStrategyUnavailable => '本機模型訓練中，敬請期待';
@@ -14956,6 +15020,11 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get appLockEnterPin => '請輸入密碼';
 
   @override
+  String appLockLockedOut(int seconds) {
+    return '密碼錯誤過多，請 $seconds 秒後再試';
+  }
+
+  @override
   String get appLockPinSetSuccess => '密碼設定成功';
 
   @override
@@ -14984,6 +15053,22 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get appLockTimeout15Min => '15分鐘後';
+
+  @override
+  String get appLockWipeTitle => '連續輸錯清除資料';
+
+  @override
+  String get appLockWipeSubtitle => '開啟後，密碼連續輸錯20次將刪除本機全部賬本、附件與設定，不可恢復';
+
+  @override
+  String get appLockWipeConfirmTitle => '清除全部本地資料？';
+
+  @override
+  String get appLockWipeConfirmMessage =>
+      '將刪除本機全部賬本、附件與設定，不可恢復（雲端備份不受影響）。確認繼續？';
+
+  @override
+  String get appLockWipedMessage => '已清除全部本地資料，請重啟應用';
 
   @override
   String get creditCardSettings => '信用卡設定';
@@ -15940,6 +16025,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get backupNowSubtitle => '將全部賬本與附件打包為一份當日備份，存入 piggycount-bak';
+
+  @override
+  String get backupPlaintextWarning => '未開啟端到端加密，備份以明文存放於雲端';
 
   @override
   String get backupNoLedgers => '沒有可備份的賬本。';

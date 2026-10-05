@@ -1189,6 +1189,10 @@
   "cloudS3BucketLabel": "存储桶名称",
   "cloudS3BucketHint": "例如 my-bucket",
   "cloudS3UseSSLLabel": "使用 HTTPS",
+  "cloudUrlMustBeHttps": "地址必须使用 HTTPS，明文传输会泄露凭据",
+  "cloudS3InsecureWarning": "已关闭 SSL，密钥与数据将以明文传输",
+  "cloudInsecureConfirmTitle": "确认使用不安全连接？",
+  "cloudInsecureConfirmMessage": "关闭 SSL 后，密钥与账本数据将以明文传输，可能被窃听，仅建议在可信内网中继续",
   "cloudS3PortLabel": "端口（可选）",
   "cloudS3PortHint": "留空使用默认端口",
   "cloudSupabaseBucketLabel": "Storage Bucket 名称",
@@ -1904,6 +1908,8 @@
   "aiStrategyLocalOnly": "仅本地",
   "aiStrategyCloudOnly": "仅云端",
   "aiStrategyCloudOnlyDesc": "只使用云端API，不下载模型",
+  "aiDesensitizeTitle": "账户名脱敏",
+  "aiDesensitizeSubtitle": "发给 AI 的账户名替换为编号（如 account_1），按名称指定账户时识别可能不准",
   "aiStrategyUnavailable": "本地模型训练中，敬请期待",
   "aiStrategySwitched": "已切换: {strategy}",
   "@aiStrategySwitched": {
@@ -2979,6 +2985,14 @@
   "appLockSetNewPin": "请设置新密码",
   "appLockConfirmPin": "请再次输入密码",
   "appLockEnterPin": "请输入密码",
+  "appLockLockedOut": "密码错误过多，请 {seconds} 秒后再试",
+  "@appLockLockedOut": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "appLockPinSetSuccess": "密码设置成功",
   "appLockDisabled": "应用锁已关闭",
   "appLockBiometric": "生物识别解锁",
@@ -2989,6 +3003,11 @@
   "appLockTimeout1Min": "1分钟后",
   "appLockTimeout5Min": "5分钟后",
   "appLockTimeout15Min": "15分钟后",
+  "appLockWipeTitle": "连续输错清除数据",
+  "appLockWipeSubtitle": "开启后，密码连续输错20次将删除本机全部账本、附件与设置，不可恢复",
+  "appLockWipeConfirmTitle": "清除全部本地数据？",
+  "appLockWipeConfirmMessage": "将删除本机全部账本、附件与设置，不可恢复（云端备份不受影响）。确认继续？",
+  "appLockWipedMessage": "已清除全部本地数据，请重启应用",
   "creditCardSettings": "信用卡设置",
   "accountTabValuation": "估值账户",
   "creditCardDaysRequired": "请选择账单日和还款日",
@@ -3401,6 +3420,7 @@
   "startupSyncRecoveryFailedHint": "密钥激活失败，同步未恢复。请确认密码后重试，或到同步设置重新操作。",
   "backupNowTitle": "立即备份",
   "backupNowSubtitle": "将全部账本与附件打包为一份当日备份，存入 piggycount-bak",
+  "backupPlaintextWarning": "未开启端到端加密，备份以明文存放于云端",
   "backupNoLedgers": "没有可备份的账本。",
   "backupRunningStatus": "正在创建备份…",
   "backupPackingProgress": "正在打包账本 {done}/{total}…",

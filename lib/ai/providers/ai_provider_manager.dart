@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ai_provider_config.dart';
@@ -9,10 +11,62 @@ import '../../services/system/logger_service.dart';
 /// AI 服务商管理服务
 ///
 /// 管理多个服务商配置和能力绑定
+/// 服务商列表含 apiKey，走安全存储；prefs 仅留旧版本迁移路径。
 class AIProviderManager {
   static const String _tag = 'AIProviderManager';
   static const String _keyProviders = 'ai_providers_v2';
   static const String _keyBinding = 'ai_capability_binding_v2';
+
+  static const FlutterSecureStorage _secure = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+
+  /// 测试注入：内存安全存储，置非空即启用，避免平台通道。
+  @visibleForTesting
+  static Map<String, String>? testSecureStore;
+
+  static Future<String?> _secureRead(String key) async {
+    final testStore = testSecureStore;
+    if (testStore != null) return testStore[key];
+    return _secure.read(key: key);
+  }
+
+  static Future<void> _secureWrite(String key, String value) async {
+    final testStore = testSecureStore;
+    if (testStore != null) {
+      testStore[key] = value;
+      return;
+    }
+    await _secure.write(key: key, value: value);
+  }
+
+  static Future<String?> _readProvidersJson() async {
+    try {
+      final secure = await _secureRead(_keyProviders);
+      if (secure != null) return secure;
+    } catch (e) {
+      logger.warning(_tag, '安全存储读取服务商失败，尝试明文迁移路径: $e');
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final legacy = prefs.getString(_keyProviders);
+    if (legacy != null) {
+      try {
+        await _secureWrite(_keyProviders, legacy);
+        await prefs.remove(_keyProviders);
+        logger.info(_tag, 'AI 服务商已从明文迁移到安全存储');
+      } catch (e) {
+        logger.warning(_tag, 'AI 服务商迁移到安全存储失败: $e');
+      }
+      return legacy;
+    }
+    return null;
+  }
+
+  static Future<void> _writeProvidersJson(String jsonStr) async {
+    await _secureWrite(_keyProviders, jsonStr);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyProviders);
+  }
 
   /// 全局回调:任何改了 providers / binding / custom_prompt 的地方都会打到这里,
   /// sync_providers 启动时注入一个"推送 AI 配置到 server"的实现,就能把变更
@@ -39,15 +93,14 @@ class AIProviderManager {
 
   /// 获取所有服务商配置
   static Future<List<AIServiceProviderConfig>> getProviders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonStr = prefs.getString(_keyProviders);
+    final jsonStr = await _readProvidersJson();
 
     if (jsonStr == null || jsonStr.isEmpty) {
       // 首次使用，尝试从旧配置迁移
       await migrateFromOldConfig();
 
       // 迁移后重新读取
-      final migratedStr = prefs.getString(_keyProviders);
+      final migratedStr = await _readProvidersJson();
       if (migratedStr == null || migratedStr.isEmpty) {
         // 如果迁移后仍为空，初始化默认服务商
         final defaultProviders = [AIServiceProviderConfig.zhipuDefault];
@@ -62,11 +115,13 @@ class AIProviderManager {
   }
 
   /// 解析服务商配置 JSON
-  static Future<List<AIServiceProviderConfig>> _parseProviders(String jsonStr) async {
+  static Future<List<AIServiceProviderConfig>> _parseProviders(
+      String jsonStr) async {
     try {
       final jsonList = jsonDecode(jsonStr) as List;
       var providers = jsonList
-          .map((e) => AIServiceProviderConfig.fromJson(e as Map<String, dynamic>))
+          .map((e) =>
+              AIServiceProviderConfig.fromJson(e as Map<String, dynamic>))
           .toList();
 
       // 确保智谱GLM始终存在
@@ -84,11 +139,15 @@ class AIProviderManager {
           logger.info(_tag, '从旧配置恢复智谱API Key');
           providers[zhipuIndex] = providers[zhipuIndex].copyWith(
             apiKey: oldApiKey,
-            textModel: prefs.getString('ai_glm_model') ?? providers[zhipuIndex].textModel,
-            visionModel: prefs.getString('ai_glm_vision_model') ?? providers[zhipuIndex].visionModel,
-            audioModel: prefs.getString('ai_glm_audio_model') ?? providers[zhipuIndex].audioModel,
+            textModel: prefs.getString('ai_glm_model') ??
+                providers[zhipuIndex].textModel,
+            visionModel: prefs.getString('ai_glm_vision_model') ??
+                providers[zhipuIndex].visionModel,
+            audioModel: prefs.getString('ai_glm_audio_model') ??
+                providers[zhipuIndex].audioModel,
           );
           await _saveProviders(providers);
+          await prefs.remove('ai_glm_api_key');
         }
       }
 
@@ -140,7 +199,8 @@ class AIProviderManager {
   }
 
   /// 直接添加服务商配置（保留原始 ID，用于配置导入）
-  static Future<void> addProviderWithConfig(AIServiceProviderConfig provider) async {
+  static Future<void> addProviderWithConfig(
+      AIServiceProviderConfig provider) async {
     final providers = await getProviders();
     providers.add(provider);
     await _saveProviders(providers);
@@ -202,11 +262,11 @@ class AIProviderManager {
     return true;
   }
 
-  /// 保存服务商列表
-  static Future<void> _saveProviders(List<AIServiceProviderConfig> providers) async {
-    final prefs = await SharedPreferences.getInstance();
+  /// 保存服务商列表（含 apiKey，进安全存储）
+  static Future<void> _saveProviders(
+      List<AIServiceProviderConfig> providers) async {
     final jsonStr = jsonEncode(providers.map((p) => p.toJson()).toList());
-    await prefs.setString(_keyProviders, jsonStr);
+    await _writeProvidersJson(jsonStr);
     try {
       onConfigChanged?.call();
     } catch (e, st) {
@@ -237,7 +297,8 @@ class AIProviderManager {
     final prefs = await SharedPreferences.getInstance();
     final jsonStr = jsonEncode(binding.toJson());
     await prefs.setString(_keyBinding, jsonStr);
-    logger.info(_tag, '保存能力绑定: text=${binding.textProviderId}, vision=${binding.visionProviderId}, speech=${binding.speechProviderId}');
+    logger.info(_tag,
+        '保存能力绑定: text=${binding.textProviderId}, vision=${binding.visionProviderId}, speech=${binding.speechProviderId}');
     try {
       onConfigChanged?.call();
     } catch (e, st) {
@@ -278,12 +339,12 @@ class AIProviderManager {
   static Future<void> applyFromServer(Map<String, dynamic> config) async {
     final prefs = await SharedPreferences.getInstance();
 
-    // providers(比较序列化后的 string,简单又稳)
+    // providers(比较序列化后的 string,简单又稳；含 apiKey，进安全存储)
     final rawProviders = config['providers'];
     if (rawProviders is List) {
       final jsonStr = jsonEncode(rawProviders);
-      if (prefs.getString(_keyProviders) != jsonStr) {
-        await prefs.setString(_keyProviders, jsonStr);
+      if (await _readProvidersJson() != jsonStr) {
+        await _writeProvidersJson(jsonStr);
       }
     }
 
@@ -301,7 +362,8 @@ class AIProviderManager {
     }
 
     final strategy = config['strategy'] as String?;
-    if (strategy != null && strategy.isNotEmpty &&
+    if (strategy != null &&
+        strategy.isNotEmpty &&
         prefs.getString('ai_strategy') != strategy) {
       await prefs.setString('ai_strategy', strategy);
     }
@@ -394,12 +456,11 @@ class AIProviderManager {
 
   /// 迁移旧配置到新格式
   static Future<void> migrateFromOldConfig() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // 检查是否已迁移
-    if (prefs.containsKey(_keyProviders)) {
+    // 安全存储已有即视为已迁移
+    if (await _readProvidersJson() != null) {
       return;
     }
+    final prefs = await SharedPreferences.getInstance();
 
     logger.info(_tag, '开始迁移旧配置');
 
@@ -410,8 +471,10 @@ class AIProviderManager {
     // 读取智谱 GLM 配置（使用正确的 key）
     final glmApiKey = prefs.getString('ai_glm_api_key') ?? '';
     final glmTextModel = prefs.getString('ai_glm_model') ?? 'glm-4-flash';
-    final glmVisionModel = prefs.getString('ai_glm_vision_model') ?? 'glm-4v-flash';
-    final glmAudioModel = prefs.getString('ai_glm_audio_model') ?? 'glm-4-voice';
+    final glmVisionModel =
+        prefs.getString('ai_glm_vision_model') ?? 'glm-4v-flash';
+    final glmAudioModel =
+        prefs.getString('ai_glm_audio_model') ?? 'glm-4-voice';
 
     logger.info(_tag, '迁移智谱配置: apiKey=${glmApiKey.isNotEmpty ? "已配置" : "未配置"}');
 
@@ -444,10 +507,24 @@ class AIProviderManager {
 
     await _saveProviders(providers);
 
+    // 清理旧明文残留：单 key apiKey 与模型 key 不再保留明文
+    for (final k in [
+      'ai_glm_api_key',
+      'ai_glm_model',
+      'ai_glm_vision_model',
+      'ai_glm_audio_model',
+      'ai_custom_api_key',
+      'ai_custom_base_url',
+      'ai_custom_text_model',
+      'ai_custom_vision_model',
+      'ai_custom_audio_model',
+    ]) {
+      await prefs.remove(k);
+    }
+
     // 设置能力绑定
-    final defaultProviderId = isCustom && customApiKey.isNotEmpty
-        ? 'custom_migrated'
-        : 'zhipu_glm';
+    final defaultProviderId =
+        isCustom && customApiKey.isNotEmpty ? 'custom_migrated' : 'zhipu_glm';
 
     await saveCapabilityBinding(AICapabilityBinding(
       textProviderId: defaultProviderId,

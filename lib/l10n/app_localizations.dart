@@ -5998,6 +5998,30 @@ abstract class AppLocalizations {
   /// **'Use HTTPS'**
   String get cloudS3UseSSLLabel;
 
+  /// No description provided for @cloudUrlMustBeHttps.
+  ///
+  /// In en, this message translates to:
+  /// **'URL must use HTTPS, credentials leak over plaintext'**
+  String get cloudUrlMustBeHttps;
+
+  /// No description provided for @cloudS3InsecureWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'SSL is off, keys and data transfer in plaintext'**
+  String get cloudS3InsecureWarning;
+
+  /// No description provided for @cloudInsecureConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use insecure connection?'**
+  String get cloudInsecureConfirmTitle;
+
+  /// No description provided for @cloudInsecureConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Without SSL, keys and ledger data transfer in plaintext and can be eavesdropped. Continue only on a trusted network'**
+  String get cloudInsecureConfirmMessage;
+
   /// No description provided for @cloudS3PortLabel.
   ///
   /// In en, this message translates to:
@@ -8908,6 +8932,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use cloud API only, no model download'**
   String get aiStrategyCloudOnlyDesc;
+
+  /// No description provided for @aiDesensitizeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Desensitize account names'**
+  String get aiDesensitizeTitle;
+
+  /// No description provided for @aiDesensitizeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account names sent to AI are replaced with IDs (e.g. account_1); naming an account explicitly may match less accurately'**
+  String get aiDesensitizeSubtitle;
 
   /// No description provided for @aiStrategyUnavailable.
   ///
@@ -12613,6 +12649,12 @@ abstract class AppLocalizations {
   /// **'Enter PIN'**
   String get appLockEnterPin;
 
+  /// No description provided for @appLockLockedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many wrong attempts, try again in {seconds}s'**
+  String appLockLockedOut(int seconds);
+
   /// No description provided for @appLockPinSetSuccess.
   ///
   /// In en, this message translates to:
@@ -12672,6 +12714,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'After 15 minutes'**
   String get appLockTimeout15Min;
+
+  /// No description provided for @appLockWipeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wipe on repeated failures'**
+  String get appLockWipeTitle;
+
+  /// No description provided for @appLockWipeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When on, 20 consecutive wrong PINs erase all local ledgers, attachments and settings. Irreversible.'**
+  String get appLockWipeSubtitle;
+
+  /// No description provided for @appLockWipeConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Erase all local data?'**
+  String get appLockWipeConfirmTitle;
+
+  /// No description provided for @appLockWipeConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This deletes all local ledgers, attachments and settings. This cannot be undone (cloud backups are unaffected). Continue?'**
+  String get appLockWipeConfirmMessage;
+
+  /// No description provided for @appLockWipedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'All local data erased. Please restart the app.'**
+  String get appLockWipedMessage;
 
   /// No description provided for @creditCardSettings.
   ///
@@ -14478,6 +14550,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pack all ledgers and attachments into one daily backup in piggycount-bak'**
   String get backupNowSubtitle;
+
+  /// No description provided for @backupPlaintextWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'End-to-end encryption is off, backups are stored in plaintext on the cloud'**
+  String get backupPlaintextWarning;
 
   /// No description provided for @backupNoLedgers.
   ///

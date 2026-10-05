@@ -3306,6 +3306,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudS3UseSSLLabel => 'Use HTTPS';
 
   @override
+  String get cloudUrlMustBeHttps =>
+      'URL must use HTTPS, credentials leak over plaintext';
+
+  @override
+  String get cloudS3InsecureWarning =>
+      'SSL is off, keys and data transfer in plaintext';
+
+  @override
+  String get cloudInsecureConfirmTitle => 'Use insecure connection?';
+
+  @override
+  String get cloudInsecureConfirmMessage =>
+      'Without SSL, keys and ledger data transfer in plaintext and can be eavesdropped. Continue only on a trusted network';
+
+  @override
   String get cloudS3PortLabel => 'Port (optional)';
 
   @override
@@ -4914,6 +4929,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiStrategyCloudOnlyDesc => 'Use cloud API only, no model download';
+
+  @override
+  String get aiDesensitizeTitle => 'Desensitize account names';
+
+  @override
+  String get aiDesensitizeSubtitle =>
+      'Account names sent to AI are replaced with IDs (e.g. account_1); naming an account explicitly may match less accurately';
 
   @override
   String get aiStrategyUnavailable => 'Local model in training, coming soon';
@@ -6981,6 +7003,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appLockEnterPin => 'Enter PIN';
 
   @override
+  String appLockLockedOut(int seconds) {
+    return 'Too many wrong attempts, try again in ${seconds}s';
+  }
+
+  @override
   String get appLockPinSetSuccess => 'PIN set successfully';
 
   @override
@@ -7010,6 +7037,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appLockTimeout15Min => 'After 15 minutes';
+
+  @override
+  String get appLockWipeTitle => 'Wipe on repeated failures';
+
+  @override
+  String get appLockWipeSubtitle =>
+      'When on, 20 consecutive wrong PINs erase all local ledgers, attachments and settings. Irreversible.';
+
+  @override
+  String get appLockWipeConfirmTitle => 'Erase all local data?';
+
+  @override
+  String get appLockWipeConfirmMessage =>
+      'This deletes all local ledgers, attachments and settings. This cannot be undone (cloud backups are unaffected). Continue?';
+
+  @override
+  String get appLockWipedMessage =>
+      'All local data erased. Please restart the app.';
 
   @override
   String get creditCardSettings => 'Credit Card Settings';
@@ -7993,6 +8038,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get backupNowSubtitle =>
       'Pack all ledgers and attachments into one daily backup in piggycount-bak';
+
+  @override
+  String get backupPlaintextWarning =>
+      'End-to-end encryption is off, backups are stored in plaintext on the cloud';
 
   @override
   String get backupNoLedgers => 'There are no ledgers to back up.';

@@ -3231,6 +3231,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudS3UseSSLLabel => 'HTTPS 사용';
 
   @override
+  String get cloudUrlMustBeHttps =>
+      'URL은 HTTPS를 사용해야 합니다. 평문 전송 시 자격 증명이 유출됩니다';
+
+  @override
+  String get cloudS3InsecureWarning => 'SSL이 꺼져 있어 키와 데이터가 평문으로 전송됩니다';
+
+  @override
+  String get cloudInsecureConfirmTitle => '안전하지 않은 연결을 사용하시겠습니까?';
+
+  @override
+  String get cloudInsecureConfirmMessage =>
+      'SSL을 끄면 키와 가계부 데이터가 평문으로 전송되어 도청될 수 있습니다. 신뢰할 수 있는 네트워크에서만 계속하세요';
+
+  @override
   String get cloudS3PortLabel => '포트 (선택 사항)';
 
   @override
@@ -4779,6 +4793,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get aiStrategyCloudOnlyDesc => '클라우드 API만 사용하며 모델을 다운로드하지 않습니다';
+
+  @override
+  String get aiDesensitizeTitle => '계좌명 비식별화';
+
+  @override
+  String get aiDesensitizeSubtitle =>
+      'AI에 전송되는 계좌명을 번호로 대체합니다(예: account_1). 계좌명을 직접 지정하면 인식 정확도가 떨어질 수 있습니다';
 
   @override
   String get aiStrategyUnavailable => '로컬 모델을 학습 중입니다. 곧 제공될 예정입니다';
@@ -6783,6 +6804,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get appLockEnterPin => 'PIN 입력';
 
   @override
+  String appLockLockedOut(int seconds) {
+    return '잘못된 시도가 너무 많습니다. $seconds초 후에 다시 시도하세요';
+  }
+
+  @override
   String get appLockPinSetSuccess => 'PIN이 설정되었습니다';
 
   @override
@@ -6811,6 +6837,23 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get appLockTimeout15Min => '15분 후';
+
+  @override
+  String get appLockWipeTitle => '연속 실패 시 데이터 삭제';
+
+  @override
+  String get appLockWipeSubtitle =>
+      '켜면 PIN을 20회 연속 틀릴 경우 기기의 모든 장부·첨부파일·설정이 삭제됩니다. 되돌릴 수 없습니다';
+
+  @override
+  String get appLockWipeConfirmTitle => '모든 로컬 데이터를 삭제하시겠습니까?';
+
+  @override
+  String get appLockWipeConfirmMessage =>
+      '기기의 모든 장부·첨부파일·설정이 삭제됩니다. 되돌릴 수 없습니다(클라우드 백업은 영향 없음). 계속하시겠습니까?';
+
+  @override
+  String get appLockWipedMessage => '모든 로컬 데이터가 삭제되었습니다. 앱을 다시 시작하세요';
 
   @override
   String get creditCardSettings => '신용카드 설정';
@@ -7779,6 +7822,9 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get backupNowSubtitle =>
       '모든 장부와 첨부 파일을 당일 백업 하나로 묶어 piggycount-bak에 저장';
+
+  @override
+  String get backupPlaintextWarning => '종단간 암호화가 꺼져 있어 백업이 클라우드에 평문으로 저장됩니다';
 
   @override
   String get backupNoLedgers => '백업할 장부가 없습니다.';
