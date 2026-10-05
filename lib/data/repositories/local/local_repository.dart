@@ -14,7 +14,8 @@ import '../transaction_repository.dart'
     show
         BatchAttachmentData,
         RecurringInstanceFingerprint,
-        TransactionUpdateBySyncIdData;
+        TransactionUpdateBySyncIdData,
+        kTransactionWindowSize;
 import 'local_ledger_repository.dart';
 import 'local_transaction_repository.dart';
 import 'local_category_repository.dart';
@@ -458,6 +459,22 @@ class LocalRepository extends BaseRepository {
             Account? toAccount
           })>> watchTransactionsWithCategoryAll({int? ledgerId}) =>
       _transactionRepo.watchTransactionsWithCategoryAll(ledgerId: ledgerId);
+
+  @override
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> watchTransactionWindow({
+    required int ledgerId,
+    ({DateTime happenedAt, int id})? before,
+    int limit = kTransactionWindowSize,
+  }) =>
+      _transactionRepo.watchTransactionWindow(
+          ledgerId: ledgerId, before: before, limit: limit);
 
   @override
   Stream<
@@ -1369,6 +1386,15 @@ class LocalRepository extends BaseRepository {
     required DateTime month,
   }) =>
       _transactionRepo.getDailyTotalsByMonth(ledgerId: ledgerId, month: month);
+
+  @override
+  Future<Map<String, (double, double)>> getDailyTotalsInRange({
+    required int ledgerId,
+    required DateTime start,
+    required DateTime end,
+  }) =>
+      _transactionRepo.getDailyTotalsInRange(
+          ledgerId: ledgerId, start: start, end: end);
 
   @override
   Future<
@@ -4236,9 +4262,9 @@ class LocalRepository extends BaseRepository {
 
     return (
       transactions: await count('SELECT COUNT(*) AS v FROM transactions'
-          ' WHERE account_id = ? OR to_account_id = ?'),
+          ' WHERE account_id = ?1 OR to_account_id = ?1'),
       recurring: await count('SELECT COUNT(*) AS v FROM recurring_transactions'
-          ' WHERE account_id = ? OR to_account_id = ?'),
+          ' WHERE account_id = ?1 OR to_account_id = ?1'),
     );
   }
 }

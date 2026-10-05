@@ -122,6 +122,12 @@ class BatchAttachmentData {
   });
 }
 
+/// 首页交易窗口的默认页大小（M2-a）。
+///
+/// 一页 100 行 ≈ 首屏 + 一两次快滑，避免"滑到底才开始加载"的空窗；
+/// 同时把首页常驻行数从「整本账本」压到「已滑过的页数 × 100」。
+const int kTransactionWindowSize = 100;
+
 /// 交易Repository接口
 /// 定义交易相关的所有数据操作
 abstract class TransactionRepository {
@@ -151,6 +157,33 @@ abstract class TransactionRepository {
             Account? toAccount
           })>> watchTransactionsWithCategoryAll({
     int? ledgerId,
+  });
+
+  /// M2-a 首页窗口化：只取窗口内的交易（keyset 游标 + LIMIT）。
+  ///
+  /// 与 [watchTransactionsWithCategoryAll] **同口径**（同样三连 LEFT JOIN +
+  /// SharedLedger hydration），差别只有两点：
+  /// 1. 排序加 `id DESC` 做 tiebreaker —— 同一时刻多笔时顺序稳定，游标可比较；
+  /// 2. 只返回 [limit] 行，不再整本账本进内存。
+  ///
+  /// [before] = 上一页最后一行的 `(happenedAt, id)`；`null` 表示从最新一页开始。
+  /// 首页当前用「`before: null` + 只增 `limit`」形态（一次查询给最新 N 行，滚动
+  /// 追加即增大 N，天然不会把已显示的行挤出窗口）；按键分页（`before`）由
+  /// `test/repositories/transaction_window_regression_test.dart` 钉住与全量查询的
+  /// **逐值等价**。
+  ///
+  /// 命中既有索引 `idx_transactions_ledger_happened`（`(ledger_id, happened_at)`）。
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> watchTransactionWindow({
+    required int ledgerId,
+    ({DateTime happenedAt, int id})? before,
+    int limit = kTransactionWindowSize,
   });
 
   /// 获取所有交易记录（带分类信息）- 非 Stream 版本
@@ -473,6 +506,21 @@ abstract class TransactionRepository {
   /// 获取指定月份的每日交易统计
   /// 返回 Map<日期字符串, (收入, 支出)>
   /// 例: {"2025-01-15": (500.0, 1200.0), ...}
+  /// M2-a：按日聚合的「当日收支」（列表头显示用）。
+  ///
+  /// 口径与列表里原本的 Dart 循环 `_computeDayTotals` **逐字一致**：
+  /// `nativeAmount ?? amount`、只计 income / expense（**transfer 不计**）、
+  /// **不**过滤 `excludeFromStats`（这是"当日收支"展示，不是统计口径 ——
+  /// 与 [getDailyTotalsByMonth] 的日历口径**故意不同**，别混用）。
+  ///
+  /// 窗口化之后，最旧的一天可能只加载了部分行，Dart 侧累加必然算少；
+  /// 所以日合计必须由本方法从 SQL 出，key = `yyyy-MM-dd`（本地时区）。
+  Future<Map<String, (double income, double expense)>> getDailyTotalsInRange({
+    required int ledgerId,
+    required DateTime start,
+    required DateTime end,
+  });
+
   Future<Map<String, (double income, double expense)>> getDailyTotalsByMonth({
     required int ledgerId,
     required DateTime month,

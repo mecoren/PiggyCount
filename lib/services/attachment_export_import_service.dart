@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as path;
@@ -84,19 +84,15 @@ class AttachmentExportImportService {
         return null;
       }
 
-      // 创建归档
-      final archive = Archive();
-
-      // 添加头像文件（如果存在）
-      if (avatarFile != null && avatarFileName != null) {
-        final bytes = await avatarFile.readAsBytes();
-        archive.addFile(ArchiveFile(
-          'avatar/$avatarFileName',
-          bytes.length,
-          bytes,
-        ));
-        logger.debug('AttachmentExportImport', '添加头像文件: $avatarFileName');
-      }
+      // M13：磁盘到磁盘装配。旧实现把每个附件 readAsBytes 进内存 + tar + gz
+      // 三份常驻（≈附件总量 ×3，500 张约 450MB）；改为逐文件流式写入 tar、
+      // 再流式 gzip，峰值降到常数级。**入口顺序 / 条目名与旧实现逐字一致**
+      // （avatar → custom_icons → metadata.json → images），跨端格式不变。
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final exportDir = await _getExportDirectory();
+      final exportPath =
+          '${exportDir.path}/piggycount_attachments_$timestamp.tar.gz';
+      final tempDir = await Directory.systemTemp.createTemp('piggycount_export');
 
       // 构建实际存在的附件列表（复用前面扫描的结果）
       final existingAttachments = <TransactionAttachment>[];
@@ -116,66 +112,67 @@ class AttachmentExportImportService {
       int processed = 0;
       final total = existingAttachments.length + customIconFiles.length;
 
-      // 先添加自定义图标文件
-      for (final iconFile in customIconFiles) {
-        final fileName = path.basename(iconFile.path);
-        final bytes = await iconFile.readAsBytes();
-        archive.addFile(ArchiveFile(
-          'custom_icons/$fileName',
-          bytes.length,
-          bytes,
-        ));
-        customIconFileNames.add(fileName);
-        logger.debug('AttachmentExportImport', '添加自定义图标: $fileName');
+      final tarPath = '${tempDir.path}/attachments.tar';
+      try {
+        final tarOutput = OutputFileStream(tarPath);
+        final tarEncoder = TarEncoder();
+        tarEncoder.start(tarOutput);
 
-        processed++;
-        onProgress?.call(processed, total);
-      }
+        // 添加头像文件（如果存在）
+        if (avatarFile != null && avatarFileName != null) {
+          _addStreamedFile(tarEncoder, avatarFile, 'avatar/$avatarFileName');
+          logger.debug('AttachmentExportImport', '添加头像文件: $avatarFileName');
+        }
 
-      // 添加元数据文件
-      final metadata = _buildMetadata(
-        existingAttachments,
-        avatarFileName: avatarFileName,
-        customIconFileNames: customIconFileNames.isEmpty ? null : customIconFileNames,
-      );
-      final metadataBytes = utf8.encode(jsonEncode(metadata));
-      archive.addFile(ArchiveFile(
-        'metadata.json',
-        metadataBytes.length,
-        metadataBytes,
-      ));
+        // 先添加自定义图标文件
+        for (final iconFile in customIconFiles) {
+          final fileName = path.basename(iconFile.path);
+          _addStreamedFile(tarEncoder, iconFile, 'custom_icons/$fileName');
+          customIconFileNames.add(fileName);
+          logger.debug('AttachmentExportImport', '添加自定义图标: $fileName');
 
-      // 添加实际存在的附件图片文件
-      for (final attachment in existingAttachments) {
-        final filePath = '${attachmentDir.path}/${attachment.fileName}';
-        final file = File(filePath);
-        final bytes = await file.readAsBytes();
-        archive.addFile(ArchiveFile(
-          'images/${attachment.fileName}',
-          bytes.length,
-          bytes,
+          processed++;
+          onProgress?.call(processed, total);
+        }
+
+        // 添加元数据文件（体积小，直接以字节写条目）
+        final metadata = _buildMetadata(
+          existingAttachments,
+          avatarFileName: avatarFileName,
+          customIconFileNames:
+              customIconFileNames.isEmpty ? null : customIconFileNames,
+        );
+        final metadataBytes = utf8.encode(jsonEncode(metadata));
+        tarEncoder.add(ArchiveFile(
+          'metadata.json',
+          metadataBytes.length,
+          metadataBytes,
         ));
 
-        processed++;
-        onProgress?.call(processed, total);
+        // 添加实际存在的附件图片文件（流式，不整文件读进内存）
+        for (final attachment in existingAttachments) {
+          final file = File('${attachmentDir.path}/${attachment.fileName}');
+          _addStreamedFile(tarEncoder, file, 'images/${attachment.fileName}');
+
+          processed++;
+          onProgress?.call(processed, total);
+        }
+
+        // 收尾 tar，再磁盘到磁盘 gzip（tar → .tar.gz，全程不整体驻留内存）
+        tarEncoder.finish();
+        await tarOutput.close();
+
+        final gzInput = InputFileStream(tarPath);
+        final gzOutput = OutputFileStream(exportPath);
+        GZipEncoder().encode(gzInput, output: gzOutput);
+        await gzInput.close();
+        await gzOutput.close();
+      } finally {
+        // 无论成败都清掉临时目录（tar 中间产物）
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
       }
-
-      // 压缩为 tar.gz
-      final tarData = TarEncoder().encode(archive);
-      final gzData = GZipEncoder().encode(tarData);
-
-      if (gzData == null) {
-        logger.error('AttachmentExportImport', 'GZip 压缩失败');
-        return null;
-      }
-
-      // 保存到临时目录
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final exportDir = await _getExportDirectory();
-      final exportPath = '${exportDir.path}/piggycount_attachments_$timestamp.tar.gz';
-
-      final exportFile = File(exportPath);
-      await exportFile.writeAsBytes(gzData);
 
       logger.info('AttachmentExportImport', '附件导出完成: $exportPath');
       return exportPath;
@@ -183,6 +180,18 @@ class AttachmentExportImportService {
       logger.error('AttachmentExportImport', '导出附件失败', e, stackTrace);
       return null;
     }
+  }
+
+  /// 把磁盘文件作为 tar 条目**流式**写入（不整文件读进内存）。
+  ///
+  /// 条目头保留默认 mode/lastModTime（与旧 `ArchiveFile(name, size, bytes)`
+  /// 一致），因此产物头信息不因本次改造而变化；只有数据体从「内存字节」变成
+  /// 「磁盘流」。`TarFile.write` 同步消费整个 InputStream，故写完即可关流。
+  static void _addStreamedFile(
+      TarEncoder encoder, File file, String archiveName) {
+    final stream = InputFileStream(file.path);
+    encoder.add(ArchiveFile.stream(archiveName, file.lengthSync(), stream));
+    stream.closeSync();
   }
 
   /// 构建元数据

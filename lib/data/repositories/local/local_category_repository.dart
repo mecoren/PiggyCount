@@ -503,7 +503,16 @@ class LocalCategoryRepository implements CategoryRepository {
                 .getSingleOrNull();
 
             if (existingSub != null) {
-              // 合并到已有的同名子分类
+              // 合并到已有的同名子分类。
+              //
+              // ⚠️ 这是**防御分支**：当前不变式是「同 kind 内分类名全局唯一」（仓库层
+              // 是分类的唯一写入方，每次写入都过那道检查），所以正常路径造不出"目标父
+              // 下已有同名子分类"这个状态。保留它是为了历史数据、将来放宽不变式、或
+              // 任何绕过检查的写入 —— 一旦命中，源子分类下一行就被删，挂在它上面的
+              // 预算 / 周期规则若不搬，当场就变成悬空引用。
+              // 回归测试用直接插入构造该态，见
+              // `test/repositories/entity_reference_guard_test.dart`
+              // 「一级分类迁移：重名子分类被合并删除…」。
               final count = await (db.update(db.transactions)
                     ..where((t) => t.categoryId.equals(sub.id)))
                   .write(TransactionsCompanion(

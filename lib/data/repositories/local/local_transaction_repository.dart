@@ -143,6 +143,44 @@ class LocalTransactionRepository implements TransactionRepository {
     return _watchTxJoinWithSharedHydration(q);
   }
 
+  @override
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> watchTransactionWindow({
+    required int ledgerId,
+    ({DateTime happenedAt, int id})? before,
+    int limit = kTransactionWindowSize,
+  }) {
+    final cursor = before;
+    final select = db.select(db.transactions);
+    if (cursor == null) {
+      select.where((t) => t.ledgerId.equals(ledgerId));
+    } else {
+      // keyset 游标：严格"更早于上一页末行"。同秒多笔用 id 兜底，
+      // 与 ORDER BY (happened_at DESC, id DESC) 同序 → 不重不漏。
+      // DateTime 比较一律走 *Value 变体（列类型编码为 unix 秒）；本 drift
+      // 版本没有 equalsValue，等值用 equals（由回归测试钉住同秒语义）。
+      select.where((t) =>
+          t.ledgerId.equals(ledgerId) &
+          (t.happenedAt.isSmallerThanValue(cursor.happenedAt) |
+              (t.happenedAt.equals(cursor.happenedAt) &
+                  t.id.isSmallerThanValue(cursor.id))));
+    }
+    select
+      ..orderBy([
+        (t) =>
+            d.OrderingTerm(expression: t.happenedAt, mode: d.OrderingMode.desc),
+        (t) => d.OrderingTerm(expression: t.id, mode: d.OrderingMode.desc),
+      ])
+      ..limit(limit);
+    return _watchTxJoinWithSharedHydration(select.join(_txJoins()));
+  }
+
   /// §7 共享账本:把 Drift 主表 stream 跟 SharedLedger* 表更新合流,任一
   /// 变化都重跑 hydration 并 emit。
   ///
@@ -1363,6 +1401,53 @@ class LocalTransactionRepository implements TransactionRepository {
 
     logger.debug(
         'LocalTransactionRepository', 'dailyTotalsByMonth 结果: ${map.length} 天');
+    return map;
+  }
+
+  @override
+  Future<Map<String, (double income, double expense)>> getDailyTotalsInRange({
+    required int ledgerId,
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    // 与 getDailyTotalsByMonth 同构，两处**故意**不同（见接口注释）：
+    //  - 不带 exclude_from_stats 过滤：这是列表头的「当日收支」展示口径，
+    //    与日历/统计的 excludeFromStats 口径不同，别混用；
+    //  - 区间是半开 [start, end)，与全仓取数口径一致。
+    // Drift 存 DateTime 为 Unix 秒，故 strftime 走 'unixepoch'。
+    final query = '''
+      SELECT
+        strftime('%Y-%m-%d', happened_at, 'unixepoch', 'localtime') as date,
+        SUM(CASE WHEN type = 'income' THEN COALESCE(native_amount, amount) ELSE 0 END) as income,
+        SUM(CASE WHEN type = 'expense' THEN COALESCE(native_amount, amount) ELSE 0 END) as expense
+      FROM transactions
+      WHERE ledger_id = ?
+        AND happened_at >= ?
+        AND happened_at < ?
+        AND type IN ('income', 'expense')
+      GROUP BY date
+      ORDER BY date DESC
+    ''';
+
+    final results = await db.customSelect(
+      query,
+      variables: [
+        d.Variable.withInt(ledgerId),
+        d.Variable.withDateTime(start),
+        d.Variable.withDateTime(end),
+      ],
+      readsFrom: {db.transactions},
+    ).get();
+
+    final map = <String, (double, double)>{};
+    for (final row in results) {
+      final date = row.read<String?>('date');
+      if (date == null) continue;
+      map[date] = (
+        row.read<double?>('income') ?? 0.0,
+        row.read<double?>('expense') ?? 0.0,
+      );
+    }
     return map;
   }
 

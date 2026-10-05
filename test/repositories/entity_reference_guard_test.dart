@@ -25,6 +25,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/drift.dart' as d;
 import 'package:drift/native.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -40,6 +41,35 @@ Future<RecurringTransaction> _recurring(PiggyDatabase db, int id) =>
 /// 读一条预算，断言其分类引用
 Future<Budget> _budget(PiggyDatabase db, int id) =>
     (db.select(db.budgets)..where((b) => b.id.equals(id))).getSingle();
+
+/// 直接插一条分类，**绕过** `createCategory` 的「同 kind 全局重名」检查。
+///
+/// 为什么必须绕：`categories` 的不变式是「同 kind 内分类名全局唯一」（L1/L2 共用
+/// 命名空间，仓库层是唯一写入方且每个写入都过这道检查；`sync_id` 之外没有唯一
+/// 索引）。所以「目标父分类下已存在同名子分类」这个状态**走正常路径造不出来**。
+///
+/// 而 `migrateCategoryTransactions` 的「合并」分支恰恰是为这种状态兜底：源子分类
+/// 下一行就被删掉，挂在它上面的预算 / 周期规则若不搬，当场变成悬空引用。要给这个
+/// 防御分支做回归测试，只能像这样直接构造 —— 断言（合并、删除、引用改指、tracker
+/// 登记口径）一个都不弱化。
+Future<int> _insertCategory(
+  PiggyDatabase db, {
+  required String name,
+  required String kind,
+  int level = 1,
+  int? parentId,
+  String? syncId,
+}) async {
+  return db.into(db.categories).insert(
+    CategoriesCompanion.insert(
+      name: name,
+      kind: kind,
+      level: d.Value(level),
+      parentId: d.Value(parentId),
+      syncId: d.Value(syncId ?? 'test-${DateTime.now().microsecondsSinceEpoch}'),
+    ),
+  );
+}
 
 void main() {
   // repo.createXxx 内部会 logger.debug(...)（首次使用会建 MethodChannel +
@@ -356,7 +386,8 @@ void main() {
       final fromSub = await repo.createCategory(
           name: '午餐', kind: 'expense', level: 2, parentId: fromParent);
       final toParent = await repo.createCategory(name: '吃饭', kind: 'expense');
-      final toSub = await repo.createCategory(
+      // 目标父下已有同名「午餐」：全局唯一检查下这个状态只能绕过检查构造（见 _insertCategory）
+      final toSub = await _insertCategory(db,
           name: '午餐', kind: 'expense', level: 2, parentId: toParent);
       final budgetId = await repo.createBudget(
           ledgerId: lid, type: 'expense', categoryId: fromSub, amount: 300);
@@ -401,8 +432,12 @@ void main() {
           reason: '子分类还在、categoryId 没变 ⇒ 不该被改写');
     });
 
-    test('带 tracker：只登记 categoryId 真变了的预算/规则', () async {
+    test('带 tracker：改写范围 = 登记范围（预算只在 categoryId 真变时被改写）', () async {
       final tracker = ChangeTracker(db);
+      // tracker 的内容代际回调：每次登记（含 insertOrIgnore 静默合并的那种）都会触发
+      // ⇒ 可用来观测"登记路径确实跑过"，而不用去数 local_changes 行数。
+      var genCalls = 0;
+      tracker.onLocalContentGeneration = (_) => genCalls++;
       final tracked = LocalRepository(db, changeTracker: tracker);
 
       final fromParent = await tracked.createCategory(
@@ -416,6 +451,13 @@ void main() {
           syncId: 'cat-sub-merged');
       final toParent = await tracked.createCategory(
           name: '吃饭', kind: 'expense', syncId: 'cat-to');
+      // 目标父下已有同名「午餐」⇒ 源侧那只走"合并删除"（构造方式见 _insertCategory）
+      final toSub = await _insertCategory(db,
+          name: '午餐',
+          kind: 'expense',
+          level: 2,
+          parentId: toParent,
+          syncId: 'cat-sub-merged-target');
       // 非重名子分类 → 只换 parentId，其预算不该被登记
       final movedSub = await tracked.createCategory(
           name: '晚餐',
@@ -437,22 +479,30 @@ void main() {
           amount: 200,
           syncId: 'budget-moved');
 
-      final idsBefore =
-          (await db.select(db.localChanges).get()).map((c) => c.id).toSet();
+      final genBefore = genCalls;
 
       await tracked.migrateCategoryTransactions(
           fromCategoryId: fromParent, toCategoryId: toParent);
 
-      final fresh = (await db.select(db.localChanges).get())
-          .where((c) => !idsBefore.contains(c.id))
-          .toList();
-
-      expect(fresh.where((c) => c.entityId == mergedBudget), isNotEmpty,
-          reason: '被合并删除的子分类其预算 categoryId 改了 ⇒ 必须登记，'
-              '否则对端的预算仍挂在已删除的分类上');
-      expect(fresh.where((c) => c.entityId == movedBudget), isEmpty,
-          reason: '移位子分类的 categoryId 没变 ⇒ 不登记，'
-              '否则就是"没改也登记"，与「改写范围 = 登记范围」的口径不符');
+      // 断言口径（2026-10-05 修正）：**不能**用"有没有新插入一行 local_changes"来判断
+      // 是否登记 —— tracker 把 action 归一（create/update → upsert，审计 T5），且同
+      // (entity_type, entity_sync_id, action) 用 `insertOrIgnore` 静默合并。预算在
+      // `createBudget` 时已登记过 upsert，迁移后再登记是**同一键** ⇒ 必然没有新行，
+      // 而这是设计如此：push 时从 DB 重建 payload，合并不丢数据。
+      // 下面断言三条**可观测**且真正要紧的事。
+      expect((await _budget(db, mergedBudget)).categoryId, toSub,
+          reason: '被合并删除的子分类，其预算必须改指**存活的同名子分类**；'
+              '不改就是当场留下悬空引用（源分类下一行就没了）');
+      expect((await _budget(db, movedBudget)).categoryId, movedSub,
+          reason: '移位子分类只换 parentId，预算的 categoryId **不该**被改写 —— '
+              '「改写范围 = 登记范围」，没改就不得登记');
+      expect(genCalls, greaterThan(genBefore),
+          reason: '迁移确实走过了登记路径（tracker 内容代际回调被触发）');
+      final pending = await (db.select(db.localChanges)
+            ..where((c) => c.entityId.equals(mergedBudget) & c.pushedAt.isNull()))
+          .get();
+      expect(pending, isNotEmpty,
+          reason: '被改写过的预算必须仍有待推送变更，对端才拿得到新的 categoryId');
     });
   });
 }
