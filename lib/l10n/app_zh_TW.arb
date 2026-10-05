@@ -50,6 +50,14 @@
   "accountDefaultIncomeTitle": "預設收入帳戶",
   "accountDefaultNone": "不設定",
   "accountDeleteConfirm": "確認刪除該帳戶嗎？",
+  "accountDeleteRecurringImpact": "該帳戶被 {count} 條週期記帳使用，刪除後這些規則將失去帳戶。",
+  "@accountDeleteRecurringImpact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "accountDeleteReconfirmMessage": "再次確認：刪除後該帳戶不可復原，已儲存的帳戶資訊將永久丟失。確定要繼續嗎？",
   "accountDeleteWarningMessage": "該帳戶有 {count} 筆關聯交易，刪除後交易記錄中的帳戶信息將被清空。確認刪除嗎？",
   "accountDeleteWarningTitle": "確認刪除",
@@ -605,6 +613,22 @@
   "categoryDeleteConfirmMessage": "確定要刪除分類\"{name}\"嗎？此操作無法撤銷。",
   "categoryDeleteConfirmTitle": "刪除分類",
   "categoryDeleteError": "刪除失敗",
+  "categoryDeleteBudgetImpact": "該分類被 {count} 個預算引用，刪除後這些預算將失去分類。",
+  "@categoryDeleteBudgetImpact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryDeleteRecurringImpact": "該分類被 {count} 條週期記帳引用，刪除後這些規則將失去分類。",
+  "@categoryDeleteRecurringImpact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "categoryDeleteSubtitle": "刪除後無法復原",
   "categoryDeleteTitle": "刪除分類",
   "categoryDeleted": "分類\"{name}\"已刪除",

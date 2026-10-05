@@ -588,40 +588,63 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
   void _deleteCategory() async {
     if (!isEditing) return;
 
+    final l10n = AppLocalizations.of(context);
     final repo = ref.read(repositoryProvider);
+    final category = widget.category!;
 
-    // 检查是否有交易记录使用此分类
-    int totalTransactionCount =
-        await repo.getTransactionCountByCategory(widget.category!.id);
-
-    // 如果是一级分类，还需要检查所有子分类的交易数量
-    if (widget.category!.level == 1) {
-      final subCategories = await repo.getSubCategories(widget.category!.id);
-      for (final subCat in subCategories) {
-        final subCount = await repo.getTransactionCountByCategory(subCat.id);
-        totalTransactionCount += subCount;
-      }
+    // 引用画像：删父分类会**连带**删掉直接子分类
+    // （local_category_repository.deleteCategory 删自身 + parent_id 指向它的行），
+    // 所以子分类上的引用也必须并入 —— 只看自身会漏掉子分类的账单/预算/规则。
+    //
+    // 分两档：
+    //  · 交易数 = **硬阻塞**（保持既有行为：分类下还有账单就不给删）；
+    //  · 预算 / 周期规则 = **软提示**（删除仍允许，但要把影响说清楚）。
+    //
+    // 此前只数 transactions，于是「只被预算引用」或「只被周期规则引用」的分类
+    // 会被判成"无引用"直接删掉，留下悬空外键 —— categories 相关列是裸
+    // integer()、SQLite 默认不开外键约束，不报错、只静默丢引用。
+    // 表覆盖范围与 LocalRepository.getSyncEntityReferences 的同名条目逐字一致。
+    var txCount = 0;
+    var budgetCount = 0;
+    var recurringCount = 0;
+    final targetIds = <int>[category.id];
+    if (category.level == 1) {
+      final subCategories = await repo.getSubCategories(category.id);
+      targetIds.addAll(subCategories.map((c) => c.id));
+    }
+    for (final id in targetIds) {
+      final refs = await repo.getCategoryRefCounts(id);
+      txCount += refs.transactions;
+      budgetCount += refs.budgets;
+      recurringCount += refs.recurring;
     }
 
-    if (totalTransactionCount > 0) {
+    if (txCount > 0) {
       if (!mounted) return;
-      await AppDialog.info(
-        context,
-        title: AppLocalizations.of(context).categoryCannotDelete,
-        message: AppLocalizations.of(context)
-            .categoryCannotDeleteMessage(totalTransactionCount),
-      );
+      await AppDialog.info(context,
+          title: l10n.categoryCannotDelete,
+          message: l10n.categoryCannotDeleteMessage(txCount));
       return;
     }
+
+    // 无交易，但有预算 / 周期规则引用：允许删，先把影响说明白。
+    final impacts = <String>[
+      if (budgetCount > 0) l10n.categoryDeleteBudgetImpact(budgetCount),
+      if (recurringCount > 0)
+        l10n.categoryDeleteRecurringImpact(recurringCount),
+    ];
+    final confirmMessage = impacts.isEmpty
+        ? l10n.categoryDeleteConfirmMessage(category.name)
+        : '${l10n.categoryDeleteConfirmMessage(category.name)}\n'
+            '${impacts.join('\n')}';
 
     if (!mounted) return;
     final confirmed = await AppDialog.confirm<bool>(
           context,
-          title: AppLocalizations.of(context).categoryDeleteConfirmTitle,
-          message: AppLocalizations.of(context)
-              .categoryDeleteConfirmMessage(widget.category!.name),
-          okLabel: AppLocalizations.of(context).commonDelete,
-          cancelLabel: AppLocalizations.of(context).commonCancel,
+          title: l10n.categoryDeleteConfirmTitle,
+          message: confirmMessage,
+          okLabel: l10n.commonDelete,
+          cancelLabel: l10n.commonCancel,
           destructive: true,
         ) ??
         false;
@@ -629,7 +652,7 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
     if (!confirmed) return;
 
     try {
-      await repo.deleteCategory(widget.category!.id);
+      await repo.deleteCategory(category.id);
       if (!mounted) return;
 
       // 刷新分类列表

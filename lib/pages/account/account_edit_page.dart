@@ -846,15 +846,27 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   Future<void> _delete() async {
     final l10n = AppLocalizations.of(context);
 
-    // 双重危险确认（各 5 秒倒计时）：有关联交易时第一段会
-    // 额外警告交易记录中的账户信息将被清空
+    // 双重危险确认（各 5 秒倒计时）：
+    //  · 有关联交易时第一段额外警告「交易记录中的账户信息将被清空」；
+    //  · 有周期规则引用时追加提示「规则将失去账户」。
+    //
+    // 为什么这里不能用 getTransactionCountByAccount 只数交易：周期规则是
+    // **独立于交易**的一份引用（recurring_transactions.account_id /
+    // to_account_id）。它此前不参与守卫、也不在删除时清理 —— 账户删掉后规则
+    // 到期仍会生成新记录，且引用指向已不存在的账户。删除实现已补上断开引用
+    // （LocalRepository.deleteAccount），守卫这里同步把影响告知用户。
+    // 表覆盖范围与 LocalRepository.getSyncEntityReferences 的同名条目逐字一致。
     final repo = ref.read(repositoryProvider);
-    final txCount = await repo.getTransactionCountByAccount(widget.account!.id);
+    final refs = await repo.getAccountRefCounts(widget.account!.id);
 
     if (!mounted) return;
-    final firstMessage = txCount > 0
-        ? l10n.accountDeleteWarningMessage(txCount)
-        : l10n.accountDeleteConfirm;
+    final impacts = <String>[
+      if (refs.transactions > 0)
+        l10n.accountDeleteWarningMessage(refs.transactions),
+      if (refs.recurring > 0) l10n.accountDeleteRecurringImpact(refs.recurring),
+    ];
+    final firstMessage =
+        impacts.isEmpty ? l10n.accountDeleteConfirm : impacts.join('\n');
     final confirmed = await showDoubleDangerConfirmDialog(
       context,
       title: l10n.accountDeleteWarningTitle,

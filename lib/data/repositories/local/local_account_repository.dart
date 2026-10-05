@@ -704,6 +704,17 @@ class LocalAccountRepository implements AccountRepository {
           ..where((t) => t.toAccountId.equals(fromAccountId)))
         .write(TransactionsCompanion(toAccountId: d.Value(toAccountId)));
 
+    // 周期规则同样引用账户（两列都可空，见 db.dart）。此前只搬交易，规则仍指向
+    // 旧账户 —— 旧账户一旦被删就留下悬空引用，**且规则到期会持续生成新的悬空
+    // 记录**。语义与交易完全一致，这里一并搬走。
+    await (db.update(db.recurringTransactions)
+          ..where((r) => r.accountId.equals(fromAccountId)))
+        .write(RecurringTransactionsCompanion(accountId: d.Value(toAccountId)));
+    await (db.update(db.recurringTransactions)
+          ..where((r) => r.toAccountId.equals(fromAccountId)))
+        .write(
+            RecurringTransactionsCompanion(toAccountId: d.Value(toAccountId)));
+
     return beforeCount;
   }
 

@@ -4,12 +4,16 @@
 // 生产恒空）。
 //
 // 本用例是**唯一**直连该方法的测试，把那块代码从「既不可达也无测试网」变成
-// 「有测试网」：断言合并结果（keeper 保留 / dupe 消失 / 引用被改写）与三条登记
-// （受影响交易 update、被改写周期规则 update、dupe 分类 delete）。
+// 「有测试网」：断言合并结果（keeper 保留 / dupe 消失 / 引用被改写）与四条登记
+// （受影响交易 update、被改写预算 update、被改写周期规则 update、dupe 分类 delete）。
 //
 // 为什么值得单独守：合并是**被动**触发的（用户走转账流程才会跑到），一旦这里的
 // keeper 选取或改写范围写错，表现是转账记录指向已被删除的分类 —— 静默的引用
 // 断裂，比直接抛错更难发现。
+//
+// ⚠️ 登记条数必须与「被改写载体的种类数」对齐（transactions / budgets /
+// recurring_transactions 三类 + dupe 分类 delete = 四条）。少一类只在
+// 重新注入 tracker 时才暴露，所以这里用**集合相等**断言，多一条或少一条都失败。
 //
 // 注：`getTransferCategory` 的调用方全是生产路径
 // （`database_providers.dart:161`、`category_manage_page.dart:465`、
@@ -104,10 +108,12 @@ void main() {
           .toSet(),
       {
         'transaction|tx-dup-ref|upsert|$ledgerId',
+        'budget|budget-dup-ref|upsert|$ledgerId',
         'recurring|rec-dup-ref|upsert|$ledgerId',
         'category|cat-transfer-dupe|delete|0',
       },
-      reason: '交易 / 周期规则 update + dupe 分类 delete 三条缺一不可；'
+      reason: '三类载体（交易 / 预算 / 周期规则）的 update 各一条 + dupe 分类 delete 一条，'
+          '缺一不可 —— 改写范围与登记范围必须逐类对齐；'
           'user-global 的分类 delete 必须挂 ledgerId=0',
     );
   });

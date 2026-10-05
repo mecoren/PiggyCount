@@ -4706,6 +4706,18 @@ abstract class AppLocalizations {
   /// **'Delete failed'**
   String get categoryDeleteError;
 
+  /// No description provided for @categoryDeleteBudgetImpact.
+  ///
+  /// In en, this message translates to:
+  /// **'This category is referenced by {count} budgets. They will lose their category after deletion.'**
+  String categoryDeleteBudgetImpact(int count);
+
+  /// No description provided for @categoryDeleteRecurringImpact.
+  ///
+  /// In en, this message translates to:
+  /// **'This category is referenced by {count} recurring rules. They will lose their category after deletion.'**
+  String categoryDeleteRecurringImpact(int count);
+
   /// No description provided for @categoryDeleted.
   ///
   /// In en, this message translates to:
@@ -8212,6 +8224,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Confirm to delete this account?'**
   String get accountDeleteConfirm;
+
+  /// No description provided for @accountDeleteRecurringImpact.
+  ///
+  /// In en, this message translates to:
+  /// **'This account is used by {count} recurring rules. They will lose their account after deletion.'**
+  String accountDeleteRecurringImpact(int count);
 
   /// No description provided for @accountDeleteReconfirmMessage.
   ///

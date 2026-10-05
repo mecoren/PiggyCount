@@ -2537,6 +2537,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get categoryDeleteError => '삭제 실패';
 
   @override
+  String categoryDeleteBudgetImpact(int count) {
+    return '이 카테고리를 참조하는 예산이 $count개 있습니다. 삭제하면 해당 예산에서 카테고리가 사라집니다.';
+  }
+
+  @override
+  String categoryDeleteRecurringImpact(int count) {
+    return '이 카테고리를 참조하는 정기 거래가 $count건 있습니다. 삭제하면 해당 규칙에서 카테고리가 사라집니다.';
+  }
+
+  @override
   String categoryDeleted(Object name) {
     return '카테고리 \"$name\"이(가) 삭제되었습니다';
   }
@@ -4399,6 +4409,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get accountDeleteConfirm => '이 계정을 삭제하시겠습니까?';
+
+  @override
+  String accountDeleteRecurringImpact(int count) {
+    return '이 계정을 사용하는 정기 거래가 $count건 있습니다. 삭제하면 해당 규칙에서 계정이 사라집니다.';
+  }
 
   @override
   String get accountDeleteReconfirmMessage =>

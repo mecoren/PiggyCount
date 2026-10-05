@@ -2524,6 +2524,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get categoryDeleteError => '删除失败';
 
   @override
+  String categoryDeleteBudgetImpact(int count) {
+    return '该分类被 $count 个预算引用，删除后这些预算将失去分类。';
+  }
+
+  @override
+  String categoryDeleteRecurringImpact(int count) {
+    return '该分类被 $count 条周期记账引用，删除后这些规则将失去分类。';
+  }
+
+  @override
   String categoryDeleted(Object name) {
     return '分类\"$name\"已删除';
   }
@@ -4372,6 +4382,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accountDeleteConfirm => '确认删除该账户吗？';
+
+  @override
+  String accountDeleteRecurringImpact(int count) {
+    return '该账户被 $count 条周期记账使用，删除后这些规则将失去账户。';
+  }
 
   @override
   String get accountDeleteReconfirmMessage =>
@@ -10753,6 +10768,16 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get categoryDeleteError => '刪除失敗';
 
   @override
+  String categoryDeleteBudgetImpact(int count) {
+    return '該分類被 $count 個預算引用，刪除後這些預算將失去分類。';
+  }
+
+  @override
+  String categoryDeleteRecurringImpact(int count) {
+    return '該分類被 $count 條週期記帳引用，刪除後這些規則將失去分類。';
+  }
+
+  @override
   String categoryDeleted(Object name) {
     return '分類\"$name\"已刪除';
   }
@@ -12601,6 +12626,11 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get accountDeleteConfirm => '確認刪除該帳戶嗎？';
+
+  @override
+  String accountDeleteRecurringImpact(int count) {
+    return '該帳戶被 $count 條週期記帳使用，刪除後這些規則將失去帳戶。';
+  }
 
   @override
   String get accountDeleteReconfirmMessage =>

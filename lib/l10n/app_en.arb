@@ -1218,6 +1218,22 @@
   "categoryDeleteConfirmTitle": "Delete Category",
   "categoryDeleteConfirmMessage": "Are you sure you want to delete category \"{name}\"? This action cannot be undone.",
   "categoryDeleteError": "Delete failed",
+  "categoryDeleteBudgetImpact": "This category is referenced by {count} budgets. They will lose their category after deletion.",
+  "@categoryDeleteBudgetImpact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryDeleteRecurringImpact": "This category is referenced by {count} recurring rules. They will lose their category after deletion.",
+  "@categoryDeleteRecurringImpact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "categoryDeleted": "Category \"{name}\" deleted",
   "categorySubCategoryTitle": "Subcategory",
   "categorySubCategoryDescriptionEnabled": "This category belongs to a parent category",
@@ -2000,6 +2016,14 @@
     }
   },
   "accountDeleteConfirm": "Confirm to delete this account?",
+  "accountDeleteRecurringImpact": "This account is used by {count} recurring rules. They will lose their account after deletion.",
+  "@accountDeleteRecurringImpact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "accountDeleteReconfirmMessage": "Final confirmation: the account cannot be recovered after deletion and its saved details will be lost permanently. Continue?",
   "accountSelectTitle": "Select Account",
   "accountNone": "No Account",

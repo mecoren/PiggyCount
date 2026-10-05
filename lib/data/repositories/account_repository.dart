@@ -127,7 +127,10 @@ abstract class AccountRepository {
   /// 获取账户在多个账本中的使用情况
   Future<Map<int, int>> getAccountUsageInLedgers(int accountId);
 
-  /// 账户迁移（将fromAccountId的所有交易迁移到toAccountId）
+  /// 账户迁移：把 [fromAccountId] 的**全部引用**改指 [toAccountId] ——
+  /// 交易（`account_id` / `to_account_id`）与周期规则（同两列）都要搬，
+  /// 只搬交易会让规则留在旧账户上，旧账户一被删就是活的悬空引用。
+  /// 返回迁移前的**交易条数**（口径同 [getTransactionCountByAccount]，不含规则）。
   Future<int> migrateAccount({
     required int fromAccountId,
     required int toAccountId,

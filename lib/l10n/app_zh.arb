@@ -930,6 +930,22 @@
   "categoryDeleteConfirmTitle": "删除分类",
   "categoryDeleteConfirmMessage": "确定要删除分类\"{name}\"吗？此操作无法撤销。",
   "categoryDeleteError": "删除失败",
+  "categoryDeleteBudgetImpact": "该分类被 {count} 个预算引用，删除后这些预算将失去分类。",
+  "@categoryDeleteBudgetImpact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryDeleteRecurringImpact": "该分类被 {count} 条周期记账引用，删除后这些规则将失去分类。",
+  "@categoryDeleteRecurringImpact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "categoryDeleted": "分类\"{name}\"已删除",
   "categorySubCategoryTitle": "二级分类",
   "categorySubCategoryDescriptionEnabled": "此分类属于某个一级分类",
@@ -1769,6 +1785,14 @@
     }
   },
   "accountDeleteConfirm": "确认删除该账户吗？",
+  "accountDeleteRecurringImpact": "该账户被 {count} 条周期记账使用，删除后这些规则将失去账户。",
+  "@accountDeleteRecurringImpact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "accountDeleteReconfirmMessage": "再次确认：删除后该账户不可恢复，已保存的账户信息将永久丢失。确定要继续吗？",
   "accountSelectTitle": "选择账户",
   "accountNone": "不选择账户",

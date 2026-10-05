@@ -1793,9 +1793,17 @@ class LocalRepository extends BaseRepository {
       );
     }
     return db.transaction(() async {
-      // 预查受影响的交易,迁移完后逐条登记 update change。
+      // 预查受影响的交易/预算/周期规则,迁移完后逐条登记 update change。
+      // 三类载体都引用 category_id(裸 integer()、无外键约束),实现层已全部
+      // 改写 —— 口径与 getTransferCategory 的合并块一致:**改写范围 = 登记范围**。
       final affected = await (db.select(db.transactions)
             ..where((t) => t.categoryId.equals(fromCategoryId)))
+          .get();
+      final affectedBudgets = await (db.select(db.budgets)
+            ..where((b) => b.categoryId.equals(fromCategoryId)))
+          .get();
+      final affectedRecurrings = await (db.select(db.recurringTransactions)
+            ..where((r) => r.categoryId.equals(fromCategoryId)))
           .get();
       final n = await _categoryRepo.migrateCategory(
         fromCategoryId: fromCategoryId,
@@ -1808,6 +1816,26 @@ class LocalRepository extends BaseRepository {
           entityId: tx.id,
           entitySyncId: tx.syncId!,
           ledgerId: tx.ledgerId,
+          action: 'update',
+        );
+      }
+      for (final b in affectedBudgets) {
+        if (b.syncId == null) continue;
+        await changeTracker!.recordLedgerChange(
+          entityType: 'budget',
+          entityId: b.id,
+          entitySyncId: b.syncId!,
+          ledgerId: b.ledgerId,
+          action: 'update',
+        );
+      }
+      for (final r in affectedRecurrings) {
+        if (r.syncId == null) continue;
+        await changeTracker!.recordLedgerChange(
+          entityType: 'recurring',
+          entityId: r.id,
+          entitySyncId: r.syncId!,
+          ledgerId: r.ledgerId,
           action: 'update',
         );
       }
@@ -1844,10 +1872,25 @@ class LocalRepository extends BaseRepository {
       final affectedTxs = await (db.select(db.transactions)
             ..where((t) => t.categoryId.isIn(affectedCategoryIds)))
           .get();
+      // 预算 / 周期规则同样引用分类,实现层已一并改写。但**不能**对
+      // affectedCategoryIds 一把梭登记:子分类的两种命运里只有「重名合并
+      // (被删除)」那种会改 categoryId,「移位(只换 parentId)」那种不变。
+      // 先记下迁移前的 categoryId,迁移后逐行比对,只登记真变了的。
+      final affectedBudgets = await (db.select(db.budgets)
+            ..where((b) => b.categoryId.isIn(affectedCategoryIds)))
+          .get();
+      final affectedRecurrings = await (db.select(db.recurringTransactions)
+            ..where((r) => r.categoryId.isIn(affectedCategoryIds)))
+          .get();
 
       final result = await _categoryRepo.migrateCategoryTransactions(
         fromCategoryId: fromCategoryId,
         toCategoryId: toCategoryId,
+      );
+
+      await _registerRepointedCategoryRefs(
+        budgets: affectedBudgets,
+        recurrings: affectedRecurrings,
       );
 
       // 受影响交易: categoryId 变了,登记 update。
@@ -1883,6 +1926,56 @@ class LocalRepository extends BaseRepository {
       }
       return result;
     });
+  }
+
+  /// 登记分类迁移里「categoryId 真被改写」的预算 / 周期规则 update change。
+  ///
+  /// 为什么要迁移后再比对一次：见 [migrateCategoryTransactions] 调用处的
+  /// 注释 —— 子分类的两种命运(合并删除 / 移位)对 categoryId 的影响不同，
+  /// 对整批 id 无差别登记会把没改的行也登记成 update，与「改写范围 = 登记范围」
+  /// 的口径不符。子分类自身的登记逻辑（删除 / parentId 变化）见调用处。
+  Future<void> _registerRepointedCategoryRefs({
+    required List<Budget> budgets,
+    required List<RecurringTransaction> recurrings,
+  }) async {
+    final tracker = changeTracker;
+    if (tracker == null) return;
+
+    if (budgets.isNotEmpty) {
+      final before = {for (final b in budgets) b.id: b.categoryId};
+      final after = await (db.select(db.budgets)
+            ..where((b) => b.id.isIn(before.keys)))
+          .get();
+      for (final row in after) {
+        if (row.categoryId == before[row.id]) continue;
+        if (row.syncId == null) continue;
+        await tracker.recordLedgerChange(
+          entityType: 'budget',
+          entityId: row.id,
+          entitySyncId: row.syncId!,
+          ledgerId: row.ledgerId,
+          action: 'update',
+        );
+      }
+    }
+
+    if (recurrings.isNotEmpty) {
+      final before = {for (final r in recurrings) r.id: r.categoryId};
+      final after = await (db.select(db.recurringTransactions)
+            ..where((r) => r.id.isIn(before.keys)))
+          .get();
+      for (final row in after) {
+        if (row.categoryId == before[row.id]) continue;
+        if (row.syncId == null) continue;
+        await tracker.recordLedgerChange(
+          entityType: 'recurring',
+          entityId: row.id,
+          entitySyncId: row.syncId!,
+          ledgerId: row.ledgerId,
+          action: 'update',
+        );
+      }
+    }
   }
 
   @override
@@ -2091,9 +2184,13 @@ class LocalRepository extends BaseRepository {
       'transfer 分类发现 ${all.length} 条,合并 → keeper=${keeper.id} dupes=$dupeIds',
     );
 
-    // 预查受影响的 transactions / recurring_transactions(为 ChangeTracker 记录)
+    // 预查受影响的 transactions / budgets / recurring_transactions
+    // (为 ChangeTracker 记录,必须与下面事务里的改写范围**逐类对齐**)
     final affectedTxs = await (db.select(db.transactions)
           ..where((t) => t.categoryId.isIn(dupeIds)))
+        .get();
+    final affectedBudgets = await (db.select(db.budgets)
+          ..where((b) => b.categoryId.isIn(dupeIds)))
         .get();
     final affectedRecurrings = await (db.select(db.recurringTransactions)
           ..where((r) => r.categoryId.isIn(dupeIds)))
@@ -2117,8 +2214,14 @@ class LocalRepository extends BaseRepository {
       await (db.delete(db.categories)..where((c) => c.id.isIn(dupeIds))).go();
     });
 
-    // ChangeTracker 记录:受影响 transactions / recurring_transactions 的
-    // update + dupe categories 的 delete。
+    // ChangeTracker 记录:受影响 transactions / budgets /
+    // recurring_transactions 的 update + dupe categories 的 delete。
+    // **改写范围 = 登记范围**:上面事务里改了谁的 categoryId,这里就得给谁登记。
+    // 少登记一类的后果只在"重新注入 tracker"时显现(本块存在的唯一理由),
+    // 表现为对端的该类记录仍指向已删除的 dupe 分类 —— 静默的引用断裂,正是
+    // 本方法想防的东西。三类载体的对应关系由
+    // `test/cloud/transfer_category_tracker_registration_test.dart` 守住
+    // (断言四条登记,缺一即失败)。
     // 生产 `LocalRepository(db)` 不注入 tracker → 本块整体跳过(CT-1),
     // 详见本方法开头的说明;保留供测试装配 / 未来重新注入 tracker 使用。
     if (changeTracker != null) {
@@ -2129,6 +2232,18 @@ class LocalRepository extends BaseRepository {
           entityId: tx.id,
           entitySyncId: tx.syncId!,
           ledgerId: tx.ledgerId,
+          action: 'update',
+        );
+      }
+      // budget_sync:预算是账本内实体(entityType 'budget' 已在
+      // sync_diff_service / local_repository 其它写入点使用),同样要推 update。
+      for (final b in affectedBudgets) {
+        if (b.syncId == null) continue;
+        await changeTracker!.recordLedgerChange(
+          entityType: 'budget',
+          entityId: b.id,
+          entitySyncId: b.syncId!,
+          ledgerId: b.ledgerId,
           action: 'update',
         );
       }
@@ -2338,6 +2453,22 @@ class LocalRepository extends BaseRepository {
           );
         }
       }
+      // 先把周期规则对它的引用断开（两列都可空，见 db.dart）。
+      //
+      // 交易侧的悬空是**刻意保留**的：删除确认文案承诺的是"交易记录中的账户
+      // 信息将被清空"，读取侧按查不到账户兜底渲染即可；反过来回写 NULL 会让
+      // 成千上万行交易产生无意义的同步噪声，视觉结果却完全一样。
+      // 但**规则是活的** —— 账户删掉后规则到期仍会生成新交易，留在那里的悬空
+      // account_id 会持续产出新的悬空记录，所以这里必须断开。
+      // 守卫侧配套：`getAccountRefCounts`（UI 删除确认前会数到规则并追加提示）。
+      await (db.update(db.recurringTransactions)
+            ..where((r) => r.accountId.equals(id)))
+          .write(const RecurringTransactionsCompanion(
+              accountId: d.Value<int?>(null)));
+      await (db.update(db.recurringTransactions)
+            ..where((r) => r.toAccountId.equals(id)))
+          .write(const RecurringTransactionsCompanion(
+              toAccountId: d.Value<int?>(null)));
       await _accountRepo.deleteAccount(id);
     });
   }
@@ -2403,6 +2534,13 @@ class LocalRepository extends BaseRepository {
                 t.accountId.equals(fromAccountId) |
                 t.toAccountId.equals(fromAccountId)))
           .get();
+      // 周期规则同样会被迁移（实现层已补），改写了就必须登记 ——
+      // 口径与 getTransferCategory 的合并块一致：**改写范围 = 登记范围**。
+      final affectedRecurrings = await (db.select(db.recurringTransactions)
+            ..where((r) =>
+                r.accountId.equals(fromAccountId) |
+                r.toAccountId.equals(fromAccountId)))
+          .get();
       final n = await _accountRepo.migrateAccount(
         fromAccountId: fromAccountId,
         toAccountId: toAccountId,
@@ -2414,6 +2552,16 @@ class LocalRepository extends BaseRepository {
           entityId: tx.id,
           entitySyncId: tx.syncId!,
           ledgerId: tx.ledgerId,
+          action: 'update',
+        );
+      }
+      for (final r in affectedRecurrings) {
+        if (r.syncId == null) continue;
+        await changeTracker!.recordLedgerChange(
+          entityType: 'recurring',
+          entityId: r.id,
+          entitySyncId: r.syncId!,
+          ledgerId: r.ledgerId,
           action: 'update',
         );
       }
@@ -4020,6 +4168,77 @@ class LocalRepository extends BaseRepository {
       recurringIds: await refs(
         'SELECT DISTINCT recurring_id AS v FROM transactions WHERE recurring_id IS NOT NULL',
       ),
+    );
+  }
+
+  // -------------------------------------------------------------------
+  // 删除守卫用的「引用画像」（单实体粒度）。
+  // 表覆盖范围与上面 getSyncEntityReferences 的同名条目逐字一致：
+  // 分类 = 交易 + 预算 + 周期规则 + 子分类；账户 = 交易 account_id/to_account_id
+  // + 周期规则 account_id/to_account_id。改动任一处必须同步另一处。
+  // -------------------------------------------------------------------
+
+  @override
+  Future<
+      ({
+        int transactions,
+        int budgets,
+        int recurring,
+        int subCategories,
+      })> getCategoryRefCounts(int categoryId) async {
+    Future<int> count(String sql) async {
+      final row = await db.customSelect(
+        sql,
+        variables: [d.Variable.withInt(categoryId)],
+        readsFrom: {
+          db.transactions,
+          db.budgets,
+          db.recurringTransactions,
+          db.categories,
+        },
+      ).getSingle();
+      final v = row.data['v'];
+      if (v is int) return v;
+      if (v is BigInt) return v.toInt();
+      if (v is num) return v.toInt();
+      return 0;
+    }
+
+    return (
+      transactions: await count(
+          'SELECT COUNT(*) AS v FROM transactions WHERE category_id = ?'),
+      budgets: await count(
+          'SELECT COUNT(*) AS v FROM budgets WHERE category_id = ?'),
+      recurring: await count(
+          'SELECT COUNT(*) AS v FROM recurring_transactions WHERE category_id = ?'),
+      subCategories: await count(
+          'SELECT COUNT(*) AS v FROM categories WHERE parent_id = ?'),
+    );
+  }
+
+  @override
+  Future<({int transactions, int recurring})> getAccountRefCounts(
+      int accountId) async {
+    // 一份引用可能同时出现在 account_id 与 to_account_id 两侧（转账），
+    // 用 OR 一次数清，避免同一笔交易被算两次。
+    Future<int> count(String sql) async {
+      final row = await db.customSelect(
+        sql,
+        variables: [d.Variable.withInt(accountId)],
+        readsFrom: {db.transactions, db.recurringTransactions},
+      ).getSingle();
+      final v = row.data['v'];
+      if (v is int) return v;
+      if (v is BigInt) return v.toInt();
+      if (v is num) return v.toInt();
+      return 0;
+    }
+
+    return (
+      transactions: await count('SELECT COUNT(*) AS v FROM transactions'
+          ' WHERE account_id = ? OR to_account_id = ?'),
+      recurring: await count('SELECT COUNT(*) AS v FROM recurring_transactions'
+          ' WHERE account_id = ? OR to_account_id = ?'),
     );
   }
 }

@@ -119,14 +119,30 @@ class AccountDedupService {
 
   /// 把 [fromId] 账户的全部引用重定向到 [toId]，返回受影响行数。
   /// 交易与周期交易两张表的 account_id / to_account_id 都要覆盖。
-  /// [changeTracker] 非空时,被改写的 recurring_transactions 行补登记
-  /// update change(交易路径保持既有行为,不在此登记)。
+  ///
+  /// [changeTracker] 非空时，**被改写的两类载体（交易 / 周期规则）都登记**
+  /// update change —— 口径是「改写范围 = 登记范围」，与
+  /// `LocalRepository.getTransferCategory` 的合并块、
+  /// `LocalRepository.migrateAccount` 保持一致。
+  /// （2026-10-04 修订：此前交易侧刻意不登记，注释写作"保持既有行为"；
+  /// 但同一函数里已经为规则登记了，同一份理由对交易同样成立 —— 不一致的
+  /// 口径比"少登记"更难维护，故统一为全部登记。）
   static Future<int> _repoint(
     PiggyDatabase db,
     int fromId,
     int toId, {
     ChangeTracker? changeTracker,
   }) async {
+    // 先取受影响行(syncId/ledgerId),改写后登记 update change
+    final affectedTx = await (db.select(db.transactions)
+          ..where(
+              (t) => t.accountId.equals(fromId) | t.toAccountId.equals(fromId)))
+        .get();
+    final affectedRecurring = await (db.select(db.recurringTransactions)
+          ..where(
+              (t) => t.accountId.equals(fromId) | t.toAccountId.equals(fromId)))
+        .get();
+
     var count = 0;
     count += await (db.update(db.transactions)
           ..where((t) => t.accountId.equals(fromId)))
@@ -134,19 +150,24 @@ class AccountDedupService {
     count += await (db.update(db.transactions)
           ..where((t) => t.toAccountId.equals(fromId)))
         .write(TransactionsCompanion(toAccountId: Value(toId)));
-
-    // 先取受影响规则行(syncId/ledgerId),改写后登记 update change
-    final affectedRecurring = await (db.select(db.recurringTransactions)
-          ..where((t) =>
-              t.accountId.equals(fromId) | t.toAccountId.equals(fromId)))
-        .get();
     count += await (db.update(db.recurringTransactions)
           ..where((t) => t.accountId.equals(fromId)))
         .write(RecurringTransactionsCompanion(accountId: Value(toId)));
     count += await (db.update(db.recurringTransactions)
           ..where((t) => t.toAccountId.equals(fromId)))
         .write(RecurringTransactionsCompanion(toAccountId: Value(toId)));
+
     if (changeTracker != null) {
+      for (final tx in affectedTx) {
+        if (tx.syncId == null || tx.syncId!.isEmpty) continue;
+        await changeTracker.recordLedgerChange(
+          entityType: 'transaction',
+          entityId: tx.id,
+          entitySyncId: tx.syncId!,
+          ledgerId: tx.ledgerId,
+          action: 'update',
+        );
+      }
       for (final r in affectedRecurring) {
         if (r.syncId == null || r.syncId!.isEmpty) continue;
         await changeTracker.recordLedgerChange(

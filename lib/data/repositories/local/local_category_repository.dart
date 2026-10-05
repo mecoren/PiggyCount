@@ -460,6 +460,17 @@ class LocalCategoryRepository implements CategoryRepository {
       ),
     );
 
+    // 预算与周期规则同样引用分类（两表都是裸 integer()、无外键约束 ⇒ 悬空
+    // 引用不报错、只静默丢分类名）。此前只搬交易，源分类随后被删就留下悬空
+    // 引用。语义与交易完全一致，这里一并搬走。
+    await (db.update(db.budgets)
+          ..where((b) => b.categoryId.equals(fromCategoryId)))
+        .write(BudgetsCompanion(categoryId: d.Value(toCategoryId)));
+    await (db.update(db.recurringTransactions)
+          ..where((r) => r.categoryId.equals(fromCategoryId)))
+        .write(
+            RecurringTransactionsCompanion(categoryId: d.Value(toCategoryId)));
+
     return beforeCount;
   }
 
@@ -500,6 +511,19 @@ class LocalCategoryRepository implements CategoryRepository {
               ));
               migratedTransactions += count;
 
+              // 预算 / 周期规则也必须跟着搬 —— 源子分类下一行就被删掉，
+              // 不搬就是**当场**产生悬空引用（不需要用户再做任何操作）。
+              await (db.update(db.budgets)
+                    ..where((b) => b.categoryId.equals(sub.id)))
+                  .write(BudgetsCompanion(
+                categoryId: d.Value(existingSub.id),
+              ));
+              await (db.update(db.recurringTransactions)
+                    ..where((r) => r.categoryId.equals(sub.id)))
+                  .write(RecurringTransactionsCompanion(
+                categoryId: d.Value(existingSub.id),
+              ));
+
               // 删除源子分类
               await (db.delete(db.categories)..where((c) => c.id.equals(sub.id))).go();
             } else {
@@ -520,6 +544,16 @@ class LocalCategoryRepository implements CategoryRepository {
           categoryId: d.Value(toCategoryId),
         ));
         migratedTransactions += directCount;
+
+        // 一级分类自身被预算 / 周期规则直接引用时同样要搬
+        // （子分类的引用在上面各自分别处理：合并的搬走、移位的 categoryId 不变）。
+        await (db.update(db.budgets)
+              ..where((b) => b.categoryId.equals(fromCategoryId)))
+            .write(BudgetsCompanion(categoryId: d.Value(toCategoryId)));
+        await (db.update(db.recurringTransactions)
+              ..where((r) => r.categoryId.equals(fromCategoryId)))
+            .write(RecurringTransactionsCompanion(
+                categoryId: d.Value(toCategoryId)));
       } else {
         // 二级分类：直接迁移交易
         final count = await (db.update(db.transactions)
@@ -528,6 +562,14 @@ class LocalCategoryRepository implements CategoryRepository {
           categoryId: d.Value(toCategoryId),
         ));
         migratedTransactions = count;
+
+        await (db.update(db.budgets)
+              ..where((b) => b.categoryId.equals(fromCategoryId)))
+            .write(BudgetsCompanion(categoryId: d.Value(toCategoryId)));
+        await (db.update(db.recurringTransactions)
+              ..where((r) => r.categoryId.equals(fromCategoryId)))
+            .write(RecurringTransactionsCompanion(
+                categoryId: d.Value(toCategoryId)));
       }
 
       return (

@@ -119,4 +119,35 @@ abstract class BaseRepository
         Set<int> tagIds,
         Set<int> recurringIds
       })> getSyncEntityReferences();
+
+  // -------------------------------------------------------------------
+  // 删除守卫的「引用画像」（单实体粒度）
+  //
+  // 为什么需要：上面 [getSyncEntityReferences] 把"谁引用谁"列全了，但那只服务于
+  // 云端合并路径。**UI 的删除守卫是另一条路径，此前只数 transactions**
+  // （`getTransactionCountByCategory` / `hasTransactions`）—— 于是「只被预算引用」
+  // 或「只被周期规则引用」的分类/账户会被判定为"无引用"而直接删掉，留下悬空外键
+  // （SQLite 默认不开外键约束 ⇒ 不报错、静默丢引用）。
+  //
+  // 因此这里补齐单实体粒度的引用画像，**表覆盖范围与 [getSyncEntityReferences]
+  // 的同名条目逐字一致**（分类 = 交易 + 预算 + 周期规则 + 子分类 parent_id；
+  // 账户 = 交易 account_id/to_account_id + 周期规则 account_id/to_account_id）。
+  // 两者的关系是"同一份口径、两种粒度"：合并路径要全集，守卫要单实体。
+  // **新增引用表时两处都要改**，别再出现第三套口径。
+  // -------------------------------------------------------------------
+
+  /// 分类的引用画像。[subCategories] 是直接子分类数 —— 删父分类会连带删它们，
+  /// 所以它同样属于"删之前必须看一眼"的引用。
+  Future<
+      ({
+        int transactions,
+        int budgets,
+        int recurring,
+        int subCategories,
+      })> getCategoryRefCounts(int categoryId);
+
+  /// 账户的引用画像。注意周期规则是**独立于交易**的一份引用：账户被删后规则
+  /// 到期仍会生成新交易，若不清引用会持续产生新的悬空记录。
+  Future<({int transactions, int recurring})> getAccountRefCounts(
+      int accountId);
 }

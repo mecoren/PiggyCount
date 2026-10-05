@@ -2564,6 +2564,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get categoryDeleteError => 'Delete failed';
 
   @override
+  String categoryDeleteBudgetImpact(int count) {
+    return 'This category is referenced by $count budgets. They will lose their category after deletion.';
+  }
+
+  @override
+  String categoryDeleteRecurringImpact(int count) {
+    return 'This category is referenced by $count recurring rules. They will lose their category after deletion.';
+  }
+
+  @override
   String categoryDeleted(Object name) {
     return 'Category \"$name\" deleted';
   }
@@ -4514,6 +4524,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountDeleteConfirm => 'Confirm to delete this account?';
+
+  @override
+  String accountDeleteRecurringImpact(int count) {
+    return 'This account is used by $count recurring rules. They will lose their account after deletion.';
+  }
 
   @override
   String get accountDeleteReconfirmMessage =>

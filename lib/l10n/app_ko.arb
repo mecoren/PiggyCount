@@ -820,6 +820,22 @@
   "categoryDeleteConfirmTitle": "카테고리 삭제",
   "categoryDeleteConfirmMessage": "카테고리 \"{name}\"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
   "categoryDeleteError": "삭제 실패",
+  "categoryDeleteBudgetImpact": "이 카테고리를 참조하는 예산이 {count}개 있습니다. 삭제하면 해당 예산에서 카테고리가 사라집니다.",
+  "@categoryDeleteBudgetImpact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "categoryDeleteRecurringImpact": "이 카테고리를 참조하는 정기 거래가 {count}건 있습니다. 삭제하면 해당 규칙에서 카테고리가 사라집니다.",
+  "@categoryDeleteRecurringImpact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "categoryDeleted": "카테고리 \"{name}\"이(가) 삭제되었습니다",
   "categorySubCategoryTitle": "하위 카테고리",
   "categorySubCategoryDescriptionEnabled": "이 카테고리는 상위 카테고리에 속합니다",
@@ -1412,6 +1428,14 @@
   "accountDeleteWarningTitle": "삭제 확인",
   "accountDeleteWarningMessage": "이 계정에는 관련 거래 {count}건이 있습니다. 삭제하면 거래 기록의 계정 정보가 지워집니다. 삭제하시겠습니까?",
   "accountDeleteConfirm": "이 계정을 삭제하시겠습니까?",
+  "accountDeleteRecurringImpact": "이 계정을 사용하는 정기 거래가 {count}건 있습니다. 삭제하면 해당 규칙에서 계정이 사라집니다.",
+  "@accountDeleteRecurringImpact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "accountDeleteReconfirmMessage": "다시 확인: 삭제 후 이 계정은 복구할 수 없으며 저장된 계정 정보가 영구적으로 사라집니다. 계속하시겠습니까?",
   "accountSelectTitle": "계정 선택",
   "accountNone": "계정 없음",
