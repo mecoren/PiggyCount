@@ -119,6 +119,216 @@ abstract class AppLocalizations {
   /// **'Agree & enable'**
   String get aiConsentAgree;
 
+  /// No description provided for @aiSendConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm before sending'**
+  String get aiSendConfirmTitle;
+
+  /// No description provided for @aiSendConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This will send the content you submitted for recognition/chat to your configured third-party AI provider. Send now?'**
+  String get aiSendConfirmMessage;
+
+  /// No description provided for @aiSendConfirmOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get aiSendConfirmOk;
+
+  /// No description provided for @noteSensitiveOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark note as sensitive'**
+  String get noteSensitiveOff;
+
+  /// No description provided for @noteSensitiveOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Note marked as sensitive'**
+  String get noteSensitiveOn;
+
+  /// No description provided for @dbEncryptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypt the whole database'**
+  String get dbEncryptTitle;
+
+  /// No description provided for @dbEncryptSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypt the local database file itself (SQLCipher). Independent of the cloud encryption above.'**
+  String get dbEncryptSubtitle;
+
+  /// No description provided for @dbEncryptUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This build\'s SQLite has no encryption support, so it can\'t be enabled (see the packaging notes in the docs).'**
+  String get dbEncryptUnsupported;
+
+  /// No description provided for @dbEncryptOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off: the database file is plaintext — anyone who gets the file can read it.'**
+  String get dbEncryptOff;
+
+  /// No description provided for @dbEncryptPendingEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'On, takes effect after restart (the database will be converted to ciphertext at next launch).'**
+  String get dbEncryptPendingEnable;
+
+  /// No description provided for @dbEncryptEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'On: the database file is encrypted.'**
+  String get dbEncryptEnabled;
+
+  /// No description provided for @dbEncryptPendingDisable.
+  ///
+  /// In en, this message translates to:
+  /// **'Off, takes effect after restart (the database will be converted back to plaintext at next launch).'**
+  String get dbEncryptPendingDisable;
+
+  /// No description provided for @dbEncryptKeyMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'The database is encrypted but this device has no key, so local data can\'t be read. Do not clear data: you can rebuild from a cloud backup.'**
+  String get dbEncryptKeyMissing;
+
+  /// No description provided for @dbEncryptEnableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable database encryption?'**
+  String get dbEncryptEnableTitle;
+
+  /// No description provided for @dbEncryptEnableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The key is stored only in this device\'s secure storage — we don\'t escrow keys and there is no backdoor. If the key is lost, local data cannot be recovered, so please make sure a cloud backup is available first. A restart is required; the first launch after that will convert the whole database (it can take tens of seconds for large data), so please don\'t force-close the app.'**
+  String get dbEncryptEnableMessage;
+
+  /// No description provided for @dbEncryptDisableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable database encryption?'**
+  String get dbEncryptDisableTitle;
+
+  /// No description provided for @dbEncryptDisableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The database file will go back to plaintext, readable by anyone who gets the file. A restart is required.'**
+  String get dbEncryptDisableMessage;
+
+  /// No description provided for @dbEncryptRestartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Registered — takes effect after restart'**
+  String get dbEncryptRestartHint;
+
+  /// No description provided for @dbEncryptActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Action failed, please retry'**
+  String get dbEncryptActionFailed;
+
+  /// No description provided for @dbHealthKeyLostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Database is encrypted, but this device has no key'**
+  String get dbHealthKeyLostTitle;
+
+  /// No description provided for @dbHealthKeyLostBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The data isn\'t corrupted — this device just can\'t unlock it. The key lives only in the original device\'s secure storage; we don\'t escrow keys and there is no backdoor. Do not clear data: the encrypted file is currently the only copy that might still be unlocked. Export a copy first; if you have a cloud backup, you can restore from it after a reset.'**
+  String get dbHealthKeyLostBody;
+
+  /// No description provided for @dbHealthKeyLostResetConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Resetting moves the encrypted file into a keep folder and rebuilds an empty database (your local data can\'t be unlocked on this device). Afterwards, restore from your cloud backup on the Cloud page. Continue?'**
+  String get dbHealthKeyLostResetConfirm;
+
+  /// No description provided for @dbHealthKeyLostActionExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Export the encrypted file (keep it)'**
+  String get dbHealthKeyLostActionExport;
+
+  /// No description provided for @devPerfDashboardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance'**
+  String get devPerfDashboardTitle;
+
+  /// No description provided for @devPerfEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance dashboard'**
+  String get devPerfEntryTitle;
+
+  /// No description provided for @devPerfEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Live FPS and frame timings (debug only)'**
+  String get devPerfEntrySubtitle;
+
+  /// No description provided for @devPerfFps.
+  ///
+  /// In en, this message translates to:
+  /// **'FPS'**
+  String get devPerfFps;
+
+  /// No description provided for @devPerfUiFrame.
+  ///
+  /// In en, this message translates to:
+  /// **'UI frame'**
+  String get devPerfUiFrame;
+
+  /// No description provided for @devPerfRasterFrame.
+  ///
+  /// In en, this message translates to:
+  /// **'Raster frame'**
+  String get devPerfRasterFrame;
+
+  /// No description provided for @devPerfRecentFrames.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent frame time'**
+  String get devPerfRecentFrames;
+
+  /// No description provided for @devPerfReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset samples'**
+  String get devPerfReset;
+
+  /// No description provided for @devPerfNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'No samples yet'**
+  String get devPerfNoData;
+
+  /// No description provided for @devPerfHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Data comes from Flutter frame callbacks (addTimingsCallback), the same basis as scripts/profile_cold_start.py. Bars above the 60fps budget (16.67ms) are highlighted; the line marks the budget.'**
+  String get devPerfHint;
+
+  /// No description provided for @devPerfUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance sampling is unavailable in this build'**
+  String get devPerfUnsupported;
+
+  /// No description provided for @devPerfUnsupportedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Sampling runs in debug/profile builds only; release keeps no resident cost.'**
+  String get devPerfUnsupportedHint;
+
   /// No description provided for @changelogTitle.
   ///
   /// In en, this message translates to:
@@ -14554,8 +14764,26 @@ abstract class AppLocalizations {
   /// No description provided for @backupPlaintextWarning.
   ///
   /// In en, this message translates to:
-  /// **'End-to-end encryption is off, backups are stored in plaintext on the cloud'**
+  /// **'End-to-end encryption is off; cloud backups are disabled'**
   String get backupPlaintextWarning;
+
+  /// No description provided for @backupRequiresEncryptionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on end-to-end encryption first'**
+  String get backupRequiresEncryptionTitle;
+
+  /// No description provided for @backupRequiresEncryptionMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'To prevent your ledgers from being stored in plaintext on the cloud, turn on end-to-end encryption before creating a cloud backup.'**
+  String get backupRequiresEncryptionMessage;
+
+  /// No description provided for @backupGoEnableEncryption.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on encryption'**
+  String get backupGoEnableEncryption;
 
   /// No description provided for @backupNoLedgers.
   ///

@@ -19,6 +19,117 @@ class AppLocalizationsZh extends AppLocalizations {
   String get aiConsentAgree => '同意并开启';
 
   @override
+  String get aiSendConfirmTitle => '发送前确认';
+
+  @override
+  String get aiSendConfirmMessage => '本次将把你主动用于识别/对话的内容发送给所配置的第三方 AI 服务商。确认发送？';
+
+  @override
+  String get aiSendConfirmOk => '确认发送';
+
+  @override
+  String get noteSensitiveOff => '标记备注为敏感';
+
+  @override
+  String get noteSensitiveOn => '备注已标记为敏感';
+
+  @override
+  String get dbEncryptTitle => '整库加密';
+
+  @override
+  String get dbEncryptSubtitle => '把本地数据库文件整体加密（SQLCipher）。与上面的云端加密相互独立。';
+
+  @override
+  String get dbEncryptUnsupported => '当前构建的 SQLite 不具备加密能力，无法开启（见开发文档的打包说明）。';
+
+  @override
+  String get dbEncryptOff => '未开启：数据库文件当前是明文，拿到文件即可直接读取。';
+
+  @override
+  String get dbEncryptPendingEnable => '已开启，重启应用后生效（下次启动会把数据库迁为密文）。';
+
+  @override
+  String get dbEncryptEnabled => '已开启：数据库文件为密文。';
+
+  @override
+  String get dbEncryptPendingDisable => '已关闭，重启应用后生效（下次启动会把数据库解回明文）。';
+
+  @override
+  String get dbEncryptKeyMissing => '数据库已加密，但本机找不到密钥，本地数据无法读取。请勿清除数据：可用云端备份重建。';
+
+  @override
+  String get dbEncryptEnableTitle => '开启整库加密？';
+
+  @override
+  String get dbEncryptEnableMessage =>
+      '密钥只保存在本机安全区，我们不做密钥托管、也没有后门。密钥一旦丢失，本地数据将无法恢复，请先确认云端备份可用。开启后需重启应用生效；重启后的首次启动会把整库迁为密文（数据量大时可能十几秒），期间请勿强行关闭应用。';
+
+  @override
+  String get dbEncryptDisableTitle => '关闭整库加密？';
+
+  @override
+  String get dbEncryptDisableMessage =>
+      '关闭后数据库文件会恢复为明文，任何拿到文件的人都能直接读取。需要重启应用生效。';
+
+  @override
+  String get dbEncryptRestartHint => '操作已登记，重启应用后生效';
+
+  @override
+  String get dbEncryptActionFailed => '操作失败，请重试';
+
+  @override
+  String get dbHealthKeyLostTitle => '本地数据库已加密，但本机找不到密钥';
+
+  @override
+  String get dbHealthKeyLostBody =>
+      '数据没有损坏，只是本机解不开：密钥只保存在原设备的安全区，我们不做托管、也没有后门。请不要清除数据——加密文件目前是唯一可能被解开的副本。可先导出副本留存；若已开启云端备份，可在重置后从云端恢复。';
+
+  @override
+  String get dbHealthKeyLostResetConfirm =>
+      '重置会把加密文件移入保留目录，并重建一个空库（本机数据无从解开）。之后请到「云服务」页用云端备份恢复。确认继续？';
+
+  @override
+  String get dbHealthKeyLostActionExport => '导出加密文件（留存）';
+
+  @override
+  String get devPerfDashboardTitle => '性能仪表盘';
+
+  @override
+  String get devPerfEntryTitle => '性能仪表盘';
+
+  @override
+  String get devPerfEntrySubtitle => '查看实时帧率与帧耗时（仅 debug）';
+
+  @override
+  String get devPerfFps => '帧率';
+
+  @override
+  String get devPerfUiFrame => 'UI 帧';
+
+  @override
+  String get devPerfRasterFrame => '光栅帧';
+
+  @override
+  String get devPerfRecentFrames => '最近帧耗时';
+
+  @override
+  String get devPerfReset => '重置采样';
+
+  @override
+  String get devPerfNoData => '还没有采样';
+
+  @override
+  String get devPerfHint =>
+      '数据来自 Flutter 帧回调（addTimingsCallback），与 scripts/profile_cold_start.py 的 timeline 口径一致。超过 60fps 预算（16.67ms）的柱体高亮，横线即该预算。';
+
+  @override
+  String get devPerfUnsupported => '当前构建不支持性能采集';
+
+  @override
+  String get devPerfUnsupportedHint =>
+      '性能采集仅在 debug / profile 构建启用，release 不常驻。';
+
+  @override
   String get changelogTitle => '更新日志';
 
   @override
@@ -7739,7 +7850,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupNowSubtitle => '将全部账本与附件打包为一份当日备份，存入 piggycount-bak';
 
   @override
-  String get backupPlaintextWarning => '未开启端到端加密，备份以明文存放于云端';
+  String get backupPlaintextWarning => '未开启端到端加密，云端备份已停用';
+
+  @override
+  String get backupRequiresEncryptionTitle => '需要先开启端到端加密';
+
+  @override
+  String get backupRequiresEncryptionMessage =>
+      '为避免账本以明文存入云端，开启端到端加密后才能创建云端备份。';
+
+  @override
+  String get backupGoEnableEncryption => '去开启加密';
 
   @override
   String get backupNoLedgers => '没有可备份的账本。';
@@ -8308,6 +8429,117 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get aiConsentAgree => '同意並開啟';
+
+  @override
+  String get aiSendConfirmTitle => '傳送前確認';
+
+  @override
+  String get aiSendConfirmMessage => '本次將把你主動用於辨識/對話的內容傳送給所設定的第三方 AI 服務商。確認傳送？';
+
+  @override
+  String get aiSendConfirmOk => '確認傳送';
+
+  @override
+  String get noteSensitiveOff => '標記備註為敏感';
+
+  @override
+  String get noteSensitiveOn => '備註已標記為敏感';
+
+  @override
+  String get dbEncryptTitle => '整庫加密';
+
+  @override
+  String get dbEncryptSubtitle => '把本機資料庫檔案整體加密（SQLCipher）。與上方的雲端加密相互獨立。';
+
+  @override
+  String get dbEncryptUnsupported => '目前建置的 SQLite 不具備加密能力，無法開啟（見開發文件的打包說明）。';
+
+  @override
+  String get dbEncryptOff => '未開啟：資料庫檔案目前是明文，取得檔案即可直接讀取。';
+
+  @override
+  String get dbEncryptPendingEnable => '已開啟，重新啟動應用後生效（下次啟動會把資料庫轉為密文）。';
+
+  @override
+  String get dbEncryptEnabled => '已開啟：資料庫檔案為密文。';
+
+  @override
+  String get dbEncryptPendingDisable => '已關閉，重新啟動應用後生效（下次啟動會把資料庫還原為明文）。';
+
+  @override
+  String get dbEncryptKeyMissing => '資料庫已加密，但本機找不到金鑰，本機資料無法讀取。請勿清除資料：可用雲端備份重建。';
+
+  @override
+  String get dbEncryptEnableTitle => '開啟整庫加密？';
+
+  @override
+  String get dbEncryptEnableMessage =>
+      '金鑰只保存在本機安全區，我們不代管金鑰、也沒有後門。金鑰一旦遺失，本機資料將無法復原，請先確認雲端備份可用。需要重新啟動應用生效；重新啟動後的首次啟動會把整庫轉為密文（資料量大時可能十幾秒），期間請勿強制關閉應用。';
+
+  @override
+  String get dbEncryptDisableTitle => '關閉整庫加密？';
+
+  @override
+  String get dbEncryptDisableMessage =>
+      '關閉後資料庫檔案會還原為明文，任何取得檔案的人都能直接讀取。需要重新啟動應用生效。';
+
+  @override
+  String get dbEncryptRestartHint => '已登記，重新啟動應用後生效';
+
+  @override
+  String get dbEncryptActionFailed => '操作失敗，請重試';
+
+  @override
+  String get dbHealthKeyLostTitle => '本機資料庫已加密，但本機找不到金鑰';
+
+  @override
+  String get dbHealthKeyLostBody =>
+      '資料沒有損壞，只是本機解不開：金鑰只保存在原裝置的安全區，我們不代管、也沒有後門。請勿清除資料——加密檔案目前是唯一可能被解開的副本。可先匯出副本留存；若已開啟雲端備份，可在重置後從雲端還原。';
+
+  @override
+  String get dbHealthKeyLostResetConfirm =>
+      '重置會把加密檔案移入保留目錄，並重建一個空資料庫（本機資料無從解開）。之後請到「雲端服務」頁用雲端備份還原。確定繼續？';
+
+  @override
+  String get dbHealthKeyLostActionExport => '匯出加密檔案（留存）';
+
+  @override
+  String get devPerfDashboardTitle => '效能儀表板';
+
+  @override
+  String get devPerfEntryTitle => '效能儀表板';
+
+  @override
+  String get devPerfEntrySubtitle => '檢視即時畫面更新率與畫面耗時（僅 debug）';
+
+  @override
+  String get devPerfFps => '畫面更新率';
+
+  @override
+  String get devPerfUiFrame => 'UI 畫面';
+
+  @override
+  String get devPerfRasterFrame => '光柵畫面';
+
+  @override
+  String get devPerfRecentFrames => '最近畫面耗時';
+
+  @override
+  String get devPerfReset => '重設取樣';
+
+  @override
+  String get devPerfNoData => '尚無取樣';
+
+  @override
+  String get devPerfHint =>
+      '資料來自 Flutter 畫面回呼（addTimingsCallback），與 scripts/profile_cold_start.py 的 timeline 口徑一致。超過 60fps 預算（16.67ms）的柱體會高亮，橫線即該預算。';
+
+  @override
+  String get devPerfUnsupported => '目前建置不支援效能取樣';
+
+  @override
+  String get devPerfUnsupportedHint =>
+      '效能取樣僅在 debug / profile 建置啟用，release 不常駐。';
 
   @override
   String get changelogTitle => '更新日誌';
@@ -16030,7 +16262,17 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get backupNowSubtitle => '將全部賬本與附件打包為一份當日備份，存入 piggycount-bak';
 
   @override
-  String get backupPlaintextWarning => '未開啟端到端加密，備份以明文存放於雲端';
+  String get backupPlaintextWarning => '未開啟端到端加密，雲端備份已停用';
+
+  @override
+  String get backupRequiresEncryptionTitle => '需先開啟端到端加密';
+
+  @override
+  String get backupRequiresEncryptionMessage =>
+      '為避免帳本以明文存入雲端，開啟端到端加密後才能建立雲端備份。';
+
+  @override
+  String get backupGoEnableEncryption => '去開啟加密';
 
   @override
   String get backupNoLedgers => '沒有可備份的賬本。';

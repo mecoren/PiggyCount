@@ -19,6 +19,123 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiConsentAgree => '동의하고 켜기';
 
   @override
+  String get aiSendConfirmTitle => '보내기 전 확인';
+
+  @override
+  String get aiSendConfirmMessage =>
+      '이번에 인식/대화를 위해 제출한 내용이 설정한 제3자 AI 제공업체로 전송됩니다. 전송할까요?';
+
+  @override
+  String get aiSendConfirmOk => '전송';
+
+  @override
+  String get noteSensitiveOff => '메모를 민감 정보로 표시';
+
+  @override
+  String get noteSensitiveOn => '메모가 민감 정보로 표시됨';
+
+  @override
+  String get dbEncryptTitle => '데이터베이스 전체 암호화';
+
+  @override
+  String get dbEncryptSubtitle =>
+      '로컬 데이터베이스 파일 자체를 암호화합니다(SQLCipher). 위의 클라우드 암호화와는 별개입니다.';
+
+  @override
+  String get dbEncryptUnsupported =>
+      '이 빌드의 SQLite는 암호화를 지원하지 않아 켤 수 없습니다(문서의 패키징 설명 참고).';
+
+  @override
+  String get dbEncryptOff => '꺼짐: 데이터베이스 파일이 평문이라 파일을 얻으면 바로 읽을 수 있습니다.';
+
+  @override
+  String get dbEncryptPendingEnable =>
+      '켜짐, 앱을 다시 시작하면 적용됩니다(다음 실행 시 암호문으로 변환).';
+
+  @override
+  String get dbEncryptEnabled => '켜짐: 데이터베이스 파일이 암호화되어 있습니다.';
+
+  @override
+  String get dbEncryptPendingDisable =>
+      '꺼짐, 앱을 다시 시작하면 적용됩니다(다음 실행 시 평문으로 복원).';
+
+  @override
+  String get dbEncryptKeyMissing =>
+      '데이터베이스는 암호화되어 있지만 이 기기에 키가 없어 로컬 데이터를 읽을 수 없습니다. 데이터를 삭제하지 마세요: 클라우드 백업으로 재구성할 수 있습니다.';
+
+  @override
+  String get dbEncryptEnableTitle => '전체 암호화를 켤까요?';
+
+  @override
+  String get dbEncryptEnableMessage =>
+      '키는 이 기기의 보안 영역에만 저장되며, 키 위탁이나 백도어는 없습니다. 키를 잃으면 로컬 데이터를 복구할 수 없으니 클라우드 백업을 먼저 확인하세요. 적용하려면 앱을 다시 시작해야 하며, 그 후 첫 실행에서 전체 데이터베이스가 변환됩니다(데이터가 많으면 수십 초). 이때 앱을 강제 종료하지 마세요.';
+
+  @override
+  String get dbEncryptDisableTitle => '전체 암호화를 끌까요?';
+
+  @override
+  String get dbEncryptDisableMessage =>
+      '끄면 데이터베이스 파일이 평문으로 돌아가며, 파일을 얻은 사람은 누구나 읽을 수 있습니다. 적용하려면 앱을 다시 시작해야 합니다.';
+
+  @override
+  String get dbEncryptRestartHint => '등록되었습니다. 앱을 다시 시작하면 적용됩니다';
+
+  @override
+  String get dbEncryptActionFailed => '작업에 실패했습니다. 다시 시도하세요';
+
+  @override
+  String get dbHealthKeyLostTitle => '이 기기에 암호화된 데이터베이스의 키가 없습니다';
+
+  @override
+  String get dbHealthKeyLostBody =>
+      '데이터가 손상된 것이 아니라 이 기기에서 풀 수 없는 것입니다. 키는 원래 기기의 보안 영역에만 있으며, 키 위탁이나 백도어는 없습니다. 데이터를 삭제하지 마세요 — 암호화된 파일이 지금 유일하게 풀릴 가능성이 있는 사본입니다. 먼저 사본을 내보내 두고, 클라우드 백업이 있다면 초기화 후 복원하세요.';
+
+  @override
+  String get dbHealthKeyLostResetConfirm =>
+      '초기화하면 암호화 파일을 보관 폴더로 옮기고 빈 데이터베이스를 새로 만듭니다(이 기기에서는 로컬 데이터를 풀 수 없습니다). 이후 「클라우드」 페이지에서 백업으로 복원하세요. 계속할까요?';
+
+  @override
+  String get dbHealthKeyLostActionExport => '암호화 파일 내보내기(보관용)';
+
+  @override
+  String get devPerfDashboardTitle => '성능';
+
+  @override
+  String get devPerfEntryTitle => '성능 대시보드';
+
+  @override
+  String get devPerfEntrySubtitle => '실시간 FPS와 프레임 시간(debug 전용)';
+
+  @override
+  String get devPerfFps => 'FPS';
+
+  @override
+  String get devPerfUiFrame => 'UI 프레임';
+
+  @override
+  String get devPerfRasterFrame => '래스터 프레임';
+
+  @override
+  String get devPerfRecentFrames => '최근 프레임 시간';
+
+  @override
+  String get devPerfReset => '샘플 초기화';
+
+  @override
+  String get devPerfNoData => '아직 샘플이 없습니다';
+
+  @override
+  String get devPerfHint =>
+      '데이터는 Flutter 프레임 콜백(addTimingsCallback)에서 오며 scripts/profile_cold_start.py와 같은 기준입니다. 60fps 예산(16.67ms)을 넘는 막대는 강조되고, 가로선이 그 예산입니다.';
+
+  @override
+  String get devPerfUnsupported => '이 빌드에서는 성능 샘플링을 사용할 수 없습니다';
+
+  @override
+  String get devPerfUnsupportedHint =>
+      '샘플링은 debug/profile 빌드에서만 동작하며 release에는 상주 비용이 없습니다.';
+
+  @override
   String get changelogTitle => '업데이트 로그';
 
   @override
@@ -7824,7 +7941,17 @@ class AppLocalizationsKo extends AppLocalizations {
       '모든 장부와 첨부 파일을 당일 백업 하나로 묶어 piggycount-bak에 저장';
 
   @override
-  String get backupPlaintextWarning => '종단간 암호화가 꺼져 있어 백업이 클라우드에 평문으로 저장됩니다';
+  String get backupPlaintextWarning => '종단간 암호화가 꺼져 있어 클라우드 백업이 비활성화되었습니다';
+
+  @override
+  String get backupRequiresEncryptionTitle => '먼저 종단간 암호화를 켜야 합니다';
+
+  @override
+  String get backupRequiresEncryptionMessage =>
+      '장부가 클라우드에 평문으로 저장되지 않도록, 클라우드 백업을 만들기 전에 종단간 암호화를 켜세요.';
+
+  @override
+  String get backupGoEnableEncryption => '암호화 켜기';
 
   @override
   String get backupNoLedgers => '백업할 장부가 없습니다.';

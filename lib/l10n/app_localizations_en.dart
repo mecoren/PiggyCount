@@ -19,6 +19,127 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiConsentAgree => 'Agree & enable';
 
   @override
+  String get aiSendConfirmTitle => 'Confirm before sending';
+
+  @override
+  String get aiSendConfirmMessage =>
+      'This will send the content you submitted for recognition/chat to your configured third-party AI provider. Send now?';
+
+  @override
+  String get aiSendConfirmOk => 'Send';
+
+  @override
+  String get noteSensitiveOff => 'Mark note as sensitive';
+
+  @override
+  String get noteSensitiveOn => 'Note marked as sensitive';
+
+  @override
+  String get dbEncryptTitle => 'Encrypt the whole database';
+
+  @override
+  String get dbEncryptSubtitle =>
+      'Encrypt the local database file itself (SQLCipher). Independent of the cloud encryption above.';
+
+  @override
+  String get dbEncryptUnsupported =>
+      'This build\'s SQLite has no encryption support, so it can\'t be enabled (see the packaging notes in the docs).';
+
+  @override
+  String get dbEncryptOff =>
+      'Off: the database file is plaintext — anyone who gets the file can read it.';
+
+  @override
+  String get dbEncryptPendingEnable =>
+      'On, takes effect after restart (the database will be converted to ciphertext at next launch).';
+
+  @override
+  String get dbEncryptEnabled => 'On: the database file is encrypted.';
+
+  @override
+  String get dbEncryptPendingDisable =>
+      'Off, takes effect after restart (the database will be converted back to plaintext at next launch).';
+
+  @override
+  String get dbEncryptKeyMissing =>
+      'The database is encrypted but this device has no key, so local data can\'t be read. Do not clear data: you can rebuild from a cloud backup.';
+
+  @override
+  String get dbEncryptEnableTitle => 'Enable database encryption?';
+
+  @override
+  String get dbEncryptEnableMessage =>
+      'The key is stored only in this device\'s secure storage — we don\'t escrow keys and there is no backdoor. If the key is lost, local data cannot be recovered, so please make sure a cloud backup is available first. A restart is required; the first launch after that will convert the whole database (it can take tens of seconds for large data), so please don\'t force-close the app.';
+
+  @override
+  String get dbEncryptDisableTitle => 'Disable database encryption?';
+
+  @override
+  String get dbEncryptDisableMessage =>
+      'The database file will go back to plaintext, readable by anyone who gets the file. A restart is required.';
+
+  @override
+  String get dbEncryptRestartHint => 'Registered — takes effect after restart';
+
+  @override
+  String get dbEncryptActionFailed => 'Action failed, please retry';
+
+  @override
+  String get dbHealthKeyLostTitle =>
+      'Database is encrypted, but this device has no key';
+
+  @override
+  String get dbHealthKeyLostBody =>
+      'The data isn\'t corrupted — this device just can\'t unlock it. The key lives only in the original device\'s secure storage; we don\'t escrow keys and there is no backdoor. Do not clear data: the encrypted file is currently the only copy that might still be unlocked. Export a copy first; if you have a cloud backup, you can restore from it after a reset.';
+
+  @override
+  String get dbHealthKeyLostResetConfirm =>
+      'Resetting moves the encrypted file into a keep folder and rebuilds an empty database (your local data can\'t be unlocked on this device). Afterwards, restore from your cloud backup on the Cloud page. Continue?';
+
+  @override
+  String get dbHealthKeyLostActionExport =>
+      'Export the encrypted file (keep it)';
+
+  @override
+  String get devPerfDashboardTitle => 'Performance';
+
+  @override
+  String get devPerfEntryTitle => 'Performance dashboard';
+
+  @override
+  String get devPerfEntrySubtitle => 'Live FPS and frame timings (debug only)';
+
+  @override
+  String get devPerfFps => 'FPS';
+
+  @override
+  String get devPerfUiFrame => 'UI frame';
+
+  @override
+  String get devPerfRasterFrame => 'Raster frame';
+
+  @override
+  String get devPerfRecentFrames => 'Recent frame time';
+
+  @override
+  String get devPerfReset => 'Reset samples';
+
+  @override
+  String get devPerfNoData => 'No samples yet';
+
+  @override
+  String get devPerfHint =>
+      'Data comes from Flutter frame callbacks (addTimingsCallback), the same basis as scripts/profile_cold_start.py. Bars above the 60fps budget (16.67ms) are highlighted; the line marks the budget.';
+
+  @override
+  String get devPerfUnsupported =>
+      'Performance sampling is unavailable in this build';
+
+  @override
+  String get devPerfUnsupportedHint =>
+      'Sampling runs in debug/profile builds only; release keeps no resident cost.';
+
+  @override
   String get changelogTitle => 'Changelog';
 
   @override
@@ -8041,7 +8162,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupPlaintextWarning =>
-      'End-to-end encryption is off, backups are stored in plaintext on the cloud';
+      'End-to-end encryption is off; cloud backups are disabled';
+
+  @override
+  String get backupRequiresEncryptionTitle =>
+      'Turn on end-to-end encryption first';
+
+  @override
+  String get backupRequiresEncryptionMessage =>
+      'To prevent your ledgers from being stored in plaintext on the cloud, turn on end-to-end encryption before creating a cloud backup.';
+
+  @override
+  String get backupGoEnableEncryption => 'Turn on encryption';
 
   @override
   String get backupNoLedgers => 'There are no ledgers to back up.';
