@@ -303,6 +303,22 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
 
   // ============ 云端备份（/prd/cloud_backup） ============
 
+  /// 备份强制加密引导：解释拦截原因并跳转加密设置页开启 E2EE。
+  Future<void> _promptEnableEncryption(
+      BuildContext context, AppLocalizations l10n) async {
+    final go = await AppDialog.confirm(
+      context,
+      title: l10n.backupRequiresEncryptionTitle,
+      message: l10n.backupRequiresEncryptionMessage,
+      okLabel: l10n.backupGoEnableEncryption,
+    );
+    if (go == true && context.mounted) {
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => const EncryptionSettingsPage(),
+      ));
+    }
+  }
+
   /// 手动立即备份：阻塞进度弹窗；成败均记录当日状态（当日不再自动触发）
   Future<void> _handleBackupNow(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
@@ -319,6 +335,17 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
           title: l10n.commonFailed, message: l10n.fullSyncUnsupported);
       return;
     }
+
+    // 安全加固：未开启端到端加密时禁止创建明文云备份，前置拦截并引导。
+    // 服务层同门禁兜底（见 CloudBackupService.createBackup），此处提前
+    // 拦截避免走到阻塞进度弹窗才报错。
+    if (!await ref.read(encryptionServiceProvider).isEnabled) {
+      if (!mounted || !context.mounted) return;
+      await _promptEnableEncryption(context, l10n);
+      return;
+    }
+    // 新增 async gap（上面 await 了 isEnabled）后重新校验 context
+    if (!mounted || !context.mounted) return;
 
     setState(() => backupBusy = true);
     final block = showBlockingProgressDialog(
@@ -358,6 +385,12 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     if (!mounted || !context.mounted) return;
 
     if (error != null) {
+      // 门禁竞态兜底：前置检查通过后、服务调用前若加密被关闭，服务层会抛
+      // BackupRequiresEncryptionException，走同一引导而不是「同步失败」。
+      if (error is BackupRequiresEncryptionException) {
+        await _promptEnableEncryption(context, l10n);
+        return;
+      }
       // 错误分类提示（审计 P1-4）：复用指标侧同一 [SyncMetricsService.classifyError]
       // 口径。此前只区分认证/非认证，导致「未配置」「数据损坏」也被兜成
       // 「网络问题」——而这三类的用户动作完全不同（去配置 / 先导出备份再恢复 /
@@ -1837,28 +1870,42 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                   borderColor: ref.watch(primaryColorProvider),
                                   child: Column(
                                     children: [
-                                      AppListTile(
-                                        leading: Icons.backup_outlined,
-                                        title: AppLocalizations.of(context)
-                                            .backupNowTitle,
-                                        subtitle: AppLocalizations.of(context)
-                                            .backupNowSubtitle,
-                                        enabled: !uploadBusy &&
-                                            !downloadBusy &&
-                                            !fullUploadBusy &&
-                                            !fullDownloadBusy &&
-                                            !backupBusy &&
-                                            !restoreBusy &&
-                                            !isFirstLoad &&
-                                            !refreshing,
-                                        trailing: backupBusy
-                                            ? PiggySpinner(
-                                                size: 20,
-                                                color: PiggyTokens.primary(
-                                                    context))
-                                            : null,
-                                        onTap: () => _handleBackupNow(context),
-                                      ),
+                                      // 未开启端到端加密时置为禁用外观（半透明），
+                                      // 但仍可点按 → 弹拦截并引导去开启加密
+                                      // （安全加固：禁止创建明文云备份）。
+                                      Consumer(builder: (ctx, r, _) {
+                                        final encAsync = r.watch(
+                                            encryptionEnabledProvider);
+                                        final dimmed =
+                                            encAsync.valueOrNull == false;
+                                        return Opacity(
+                                          opacity: dimmed ? 0.5 : 1,
+                                          child: AppListTile(
+                                            leading: Icons.backup_outlined,
+                                            title: AppLocalizations.of(context)
+                                                .backupNowTitle,
+                                            subtitle:
+                                                AppLocalizations.of(context)
+                                                    .backupNowSubtitle,
+                                            enabled: !uploadBusy &&
+                                                !downloadBusy &&
+                                                !fullUploadBusy &&
+                                                !fullDownloadBusy &&
+                                                !backupBusy &&
+                                                !restoreBusy &&
+                                                !isFirstLoad &&
+                                                !refreshing,
+                                            trailing: backupBusy
+                                                ? PiggySpinner(
+                                                    size: 20,
+                                                    color: PiggyTokens.primary(
+                                                        context))
+                                                : null,
+                                            onTap: () =>
+                                                _handleBackupNow(context),
+                                          ),
+                                        );
+                                      }),
                                       PiggyTokens.cardDivider(context),
                                       AppListTile(
                                         leading: Icons.restore,
@@ -2013,7 +2060,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                     AppLocalizations.of(context)
                                                         .backupPlaintextWarning,
                                                     style: TextStyle(
-                                                      fontSize: 12,
+                                                      fontSize: PiggyTextTokens.fs12,
                                                       color:
                                                           PiggyTokens.warning(
                                                               context),
@@ -2084,7 +2131,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                 ? PiggyTokens.success(context)
                                                 : PiggyTokens.textTertiary(
                                                     context),
-                                            fontSize: 12,
+                                            fontSize: PiggyTextTokens.fs12,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),

@@ -14,6 +14,7 @@ import '../../styles/tokens.dart';
 import '../../services/billing/post_processor.dart';
 import '../../utils/transaction_edit_utils.dart';
 import '../../utils/category_utils.dart';
+import '../../utils/sensitive_data_masker.dart';
 import '../category_icon.dart';
 import 'transaction_day_grouper.dart';
 import '../../pages/transaction/category_detail_page.dart';
@@ -65,6 +66,21 @@ class TransactionList extends ConsumerStatefulWidget {
   /// 列表头部自定义内容(如月份总结卡片),作为列表第一项随列表一起滚动。
   final Widget? listHeader;
 
+  /// 日合计覆盖（M2-a 窗口化）。
+  ///
+  /// 窗口只加载最新 N 行时，**最旧的一天可能只加载了部分行**，本组件内的
+  /// Dart 累加会算少；调用方注入 SQL 口径的 `yyyy-MM-dd → (income, expense)`
+  /// 即可保证表头数字正确。null = 退回本地累加（与旧行为逐字一致）。
+  /// 口径必须与 [_computeDayTotals] 相同（见 `getDailyTotalsInRange`）。
+  final Map<String, (double, double)>? dayTotals;
+
+  /// 是否还有更旧的交易未加载。false 时不再回调 [onLoadMore]（否则滑到底
+  /// 会反复空转请求）。
+  final bool hasMore;
+
+  /// 滚到接近列表底部时回调（首页据此把窗口 limit 调大一页）。
+  final VoidCallback? onLoadMore;
+
   const TransactionList({
     super.key,
     this.transactionsWithDetails,
@@ -76,6 +92,9 @@ class TransactionList extends ConsumerStatefulWidget {
     this.controller,
     this.wrapInOuterCard = true,
     this.listHeader,
+    this.dayTotals,
+    this.hasMore = false,
+    this.onLoadMore,
   }) : assert(transactionsWithDetails != null || transactions != null,
             'Either transactionsWithDetails or transactions must be provided');
 
@@ -116,6 +135,9 @@ class TransactionListState extends ConsumerState<TransactionList> {
   final TransactionDayGrouper _grouper = TransactionDayGrouper();
   bool _groupingSeeded = false;
   final Map<String, (double, double)> _dayTotalsCache = {};
+
+  /// M2-a：一帧最多请求一次下一页（底部阈值内会有多行命中）。
+  bool _loadMoreScheduled = false;
 
   // 缓存标签数据（仅用于非预加载模式）
   Map<int, List<Tag>> _cachedTagsMap = {};
@@ -416,7 +438,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
     for (final key in sortedKeys) {
       final list = groups[key]!;
       _dateIndexMap[key] = _flatItems.length;
-      _flatItems.add(('header', key, list, _computeDayTotals(list)));
+      _flatItems.add(('header', key, list, _dayTotalsFor(key, list)));
       for (final item in list) {
         _flatItems.add(('transaction', item, list));
       }
@@ -449,7 +471,11 @@ class TransactionListState extends ConsumerState<TransactionList> {
           list,
           i == 0, // isFirst：首日画顶部圆角+顶边+阴影
           i == lastIndex, // isLast：末日画底部圆角
-          _dayTotalsCache.putIfAbsent(key, () => _computeDayTotals(list)),
+          // 注入口径不缓存：SQL 日合计会随窗口增长而变，缓存会留旧值；
+          // 未注入时维持 P1-C 的脏日缓存语义（与旧行为逐字一致）。
+          widget.dayTotals != null
+              ? _dayTotalsFor(key, list)
+              : _dayTotalsCache.putIfAbsent(key, () => _computeDayTotals(list)),
         ));
       }
     }
@@ -457,6 +483,22 @@ class TransactionListState extends ConsumerState<TransactionList> {
     if (_flatItems.isNotEmpty) {
       _flatItems.add(('bottomSpacer', null, null));
     }
+  }
+
+  /// 日合计取值：调用方注入的 SQL 口径优先（窗口化后最旧一天可能只加载了
+  /// 部分行，本地累加会算少），未注入时退回本地累加 —— 两条口径必须一致
+  /// （见 `getDailyTotalsInRange` 的注释）。
+  (double, double) _dayTotalsFor(
+      String key,
+      List<
+              ({
+                Transaction t,
+                Category? category,
+                Account? account,
+                Account? toAccount
+              })>
+          list) {
+    return widget.dayTotals?[key] ?? _computeDayTotals(list);
   }
 
   /// 日合计预计算：income/expense 构建期一次算好存入 flat item，渲染期不再
@@ -557,6 +599,20 @@ class TransactionListState extends ConsumerState<TransactionList> {
           (BuildContext context, int index) {
             final item = _flatItems[index];
             final type = item.$1 as String;
+
+            // M2-a：接近列表底部 → 请求下一页（limit 只增，已显示的行不会被挤掉）。
+            // 用 post-frame 回调：构建期不能触发 provider 更新；_loadMoreScheduled
+            // 保证一帧最多一次（阈值内会有多行命中）。
+            if (widget.hasMore &&
+                widget.onLoadMore != null &&
+                !_loadMoreScheduled &&
+                index >= _flatItems.length - 3) {
+              _loadMoreScheduled = true;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _loadMoreScheduled = false;
+                if (mounted) widget.onLoadMore!();
+              });
+            }
 
             if (type == 'listHeader') {
               // 列表头部内容（随列表滚动）
@@ -712,7 +768,11 @@ class TransactionListState extends ConsumerState<TransactionList> {
         ? AppLocalizations.of(context).adjustmentTransaction
         : CategoryUtils.getDisplayName(it.category?.name, context);
 
-    final subtitle = it.t.note ?? '';
+    // 备注敏感标记：列表展示统一走掩码（设备本地标记，见 SensitiveNoteService）
+    final sensitiveNoteIds =
+        ref.watch(sensitiveNoteIdsProvider).valueOrNull ?? const <int>{};
+    final subtitle = SensitiveDataMasker.maskNoteIf(
+        sensitiveNoteIds.contains(it.t.id), it.t.note);
 
     // D 方案:account / toAccount 已经由 watchTransactionsWith* 的 LEFT JOIN
     // (+ SharedLedger* hydration) 直接挂在 tx 记录上,跟 category 同款。UI 只读

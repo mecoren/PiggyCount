@@ -17,6 +17,7 @@ import '../../services/billing/post_processor.dart';
 import '../../providers.dart';
 import '../../providers/ai_chat_providers.dart';
 import '../../ai/core/bill_info.dart';
+import '../../ai/privacy/ai_send_confirm.dart';
 import '../../pages/transaction/transaction_editor_page.dart';
 import '../../pages/ai/ai_settings_page.dart';
 import '../../widgets/biz/ledger_selector_dialog.dart';
@@ -198,7 +199,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                         AppLocalizations.of(context).aiChatConfigWarning,
                         style: TextStyle(
                           color: PiggyTokens.error(context),
-                          fontSize: 13.0.scaled(context, ref),
+                          fontSize: PiggyTextTokens.fs13.scaled(context, ref),
                         ),
                       ),
                     ),
@@ -218,7 +219,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                         AppLocalizations.of(context).aiChatGoToSettings,
                         style: TextStyle(
                           color: ref.watch(primaryColorProvider),
-                          fontSize: 13.0.scaled(context, ref),
+                          fontSize: PiggyTextTokens.fs13.scaled(context, ref),
                         ),
                       ),
                     ),
@@ -323,7 +324,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                       AppLocalizations.of(context).aiChatThinking,
                       style: TextStyle(
                         color: PiggyTokens.textSecondary(context),
-                        fontSize: 13.0.scaled(context, ref),
+                        fontSize: PiggyTextTokens.fs13.scaled(context, ref),
                       ),
                     ),
                   ],
@@ -447,7 +448,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                       : null,
                   style: TextStyle(
                     color: PiggyTokens.textPrimary(context),
-                    fontSize: 14.0.scaled(context, ref),
+                    fontSize: PiggyTextTokens.fs14.scaled(context, ref),
                     height: 1.5,
                   ),
                 ),
@@ -642,6 +643,10 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
     bool forceChat = false,
   }) async {
     if (text.isEmpty || _isLoading) return;
+
+    // AI 外发会话级二次确认（每会话首次；用户取消则本条不发）
+    if (!await AiSendConfirmGate.ensureConfirmed()) return;
+    if (!mounted) return;
 
     setState(() => _isLoading = true);
 

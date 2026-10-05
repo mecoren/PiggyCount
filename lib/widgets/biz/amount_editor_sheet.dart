@@ -58,6 +58,8 @@ typedef AmountEditorResult = ({
   // null = **不改动**（本次编辑未涉及自定义字段，或该笔本来就没值）；空 map
   // = 显式清空。与 v45 originalAmount 的"三态"同思路，避免顺手清空已有值。
   Map<String, dynamic>? customValues,
+  // 备注敏感标记（设备本地）：true = 该笔备注在 AI 外发与本地列表展示时掩码。
+  bool noteSensitive,
 });
 
 class AmountEditorSheet extends ConsumerStatefulWidget {
@@ -91,6 +93,8 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   final String? initialNote;
   final int? initialAccountId;
   final List<int>? initialTagIds; // 初始标签ID列表
+  /// 备注敏感标记初值（编辑态回显；新建为 false）。
+  final bool initialNoteSensitive;
   final bool showAccountPicker; // 是否显示账户选择
   final ValueChanged<AmountEditorResult> onSubmit;
   final int ledgerId;
@@ -120,6 +124,7 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
     this.initialNote,
     this.initialAccountId,
     this.initialTagIds,
+    this.initialNoteSensitive = false,
     this.showAccountPicker = false,
     required this.onSubmit,
     required this.ledgerId,
@@ -162,6 +167,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   bool _accountPicked = false;
   int? _selectedAccountId;
   final TextEditingController _noteCtrl = TextEditingController();
+  // 备注敏感标记（设备本地）：打标后 AI 外发与列表展示统一掩码
+  bool _noteSensitive = false;
   // v45 原始金额(选填)的输入串。空串 = 未填写(提交 null)。
   // 刻意不用 TextField —— 它由下方**自定义数字键盘**输入，谁被选中就输谁，
   // 避免点击时弹出系统键盘、两套键盘打架。
@@ -328,6 +335,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         : s;
     _amountStr = trimmed.isEmpty ? '0' : trimmed;
     _noteCtrl.text = widget.initialNote ?? '';
+    _noteSensitive = widget.initialNoteSensitive;
     // v45 原始金额回显:null → 留空(即「未填写」，保存时兜底为记账金额)。
     final initOriginal = widget.initialOriginalAmount;
     if (initOriginal != null) {
@@ -907,7 +915,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                 label,
                 style: text.titleMedium?.copyWith(
                   color: fg ?? PiggyTokens.textPrimary(context),
-                  fontSize: 18,
+                  fontSize: PiggyTextTokens.fs18,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -963,7 +971,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                       text: '/',
                       style: text.titleMedium!.copyWith(
                         color: PiggyTokens.textTertiary(context),
-                        fontSize: 14,
+                        fontSize: PiggyTextTokens.fs14,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -1250,6 +1258,25 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                         minHeight: 20,
                       )
                     : null,
+                // 备注敏感标记：点锁图标切换；打标后 AI 外发与列表展示掩码。
+                // 用 suffixIcon 而非另起一行 —— 快捷记账抽屉高度紧张，加行会溢出。
+                suffixIcon: GestureDetector(
+                  onTap: () =>
+                      setState(() => _noteSensitive = !_noteSensitive),
+                  child: Icon(
+                    _noteSensitive
+                        ? Icons.lock_outline
+                        : Icons.lock_open_outlined,
+                    size: 18,
+                    color: _noteSensitive
+                        ? PiggyTokens.primary(context)
+                        : PiggyTokens.iconTertiary(context),
+                  ),
+                ),
+                suffixIconConstraints: const BoxConstraints(
+                  minWidth: 34,
+                  minHeight: 20,
+                ),
               ),
             ),
             // 账户选择（仅在启用时显示）
@@ -1434,6 +1461,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                 note: _noteCtrl.text.isEmpty
                                     ? null
                                     : _noteCtrl.text,
+                                noteSensitive: _noteSensitive,
                                 date: _date,
                                 accountId: _selectedAccountId,
                                 tagIds: _selectedTagIds,
@@ -1675,14 +1703,14 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                   title,
                   style: TextStyle(
                     color: PiggyTokens.textPrimary(context),
-                    fontSize: 15.0.scaled(context, ref),
+                    fontSize: PiggyTextTokens.fs15.scaled(context, ref),
                   ),
                 ),
                 subtitle: Text(
                   hint,
                   style: TextStyle(
                     color: PiggyTokens.textTertiary(context),
-                    fontSize: 12.0.scaled(context, ref),
+                    fontSize: PiggyTextTokens.fs12.scaled(context, ref),
                   ),
                 ),
                 value: value,
@@ -1697,7 +1725,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                 l10n.txFlagDialogTitle,
                 style: TextStyle(
                   color: PiggyTokens.textPrimary(context),
-                  fontSize: 17.0.scaled(context, ref),
+                  fontSize: PiggyTextTokens.fs17.scaled(context, ref),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1817,7 +1845,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     '$attachmentCount',
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
-                      fontSize: 14,
+                      fontSize: PiggyTextTokens.fs14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

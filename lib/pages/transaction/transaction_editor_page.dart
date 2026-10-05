@@ -546,6 +546,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       initialNote: widget.initialNote,
       initialAccountId: _quickAccountByKind[kind] ?? widget.initialAccountId,
       initialTagIds: widget.initialTagIds,
+      initialNoteSensitive: _editingNoteSensitive,
       showAccountPicker: true,
       ledgerId: ledgerId,
       editingTransactionId: widget.editingTransactionId,
@@ -668,6 +669,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
           initialNote: widget.initialNote,
           initialAccountId: initialAccountId,
           initialTagIds: widget.initialTagIds,
+          initialNoteSensitive: _editingNoteSensitive,
           showAccountPicker: true,
           ledgerId: ledgerId,
           editingTransactionId: widget.editingTransactionId,
@@ -705,6 +707,13 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
   ///
   /// 分类取 [AmountEditorResult.category]：新流程允许用户在表单内换分类，
   /// 闭包捕获的「进入表单时的分类」可能已经过时，不能再作为写入依据。
+  /// 编辑态回显：该笔是否已标记为敏感备注（设备本地标记）。
+  bool get _editingNoteSensitive {
+    final id = widget.editingTransactionId;
+    if (id == null) return false;
+    return ref.read(sensitiveNoteIdsProvider).valueOrNull?.contains(id) ?? false;
+  }
+
   Future<void> _persistTransaction(
     BuildContext context,
     String kind,
@@ -775,6 +784,12 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
         customValues: res.customValues,
       );
     }
+    // 备注敏感标记（设备本地，不参与同步）：随本次表单结果落盘
+    await ref
+        .read(sensitiveNoteServiceProvider)
+        .setSensitive(transactionId, res.noteSensitive);
+    ref.read(sensitiveNoteRefreshProvider.notifier).state++;
+
     // 保存待上传的附件
     if (res.pendingAttachments.isNotEmpty) {
       await attachmentService.saveAttachments(

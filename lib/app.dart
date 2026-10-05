@@ -30,6 +30,7 @@ import 'cloud/backup/cloud_backup_providers.dart';
 import 'cloud/backup/cloud_backup_service.dart' show CloudBackupService;
 import 'cloud/sync_restore_guard.dart';
 import 'providers/sync_providers.dart' as sp;
+import 'providers/encryption_providers.dart' show encryptionServiceProvider;
 import 'utils/voice_billing_helper.dart';
 import 'utils/image_billing_helper.dart';
 import 'pages/ai/ai_chat_page.dart';
@@ -246,6 +247,11 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       )) {
         return;
       }
+
+      // 安全加固：未开启端到端加密时禁止创建明文云备份，静默跳过。
+      // 不写 attempt 锚点 / last_date，避免卡片每天误报「备份失败」——
+      // 用户需先在加密设置页开启 E2EE，才谈得上备份。
+      if (!await ref.read(encryptionServiceProvider).isEnabled) return;
 
       final backup = ref.read(cloudBackupServiceProvider);
       if (backup == null) return; // 云未就绪：不计为当日已备

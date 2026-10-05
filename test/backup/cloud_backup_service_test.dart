@@ -24,6 +24,18 @@ import 'package:piggycount/cloud/backup/cloud_backup_service.dart';
 import 'package:piggycount/cloud/transactions_json.dart';
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
+import 'package:piggycount/domain/encryption/encryption_service.dart';
+
+/// 备份强制加密门禁：恒「已开启」的假加密服务（createBackup 要求 E2EE 已开）。
+class _EnabledEncryptionService implements EncryptionService {
+  @override
+  Future<bool> get isEnabled => Future.value(true);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
+final _enabledEncryption = _EnabledEncryptionService();
 
 /// 内存假存储：记录 upload 的 path→data，list 按前缀过滤
 class _FakeStorage extends fcs.NoopStorageService {
@@ -80,6 +92,7 @@ void main() {
       db: db,
       repo: repo,
       storageResolver: () async => storage,
+      encryptionService: _enabledEncryption,
       documentsDir: () async => docsDir,
     );
   });
@@ -279,6 +292,7 @@ void main() {
         db: db2,
         repo: repo2,
         storageResolver: () async => storage,
+        encryptionService: _enabledEncryption,
         documentsDir: () async => docsDir2,
       );
 
@@ -354,6 +368,7 @@ void main() {
         db: db,
         repo: repo,
         storageResolver: () async => binStorage,
+        encryptionService: _enabledEncryption,
         documentsDir: () async => docsDir,
       );
       final id = await addLedger('Main');
@@ -376,6 +391,7 @@ void main() {
         db: db,
         repo: repo,
         storageResolver: () async => binStorage,
+        encryptionService: _enabledEncryption,
         documentsDir: () async => docsDir,
       );
       final id = await addLedger('Main');
@@ -391,6 +407,7 @@ void main() {
         db: db2,
         repo: repo2,
         storageResolver: () async => binStorage,
+        encryptionService: _enabledEncryption,
         documentsDir: () async => docsDir2,
       );
       final res = await service2.restoreBackup(fileName: out.fileName);
@@ -420,6 +437,7 @@ void main() {
         db: db2,
         repo: repo2,
         storageResolver: () async => legacy,
+        encryptionService: _enabledEncryption,
         documentsDir: () async => docsDir2,
       );
       final res = await service2.restoreBackup(fileName: out.fileName);
@@ -439,6 +457,7 @@ void main() {
         db: db,
         repo: repo,
         storageResolver: () async => s3Style,
+        encryptionService: _enabledEncryption,
         documentsDir: () async => docsDir,
       );
 

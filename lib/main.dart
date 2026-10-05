@@ -38,6 +38,8 @@ import 'package:path_provider/path_provider.dart';
 
 
 import 'utils/platform_info.dart';
+import 'ai/privacy/ai_send_confirm.dart';
+import 'widgets/ai/ai_send_confirm_dialog.dart';
 
 /// 全局 navigator key — 给 service 层(没有 BuildContext)push 路由使用。
 final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
@@ -162,6 +164,14 @@ Future<void> main() async {
   // 读写的是两份独立 state；② 子容器未继承 `observers`，`_WidgetUpdateObserver`
   // 只看得见后台侧。`UncontrolledProviderScope` 是 ProviderScope 内部实际
   // 使用的同一组件，容器生命周期由本函数持有（与 App 同寿），语义一致。
+  // AI 外发会话级二次确认门：工厂层是无 BuildContext 的纯 Dart，确认动作在
+  // 这里用全局 Navigator 接线；未接线时门自会 fail-closed（拒绝外发）。
+  AiSendConfirmGate.uiConfirm = () async {
+    final ctx = globalNavigatorKey.currentContext;
+    if (ctx == null) return false;
+    return ensureAiSendConfirm(ctx);
+  };
+
   runApp(UncontrolledProviderScope(
     container: container,
     child: const MainApp(),

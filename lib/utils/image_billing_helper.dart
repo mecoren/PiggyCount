@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../ai/core/prompt_builder.dart';
+import '../ai/privacy/ai_send_confirm.dart';
 import '../ai/providers/ai_provider_config.dart';
 import '../ai/providers/ai_provider_manager.dart';
 import '../l10n/app_localizations.dart';
@@ -49,6 +50,10 @@ class ImageBillingHelper {
         imageQuality: 85,
       );
       if (pickedFile == null) return;
+      if (!context.mounted) return;
+
+      // AI 外发会话级二次确认（每会话首次；用户取消则本次不发送）
+      if (!await AiSendConfirmGate.ensureConfirmed()) return;
       if (!context.mounted) return;
 
       // 2. 显示 loading：走项目统一阻塞进度弹窗（禁止点外部 / 返回键关闭），

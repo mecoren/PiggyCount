@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' as fcs;
@@ -58,6 +58,26 @@ typedef RestoreOutcome = (
     int attachmentsRestored,
     int skippedRecurring,
     String fileName});
+
+/// 云备份强制加密门禁异常（安全加固）。
+///
+/// 未开启端到端加密时**禁止**创建云端明文备份：备份容器不做透明加密等于
+/// 把整本账本（金额/备注/账户名）以明文交给存储后端。服务层只抛强类型
+/// 异常，面向用户的文案由 UI 层按 l10n 映射，不在这里塞。
+///
+/// 与 [CloudEncryptedLocallyDisabledException] 的区别：后者是「云端已是
+/// 密文但本设备无密钥」的**恢复侧**引导（去开加密/输密码恢复）；本异常是
+/// **创建侧**前置拦截（去开加密再备份），用户动作不同，不得混淆。
+class BackupRequiresEncryptionException implements Exception {
+  final String message;
+
+  const BackupRequiresEncryptionException([
+    this.message = '云端备份要求先开启端到端加密',
+  ]);
+
+  @override
+  String toString() => 'BackupRequiresEncryptionException: $message';
+}
 
 /// 云端全量备份服务（/prd/cloud_backup/design.md）
 ///
@@ -174,35 +194,46 @@ class CloudBackupService {
     return storage;
   }
 
-  /// 创建全量备份：全部本地账本 JSON + 引用的附件二进制 → ZIP → base64 上传。
+  /// 备份强制加密门禁：未开启 E2EE（或未注入加密服务）时拒绝创建明文备份。
   ///
-  /// 孤儿附件行（本地物理文件缺失）跳过并 warning，不阻断（对齐
-  /// uploadAttachmentObjects 口径）。无本地账本抛 StateError。
-  Future<BackupOutcome> createBackup({
+  /// 生产环境 [encryptionService] 恒非空；null 视为「未开启」一并拦截
+  /// （fail-closed），不因构造遗漏而放行明文。
+  Future<void> _requireEncryptionEnabled() async {
+    final svc = encryptionService;
+    if (svc != null && await svc.isEnabled) return;
+    throw const BackupRequiresEncryptionException();
+  }
+
+  /// 装配当日备份 ZIP（BKV-1 / M13：磁盘到磁盘流式）。
+  ///
+  /// 账本 JSON 走内存条目（体量小），附件**逐文件流式**写入临时 ZIP 文件
+  /// （`ZipFileEncoder.addFile` 内部走 `InputFileStream`），不再把附件
+  /// `readAsBytes` 进内存再叠一份 `Archive` —— 旧实现的峰值≈附件总量 ×3。
+  /// 最终上传接口按字节收，故 ZIP 写完后读回一次（约 ZIP 体积 1 份）。
+  /// 返回 ZIP 字节与附件统计；无论成败都清理临时目录。
+  Future<
+      ({
+        List<int> bytes,
+        int attPacked,
+        int attSkipped,
+        int attTotalBytes
+      })> _packBackupZip({
+    required List<Ledger> ledgers,
     void Function(int done, int total)? onLedgersProgress,
     void Function(int done, int total)? onAttachmentsProgress,
   }) async {
-    if (_busy) {
-      throw StateError('已有备份/恢复操作正在执行');
-    }
-    _busy = true;
-    // P0-1：备份计时
-    final watch = Stopwatch()..start();
+    final tempDir = await Directory.systemTemp.createTemp('piggycount_backup');
+    final zipPath = '${tempDir.path}/backup.zip';
     try {
-      final storage = await _requireStorage();
-      final ledgers = await repo.getAllLedgers();
-      if (ledgers.isEmpty) {
-        throw StateError('没有可备份的账本');
-      }
-
-      final archive = Archive();
+      final zip = ZipFileEncoder();
+      zip.open(zipPath);
 
       // 1. 账本快照：exportTransactionsJson 原始产物（与同步上传完全同构）
       var done = 0;
       for (final ledger in ledgers) {
         final jsonStr = (await exportTransactionsJson(db, ledger.id)).jsonStr;
         final bytes = utf8.encode(jsonStr);
-        archive.addFile(
+        zip.addArchiveFile(
             ArchiveFile('ledger_${ledger.id}.json', bytes.length, bytes));
         done++;
         onLedgersProgress?.call(done, ledgers.length);
@@ -238,36 +269,83 @@ class CloudBackupService {
           attSkipped++;
           logger.warning('Backup', '附件本地文件缺失，跳过打包: sha256=${entry.key}');
         } else {
-          final bytes = await File(srcPath).readAsBytes();
-          attTotalBytes += bytes.length;
-          archive.addFile(ArchiveFile(
-              'attachments/${entry.key}.bin', bytes.length, bytes));
+          final len = File(srcPath).lengthSync();
+          attTotalBytes += len;
+          await zip.addFile(File(srcPath), 'attachments/${entry.key}.bin');
           attPacked++;
         }
         attDone++;
         onAttachmentsProgress?.call(attDone, filesBySha.length);
       }
 
-      // BKV-1（审计 2026-09-12 P1）止血告警：备份为全内存装配 ZIP，
-      // 附件总量超过阈值时峰值内存约为总量 3 倍（读入 + ZIP + base64/
-      // 加密中间态），移动端大附件库可能在上传前 OOM 崩溃且当日备份
-      // 丢失。超阈值仍继续（备份完整性优先），但告警日志 + 结果字段
-      // 透传，调用方可提示用户精简附件库或关注备份稳定性。
-      // 流式/分卷方案列入后续设计评审（BKV-1 完整修复）。
+      await zip.close();
+      final bytes = await File(zipPath).readAsBytes();
+      return (
+        bytes: bytes,
+        attPacked: attPacked,
+        attSkipped: attSkipped,
+        attTotalBytes: attTotalBytes
+      );
+    } finally {
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
+    }
+  }
+
+  /// 创建全量备份：全部本地账本 JSON + 引用的附件二进制 → ZIP → base64 上传。
+  ///
+  /// 孤儿附件行（本地物理文件缺失）跳过并 warning，不阻断（对齐
+  /// uploadAttachmentObjects 口径）。无本地账本抛 StateError。
+  ///
+  /// **安全门禁**：未开启端到端加密时抛 [BackupRequiresEncryptionException]，
+  /// 不创建明文云端备份。互斥锁在入口同步置位（保持并发互斥语义不变），
+  /// 门禁失败时复位，异常路径不残留 `_busy`。
+  Future<BackupOutcome> createBackup({
+    void Function(int done, int total)? onLedgersProgress,
+    void Function(int done, int total)? onAttachmentsProgress,
+  }) async {
+    if (_busy) {
+      throw StateError('已有备份/恢复操作正在执行');
+    }
+    _busy = true;
+    // 安全加固：未开启 E2EE 一律拒绝，避免账本以明文落入云端。
+    // 门禁失败必须复位互斥锁，否则后续备份入口被永久挡住。
+    try {
+      await _requireEncryptionEnabled();
+    } catch (_) {
+      _busy = false;
+      rethrow;
+    }
+    // P0-1：备份计时
+    final watch = Stopwatch()..start();
+    try {
+      final storage = await _requireStorage();
+      final ledgers = await repo.getAllLedgers();
+      if (ledgers.isEmpty) {
+        throw StateError('没有可备份的账本');
+      }
+
+      // 装配 ZIP（BKV-1 / M13：附件磁盘到磁盘流式写入，不再全内存）
+      final packed = await _packBackupZip(
+        ledgers: ledgers,
+        onLedgersProgress: onLedgersProgress,
+        onAttachmentsProgress: onAttachmentsProgress,
+      );
+      final (:bytes, :attPacked, :attSkipped, :attTotalBytes) = packed;
+
+      // BKV-1 阈值告警：备份完整性优先，超阈值仍继续；但峰值已由「附件总量
+      // ×3」降到「≈ZIP 体积 1 份 + 上传侧 base64/加密中间态」。
       if (attTotalBytes > attachmentThresholdBytes) {
         logger.warning('Backup',
             '附件总量 ${_fmtBytes(attTotalBytes)} 超过阈值 '
-            '${_fmtBytes(attachmentThresholdBytes)}，备份内存峰值风险高'
-            '（全内存装配 ZIP，BKV-1 已知边界）');
+            '${_fmtBytes(attachmentThresholdBytes)}，备份体积较大');
       }
 
       // 3. ZIP → 二进制上传（upsert 语义天然实现当日覆盖）。
       //    WebDAV/S3 走真字节路径（云端文件可直接用 ZIP 工具打开）；
       //    其余后端 base64 兜底；E2EE 由装饰器加密为与同步文件同格式密文。
-      final zipData = ZipEncoder().encode(archive);
-      if (zipData == null) {
-        throw StateError('备份压缩失败');
-      }
+      final zipData = bytes;
       final fileName = backupFileNameFor(DateTime.now());
       await storage.uploadBinaryOrFallback(
           path: '$backupDir/$fileName', bytes: zipData);

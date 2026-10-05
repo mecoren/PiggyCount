@@ -5,6 +5,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../ai/core/prompt_builder.dart';
+import '../../ai/privacy/ai_send_confirm.dart';
 import '../../ai/providers/ai_provider_config.dart';
 import '../../ai/providers/ai_provider_manager.dart';
 import '../../l10n/app_localizations.dart';
@@ -261,7 +262,10 @@ class AutoBillingService {
 
       final autoAddAttachment =
           _container.read(smartBillingAutoAttachmentProvider);
-      final result = await _container.read(aiBookkeeperProvider).fromImage(
+      // 后台自动化：非交互路径，用户已在自动化设置中显式开启，无需会话
+      // 二次确认（交互确认由前台渠道负责）；仍受工厂层同意二道关约束。
+      final result = await AiSendConfirmGate.runBypassed(
+          () => _container.read(aiBookkeeperProvider).fromImage(
         image: file,
         ledgerId: ledgerId,
         billGuard: PromptBuilder.billGuardForImage,
@@ -295,7 +299,7 @@ class AutoBillingService {
                 }
               }
             : null,
-      );
+      ));
 
       final aiElapsed = DateTime.now().millisecondsSinceEpoch - aiStartTime;
       logger.info('AutoBilling', 'AI 识别 + 落库完成',
@@ -422,7 +426,8 @@ class AutoBillingService {
         return null;
       }
 
-      final result = await _container.read(aiBookkeeperProvider).fromText(
+      final result = await AiSendConfirmGate.runBypassed(
+          () => _container.read(aiBookkeeperProvider).fromText(
         text: text,
         ledgerId: ledgerId,
         billingTypes: const [
@@ -430,7 +435,7 @@ class AutoBillingService {
           TagSeedService.billingTypeAi,
         ],
         l10n: l10n,
-      );
+      ));
 
       if (!result.success) {
         if (showNotification) {

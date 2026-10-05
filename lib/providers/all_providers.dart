@@ -44,3 +44,9 @@ export 'quick_entry_providers.dart';
 
 // 日历节假日相关
 export 'holiday_providers.dart';
+
+// 备注敏感标记相关（设备本地，不参与同步）
+export 'sensitive_note_providers.dart';
+
+// 首页交易窗口（M2-a：keyset/limit + 日合计下沉 SQL）
+export 'home_tx_window_providers.dart';

@@ -11,6 +11,7 @@ import '../providers/ai_chat_providers.dart';
 import '../providers/ai_config_providers.dart';
 import '../providers/voice_billing_providers.dart';
 import '../services/system/logger_service.dart';
+import '../ai/privacy/ai_send_confirm.dart';
 import '../ai/providers/ai_provider_manager.dart';
 import '../ai/providers/ai_provider_config.dart';
 import '../services/billing/post_processor.dart';
@@ -50,6 +51,10 @@ class VoiceBillingHelper {
         showToast(context, l10n.fabActionVoiceDisabled);
         return;
       }
+
+      // AI 外发会话级二次确认（每会话首次；取消则本次不启动录音）
+      if (!await AiSendConfirmGate.ensureConfirmed()) return;
+      if (!context.mounted) return;
 
       // 1. 检查并请求麦克风权限
       var status = await Permission.microphone.status;

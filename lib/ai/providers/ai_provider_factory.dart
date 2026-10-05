@@ -7,6 +7,7 @@ import 'package:flutter_ai_kit_zhipu/flutter_ai_kit_zhipu.dart';
 
 import 'ai_provider_config.dart';
 import 'ai_provider_manager.dart';
+import '../privacy/ai_send_confirm.dart';
 import '../../services/system/logger_service.dart';
 
 /// AI Provider 工厂类
@@ -50,6 +51,10 @@ class AIProviderFactory {
   }) async {
     final tag = logTag ?? 'AIFactory';
 
+    // 审计二道关 + 会话级二次确认：未同意 / 未确认一律不外发（见
+    // AiSendConfirmGate）。交互渠道应在发起前先确认并静默取消。
+    await AiSendConfirmGate.guardOutboundSend();
+
     // 获取文本能力对应的服务商
     final config = await AIProviderManager.getProviderForCapability(
       AICapabilityType.text,
@@ -84,6 +89,9 @@ class AIProviderFactory {
   }) async {
     final tag = logTag ?? 'AIFactory';
 
+    // 审计二道关 + 会话级二次确认（见 AiSendConfirmGate）。
+    await AiSendConfirmGate.guardOutboundSend();
+
     // 获取视觉能力对应的服务商
     final config = await AIProviderManager.getProviderForCapability(
       AICapabilityType.vision,
@@ -115,6 +123,9 @@ class AIProviderFactory {
     String? logTag,
   }) async {
     final tag = logTag ?? 'AIFactory';
+
+    // 审计二道关 + 会话级二次确认（见 AiSendConfirmGate）。
+    await AiSendConfirmGate.guardOutboundSend();
 
     // 获取语音能力对应的服务商
     final config = await AIProviderManager.getProviderForCapability(

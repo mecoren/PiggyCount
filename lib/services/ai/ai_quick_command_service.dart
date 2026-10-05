@@ -5,6 +5,8 @@ import '../../models/ai_quick_command.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../utils/month_range.dart';
+import '../../utils/sensitive_data_masker.dart';
+import '../security/sensitive_note_service.dart';
 import 'package:drift/drift.dart' as drift;
 import '../../data/repositories/local/local_repository.dart';
 
@@ -172,6 +174,8 @@ ${categoryList.join('\n')}
       }
 
       final list = <String>[];
+      // 备注敏感标记：外发前把敏感备注替换为固定掩码（设备本地标记）
+      final sensitiveIds = await const SensitiveNoteService().load();
       for (final t in transactions) {
         String? categoryName;
         if (t.categoryId != null) {
@@ -184,7 +188,9 @@ ${categoryList.join('\n')}
         final date = t.happenedAt.toString().substring(0, 10);
         final typeStr = t.type == 'income' ? '收入' : '支出';
         final amountStr = _formatAmount(t.amount);
-        final noteStr = t.note != null && t.note!.isNotEmpty ? ' (${t.note})' : '';
+        final maskedNote =
+            SensitiveDataMasker.maskNoteIf(sensitiveIds.contains(t.id), t.note);
+        final noteStr = maskedNote.isNotEmpty ? ' ($maskedNote)' : '';
 
         list.add('- $date $typeStr $amountStr ${categoryName ?? ""}$noteStr');
       }
