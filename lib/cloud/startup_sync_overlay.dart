@@ -7,7 +7,9 @@
 // - 样式遵循 PiggyTokens 设计系统：PiggyDimens.alertWidth(Wide) 卡片宽度、
 //   radiusXl 圆角、surfaceElevated 背景、PiggyShadows.card 阴影；
 //   错误 / 信息两种**通知态**走 [_AlertBody]（与 AppDialog 同一套
-//   「标题 + 说明 + 底部分栏按钮」版式）
+//   「标题 + 说明 + 底部分栏按钮」版式）；**候选态**（发现更新）走
+//   [_HasUpdatesView]，同为「居中标题 + 说明 + 内容区滚动 +
+//   [PiggyDialogActionsBar] 分栏动作区」，只是内容换成账本清单与三动作
 
 import 'dart:async';
 
@@ -260,17 +262,22 @@ class _StartupSyncOverlayView extends StatelessWidget {
   }
 
   Widget _buildCard(BuildContext context, StartupSyncState state) {
-    // 通知态（错误 / 信息）用窄卡片 + **零内边距**：内部 [_AlertBody] 自带
-    // 文案留白，底部分栏动作区的横线与圆角裁切必须贴卡片边缘才与
-    // AppDialog 一致；进度 / 候选态仍留内容留白，卡片宽度走宽档。
+    // 通知态（错误 / 信息）与候选态（发现更新）的**弹窗结构**由视图自带留白，
+    // 卡片必须**零内边距** —— 底部分栏动作区（[PiggyDialogActionsBar]）的横线、
+    // 竖线与圆角裁切要贴卡片边缘才与 AppDialog / AppDialogShell 一致；
+    // 留 p24 会把分栏缩进成卡片中间的一条悬浮短横线。
+    // 宽度：通知态用窄卡片（与 iOS 警示框同宽），候选态带账本清单 + 三动作，
+    // 走宽档；进度态（checking / applying / done）仍留内容留白的宽卡片。
     final isAlert = state is ErrorState || state is InfoState;
+    final zeroPadding = isAlert || state is HasUpdatesState;
     return Container(
       constraints: BoxConstraints(
         maxWidth: isAlert ? PiggyDimens.alertWidth : PiggyDimens.alertWidthWide,
       ),
       margin: const EdgeInsets.symmetric(horizontal: PiggyDimens.p24),
-      padding:
-          isAlert ? EdgeInsets.zero : const EdgeInsets.all(PiggyDimens.p24),
+      padding: zeroPadding
+          ? EdgeInsets.zero
+          : const EdgeInsets.all(PiggyDimens.p24),
       decoration: BoxDecoration(
         color: PiggyTokens.surfaceElevated(context),
         borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
@@ -346,7 +353,12 @@ class _CheckingView extends StatelessWidget {
   }
 }
 
-/// 发现更新视图：候选列表 + 三按钮
+/// 发现更新视图：候选账本清单 + 三动作分栏，套用项目统一弹窗语言 ——
+/// 居中标题（图标 + 文案）→ 说明 → 内容区限高滚动 → 底部
+/// [PiggyDialogActionsBar] 分栏动作区，与 [_AlertBody] / [AppDialogShell] 同款。
+///
+/// 回归点：此前是自绘版式（左对齐标题 + Filled / Outlined / Text 三个大按钮
+/// + p24 内边距），与项目其余弹窗（iOS 警示框口径）不一致。
 class _HasUpdatesView extends StatelessWidget {
   const _HasUpdatesView({required this.state, required this.controller});
   final HasUpdatesState state;
@@ -359,54 +371,79 @@ class _HasUpdatesView extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Icon(Icons.cloud_download_outlined,
-                color: Theme.of(context).colorScheme.primary, size: 22),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                l10n.startupSyncCheckTitle,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+        // 标题区留白与 [_AlertBody] 同款（p20 起），底部交给滚动区接续。
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            PiggyDimens.p20,
+            PiggyDimens.p20,
+            PiggyDimens.p20,
+            PiggyDimens.p12,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 「图标 + 标题」标题行：居中，与 [_AlertBody] / [AppDialogShell]
+              // 的标题同口径（Row 居中，文案随宽度换行）。
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.cloud_download_outlined,
+                      color: PiggyTokens.primary(context), size: 20),
+                  const SizedBox(width: PiggyDimens.p8),
+                  Flexible(
+                    child: Text(
+                      l10n.startupSyncCheckTitle,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: PiggyTokens.textPrimary(context),
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: PiggyDimens.p8),
+              Text(
+                l10n.startupSyncCheckSummaryMessage(state.candidates.length),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: PiggyTokens.textSecondary(context),
                     ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Text(
-          l10n.startupSyncCheckSummaryMessage(state.candidates.length),
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: PiggyTokens.textSecondary(context),
-              ),
-        ),
-        // 另有账本存在「不会自动合并」的差异（方向未知的云端账本元信息差异）：
-        // 只提示，不参与任何自动动作 —— 用户可在本次合并后去云同步页处理。
-        if (state.infoMessage != null) ...[
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.info_outline,
-                  size: 14, color: PiggyTokens.textTertiary(context)),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  state.infoMessage!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: PiggyTokens.textTertiary(context),
+              // 另有账本存在「不会自动合并」的差异（方向未知的云端账本元信息差异）：
+              // 只提示，不参与任何自动动作 —— 用户可在本次合并后去云同步页处理。
+              if (state.infoMessage != null) ...[
+                const SizedBox(height: PiggyDimens.p8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline,
+                        size: 14, color: PiggyTokens.textTertiary(context)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        state.infoMessage!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: PiggyTokens.textTertiary(context),
+                            ),
                       ),
+                    ),
+                  ],
                 ),
-              ),
+              ],
             ],
           ),
-        ],
-        const SizedBox(height: 12),
+        ),
         // 审计 U7：候选列表数量无上限，小屏/大字号下不可滚动 Column
-        // 会纵向溢出（RenderFlex overflow）。限高 + 列表段可滚动，
-        // 按钮区保持固定在滚动区外。
+        // 会纵向溢出（RenderFlex overflow）。限高 + 内容区可滚动，
+        // 动作区保持固定在滚动区外。
         Flexible(
           child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(
+              PiggyDimens.p20,
+              0,
+              PiggyDimens.p20,
+              PiggyDimens.p16,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -456,23 +493,25 @@ class _HasUpdatesView extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 20),
-        // 主按钮：一键应用全部
-        FilledButton(
-          onPressed: () => state.completer.complete(SummaryChoice.applyAll),
-          child: Text(l10n.startupSyncCheckApplyAll),
-        ),
-        const SizedBox(height: 8),
-        // 次按钮：逐个确认
-        OutlinedButton(
-          onPressed: () => state.completer.complete(SummaryChoice.confirmEach),
-          child: Text(l10n.startupSyncCheckConfirmEach),
-        ),
-        const SizedBox(height: 8),
-        // 文字按钮：暂不合并
-        TextButton(
-          onPressed: () => state.completer.complete(SummaryChoice.skip),
-          child: Text(l10n.startupSyncCheckSkip),
+        // 动作区走 [PiggyDialogActionsBar]（横线 + 分栏纯文本钮，末位=确认取
+        // 主题色）。顺序照「暂不合并 → 逐个确认 → 一键应用全部」：把主选放末位，
+        // 与冲突处理的「取消 / 对比合并 / 强制上传」同一口径。
+        PiggyDialogActionsBar(
+          actions: [
+            TextButton(
+              onPressed: () => state.completer.complete(SummaryChoice.skip),
+              child: Text(l10n.startupSyncCheckSkip),
+            ),
+            TextButton(
+              onPressed: () =>
+                  state.completer.complete(SummaryChoice.confirmEach),
+              child: Text(l10n.startupSyncCheckConfirmEach),
+            ),
+            TextButton(
+              onPressed: () => state.completer.complete(SummaryChoice.applyAll),
+              child: Text(l10n.startupSyncCheckApplyAll),
+            ),
+          ],
         ),
       ],
     );

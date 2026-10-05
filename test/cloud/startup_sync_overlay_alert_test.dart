@@ -1,13 +1,22 @@
-// 启动检查遮罩「通知态」（错误 / 信息）弹窗口径回归：
-// 这两种状态是**通知**（不是进度卡），必须与 AppDialog 同一套外观 ——
-// 窄卡片（alertWidth）+ 居中标题 + 三级色说明 + 底部单个全宽文本按钮。
-// 回归点：此前是自绘的「红色错误图标 + 居中正文 + FilledButton 确定」。
+// 启动检查遮罩「弹窗态」口径回归：通知态（错误 / 信息）与候选态（发现更新）
+// 都是**弹窗**（不是进度卡），必须与 AppDialog 同一套外观 ——
+// 居中标题 + 三级色说明 + 底部 [PiggyDialogActionsBar] 分栏纯文本按钮。
 //
-// 进度态（checking / applying / hasUpdates / done）仍是宽卡片，不在此断言。
+// 回归点：通知态此前是自绘的「红色错误图标 + 居中正文 + FilledButton 确定」；
+// 候选态此前是自绘的「左对齐图标标题 + Filled / Outlined / Text 三个大按钮
+// + p24 内边距」，与项目其余弹窗不一致。
+//
+// 进度态（checking / applying / done）仍是内容自绘的宽卡片，不在此断言。
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:piggycount/cloud/startup_sync_checker.dart'
+    show LedgerCandidate, SummaryChoice;
 import 'package:piggycount/cloud/startup_sync_overlay.dart';
+import 'package:piggycount/cloud/sync_service.dart' show SyncDiff, SyncStatus;
+import 'package:piggycount/data/db.dart' as db;
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/styles/tokens.dart';
 
@@ -28,6 +37,27 @@ double _cardWidth(WidgetTester tester) =>
 /// 卡片宽度上限（[Container] 的 constraints.maxWidth）。
 double _cardMaxWidth(WidgetTester tester) =>
     tester.widget<Container>(_card()).constraints!.maxWidth;
+
+/// 造一个候选账本：widget 级测试不需要真实数据库行，直接构造数据类。
+LedgerCandidate _candidate(int id, String name) => LedgerCandidate(
+      ledger: db.Ledger(
+        id: id,
+        name: name,
+        currency: 'CNY',
+        type: 'general',
+        createdAt: DateTime(2026, 1, 1),
+        myRole: 'owner',
+        memberCount: 1,
+        isShared: false,
+        monthStartDay: 1,
+      ),
+      status: const SyncStatus(
+        diff: SyncDiff.cloudNewer,
+        localCount: 0,
+        localFingerprint: 'local-fp',
+      ),
+      diffType: SyncDiff.cloudNewer,
+    );
 
 /// 挂载遮罩（attach 走 rootOverlay，与 app.dart 生产装配一致）。
 ///
@@ -117,6 +147,35 @@ void main() {
 
     expect(find.text('请到「我的 → 云同步」手动处理。'), findsOneWidget);
     expect(find.text('\n请到「我的 → 云同步」手动处理。'), findsNothing);
+  });
+
+  testWidgets('候选态：居中标题 + 账本清单 + 分栏纯文本三动作', (tester) async {
+    final controller = await _pumpWithOverlay(tester);
+    final completer = Completer<SummaryChoice>();
+
+    controller.showHasUpdates(
+      [_candidate(1, '日常消费账本'), _candidate(2, '投资理财账本')],
+      completer,
+    );
+    await tester.pump();
+
+    expect(find.text('云端有更新'), findsOneWidget);
+    expect(find.textContaining('检测到 2 个账本'), findsOneWidget);
+    expect(find.text('日常消费账本'), findsOneWidget);
+
+    // 与 AppDialog 一致：分栏纯文本按钮，不是 Filled/Outlined 大按钮
+    expect(find.byType(FilledButton), findsNothing);
+    expect(find.byType(OutlinedButton), findsNothing);
+    for (final label in ['暂不合并', '逐个确认', '一键应用全部']) {
+      expect(find.widgetWithText(TextButton, label), findsOneWidget);
+    }
+
+    // 候选态带账本清单 + 三动作，走宽档卡片
+    expect(_cardWidth(tester), PiggyDimens.alertWidthWide);
+
+    await tester.tap(find.text('一键应用全部'));
+    await tester.pump();
+    expect(await completer.future, SummaryChoice.applyAll);
   });
 
   testWidgets('进度态仍是宽卡片（alertWidthWide），不被窄化', (tester) async {
