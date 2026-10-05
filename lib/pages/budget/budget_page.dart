@@ -308,12 +308,10 @@ class BudgetPage extends ConsumerWidget {
     );
   }
 
-  void _addBudget(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const BudgetEditPage()),
-    );
-  }
+  /// 预算新建 / 编辑一律走项目统一的悬浮卡片表单抽屉（[showBudgetFormBottomSheet]），
+  /// 不再跳转全屏页面 —— 与记账、账户新建同一口径。
+  Future<void> _addBudget(BuildContext context) =>
+      showBudgetFormBottomSheet(context);
 
   /// §7 共享账本:Editor 视角不允许编辑预算
   bool _isEditorInShared(WidgetRef ref) {
@@ -328,21 +326,12 @@ class BudgetPage extends ConsumerWidget {
     }
     final budget = await ref.read(totalBudgetProvider.future);
     if (budget != null && context.mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => BudgetEditPage(budget: budget)),
-      );
+      await showBudgetFormBottomSheet(context, budget: budget);
     }
   }
 
-  void _addCategoryBudget(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const BudgetEditPage(isCategory: true),
-      ),
-    );
-  }
+  Future<void> _addCategoryBudget(BuildContext context) =>
+      showBudgetFormBottomSheet(context, isCategory: true);
 
   void _editCategoryBudget(
     BuildContext context,
@@ -356,10 +345,7 @@ class BudgetPage extends ConsumerWidget {
     final allBudgets = await ref.read(allBudgetsProvider.future);
     final budget = allBudgets.where((b) => b.id == usage.budgetId).firstOrNull;
     if (budget != null && context.mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => BudgetEditPage(budget: budget)),
-      );
+      await showBudgetFormBottomSheet(context, budget: budget);
     }
   }
 }

@@ -223,10 +223,11 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
   }
 
   Future<void> _openEditor(CustomFieldDefinition? existing) async {
-    final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    // 外壳走项目统一的表单抽屉（[showPiggyFormSheet] → [PiggyFormSheet]）：
+    // 悬浮卡片 + 居中标题 + 底部「取消｜保存」双等宽按钮行，卡片 chrome
+    // （键盘避让 / 底部安全区 / 左右留距 / Material 圆角）由外壳统一负责。
+    final saved = await showPiggyFormSheet<bool>(
+      context,
       builder: (_) => _CustomFieldEditSheet(existing: existing),
     );
     if (saved == true && mounted) {
@@ -358,85 +359,48 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
     final l10n = AppLocalizations.of(context);
     final canSubmit = _nameController.text.trim().isNotEmpty && !_submitting;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        decoration: BoxDecoration(
-          color: PiggyTokens.surface(context),
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(PiggyDimens.radius2xl),
+    // 外壳走项目统一的悬浮卡片表单抽屉（[PiggyFormSheet]）：居中标题 →
+    // p16 → 字段 → p20 → 「取消｜保存」。间距全部取 [PiggyDimens] 令牌，
+    // 不再自绘全宽平底弹层 + 顶部小把手（旧样式顶部贴边、字段挤在一起）。
+    return PiggyFormSheet(
+      title: _isEditing ? l10n.customFieldEditTitle : l10n.customFieldAddTitle,
+      cancelLabel: l10n.commonCancel,
+      confirmLabel: l10n.commonSave,
+      onCancel: () => Navigator.of(context).pop(false),
+      onConfirm: canSubmit ? _submit : null,
+      confirmBusy: _submitting,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _label(l10n.customFieldNameLabel),
+          const SizedBox(height: PiggyDimens.p8),
+          TextField(
+            controller: _nameController,
+            autofocus: true,
+            maxLength: 20,
+            textInputAction: TextInputAction.done,
+            onChanged: (_) => setState(() => _error = null),
+            onSubmitted: (_) => canSubmit ? _submit() : null,
+            decoration: piggyOutlinedDecoration(
+              context,
+              hint: l10n.customFieldNameHint,
+              errorText: _error,
+            ).copyWith(counterText: ''),
           ),
-        ),
-        padding: EdgeInsets.fromLTRB(
-          20,
-          12,
-          20,
-          20 + MediaQuery.of(context).padding.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: PiggyTokens.divider(context),
-                  borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _isEditing ? l10n.customFieldEditTitle : l10n.customFieldAddTitle,
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: PiggyTokens.textPrimary(context),
-              ),
-            ),
-            const SizedBox(height: 18),
-            _label(l10n.customFieldNameLabel),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _nameController,
-              autofocus: true,
-              maxLength: 20,
-              textInputAction: TextInputAction.done,
-              onChanged: (_) => setState(() => _error = null),
-              onSubmitted: (_) => canSubmit ? _submit() : null,
-              decoration: piggyOutlinedDecoration(
-                context,
-                hint: l10n.customFieldNameHint,
-                errorText: _error,
-              ).copyWith(counterText: ''),
-            ),
-            const SizedBox(height: 16),
-            _label(l10n.customFieldTypeLabel),
-            const SizedBox(height: 8),
-            _buildTypeSelector(l10n),
-            const SizedBox(height: 20),
-            // 底部操作：双等宽大按钮（取消描边 + 保存填充，全站统一口径）。
-            PiggySheetActions(
-              cancelLabel: l10n.commonCancel,
-              confirmLabel: l10n.commonSave,
-              onCancel: () => Navigator.of(context).pop(false),
-              onConfirm: canSubmit ? _submit : null,
-              confirmBusy: _submitting,
-            ),
-          ],
-        ),
+          const SizedBox(height: PiggyDimens.p16),
+          _label(l10n.customFieldTypeLabel),
+          const SizedBox(height: PiggyDimens.p8),
+          _buildTypeSelector(l10n),
+        ],
       ),
     );
   }
 
   Widget _label(String text) => Text(
         text,
-        style: TextStyle(
-          fontSize: 13,
+        style: PiggyTextTokens.label(context).copyWith(
           fontWeight: FontWeight.w500,
-          color: PiggyTokens.textSecondary(context),
         ),
       );
 

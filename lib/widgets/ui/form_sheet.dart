@@ -38,7 +38,10 @@ class PiggyFormSheet extends StatelessWidget {
   final String cancelLabel;
   final String confirmLabel;
   final VoidCallback onCancel;
-  final VoidCallback onConfirm;
+
+  /// 确认回调；传 `null` 即禁用确认键（如必填项为空时），与
+  /// [PiggySheetActions.onConfirm] 的语义一致。
+  final VoidCallback? onConfirm;
 
   /// 确认进行中：确认键转圈并与取消键一并禁用（防连点）。
   final bool confirmBusy;
