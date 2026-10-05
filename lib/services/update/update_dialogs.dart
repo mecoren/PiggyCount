@@ -429,6 +429,10 @@ class _MirrorSelectDialogState extends State<_MirrorSelectDialog> {
           ],
         ),
       ),
+      // 动作区走 iOS 警示框口径（AppDialogShell → PiggyDialogActionsBar：
+      // 横线分栏 + 纯文本钮，末位主题色）。传 Filled/Outlined 会被拉满整格、
+      // 变成「蓝底圆角大按钮」；actions 里也**不要**塞 SizedBox 之类的占位件
+      // —— 每个元素都会占一格，3 个动作会竖排出空行。
       actions: [
         if (widget.showTestButton)
           TextButton.icon(
@@ -442,7 +446,7 @@ class _MirrorSelectDialogState extends State<_MirrorSelectDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l10n.commonCancel),
         ),
-        FilledButton(
+        TextButton(
           onPressed: _isTesting || _selectedMirrorId == null
               ? null
               : () async {
@@ -454,7 +458,10 @@ class _MirrorSelectDialogState extends State<_MirrorSelectDialog> {
                     }
                   }
                 },
-          child: Text(l10n.commonConfirm),
+          child: Text(
+            l10n.commonConfirm,
+            style: TextStyle(color: PiggyTokens.primary(context)),
+          ),
         ),
       ],
     );
@@ -604,27 +611,19 @@ class _DownloadConfirmDialogState extends State<_DownloadConfirmDialog> {
           ],
         ),
       ),
+      // 同上一处：iOS 分栏「稍后 ｜ 下载」（末位主题色），不再用
+      // Outlined/Filled 大按钮，也不要插 SizedBox 占位。
       actions: [
-        OutlinedButton(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Theme.of(context).colorScheme.primary,
-            side: BorderSide(color: Theme.of(context).colorScheme.primary),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-            ),
-          ),
+        TextButton(
           onPressed: () => Navigator.of(context).pop(false),
           child: Text(l10n.updateLaterButton),
         ),
-        const SizedBox(width: 12),
-        FilledButton(
-          style: FilledButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-            ),
-          ),
+        TextButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: Text(l10n.updateDownloadButton),
+          child: Text(
+            l10n.updateDownloadButton,
+            style: TextStyle(color: PiggyTokens.primary(context)),
+          ),
         ),
       ],
     );
