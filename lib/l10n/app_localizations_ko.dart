@@ -22,7 +22,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get changelogTitle => '업데이트 로그';
 
   @override
-  String get changelogSubtitle => 'See what changed in each release';
+  String get changelogSubtitle => '각 버전에서 무엇이 바뀌었는지 확인하세요';
 
   @override
   String changelogVersionSubtitle(String date, int count) {
@@ -8261,10 +8261,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get rangeReportChangeRange => '기간 변경';
 
   @override
-  String get rangePickerTitle => 'Select range';
+  String get rangePickerTitle => '기간 선택';
 
   @override
-  String get rangePickerHintEnd => 'Tap an end date';
+  String get rangePickerHintEnd => '종료 날짜를 탭하세요';
 
   @override
   String get rangeReportCustomFieldTitle => '사용자 정의 필드 요약';

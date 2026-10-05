@@ -8313,6 +8313,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get changelogTitle => '更新日誌';
 
   @override
+  String get changelogSubtitle => '看看每個版本更新了什麼';
+
+  @override
   String changelogVersionSubtitle(String date, int count) {
     return '$date · $count 項更新';
   }
@@ -16456,6 +16459,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get rangeReportChangeRange => '更換區間';
+
+  @override
+  String get rangePickerTitle => '選擇區間';
+
+  @override
+  String get rangePickerHintEnd => '點一下選結束日期';
 
   @override
   String get rangeReportCustomFieldTitle => '自訂欄位彙總';
