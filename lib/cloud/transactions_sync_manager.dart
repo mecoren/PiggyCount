@@ -3747,7 +3747,11 @@ class TransactionsSyncManager implements SyncService {
   /// 清空。超出 [_maxCachedPayloadChars] / [_maxCachedPayloadTotalChars] 就
   /// **干脆不缓存**：导入走 [importRemoteLedger] 的未命中分支重新下载，
   /// 语义不变，只是多一次下载。
-  /// 两个上限是**估式不是实测**（无真机/真实云端语料），编号 TODO-M19。
+  /// 两个上限是**估式不是实测**，编号 M19 —— 2026-10-05 定论：**维持估式**。
+  /// 取真实 payload 分布需要真机 + 真实云账号（本环境只有模拟器/桌面），而这两个
+  /// 阈值的作用是"防止 N 本账本明文整本常驻"，8MB / 16MB 相对该风险已经很保守
+  /// （一万笔的账本 ≈ 2MB）。复访条件：拿到真实分布（或用户报"导入前内存高"）时
+  /// 按分位数重设。
   final Map<String, String> _discoveredPayloads = {};
 
   static const int _maxCachedPayloadChars = 8 * 1024 * 1024;
