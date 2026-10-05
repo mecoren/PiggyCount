@@ -494,14 +494,26 @@ class AppLinkService {
   /// 冷启动通过 deep-link 触发记账时,Splash 的 `_currentLedgerPersist` 恢复
   /// 逻辑可能还没跑完(它是 fire-and-forget,不被 await),currentLedgerId 还
   /// 停在默认值 1。这里显式、幂等地校准一次,确保记到用户真正选中的账本。
+  ///
+  /// ⚠️ 采纳前**必须**校验,不能把 prefs 里的值直接装回去:
+  /// ① `0` 是「本机无账本」哨兵(冷启动自愈在账本全空时归零,见
+  ///    `providers/database_providers.dart`),不是账本 id;
+  /// ② 这里既然会与自愈「赛跑」,就必须假设 prefs 可能还是**悬空值** ——
+  ///    而自愈只在冷启动跑一次,先被装回去的悬空值没有第二次机会被纠正,
+  ///    于是又回到「悬空 id 绕过全部 UI 守卫」的原故障(实测抛裸的
+  ///    `Exception: 账本 N 不存在`,见 docs/test/ 报告 6.5)。
   Future<void> _restoreCurrentLedgerId() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getInt('current_ledger_id');
-      if (saved != null &&
-          _container.read(currentLedgerIdProvider) != saved) {
-        _container.read(currentLedgerIdProvider.notifier).state = saved;
+      if (saved == null || saved <= 0) return;
+      if (_container.read(currentLedgerIdProvider) == saved) return;
+      final repo = _container.read(repositoryProvider);
+      if (await repo.getLedgerById(saved) == null) {
+        logger.warning('AppLink', 'prefs 的 current_ledger_id=$saved 已不存在，跳过采纳');
+        return;
       }
+      _container.read(currentLedgerIdProvider.notifier).state = saved;
     } catch (_) {
       // 恢复失败不致命,退回当前(可能为默认)账本。
     }

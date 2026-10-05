@@ -38,16 +38,24 @@ class AutoBillingService {
   }
 
   /// 解析当前账本 ID(Provider → SharedPreferences → 数据库默认)。
+  ///
+  /// ⚠️ `currentLedgerIdProvider` 的取值可能是 **0** —— 那是「本机无账本」哨兵
+  /// (冷启动自愈在账本全空时归零,见 `providers/database_providers.dart`),
+  /// **不是**可用的账本 id。0 必须当成 null 返回,否则会穿透调用方的
+  /// `if (ledgerId == null)` 守卫,拿 `ledgerId: 0` 去落库(记账到不存在的账本)。
+  /// 全仓认这个哨兵的守卫只有 7 处(cloud_sync_page / share_poster_service ×4 /
+  /// analytics_page / transactions_sync_manager),本方法必须自己判。
   Future<int?> _resolveLedgerId() async {
     try {
       final id = _container.read(currentLedgerIdProvider);
+      if (id <= 0) return null;
       return id;
     } catch (_) {
       // provider 尚未就绪（启动早期窗口），回退 prefs/数据库解析
     }
     final prefs = await SharedPreferences.getInstance();
     final fromPrefs = prefs.getInt(_ledgerIdKey);
-    if (fromPrefs != null) return fromPrefs;
+    if (fromPrefs != null && fromPrefs > 0) return fromPrefs;
     final repo = _container.read(repositoryProvider);
     final ledgers = await repo.getAllLedgers();
     if (ledgers.isEmpty) return null;
