@@ -160,7 +160,7 @@ class AttachmentService {
 
       logger.info('AttachmentService',
           '附件保存成功${urgent ? "(urgent/sync copy)" : ""}: $fileName');
-      return repo.getAttachmentById(id);
+      return await repo.getAttachmentById(id);
     } catch (e, stackTrace) {
       logger.error('AttachmentService', '保存附件失败', e, stackTrace);
       return null;

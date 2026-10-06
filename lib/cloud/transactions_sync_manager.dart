@@ -3355,7 +3355,7 @@ class TransactionsSyncManager implements SyncService {
       // 与同账本的并发上传互斥（否则恢复事务提交前后到达的上传会把恢复前
       // 旧内容回传云端）。锁在 ledgerId 解析后获取：新建行的 id 在此之前
       // 对其他调用方不可见，不存在锁窗口外的竞态。
-      return _withLedgerLock<int?>(ledgerId, () async {
+      return await _withLedgerLock<int?>(ledgerId, () async {
         // 下载数据
         final raw = await provider.storage.download(path: remotePath);
 
