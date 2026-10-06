@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import '../data/db.dart';
 import '../data/repositories/local/local_repository.dart';
 import '../utils/shared_ledger_picker_filter.dart';
@@ -110,7 +111,7 @@ final recentTagsForCurrentLedgerProvider =
 final canCreateTagForCurrentLedgerProvider = Provider<bool>((ref) {
   // 切换账本触发 reload 时 Riverpod 会保留 previous value;权限判断不能沿用
   // 上一个个人/Owner 账本,否则进入 Editor 账本的短窗口仍会暴露创建入口。
-  final ledger = ref.watch(currentLedgerProvider).unwrapPrevious().valueOrNull;
+  final ledger = ref.watch(currentLedgerProvider).unwrapPrevious().value;
   if (ledger == null) return false;
   return !ledger.isShared || ledger.myRole == 'owner';
 });

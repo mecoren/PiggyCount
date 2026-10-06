@@ -1153,7 +1153,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             // v47：自定义字段角标（无值/定义解析不出 → 不显示）。
                             final customBadges = ref
                                     .watch(customFieldValueBadgesProvider)
-                                    .valueOrNull?[item.t.id] ??
+                                    .value?[item.t.id] ??
                                 const <({String name, String display})>[];
                             final customBadgeTexts = [
                               for (final b in customBadges)

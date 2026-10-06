@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../utils/shared_ledger_picker_filter.dart';
@@ -45,7 +46,7 @@ final quickEntryModeEnabledInitProvider = FutureProvider<void>((ref) async {
 ///    还必须属于**当前账本**；
 /// 3. 账本切换 / 云端同步到新数据后自动重算（watch 两个上游）。
 ///
-/// 用法：UI 侧用 `.valueOrNull` **同步**读取。想要「点击即出表单、
+/// 用法：UI 侧用 `.value` **同步**读取。想要「点击即出表单、
 /// 中途没有异步等待」的效果，需在首帧后 fire-and-forget 预热一次
 /// （见 `app.dart` 的预热调用）。
 final quickEntryLastCategoryProvider =

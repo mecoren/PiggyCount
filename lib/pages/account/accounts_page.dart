@@ -217,7 +217,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                           iconColor: PiggyTokens.incomeColor(context, ref),
                           typeOrder: assetTypeOrder,
                           groups: groups,
-                          allStats: allStatsAsync.valueOrNull,
+                          allStats: allStatsAsync.value,
                           primaryColor: primaryColor,
                           ledgerId: ledgerId,
                         ),
@@ -231,7 +231,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                           iconColor: PiggyTokens.expenseColor(context, ref),
                           typeOrder: liabilityTypeOrder,
                           groups: groups,
-                          allStats: allStatsAsync.valueOrNull,
+                          allStats: allStatsAsync.value,
                           primaryColor: primaryColor,
                           ledgerId: ledgerId,
                         ),
@@ -248,7 +248,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                             type: type,
                             accounts: groupList,
                             primaryColor: primaryColor,
-                            allStats: allStatsAsync.valueOrNull,
+                            allStats: allStatsAsync.value,
                             onReorder: (oldIndex, newIndex) =>
                                 _onReorder(type, groupList, oldIndex, newIndex),
                             onTap: (account) =>
@@ -262,7 +262,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                         // 分区头小计与净资产卡差额对账)
                         _HiddenAccountsSection(
                           accounts: accounts.where((a) => a.hidden).toList(),
-                          allStats: allStatsAsync.valueOrNull,
+                          allStats: allStatsAsync.value,
                           primaryColor: primaryColor,
                           onTap: (account) =>
                               _viewAccountDetail(context, ref, account),
@@ -318,8 +318,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     AsyncValue<List<({String type, double totalBalance})>> compositionAsync,
     Color primaryColor,
   ) {
-    // reload 时 asData 会短暂变 null 致布局闪动,用 valueOrNull 保留上次结果
-    final isSingleCurrency = (netWorthAsync.valueOrNull?.length ?? 1) <= 1;
+    // reload 时 asData 会短暂变 null 致布局闪动,用 value 保留上次结果
+    final isSingleCurrency = (netWorthAsync.value?.length ?? 1) <= 1;
     // 折算态:总闸开启时也展示饼图,数据换成折算后聚合(主币种口径)。
     final multiCurrencyActive = ref.watch(multiCurrencyActiveProvider);
     final showComposition = isSingleCurrency || multiCurrencyActive;
@@ -416,7 +416,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
 
     // 多币种态总闸开启且折算结果就绪 → 走折算视图;否则原 per-currency 渲染原样回退。
     final multiCurrencyActive = ref.watch(multiCurrencyActiveProvider);
-    final converted = ref.watch(convertedNetWorthProvider).valueOrNull;
+    final converted = ref.watch(convertedNetWorthProvider).value;
     if (multiCurrencyActive && converted != null) {
       return _buildConvertedNetWorthContent(
           context, ref, converted, useCompact);
@@ -698,7 +698,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     final l10n = AppLocalizations.of(context);
     final base = ref.watch(baseCurrencyProvider).toUpperCase();
     final nwByCurrency =
-        ref.watch(netWorthBreakdownByCurrencyProvider).valueOrNull ?? const {};
+        ref.watch(netWorthBreakdownByCurrencyProvider).value ?? const {};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -1087,7 +1087,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
 
     // 折算态(总闸开启且汇率就绪)且组内多币种 → 小计折算并支持点击详情。
     final multiCurrencyActive = ref.watch(multiCurrencyActiveProvider);
-    final rates = ref.watch(effectiveRatesProvider).valueOrNull;
+    final rates = ref.watch(effectiveRatesProvider).value;
     final base = ref.watch(baseCurrencyProvider).toUpperCase();
     final convertActive =
         multiCurrencyActive && rates != null && !isSingleCurrency;
@@ -1231,7 +1231,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                   Consumer(
                     builder: (context, ref, _) {
                       final used =
-                          ref.watch(usedCurrenciesProvider).valueOrNull;
+                          ref.watch(usedCurrenciesProvider).value;
                       if (used == null || used.length < 2) {
                         return const SizedBox.shrink();
                       }
@@ -1788,7 +1788,7 @@ class _HiddenAccountsSectionState
       );
     }
     final multiCurrencyActive = ref.watch(multiCurrencyActiveProvider);
-    final rates = ref.watch(effectiveRatesProvider).valueOrNull;
+    final rates = ref.watch(effectiveRatesProvider).value;
     final base = ref.watch(baseCurrencyProvider).toUpperCase();
     final hide = ref.watch(hideAmountsProvider);
 

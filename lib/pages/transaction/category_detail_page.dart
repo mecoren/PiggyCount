@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import '../../providers.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/custom_field_providers.dart';
@@ -410,7 +411,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
     final Map<int, String> ledgerNames = widget.allLedgers
         ? {
             for (final l
-                in (ref.watch(ledgersStreamProvider).valueOrNull ?? []))
+                in (ref.watch(ledgersStreamProvider).value ?? []))
               l.id: l.name
           }
         : const <int, String>{};
@@ -504,7 +505,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
     // v47：自定义字段角标（无值/定义解析不出 → 不显示）。
     final customBadges = ref
             .watch(customFieldValueBadgesProvider)
-            .valueOrNull?[transaction.id] ??
+            .value?[transaction.id] ??
         const <({String name, String display})>[];
     final customBadgeTexts = [
       for (final b in customBadges) '${b.name}: ${b.display}',

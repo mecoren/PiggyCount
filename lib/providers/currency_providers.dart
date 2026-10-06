@@ -1,6 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+// riverpod 3 起 ProviderListenable 等内部类型移到 misc.dart（不再由
+// flutter_riverpod.dart 导出）
+import 'package:flutter_riverpod/misc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/repositories/base_repository.dart';
@@ -32,7 +36,7 @@ final baseCurrencyInitProvider = FutureProvider<void>((ref) async {
   if (saved == null || saved.isEmpty) {
     saved = prefs.getString('selected_currency');
     if (saved == null || saved.isEmpty) {
-      saved = ref.read(currentLedgerProvider).valueOrNull?.currency;
+      saved = ref.read(currentLedgerProvider).value?.currency;
     }
     if (saved == null || saved.isEmpty) saved = 'CNY';
     await prefs.setString('baseCurrency', saved);
@@ -56,7 +60,7 @@ final usedCurrenciesProvider = FutureProvider<Set<String>>((ref) async {
 /// 多币种态总闸(README D6):使用中币种 ≥2 即恒为折算态,与 Web 端对齐。
 /// 原「按主币种折算」开关已下线(默认折算),不再有「非折算多币种」态。
 final multiCurrencyActiveProvider = Provider<bool>((ref) {
-  final used = ref.watch(usedCurrenciesProvider).valueOrNull;
+  final used = ref.watch(usedCurrenciesProvider).value;
   return used != null && used.length >= 2;
 });
 
@@ -112,7 +116,7 @@ final currencyPickerRatesProvider =
 /// 当前账本本位币(ISO 大写)。`ledger.currency` 的语义化别名——交易级多币种后
 /// 它的语义是「账本统计折算的目标币种」(.docs/multi-currency-ledger L1)。
 final currentLedgerCurrencyProvider = Provider<String>((ref) {
-  final ledger = ref.watch(currentLedgerProvider).valueOrNull;
+  final ledger = ref.watch(currentLedgerProvider).value;
   final c = ledger?.currency;
   return (c == null || c.isEmpty) ? 'CNY' : c.toUpperCase();
 });
@@ -145,7 +149,7 @@ final effectiveRatesForLedgerProvider =
 final ledgerUnconvertedForeignTxCountProvider = FutureProvider<int>((ref) async {
   ref.watch(statsRefreshProvider);
   ref.watch(rateRefreshTickProvider);
-  final ledger = ref.watch(currentLedgerProvider).valueOrNull;
+  final ledger = ref.watch(currentLedgerProvider).value;
   if (ledger == null) return 0;
   final repo = ref.watch(repositoryProvider);
   return repo.countUnconvertedForeignTx(ledger.id);
@@ -154,7 +158,7 @@ final ledgerUnconvertedForeignTxCountProvider = FutureProvider<int>((ref) async 
 /// 当前账本外币交易条数(含已折算):>0 时账本统计页显示折算脚注(01 §五)。
 final ledgerForeignTxCountProvider = FutureProvider<int>((ref) async {
   ref.watch(statsRefreshProvider);
-  final ledger = ref.watch(currentLedgerProvider).valueOrNull;
+  final ledger = ref.watch(currentLedgerProvider).value;
   if (ledger == null) return 0;
   final repo = ref.watch(repositoryProvider);
   return repo.countForeignCurrencyTx(ledger.id);
@@ -207,7 +211,7 @@ final convertedAssetCompositionProvider =
 /// (如周期刷新、启动预拉);UI 层用 [refreshExchangeRatesFromUi]。
 Future<bool> refreshExchangeRates(Ref ref,
         {bool force = false, Set<String>? extraQuotes}) =>
-    _refreshExchangeRatesImpl(
+    refreshExchangeRatesImpl(
       read: ref.read,
       readFuture: <T>(p) => ref.read(p.future),
       force: force,
@@ -218,7 +222,7 @@ Future<bool> refreshExchangeRates(Ref ref,
 /// ConsumerState 里只有 `WidgetRef`,无法 cast 成 `Ref`,故单开此入口。
 Future<bool> refreshExchangeRatesFromUi(WidgetRef ref,
         {bool force = false, Set<String>? extraQuotes}) =>
-    _refreshExchangeRatesImpl(
+    refreshExchangeRatesImpl(
       read: ref.read,
       readFuture: <T>(p) => ref.read(p.future),
       force: force,
@@ -232,7 +236,12 @@ Future<bool> refreshExchangeRatesFromUi(WidgetRef ref,
 /// 汇率组。默认所有账本本位币 == 主币种 → 集合仅一个,行为与 MVP 完全一致。
 /// [extraQuotes]:额外要拉的币种(v30 记账页手选币种,L12)——手选币种不在
 /// usedCurrencies(账户币种∪主币种)里,不带上它拉回来的组里永远没有它。
-Future<bool> _refreshExchangeRatesImpl({
+/// 真正的实现：只依赖 read / readFuture 两个能力，与 Ref / WidgetRef 解耦。
+///
+/// riverpod 3 起 `Ref` 是 sealed，外部无法再伪造一个实现（旧测试用的
+/// `implements Ref` 已不可行），因此这里保持公开，由测试直接传
+/// `container.read` 与 `(p) => container.read(p.future)` 驱动。
+Future<bool> refreshExchangeRatesImpl({
   required T Function<T>(ProviderListenable<T>) read,
   required Future<T> Function<T>(FutureProvider<T>) readFuture,
   required bool force,

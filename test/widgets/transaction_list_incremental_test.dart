@@ -112,5 +112,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(key.currentState!.jumpToMonth(DateTime(2024, 1, 15)), isTrue);
+
+    // riverpod 3 改变了 provider 通知/重建时机，TransactionList 内部基于
+    // Future.delayed 的收尾任务会比 2.x 晚结束。卸载并推进时间让残留 Timer
+    // 跑完，避免 "A Timer is still pending even after the widget tree was disposed"。
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 1));
   });
 }

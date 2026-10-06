@@ -374,7 +374,7 @@ class AppLinkService {
       await _restoreCurrentLedgerId();
 
       // 必须 await .future:冷启动时 currentLedgerProvider 还在 loading,
-      // 用 .valueOrNull 会拿到 null 而误判"无账本"导致静默失败(issue #162)。
+      // 用 .value 会拿到 null 而误判"无账本"导致静默失败(issue #162)。
       final currentLedger = await _container.read(currentLedgerProvider.future);
 
       if (currentLedger == null) {

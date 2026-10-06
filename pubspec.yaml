@@ -21,7 +21,9 @@ dependencies:
   # @immutable 注解（encryption_settings 等）显式声明，消除
   # depend_on_referenced_packages（经 flutter SDK 传递可用，lint 要求直声明）
   meta: ^1.16.0
-  flutter_riverpod: ^2.5.1
+  # 批次11（分支 chore/riverpod3）：2.x → 3.x 是破坏性升级，
+  # Ref 泛型移除、StateProvider/StateNotifierProvider 归入 legacy 等。
+  flutter_riverpod: ^3.4.3
   collection: ^1.18.0
   drift: ^2.35.1
   # **必须保留**（2026-10-05 实测结论）：它是 Android 上唯一真正进 APK 的

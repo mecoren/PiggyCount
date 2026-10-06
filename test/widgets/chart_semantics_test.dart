@@ -29,6 +29,11 @@ String summaryLabel(WidgetTester tester) {
 
 Future<void> pump(WidgetTester tester, Widget chart) async {
   await tester.pumpWidget(ProviderScope(
+    // riverpod 3 默认会对失败的 provider 自动重试（带延迟的 Timer）。本测试
+    // 不 override repository 等依赖，会有 provider 抛错 → 调度重试 Timer →
+    // 触发 "A Timer is still pending even after the widget tree was disposed"。
+    // 测试要确定性，这里关掉重试。
+    retry: (_, __) => null,
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -122,6 +127,11 @@ void main() {
 
     final text = summaryLabel(tester);
     expect(text, contains('餐饮 60.0%'));
+    // riverpod 3 改变了 provider 的通知/重建时机，该图表的动画/延时任务会比
+    // 2.x 晚收尾。先卸载图表再推进时间，让残留任务跑完，避免
+    // "A Timer is still pending even after the widget tree was disposed"。
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 1));
   });
 
   testWidgets('资产构成饼图：各类型名称+占比进摘要', (tester) async {

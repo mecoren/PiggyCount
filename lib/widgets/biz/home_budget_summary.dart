@@ -21,13 +21,13 @@ class HomeBudgetSummary extends ConsumerWidget {
 
     final overviewAsync = ref.watch(budgetOverviewProvider);
 
-    // 用 valueOrNull 拿当前/历史 value,绕开 invalidate 期间的 loading 闪烁:
+    // 用 value 拿当前/历史 value,绕开 invalidate 期间的 loading 闪烁:
     // - 冷启动首次 fetch:overview = null → 返 shrink(没旧数据可显示)
     // - 增删 tx 触发 invalidate:Riverpod AsyncLoading 自带 previous value,
-    //   valueOrNull 仍返回上次的 BudgetOverview → 进度条不消失
+    //   value 仍返回上次的 BudgetOverview → 进度条不消失
     // - 数据 fetch 出错:value 为 null → 走 shrink,但 previous 保留时也会
     //   继续渲染旧数据,符合「网络抖动也别闪」的预期
-    final overview = overviewAsync.valueOrNull;
+    final overview = overviewAsync.value;
     if (overview == null || overview.totalBudget == null) {
       return const SizedBox.shrink();
     }

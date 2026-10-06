@@ -690,7 +690,7 @@ class _RecurringTransactionEditPageState
     final ledgerId = _selectedLedgerId;
     if (ledgerId == null) return const SizedBox.shrink();
     final definitions =
-        ref.watch(customFieldDefinitionsOnceProvider(ledgerId)).valueOrNull ??
+        ref.watch(customFieldDefinitionsOnceProvider(ledgerId)).value ??
             const <CustomFieldDefinition>[];
     if (definitions.isEmpty) {
       return Text(

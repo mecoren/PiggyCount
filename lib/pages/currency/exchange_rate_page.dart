@@ -64,12 +64,12 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
     final ratesAsync = ref.watch(effectiveRatesProvider);
 
     // 外币 = 使用中币种 − 主币种,排序
-    final quotes = (usedAsync.valueOrNull ?? <String>{})
+    final quotes = (usedAsync.value ?? <String>{})
         .where((c) => c.toUpperCase() != base)
         .map((c) => c.toUpperCase())
         .toList()
       ..sort();
-    final rates = ratesAsync.valueOrNull ?? const <String, EffectiveRate>{};
+    final rates = ratesAsync.value ?? const <String, EffectiveRate>{};
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),

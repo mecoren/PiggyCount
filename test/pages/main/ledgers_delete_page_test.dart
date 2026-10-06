@@ -309,6 +309,10 @@ void main() {
 
     testWidgets('删的是当前账本且还有别的 → 自动切到余下第一个', (tester) async {
       final container = await pumpPage(tester);
+      // riverpod 3：页面未 watch currentLedgerProvider 时它处于 paused 状态，
+      // 单独 `read(.future)` 会永远停在 loading（2.x 里 read 会顺带初始化）。
+      final ledgerSub = container.listen(currentLedgerProvider, (_, __) {});
+      addTearDown(ledgerSub.close);
       await container.read(currentLedgerProvider.future);
       expect(container.read(currentLedgerIdProvider), 1);
 
@@ -331,6 +335,9 @@ void main() {
       // 否则首页胶囊会显示一个幽灵账本。
       await repo.deleteLedger(2);
       final container = await pumpPage(tester);
+      // 同上：先订阅保活再读 .future（riverpod 3 的 paused 语义）。
+      final ledgerSub = container.listen(currentLedgerProvider, (_, __) {});
+      addTearDown(ledgerSub.close);
       await container.read(currentLedgerProvider.future);
 
       await openDangerDialog(tester, zh(tester).ledgersDeleteLocal,

@@ -119,7 +119,7 @@ class _RangePickerSheetState extends ConsumerState<_RangePickerSheet> {
     final primary = PiggyTokens.primary(context);
     // 节假日本地缓存（DB 为空时 Service 回落预置表，冷启动 / 离线仍可标注）；
     // 加载中先给空 map —— 日历照常渲染，只暂不带休/班徽标，不塌骨架。
-    final holidays = ref.watch(holidayMapProvider).valueOrNull ??
+    final holidays = ref.watch(holidayMapProvider).value ??
         const <String, HolidayEntry>{};
 
     final screenH = MediaQuery.sizeOf(context).height;

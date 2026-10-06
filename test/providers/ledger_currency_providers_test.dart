@@ -43,6 +43,11 @@ void main() {
           .overrideWith((ref) => Stream<Ledger?>.value(ledgerWith('usd'))),
     ]);
     addTearDown(container.dispose);
+    // riverpod 3：没有任何活跃订阅的 provider 处于 paused 状态，
+    // 只有 `read(.future)` 会永远停在 loading（2.x 里 read 会顺带初始化它）。
+    // 先建立一次订阅保活，再等首个值。
+    final sub = container.listen(currentLedgerProvider, (_, __) {});
+    addTearDown(sub.close);
     await container.read(currentLedgerProvider.future);
     expect(container.read(currentLedgerCurrencyProvider), 'USD');
 
@@ -50,6 +55,8 @@ void main() {
       currentLedgerProvider.overrideWith((ref) => Stream<Ledger?>.value(null)),
     ]);
     addTearDown(empty.dispose);
+    final emptySub = empty.listen(currentLedgerProvider, (_, __) {});
+    addTearDown(emptySub.close);
     await empty.read(currentLedgerProvider.future);
     expect(empty.read(currentLedgerCurrencyProvider), 'CNY');
   });
@@ -77,6 +84,9 @@ void main() {
           .overrideWith((ref) => Stream<Ledger?>.value(ledgerWith('USD'))),
     ]);
     addTearDown(container.dispose);
+    // 同上：先订阅保活再读 .future（riverpod 3 的 paused 语义）
+    final sub = container.listen(currentLedgerProvider, (_, __) {});
+    addTearDown(sub.close);
     await container.read(currentLedgerProvider.future);
     // 主币种是 CNY,但账本本位币 USD → 应取 base=USD 的组
     container.read(baseCurrencyProvider.notifier).state = 'CNY';

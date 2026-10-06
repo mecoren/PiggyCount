@@ -61,7 +61,7 @@ void main() {
         usedCurrenciesProvider.overrideWith((ref) => Future.value(used)),
       ]);
       addTearDown(container.dispose);
-      // 等 FutureProvider 解析完成,multiCurrencyActiveProvider 才能读到 valueOrNull
+      // 等 FutureProvider 解析完成,multiCurrencyActiveProvider 才能读到 value
       await container.read(usedCurrenciesProvider.future);
       return container.read(multiCurrencyActiveProvider);
     }

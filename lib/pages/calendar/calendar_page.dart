@@ -170,7 +170,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
     // 节假日本地缓存（DB 为空时 Service 回落 2026 预置表，冷启动 / 离线仍可标注）。
     // 加载中先给空 map —— 日历照常渲染，只是暂不带休/班徽标，避免整页闪骨架。
-    final holidays = ref.watch(holidayMapProvider).valueOrNull ??
+    final holidays = ref.watch(holidayMapProvider).value ??
         const <String, HolidayEntry>{};
 
     return Scaffold(
@@ -581,7 +581,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               // v47：自定义字段角标（无值/定义解析不出 → 不显示）。
               final customBadges = ref
                       .watch(customFieldValueBadgesProvider)
-                      .valueOrNull?[item.t.id] ??
+                      .value?[item.t.id] ??
                   const <({String name, String display})>[];
               final customBadgeTexts = [
                 for (final b in customBadges) '${b.name}: ${b.display}',

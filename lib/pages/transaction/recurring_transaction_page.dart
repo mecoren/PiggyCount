@@ -129,7 +129,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
     final code = recurring.currencyCode;
     if (code == null || code.isEmpty) return false;
     final base =
-        ref.watch(ledgerByIdProvider(recurring.ledgerId)).valueOrNull?.currency;
+        ref.watch(ledgerByIdProvider(recurring.ledgerId)).value?.currency;
     return code.toUpperCase() != (base?.toUpperCase() ?? '');
   }
 

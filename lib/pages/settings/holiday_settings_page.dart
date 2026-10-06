@@ -44,7 +44,7 @@ class _HolidaySettingsPageState extends ConsumerState<HolidaySettingsPage> {
     final l10n = AppLocalizations.of(context);
     final listAsync = ref.watch(holidayListProvider);
     final metaAsync = ref.watch(holidayMetaProvider);
-    final meta = metaAsync.valueOrNull;
+    final meta = metaAsync.value;
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),

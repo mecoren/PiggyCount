@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 // 导入任务进度：用于显示"后台导入中"状态与进度
 class ImportProgress {

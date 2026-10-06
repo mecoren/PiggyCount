@@ -58,8 +58,11 @@ void main() {
     ]);
     addTearDown(container.dispose);
 
-    final ok = await refreshExchangeRates(
-      _RefLike(container),
+    // riverpod 3 起 Ref 是 sealed（外部无法再伪造实现），改为直接驱动
+    // 解耦后的实现：传入 ProviderContainer 的 read / readFuture 两个能力。
+    final ok = await refreshExchangeRatesImpl(
+      read: container.read,
+      readFuture: <T>(p) => container.read(p.future),
       force: true,
       extraQuotes: {'JPY'},
     );
@@ -73,17 +76,5 @@ void main() {
   });
 }
 
-/// refreshExchangeRates 需要 Ref;测试里用 ProviderContainer 适配出
-/// read / readFuture 两个能力(与 Ref 等价)。
-class _RefLike implements Ref {
-  @override
-  final ProviderContainer container;
-  _RefLike(this.container);
-
-  @override
-  T read<T>(ProviderListenable<T> provider) => container.read(provider);
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      super.noSuchMethod(invocation);
-}
+// 原 `_RefLike implements Ref` 适配器已删除：riverpod 3 起 `Ref` 是 sealed，
+// 外部无法实现/继承，测试改为直接把 `container.read` 传给 refreshExchangeRatesImpl。

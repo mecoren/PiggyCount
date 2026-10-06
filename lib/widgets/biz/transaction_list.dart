@@ -770,7 +770,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
     // 备注敏感标记：列表展示统一走掩码（设备本地标记，见 SensitiveNoteService）
     final sensitiveNoteIds =
-        ref.watch(sensitiveNoteIdsProvider).valueOrNull ?? const <int>{};
+        ref.watch(sensitiveNoteIdsProvider).value ?? const <int>{};
     final subtitle = SensitiveDataMasker.maskNoteIf(
         sensitiveNoteIds.contains(it.t.id), it.t.note);
 
@@ -779,7 +779,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
     // it.account?.name,Drift 自动响应主表 accounts 行变化 + 镜像表
     // sharedLedgerAccounts 变化,无需任何命令式 cache / setState / provider fallback。
     final accountFeatureEnabled =
-        ref.watch(accountFeatureEnabledProvider).valueOrNull ?? true;
+        ref.watch(accountFeatureEnabledProvider).value ?? true;
     String? accountName;
     String? toAccountName;
     if (accountFeatureEnabled) {
@@ -860,7 +860,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
           // B1(v47):自定义字段角标 —— 按当前账本定义解析展示文本;
           // 无值 / 定义解析不出 → 不显示(列表不被噪音填满)。
           final customBadges =
-              ref.watch(customFieldValueBadgesProvider).valueOrNull?[it.t.id] ??
+              ref.watch(customFieldValueBadgesProvider).value?[it.t.id] ??
                   const <({String name, String display})>[];
           final customBadgeTexts = [
             for (final b in customBadges) '${b.name}: ${b.display}',

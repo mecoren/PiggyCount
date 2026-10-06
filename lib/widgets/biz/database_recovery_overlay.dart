@@ -54,7 +54,7 @@ class _DatabaseRecoveryOverlayState
 
   @override
   Widget build(BuildContext context) {
-    final health = ref.watch(dbHealthProvider).valueOrNull;
+    final health = ref.watch(dbHealthProvider).value;
     final dismissed = ref.watch(dbHealthDismissedProvider);
     // 加载中 / 健康 / 用户已选择稍后处理 → 不占屏
     if (health == null || health.isHealthy || dismissed) {
@@ -131,7 +131,7 @@ class _DatabaseRecoveryOverlayState
     final iconColor = PiggyTokens.iconPrimary(context);
     // 加密库缺钥时文件**没有**坏，说「导出损坏文件」是误导（用户会以为拿到的
     // 是废文件，反而不留档）。换成一个如实说明用途的标签。
-    final keyLost = ref.watch(dbHealthProvider).valueOrNull?.health ==
+    final keyLost = ref.watch(dbHealthProvider).value?.health ==
         DbHealth.keyUnavailable;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -181,7 +181,7 @@ class _DatabaseRecoveryOverlayState
         Text(
           // 密钥不可得时，"重置"的含义完全不同：不是丢掉废数据，而是把唯一
           // 可能被解开的密文移走。必须换一套说法，否则用户以为是同一件事。
-          ref.watch(dbHealthProvider).valueOrNull?.health ==
+          ref.watch(dbHealthProvider).value?.health ==
                   DbHealth.keyUnavailable
               ? l10n.dbHealthKeyLostResetConfirm
               : l10n.dbHealthResetConfirmMessage,

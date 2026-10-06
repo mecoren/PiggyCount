@@ -378,7 +378,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
   Future<void> _clearUnusedCategories() async {
     final l10n = AppLocalizations.of(context);
     final categoriesWithCount =
-        ref.read(categoriesWithCountProvider).valueOrNull ?? [];
+        ref.read(categoriesWithCountProvider).value ?? [];
 
     // 找出交易数为0的分类（统计已包含子分类交易数）
     final unusedCategories = categoriesWithCount
@@ -449,7 +449,7 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
   /// 静默清空未使用的分类（用于覆盖导入）
   Future<void> _clearUnusedCategoriesSilent() async {
     final categoriesWithCount =
-        ref.read(categoriesWithCountProvider).valueOrNull ?? [];
+        ref.read(categoriesWithCountProvider).value ?? [];
     final unusedCategories = categoriesWithCount
         .where((item) => item.transactionCount == 0)
         .toList();

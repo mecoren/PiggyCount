@@ -324,8 +324,8 @@ class _EncryptionSettingsPageState
     final l10n = AppLocalizations.of(context);
     final enabledAsync = ref.watch(encryptionEnabledProvider);
     final hasKeyAsync = ref.watch(encryptionHasActiveKeyProvider);
-    final isEnabled = enabledAsync.valueOrNull ?? false;
-    final hasKey = hasKeyAsync.valueOrNull ?? false;
+    final isEnabled = enabledAsync.value ?? false;
+    final hasKey = hasKeyAsync.value ?? false;
 
     return Scaffold(
       extendBodyBehindAppBar: true,

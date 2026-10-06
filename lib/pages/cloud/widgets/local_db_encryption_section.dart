@@ -22,7 +22,7 @@ class LocalDbEncryptionSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final state = ref.watch(localDbEncryptionStateProvider).valueOrNull;
+    final state = ref.watch(localDbEncryptionStateProvider).value;
     // 首次读取完成前整卡不渲染：避免"先显示未开启、再跳成已开启"的闪动
     if (state == null) return const SizedBox.shrink();
 

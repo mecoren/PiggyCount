@@ -41,7 +41,7 @@ class CloudSyncPage extends ConsumerStatefulWidget {
 /// 宁可不显示也不能阻塞发现流程本身。
 String? _backendIdentitySummary(WidgetRef ref, AppLocalizations l10n) {
   try {
-    final cfg = ref.read(activeCloudConfigProvider).valueOrNull;
+    final cfg = ref.read(activeCloudConfigProvider).value;
     if (cfg == null) return null;
     return backendIdentitySummary(l10n, cfg);
   } catch (_) {
@@ -1877,7 +1877,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                         final encAsync = r.watch(
                                             encryptionEnabledProvider);
                                         final dimmed =
-                                            encAsync.valueOrNull == false;
+                                            encAsync.value == false;
                                         return Opacity(
                                           opacity: dimmed ? 0.5 : 1,
                                           child: AppListTile(
@@ -2027,7 +2027,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                         final encEnabled = r
                                                 .watch(
                                                     encryptionEnabledProvider)
-                                                .valueOrNull ??
+                                                .value ??
                                             false;
                                         if (encEnabled) {
                                           return const SizedBox.shrink();
@@ -2088,7 +2088,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                 final encEnabledAsync =
                                     r.watch(encryptionEnabledProvider);
                                 final encEnabled =
-                                    encEnabledAsync.valueOrNull ?? false;
+                                    encEnabledAsync.value ?? false;
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 12),
                                   child: SectionCard(

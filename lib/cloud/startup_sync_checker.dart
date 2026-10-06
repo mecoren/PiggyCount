@@ -1535,7 +1535,7 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
   /// 用 read（不 watch）：启动检查是一次性动作，无重建语义。
   String? _currentBackendSummary(AppLocalizations l10n) {
     try {
-      final cfg = _ref.read(activeCloudConfigProvider).valueOrNull;
+      final cfg = _ref.read(activeCloudConfigProvider).value;
       if (cfg == null) return null;
       return backendIdentitySummary(l10n, cfg);
     } catch (e) {

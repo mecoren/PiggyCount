@@ -213,7 +213,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
           final categoryId = widget.initialCategoryId ??
               ref
                   .read(quickEntryLastCategoryProvider(widget.initialKind))
-                  .valueOrNull;
+                  .value;
           if (categoryId == null) return;
           final c = await _resolveCategoryById(categoryId);
           if (!mounted || c == null) return;
@@ -244,7 +244,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     final explicitId =
         kind == widget.initialKind ? widget.initialCategoryId : null;
     final categoryId = explicitId ??
-        ref.read(quickEntryLastCategoryProvider(kind)).valueOrNull;
+        ref.read(quickEntryLastCategoryProvider(kind)).value;
     Category? category;
     if (categoryId != null) {
       final c = await _resolveCategoryById(categoryId);
@@ -711,7 +711,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
   bool get _editingNoteSensitive {
     final id = widget.editingTransactionId;
     if (id == null) return false;
-    return ref.read(sensitiveNoteIdsProvider).valueOrNull?.contains(id) ?? false;
+    return ref.read(sensitiveNoteIdsProvider).value?.contains(id) ?? false;
   }
 
   Future<void> _persistTransaction(
