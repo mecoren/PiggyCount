@@ -84,7 +84,9 @@ dependencies:
   home_widget: ^0.10.0
   image_picker: ^1.1.2
   flutter_image_compress: ^2.3.0
-  image_cropper: ^10.0.0
+  # 批次10：12.x 与 image_cropper_platform_interface 8.x 配套，
+  # 同时移除下方钉了 7.1.0 的 override（详见 dependency_overrides 注释）。
+  image_cropper: ^12.2.1
   gbk_codec: ^0.4.0
   app_links: ^7.2.1
   record: ^7.1.1
@@ -140,17 +142,12 @@ dev_dependencies:
   # test/services/file_reader_memory_test.dart 需要自建 Fake 时显式声明
   cross_file: ^0.3.5
 
-dependency_overrides:
-  # 2026-10-06：原 `record_platform_interface: 1.2.0` pin 已移除。record 7 的官方
-  # 平台实现（record_android 2.2.0 / record_linux 2.1.2 / record_windows 2.3.0）
-  # 统一要求 record_platform_interface ^2.1.0，继续钉 1.2.0 会让录音调用 1.2.0
-  # 的接口而与新实现不匹配（编译不报，运行时才炸）。原 pin 是为修当年的
-  # record_linux 兼容问题，record 7 的新 linux 实现已不需要。
-  # 遗留 pin:7.2.0 曾要求 Flutter >= 3.27.6 (Color.toARGB32),当时不可用。
-  # 当前工具链已是 3.44.3,理论上可以放开;但 image_cropper 主包仍锁在
-  # 10.0.0+1,放开会导致 platform_interface 跳到 8.x 与主包 API 不匹配。
-  # 要动的话必须连主包一起升并回归裁剪流程,故暂留。见 prd 遗留清单。
-  image_cropper_platform_interface: 7.1.0
+# dependency_overrides 段已于 2026-10-06 清空移除，两条历史 pin 的去向：
+#   - `record_platform_interface: 1.2.0`：随 record 7.1.1 移除——record 7 的官方
+#     平台实现统一要求 ^2.1.0，继续钉 1.2.0 会编译通过但运行时接口不匹配。
+#   - `image_cropper_platform_interface: 7.1.0`：随 image_cropper 12.2.1 移除——
+#     12.x 与 platform_interface 8.x 配套，钉 7.1.0 反而与主包 API 不匹配。
+# 将来若需临时钉版本再加回；裁剪流程需真机回归确认。
 
 # sqlite3 3.x 通过 Dart hooks 提供多套 native 构建：默认 `sqlite3`，另有
 # `sqlite3mc`（SQLite3MultipleCiphers）与 `sqlcipher`（整库加密用）。

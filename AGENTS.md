@@ -43,7 +43,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 | 测试 | `flutter_test` + `mocktail`（不用 mockito，避免 codegen）+ Drift `NativeDatabase.memory()` |
 | CI | GitHub Actions：`analyze.yml`（analyze 0-issue 门 + test 同步契约门）、`release.yml`（tag 触发多平台构建发布） |
 
-**版本约束注意**：`dependency_overrides` 只钉 `image_cropper_platform_interface: 7.1.0`（7.2.0 要求 Flutter >= 3.27.6；`record_platform_interface` 的 1.2.0 pin 已随 record 7.1.1 移除——record 7 的平台实现统一要求 `^2.1.0`，继续钉 1.2.0 会编译通过但运行时崩）；`hooks.user_defines.sqlite3.source: system` 让 sqlite3 运行时动态查找，**不要删**——否则构建期会去 GitHub 下载预编译 libsqlite3 而在国内网络失败。`flutter_launcher_icons.ios: false`，iOS 图标手工维护（0.14.x 会重写 `Contents.json`）。
+**版本约束注意**：`dependency_overrides` 目前为空（2026-10-06 清空）——两条历史 pin 分别随 `record 7.1.1`（`record_platform_interface: 1.2.0`，record 7 的平台实现统一要求 `^2.1.0`）与 `image_cropper 12.2.1`（`image_cropper_platform_interface: 7.1.0`，12.x 与 8.x 配套）移除；`hooks.user_defines.sqlite3.source: system` 让 sqlite3 运行时动态查找，**不要删**——否则构建期会去 GitHub 下载预编译 libsqlite3 而在国内网络失败。`flutter_launcher_icons.ios: false`，iOS 图标手工维护（0.14.x 会重写 `Contents.json`）。
 
 ## 架构边界
 
