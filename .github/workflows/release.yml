@@ -200,7 +200,14 @@ jobs:
 
       - name: Install Android build-tools and platforms
         run: |
-          sdkmanager --install "platform-tools" "platforms;android-35" "platforms;android-36" "build-tools;35.0.0"
+          # platforms;android-37.0 —— compileSdk 37 所需的平台包。Android 已引入
+          # minor API level：SDK 仓库里**没有** `platforms;android-37`（AGP 8.12.x
+          # 找它就会报 "Failed to find target with hash string 'android-37'"），
+          # 准确包 ID 是 `platforms;android-37.0`（照 Google 官方 repository2-3.xml 核对）。
+          # 原先没装它，靠 AGP 构建期自动下载兜底（首次会慢 1–2 分钟）。
+          # build-tools 用 37.0.0：原先装的是 35.0.0（compileSdk 36 时代的），
+          # compileSdk 抬到 37 后应对齐（Google 仓库里 37.0.0 已正式发布）。
+          sdkmanager --install "platform-tools" "platforms;android-35" "platforms;android-36" "platforms;android-37.0" "build-tools;37.0.0"
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
