@@ -78,7 +78,7 @@ class AutoBillingService {
 
     // 同 _showNotification:通知子系统任何异常都不允许影响记账主流程
     try {
-      await _notificationsPlugin.initialize(initSettings);
+      await _notificationsPlugin.initialize(settings: initSettings);
     } catch (e) {
       logger.warning('AutoBilling', '通知初始化失败(仅影响进度通知,不影响记账): $e');
     }
@@ -528,7 +528,12 @@ class AutoBillingService {
     );
 
     try {
-      await _notificationsPlugin.show(id, title, body, details);
+      await _notificationsPlugin.show(
+        id: id,
+        title: title,
+        body: body,
+        notificationDetails: details,
+      );
     } catch (e) {
       logger.warning('AutoBilling',
           '通知发送失败(未授权通知时属预期,不中断记账流程): $e');

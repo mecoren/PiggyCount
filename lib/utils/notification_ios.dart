@@ -21,7 +21,7 @@ class IOSNotificationUtil implements util.NotificationUtil {
 
     const initSettings = InitializationSettings(iOS: iosSettings);
 
-    await _plugin.initialize(initSettings);
+    await _plugin.initialize(settings: initSettings);
 
     // 初始化后立即请求权限
     await requestPermissions();
@@ -72,14 +72,15 @@ class IOSNotificationUtil implements util.NotificationUtil {
     const notificationDetails = NotificationDetails(iOS: iosDetails);
 
     try {
+      // fln 22 起顶层 zonedSchedule 强制要求 androidScheduleMode；iOS 侧不消费它，
+      // 仅 Android 用来决定精确/非精确闹钟。
       await _plugin.zonedSchedule(
-        id,
-        title,
-        body,
-        tzScheduledDate,
-        notificationDetails,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: tzScheduledDate,
+        notificationDetails: notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exact,
         matchDateTimeComponents: DateTimeComponents.time, // 每天重复
       );
 
@@ -110,14 +111,14 @@ class IOSNotificationUtil implements util.NotificationUtil {
 
     const notificationDetails = NotificationDetails(iOS: iosDetails);
 
+    // 同上：iOS 不消费 androidScheduleMode，仅为满足 fln 22 的必填签名。
     await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      tzScheduledDate,
-      notificationDetails,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: tzScheduledDate,
+      notificationDetails: notificationDetails,
+      androidScheduleMode: AndroidScheduleMode.exact,
     );
 
     logger.info('Notification', '[iOS] 单次提醒设置成功: $scheduledDate');
@@ -126,7 +127,7 @@ class IOSNotificationUtil implements util.NotificationUtil {
   @override
   Future<void> cancelNotification(int id) async {
     if (!_initialized) await initialize();
-    await _plugin.cancel(id);
+    await _plugin.cancel(id: id);
     logger.info('Notification', '[iOS] 通知已取消: $id');
   }
 
@@ -153,7 +154,12 @@ class IOSNotificationUtil implements util.NotificationUtil {
 
     const notificationDetails = NotificationDetails(iOS: iosDetails);
 
-    await _plugin.show(id, title, body, notificationDetails);
+    await _plugin.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: notificationDetails,
+    );
     logger.info('Notification', '[iOS] 即时通知已显示: $title');
   }
 

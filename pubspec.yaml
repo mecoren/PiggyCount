@@ -40,11 +40,11 @@ dependencies:
   decimal: ^3.0.0
   fl_chart: ^0.68.0
   shared_preferences: ^2.3.2
-  # 暂缓 7.x（2026-10-06 实测解析失败）：connectivity_plus >=7.3.2 依赖 nm ^0.6.0
-  # → dbus ^0.8.0，而 flutter_local_notifications 17.x 的 Linux 实现依赖
-  # flutter_local_notifications_linux ^4.0.1 → dbus ^0.7.8，两者互斥。
-  # 待 flutter_local_notifications 升到 22.x（Linux 实现换 8.x）后再一并升。
-  connectivity_plus: ^6.1.0
+  # 停 7.3.1（2026-10-06 实测）：7.3.2 起依赖 nm ^0.6.0 → dbus ^0.8.0，而
+  # flutter_local_notifications 22.x 的 Linux 实现（flutter_local_notifications_linux
+  # 8.0.1）仍依赖 dbus ^0.7.8，两版 dbus 无法共存。7.3.2 相对 7.3.1 只是 Linux 侧
+  # 的 nm 探测改进，对本项目（Android/iOS）无实际影响。
+  connectivity_plus: ^7.3.1
   csv: ^8.0.0
   file_picker: ^8.1.2
   supabase_flutter: ^2.5.6
@@ -63,8 +63,11 @@ dependencies:
   permission_handler: ^12.0.3
   dio: ^5.4.3+1
   open_filex: ^4.4.0
-  flutter_local_notifications: ^17.2.2
-  timezone: ^0.9.4
+  # 通知链必须同批升：18.x 约束 timezone <0.11.0，22.x 才是 ^0.11.0；
+  # 22.x 同时要求 Dart ^3.10.0 / Flutter >=3.38.1（本工具链 3.12.2 / 3.44.3 满足），
+  # 且 Android 侧必须开 coreLibraryDesugaring（见 android/app/build.gradle）。
+  flutter_local_notifications: ^22.3.1
+  timezone: ^0.11.1
   flutter_list_view: ^1.1.29
   visibility_detector: ^0.4.0+2
   reorderable_grid_view: ^2.2.8

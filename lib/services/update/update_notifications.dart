@@ -48,8 +48,8 @@ class UpdateNotifications {
       const initializationSettings =
           InitializationSettings(android: androidSettings, iOS: iosSettings);
 
-      final initialized =
-          await _notificationsPlugin.initialize(initializationSettings);
+      final initialized = await _notificationsPlugin
+          .initialize(settings: initializationSettings);
       _isNotificationInitialized = initialized == true;
       logger.info('UpdateNotifications', '通知初始化结果: $initialized');
     } catch (e) {
@@ -100,10 +100,10 @@ class UpdateNotifications {
           '开始显示通知 - 标题: $title, 内容: $body, 进度: $progress, 不确定: $indeterminate');
 
       await _notificationsPlugin.show(
-        0,
-        title,
-        body,
-        details,
+        id: 0,
+        title: title,
+        body: body,
+        notificationDetails: details,
       );
 
       logger.info('UpdateNotifications', '通知显示完成 - ID: 0, 进度: $progress%');
@@ -137,10 +137,10 @@ class UpdateNotifications {
       const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
 
       await _notificationsPlugin.show(
-        0,
-        'Download Complete',
-        'New version downloaded, tap to install',
-        details,
+        id: 0,
+        title: 'Download Complete',
+        body: 'New version downloaded, tap to install',
+        notificationDetails: details,
       );
 
       logger.info('UpdateNotifications', '显示下载完成通知');
@@ -152,7 +152,7 @@ class UpdateNotifications {
   /// 取消下载通知
   static Future<void> cancelDownloadNotification() async {
     try {
-      await _notificationsPlugin.cancel(0);
+      await _notificationsPlugin.cancel(id: 0);
       logger.info('UpdateNotifications', '取消下载通知');
     } catch (e) {
       logger.error('UpdateNotifications', '取消通知失败', e);
