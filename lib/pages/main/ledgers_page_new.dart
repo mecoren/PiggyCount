@@ -163,11 +163,11 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     AsyncValue<List<LedgerDisplayItem>> remoteAsync,
   ) {
     // 获取本地账本（快速）
-    final localLedgers = localAsync.valueOrNull ?? [];
+    final localLedgers = localAsync.value ?? [];
     final localError = localAsync.error;
 
     // 获取远程账本（慢速）
-    final remoteLedgers = remoteAsync.valueOrNull ?? [];
+    final remoteLedgers = remoteAsync.value ?? [];
     final remoteLoading = remoteAsync.isLoading;
     final remoteError = remoteAsync.error;
 
@@ -334,7 +334,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   Future<void> _handleLocalLedgerTap(LedgerDisplayItem ledger) async {
     // 获取同步状态
     final syncStatusAsync = ref.read(syncStatusProvider(ledger.id));
-    final syncStatus = syncStatusAsync.valueOrNull;
+    final syncStatus = syncStatusAsync.value;
 
     // 检查是否有冲突
     if (syncStatus?.diff == SyncDiff.different) {

@@ -48,6 +48,10 @@ void main() {
 
   Widget host(List<TxItem> transactions, GlobalKey<TransactionListState> key) {
     return ProviderScope(
+      // riverpod 3：provider 失败后会自动重试（指数退避 Timer），残留的 timer 会
+      // 触发 flutter_test 的 pending-timer 断言。本测试只验证列表增量 diff 行为，
+      // 故禁用重试。
+      retry: (retryCount, error) => null,
       overrides: [
         repositoryProvider.overrideWithValue(repo),
         currentLedgerIdProvider.overrideWith((ref) => 1),
@@ -112,5 +116,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(key.currentState!.jumpToMonth(DateTime(2024, 1, 15)), isTrue);
-  });
+
+    // riverpod 3：ProviderScope 卸载时 StreamProvider 会去 dispose drift 的
+    // QueryStream，后者用 Timer(Duration.zero) 异步关闭。该断言在测试体结束、
+    // tearDown 之前执行，故必须在这里把时间推进掉，否则残留 pending timer。
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    // pump() 不推进时间，drift 的 Timer(Duration.zero) 需要显式推进才会执行
+    await tester.pump(const Duration(milliseconds: 1));
+    });
 }

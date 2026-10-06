@@ -27,7 +27,7 @@ class HomeBudgetSummary extends ConsumerWidget {
     //   valueOrNull 仍返回上次的 BudgetOverview → 进度条不消失
     // - 数据 fetch 出错:value 为 null → 走 shrink,但 previous 保留时也会
     //   继续渲染旧数据,符合「网络抖动也别闪」的预期
-    final overview = overviewAsync.valueOrNull;
+    final overview = overviewAsync.value;
     if (overview == null || overview.totalBudget == null) {
       return const SizedBox.shrink();
     }

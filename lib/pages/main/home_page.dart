@@ -1046,7 +1046,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                           oldestDay: DateTime(oldestLocal.year,
                               oldestLocal.month, oldestLocal.day),
                         )))
-                        .valueOrNull;
+                        .value;
 
                 // Stream 首帧已到 → 启动预载缓存(20 条含标签/附件详情的
                 // 拷贝)完成使命,post-frame 清空避免与 Stream 全量数据双份

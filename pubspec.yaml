@@ -21,7 +21,10 @@ dependencies:
   # @immutable 注解（encryption_settings 等）显式声明，消除
   # depend_on_referenced_packages（经 flutter SDK 传递可用，lint 要求直声明）
   meta: ^1.16.0
-  flutter_riverpod: ^2.5.1
+  # 3.4.3（2026-10-06 批次E）：2.x → 3.x 的破坏性变更主要靠官方 legacy 入口
+  # 平滑过渡（StateProvider / StateNotifierProvider 已移入
+  # package:flutter_riverpod/legacy.dart），其余为 Ref 泛型化等签名调整。
+  flutter_riverpod: ^3.4.3
   collection: ^1.18.0
   drift: ^2.35.1
   # **必须保留 0.5.x**（2026-10-05 首测，2026-10-06 在 Flutter 3.47.6 复验）：
@@ -49,6 +52,10 @@ dependencies:
   # flutter_local_notifications 22.x 的 Linux 实现（flutter_local_notifications_linux
   # 8.0.1）仍依赖 dbus ^0.7.8，两版 dbus 无法共存。7.3.2 相对 7.3.1 只是 Linux 侧
   # 的 nm 探测改进，对本项目（Android/iOS）无实际影响。
+  # 批次E 补充：`flutter pub outdated` 会把 7.3.2 报成 Resolvable，但实际执行
+  # `flutter pub upgrade connectivity_plus` 仍因上述 dbus 冲突失败——该列只做单包
+  # 可行性估计，不作准。官方给的出路是升 flutter_local_notifications ^23.0.0-dev.3
+  # （预发布版），本项目不采用。
   connectivity_plus: ^7.3.1
   csv: ^8.0.0
   # 批次8：12.x 之前锁 win32 ^5.9，与 share_plus 13 / package_info_plus 10 /

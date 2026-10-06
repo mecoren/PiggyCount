@@ -116,14 +116,25 @@ void main() {
   /// （`activeCloudConfigProvider` → 安全存储/偏好）。本组用例只关心**本地**
   /// 账本的破坏性路径，远程列表固定给空。
   Future<ProviderContainer> pumpPage(WidgetTester tester) async {
-    final container = ProviderContainer(overrides: [
-      databaseProvider.overrideWithValue(db),
-      repositoryProvider.overrideWithValue(repo),
-      syncServiceProvider.overrideWithValue(sync),
-      remoteLedgersProvider
-          .overrideWith((ref) async => const <LedgerDisplayItem>[]),
-    ]);
+    final container = ProviderContainer(
+        // riverpod 3：provider 失败后会自动重试（指数退避 Timer）。本文件含
+        // 「云端备份删除失败被吞掉」这类故意失败的用例，残留的重试 timer 会触发
+        // flutter_test 的 `!timersPending` 断言。本测试只验证删除流程，故禁用重试。
+        retry: (retryCount, error) => null,
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          repositoryProvider.overrideWithValue(repo),
+          syncServiceProvider.overrideWithValue(sync),
+          remoteLedgersProvider
+              .overrideWith((ref) async => const <LedgerDisplayItem>[]),
+        ]);
     addTearDown(container.dispose);
+    // riverpod 3（Breaking）：StreamProvider 在「没有主动监听者」时会暂停其
+    // StreamSubscription —— 此时 read(provider.future) 永不完成。本文件的用例
+    // 需要 await currentLedgerProvider.future（删除账本后还要再 await 一次），
+    // 故显式建立保活订阅；不建它，这两个用例会挂到 10 分钟超时。
+    final ledgerSub = container.listen(currentLedgerProvider, (_, __) {});
+    addTearDown(ledgerSub.close);
     // 预热本地列表：页面首帧就要渲染卡片，否则拿到 loading 态只剩骨架屏
     await container.read(localLedgersProvider.future);
 

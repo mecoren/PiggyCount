@@ -58,10 +58,12 @@ void main() {
     ]);
     addTearDown(container.dispose);
 
-    final ok = await refreshExchangeRates(
-      _RefLike(container),
-      force: true,
-      extraQuotes: {'JPY'},
+    // riverpod 3：Ref 是 sealed class，测试里无法 implements 伪造；改为在真实
+    // provider 内调用，从而拿到真实的 Ref（与生产路径一致）。
+    final ok = await container.read(
+      FutureProvider<bool>(
+        (ref) => refreshExchangeRates(ref, force: true, extraQuotes: {'JPY'}),
+      ).future,
     );
     expect(ok, isTrue);
     expect(fake.fetchCount, greaterThan(0));
@@ -73,17 +75,3 @@ void main() {
   });
 }
 
-/// refreshExchangeRates 需要 Ref;测试里用 ProviderContainer 适配出
-/// read / readFuture 两个能力(与 Ref 等价)。
-class _RefLike implements Ref {
-  @override
-  final ProviderContainer container;
-  _RefLike(this.container);
-
-  @override
-  T read<T>(ProviderListenable<T> provider) => container.read(provider);
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      super.noSuchMethod(invocation);
-}

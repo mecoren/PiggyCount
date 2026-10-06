@@ -310,7 +310,7 @@ void main() {
   /// 落点测试的宿主。
   ///
   /// 关键在于**先把「记忆」预热到 ready 再挂页面**：页面 `initState` 只在首帧后
-  /// 采样一次 provider（`.valueOrNull`），而生产里 `app.dart` 已在启动首帧预热过，
+  /// 采样一次 provider（`.value`），而生产里 `app.dart` 已在启动首帧预热过，
   /// 用户点 FAB 时 provider 早就 resolved。测试若不预热，首帧采到的必然是 loading
   /// 态 → 走的是「未就绪退回网格」那条路，就测不到「命中直落表单」。
   Future<Widget> pageHost({

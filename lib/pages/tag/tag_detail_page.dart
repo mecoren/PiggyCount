@@ -155,7 +155,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
     final params = (tagId: widget.tagId, ledgerId: ledgerScope);
     final rowsAsync = ref.watch(_tagRowsProvider(params));
     // 统计与列表同源：都按当前维度这批明细现算，删改后无需额外刷新（见 _statsOf）。
-    final allRows = rowsAsync.valueOrNull;
+    final allRows = rowsAsync.value;
     final rows = _rowsInScope(allRows ?? const <_TagRow>[], range);
 
     return Scaffold(
@@ -489,14 +489,14 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
     final ledgerNames = widget.allLedgers
         ? <int, String>{
             for (final l
-                in (ref.watch(ledgersStreamProvider).valueOrNull ?? []))
+                in (ref.watch(ledgersStreamProvider).value ?? []))
               l.id: l.name
           }
         : const <int, String>{};
 
     // 账户名（转账显示「转出 → 转入」，其余显示账户名）。账户功能关闭时不展示。
     final accountsEnabled =
-        ref.watch(accountFeatureEnabledProvider).valueOrNull ?? true;
+        ref.watch(accountFeatureEnabledProvider).value ?? true;
     final accountNames =
         accountsEnabled ? _accountNames : const <int, String>{};
 
@@ -596,7 +596,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
 
     // v47：自定义字段角标（无值/定义解析不出 → 不显示）。
     final customBadges =
-        ref.watch(customFieldValueBadgesProvider).valueOrNull?[t.id] ??
+        ref.watch(customFieldValueBadgesProvider).value?[t.id] ??
             const <({String name, String display})>[];
     final customBadgeTexts = [
       for (final b in customBadges) '${b.name}: ${b.display}',

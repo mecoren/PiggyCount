@@ -42,7 +42,7 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
     final ledgerId = ref.watch(currentLedgerIdProvider);
     final definitionsAsync = ref.watch(customFieldDefinitionsProvider(ledgerId));
 
-    final hasFields = definitionsAsync.valueOrNull?.isNotEmpty ?? false;
+    final hasFields = definitionsAsync.value?.isNotEmpty ?? false;
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),

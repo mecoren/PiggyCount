@@ -30,7 +30,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 | --- | --- |
 | 框架 | Flutter 3.47.6（stable，Dart 3.13.5）+ Dart SDK `^3.6.0`，`flutter_lints ^6.0.0` |
 | Android 构建 | compileSdk **37**（Android 17，`permission_handler_android 14.x` 硬要求）+ AGP **9.1.0** + Gradle **9.3.1** + NDK **28.2.13676358** + Java 17 / Kotlin **2.4.0**（见 `android/app/build.gradle`、`android/settings.gradle`；compileSdk 37 的平台包在本机装成 `platforms/android-37.0`，AGP 8.12.x 找不到它。Flutter 3.47.6 的兼容矩阵已不含 AGP 8.x，故 AGP 9 / Gradle 9 / Kotlin 2.4 三者必须同批升；AGP 9 起 `resValues` build feature 默认关闭，靠 `android/gradle.properties` 的 `android.defaults.buildfeatures.resvalues=true` 显式打开，否则报 “Build Type debug contains custom resource values, but the feature is disabled”；`android/build.gradle` 已改用 `layout.buildDirectory` —— Gradle 9 移除了 `Project.buildDir`） |
-| 状态与 DI | Riverpod 2.5（`flutter_riverpod`）——唯一状态管理方案，同时承担 DI |
+| 状态与 DI | Riverpod **3.4.3**（`flutter_riverpod`）——唯一状态管理方案，同时承担 DI（3.x 迁移要点见下方「Riverpod 3 迁移注意」） |
 | 本地数据库 | Drift 2.20 ORM + `sqlite3_flutter_libs` / `sqlite3`（`PiggyDatabase`，schemaVersion 49） |
 | 路由 | Navigator 1.0（`MaterialPageRoute` + `Navigator.push`），**不用** go_router / auto_route |
 | 云同步（自研） | `packages/flutter_cloud_sync`（核心）+ 各 provider 子包：`_supabase` / `_webdav` / `_s3` / `_icloud` |
@@ -44,6 +44,17 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 | CI | GitHub Actions：`analyze.yml`（analyze 0-issue 门 + test 同步契约门）、`release.yml`（tag 触发多平台构建发布） |
 
 **版本约束注意**：`dependency_overrides` 只钉 `jni_flutter: 1.0.3`（1.0.4 已被 pub 撤回，而 `path_provider_android 2.3.1` 的 `^1.0.1` 仍会把 1.0.4 选为最高版——镜像源版本列表不带 retracted 标记，pub 不会自动避开；等上游换掉该依赖后可移除）；两条历史 pin 分别随 `record 7.1.1`（`record_platform_interface: 1.2.0`，record 7 的平台实现统一要求 `^2.1.0`）与 `image_cropper 12.2.1`（`image_cropper_platform_interface: 7.1.0`，12.x 与 8.x 配套）移除；`hooks.user_defines.sqlite3.source: system` 让 sqlite3 运行时动态查找，**不要删**——否则构建期会去 GitHub 下载预编译 libsqlite3 而在国内网络失败。`flutter_launcher_icons.ios: false`，iOS 图标手工维护（0.14.x 会重写 `Contents.json`）。
+
+**Riverpod 3 迁移注意**（2026-10-06 由 2.5 升到 3.4.3；`analyze --fatal-infos` 0 issue + 1842 测试全绿后落地）：
+
+1. **`StateProvider` / `StateNotifierProvider` 已移出主入口**，改从 `package:flutter_riverpod/legacy.dart` 导入（本项目 37 个文件在用，含 `StateNotifier` / `StateController`）。只用到 legacy API 的文件要**删掉** `flutter_riverpod.dart` 主 import，否则报 `unused_import` 破 0-issue 门。
+2. **`AsyncValue.valueOrNull` 被移除**，一律改用 `.value`（3.x 的 `value` 在 error 时返回 `null`，即旧 `valueOrNull` 语义）。本批改了 38 个文件。
+3. **`StreamProvider` 在没有「主动监听者」时会暂停其 `StreamSubscription`** —— 此时 `read(provider.future)` **永不完成**（测试里表现为挂到 10 分钟超时）。测试若要 `await xxx.future`，需先 `container.listen(provider, (_, __) {})` 保活。
+4. **provider 失败会自动重试**（指数退避 Timer，默认开启）。测试中对故意失败的用例会残留 pending timer，用 `ProviderContainer(retry: (_, __) => null)` 或 `ProviderScope(retry: ...)` 关掉。
+5. **`ProviderObserver.didUpdateProvider` 由 4 参改 3 参**：`(ProviderObserverContext context, Object? previousValue, Object? newValue)`，`provider` / `container` 从 `context` 取；`ProviderObserver` 是 `base class`，子类必须显式声明 `base` / `final` / `sealed`。`ProviderBase` 不再公开导出。
+6. **`ProviderListenable` 改从 `package:flutter_riverpod/misc.dart` 导出**（主入口不再导出）。
+7. **`Ref` 是 `sealed class`**，测试里不能 `implements Ref` 伪造；改为「在真实 provider 内调用」拿真实 `Ref`：`container.read(FutureProvider<bool>((ref) => fn(ref)).future)`。
+8. **drift 的 `QueryStream` 在 dispose 时用 `Timer(Duration.zero)` 异步关闭**：widget 测试卸载 `ProviderScope` 后必须 `pump()` 再 `pump(Duration(milliseconds: 1))` 推进时间，否则 pending-timer 断言失败（该断言在测试体结束、`tearDown` 之前跑，`addTearDown` 兜不住）。
 
 ## 架构边界
 

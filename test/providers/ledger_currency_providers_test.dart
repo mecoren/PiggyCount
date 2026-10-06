@@ -43,6 +43,11 @@ void main() {
           .overrideWith((ref) => Stream<Ledger?>.value(ledgerWith('usd'))),
     ]);
     addTearDown(container.dispose);
+    // riverpod 3（Breaking）：StreamProvider 在没有主动监听者时会暂停其
+    // StreamSubscription，此时 read(provider.future) 永不完成 → 显式建立
+    // 保活订阅（不建会挂到测试超时）。
+    final ledgerSub = container.listen(currentLedgerProvider, (_, __) {});
+    addTearDown(ledgerSub.close);
     await container.read(currentLedgerProvider.future);
     expect(container.read(currentLedgerCurrencyProvider), 'USD');
 
@@ -50,6 +55,9 @@ void main() {
       currentLedgerProvider.overrideWith((ref) => Stream<Ledger?>.value(null)),
     ]);
     addTearDown(empty.dispose);
+    // 同上：riverpod 3 的 StreamProvider 需要主动监听者，否则 .future 永不完成
+    final emptySub = empty.listen(currentLedgerProvider, (_, __) {});
+    addTearDown(emptySub.close);
     await empty.read(currentLedgerProvider.future);
     expect(empty.read(currentLedgerCurrencyProvider), 'CNY');
   });
@@ -77,6 +85,9 @@ void main() {
           .overrideWith((ref) => Stream<Ledger?>.value(ledgerWith('USD'))),
     ]);
     addTearDown(container.dispose);
+    // 同上：riverpod 3 的 StreamProvider 需要主动监听者，否则 .future 永不完成
+    final ledgerSub = container.listen(currentLedgerProvider, (_, __) {});
+    addTearDown(ledgerSub.close);
     await container.read(currentLedgerProvider.future);
     // 主币种是 CNY,但账本本位币 USD → 应取 base=USD 的组
     container.read(baseCurrencyProvider.notifier).state = 'CNY';

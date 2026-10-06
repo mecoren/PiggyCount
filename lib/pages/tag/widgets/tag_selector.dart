@@ -74,7 +74,7 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
     // Editor 不可在共享账本 picker 新建标签(移植 BeeCount #436)
     final canCreateTag = ref.watch(canCreateTagForCurrentLedgerProvider);
     final visibleTagIds =
-        allTagsAsync.valueOrNull?.map((tag) => tag.id).toSet();
+        allTagsAsync.value?.map((tag) => tag.id).toSet();
 
     return PiggyPickerSheet(
       title: l10n.tagSelectTitle,

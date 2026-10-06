@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'database_providers.dart';
 import 'ui_state_providers.dart';
 import 'currency_providers.dart';

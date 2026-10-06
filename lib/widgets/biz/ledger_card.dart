@@ -67,7 +67,7 @@ class _LedgerCardState extends ConsumerState<LedgerCard> {
 
     // 获取同步状态
     final syncStatusAsync = ref.watch(syncStatusProvider(ledger.id));
-    final syncStatus = syncStatusAsync.valueOrNull;
+    final syncStatus = syncStatusAsync.value;
 
     // 检查是否正在上传
     final uploadingIds = ref.watch(uploadingLedgerIdsProvider);

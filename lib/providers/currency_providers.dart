@@ -1,6 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// riverpod 3：ProviderListenable 从 misc.dart 导出（主入口不再导出它），
+// _refreshExchangeRatesImpl 的 read 形参需要它。
+import 'package:flutter_riverpod/misc.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/repositories/base_repository.dart';
@@ -32,7 +36,7 @@ final baseCurrencyInitProvider = FutureProvider<void>((ref) async {
   if (saved == null || saved.isEmpty) {
     saved = prefs.getString('selected_currency');
     if (saved == null || saved.isEmpty) {
-      saved = ref.read(currentLedgerProvider).valueOrNull?.currency;
+      saved = ref.read(currentLedgerProvider).value?.currency;
     }
     if (saved == null || saved.isEmpty) saved = 'CNY';
     await prefs.setString('baseCurrency', saved);
@@ -56,7 +60,7 @@ final usedCurrenciesProvider = FutureProvider<Set<String>>((ref) async {
 /// 多币种态总闸(README D6):使用中币种 ≥2 即恒为折算态,与 Web 端对齐。
 /// 原「按主币种折算」开关已下线(默认折算),不再有「非折算多币种」态。
 final multiCurrencyActiveProvider = Provider<bool>((ref) {
-  final used = ref.watch(usedCurrenciesProvider).valueOrNull;
+  final used = ref.watch(usedCurrenciesProvider).value;
   return used != null && used.length >= 2;
 });
 
@@ -112,7 +116,7 @@ final currencyPickerRatesProvider =
 /// 当前账本本位币(ISO 大写)。`ledger.currency` 的语义化别名——交易级多币种后
 /// 它的语义是「账本统计折算的目标币种」(.docs/multi-currency-ledger L1)。
 final currentLedgerCurrencyProvider = Provider<String>((ref) {
-  final ledger = ref.watch(currentLedgerProvider).valueOrNull;
+  final ledger = ref.watch(currentLedgerProvider).value;
   final c = ledger?.currency;
   return (c == null || c.isEmpty) ? 'CNY' : c.toUpperCase();
 });
@@ -145,7 +149,7 @@ final effectiveRatesForLedgerProvider =
 final ledgerUnconvertedForeignTxCountProvider = FutureProvider<int>((ref) async {
   ref.watch(statsRefreshProvider);
   ref.watch(rateRefreshTickProvider);
-  final ledger = ref.watch(currentLedgerProvider).valueOrNull;
+  final ledger = ref.watch(currentLedgerProvider).value;
   if (ledger == null) return 0;
   final repo = ref.watch(repositoryProvider);
   return repo.countUnconvertedForeignTx(ledger.id);
@@ -154,7 +158,7 @@ final ledgerUnconvertedForeignTxCountProvider = FutureProvider<int>((ref) async 
 /// 当前账本外币交易条数(含已折算):>0 时账本统计页显示折算脚注(01 §五)。
 final ledgerForeignTxCountProvider = FutureProvider<int>((ref) async {
   ref.watch(statsRefreshProvider);
-  final ledger = ref.watch(currentLedgerProvider).valueOrNull;
+  final ledger = ref.watch(currentLedgerProvider).value;
   if (ledger == null) return 0;
   final repo = ref.watch(repositoryProvider);
   return repo.countForeignCurrencyTx(ledger.id);

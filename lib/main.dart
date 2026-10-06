@@ -272,18 +272,20 @@ Future<void> _registerWidgetCallback() async {
 }
 
 /// Provider observer to update widget on app start
-class _WidgetUpdateObserver extends ProviderObserver {
+// riverpod 3 把 ProviderObserver 声明为 base class，子类必须显式标 base/final/sealed。
+final class _WidgetUpdateObserver extends ProviderObserver {
   _WidgetUpdateObserver();
   @override
   void didUpdateProvider(
-    ProviderBase provider,
+    ProviderObserverContext context,
     Object? previousValue,
     Object? newValue,
-    ProviderContainer container,
   ) {
+    // riverpod 3：didUpdateProvider 由 4 参改为 3 参 —— provider 与 container
+    // 合并进 ProviderObserverContext（原来的 ProviderBase 类型也不再公开）。
     // Update widget when current ledger is loaded
-    if (provider == currentLedgerIdProvider && newValue != null) {
-      _updateWidgetOnStart(container);
+    if (context.provider == currentLedgerIdProvider && newValue != null) {
+      _updateWidgetOnStart(context.container);
     }
   }
 

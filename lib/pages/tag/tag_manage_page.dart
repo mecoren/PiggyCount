@@ -442,7 +442,7 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
   /// 清空未使用的标签
   Future<void> _clearUnusedTags() async {
     final l10n = AppLocalizations.of(context);
-    final tagsWithStats = ref.read(tagsWithStatsProvider).valueOrNull ?? [];
+    final tagsWithStats = ref.read(tagsWithStatsProvider).value ?? [];
 
     // 找出交易数为0的标签
     final unusedTags =
@@ -491,7 +491,7 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
 
   /// 静默清空未使用的标签（用于覆盖导入）
   Future<void> _clearUnusedTagsSilent() async {
-    final tagsWithStats = ref.read(tagsWithStatsProvider).valueOrNull ?? [];
+    final tagsWithStats = ref.read(tagsWithStatsProvider).value ?? [];
     final unusedTags =
         tagsWithStats.where((item) => item.transactionCount == 0).toList();
 

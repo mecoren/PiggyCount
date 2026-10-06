@@ -504,7 +504,7 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
 
   Future<void> _generatePoster() async {
     final dataAsync = ref.read(annualReportDataProvider(_selectedYear));
-    final data = dataAsync.valueOrNull;
+    final data = dataAsync.value;
     if (data == null) return;
 
     final l10n = AppLocalizations.of(context);

@@ -423,7 +423,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   /// 本笔汇率:手改/隐含 > 有效汇率(effectiveRatesForLedgerProvider)。
   double? _currentRate() {
     if (_rateManuallySet) return double.tryParse(_rateStr ?? '');
-    final rates = ref.read(effectiveRatesForLedgerProvider).valueOrNull;
+    final rates = ref.read(effectiveRatesForLedgerProvider).value;
     final er = rates?[_txCurrency()];
     return er == null ? null : double.tryParse(er.rate);
   }
@@ -438,7 +438,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     if (txCurrency == base || _rateManuallySet || _fetchingRate) return;
     if (_rateFetchAttemptedFor == txCurrency) return;
     final ratesAsync = ref.read(effectiveRatesForLedgerProvider);
-    final rates = ratesAsync.valueOrNull;
+    final rates = ratesAsync.value;
     if (rates == null) return; // provider 尚未解析,等它先出结果
     if (rates.containsKey(txCurrency)) return; // 已有汇率
     _rateFetchAttemptedFor = txCurrency;
@@ -1592,7 +1592,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   /// 的左边界与原始金额位对齐。
   Widget _buildCustomFieldsSection() {
     final definitions =
-        ref.watch(customFieldsForCurrentLedgerProvider).valueOrNull ??
+        ref.watch(customFieldsForCurrentLedgerProvider).value ??
             const <CustomFieldDefinition>[];
     if (definitions.isEmpty) return const SizedBox.shrink();
 
@@ -1653,7 +1653,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     // synthetic id 跟 tag picker 一致),否则编辑模式 tx 已选的 synthetic id 在
     // 主表里找不到,显示"无标签"。
     final allTagsAsync = ref.watch(tagsForCurrentLedgerProvider);
-    final allTags = allTagsAsync.valueOrNull ?? [];
+    final allTags = allTagsAsync.value ?? [];
 
     // 获取已选中的标签详情
     final selectedTags =
@@ -1664,7 +1664,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       final attachmentsAsync = ref
           .watch(transactionAttachmentsProvider(widget.editingTransactionId!));
       // 同样使用 valueOrNull 避免闪烁
-      final attachments = attachmentsAsync.valueOrNull ?? [];
+      final attachments = attachmentsAsync.value ?? [];
       final totalCount = attachments.length + _pendingAttachments.length;
       return _buildRowContent(selectedTags, totalCount, attachments);
     }

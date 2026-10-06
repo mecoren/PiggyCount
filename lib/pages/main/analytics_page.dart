@@ -137,7 +137,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   /// 存量外币交易 >0 时出现;确认后按当前有效汇率重算(逐笔记 change,L13)。
   Widget _buildRecalcForeignBanner(BuildContext context) {
     final count =
-        ref.watch(ledgerUnconvertedForeignTxCountProvider).valueOrNull ?? 0;
+        ref.watch(ledgerUnconvertedForeignTxCountProvider).value ?? 0;
     if (count <= 0) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final primary = ref.watch(primaryColorProvider);
@@ -179,7 +179,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
   /// 折算脚注:账本存在外币交易(含已折算)时,提示统计数字已折本位币。
   Widget _buildConvertedFootnote(BuildContext context) {
-    final count = ref.watch(ledgerForeignTxCountProvider).valueOrNull ?? 0;
+    final count = ref.watch(ledgerForeignTxCountProvider).value ?? 0;
     if (count <= 0) return const SizedBox.shrink();
     final base = ref.watch(currentLedgerCurrencyProvider);
     return Padding(

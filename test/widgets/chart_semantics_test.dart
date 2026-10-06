@@ -29,6 +29,10 @@ String summaryLabel(WidgetTester tester) {
 
 Future<void> pump(WidgetTester tester, Widget chart) async {
   await tester.pumpWidget(ProviderScope(
+    // riverpod 3：provider 失败后会自动重试（指数退避 Timer）。本测试挂的是真实
+    // provider 树，异步 provider 一旦失败就会残留 pending timer 触发 flutter_test
+    // 的断言，故测试里禁用重试（unawaited 只关心图表语义，不关心重试）。
+    retry: (retryCount, error) => null,
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -37,6 +41,21 @@ Future<void> pump(WidgetTester tester, Widget chart) async {
     ),
   ));
   await tester.pumpAndSettle();
+}
+
+/// riverpod 3 + drift 的收尾动作。
+///
+/// `ProviderScope` 卸载时 `StreamProvider` 会去 dispose drift 的 `QueryStream`，
+/// 后者用 `Timer(Duration.zero)` 异步关闭 —— 不推进时间就会残留 pending timer，
+/// 触发 flutter_test 的 `!timersPending` 断言（该断言在测试体结束、tearDown 之前
+/// 执行，所以不能靠 addTearDown 兜）。凡是用例会 watch 到 StreamProvider 的，
+/// 在测试体末尾调用本函数。
+Future<void> settleProviderDispose(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump();
+  // 关键：pump() 只推进一帧、并不推进时间，而 drift 的关闭走的是
+  // Timer(Duration.zero) —— 必须显式推进时间它才会被执行。
+  await tester.pump(const Duration(milliseconds: 1));
 }
 
 void main() {
@@ -122,6 +141,10 @@ void main() {
 
     final text = summaryLabel(tester);
     expect(text, contains('餐饮 60.0%'));
+
+    // 本用例的 CategoryPieChart 会 watch 到 StreamProvider，卸载时会产生
+    // Timer(Duration.zero)，必须推进时间跑完再结束测试。
+    await settleProviderDispose(tester);
   });
 
   testWidgets('资产构成饼图：各类型名称+占比进摘要', (tester) async {

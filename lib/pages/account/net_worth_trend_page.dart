@@ -61,12 +61,12 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
     final l10n = AppLocalizations.of(context);
     final primary = ref.watch(primaryColorProvider);
     final hide = ref.watch(hideAmountsProvider);
-    final earliest = ref.watch(earliestTransactionDateProvider).valueOrNull;
+    final earliest = ref.watch(earliestTransactionDateProvider).value;
     final dates = _rangeDates(earliest);
     final seriesAsync = ref.watch(netWorthTrendSeriesProvider(
         (startDate: dates.start, endDate: dates.end)));
     final multi =
-        (ref.watch(usedCurrenciesProvider).valueOrNull?.length ?? 1) > 1;
+        (ref.watch(usedCurrenciesProvider).value?.length ?? 1) > 1;
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),

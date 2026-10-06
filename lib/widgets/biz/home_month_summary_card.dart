@@ -40,11 +40,11 @@ class HomeMonthSummaryCard extends ConsumerWidget {
     final totalsAsync = ref.watch(monthlyTotalsProvider(params));
     final cachedTotals = ref.watch(lastMonthlyTotalsProvider(params));
     final (income, expense) =
-        totalsAsync.valueOrNull ?? cachedTotals ?? (0.0, 0.0);
+        totalsAsync.value ?? cachedTotals ?? (0.0, 0.0);
 
     // 预算级别（用于支出格括号显示）
     final overviewAsync = ref.watch(budgetOverviewProvider);
-    final totalBudget = overviewAsync.valueOrNull?.totalBudget;
+    final totalBudget = overviewAsync.value?.totalBudget;
 
     // 货币来源：主币别优先(用户在多币种设置里选的那个) → 当前账本位币 → CNY。
     // 之前只读 ledger.currency,用户在设置里改了主币别卡片里依然按账本币显示,
