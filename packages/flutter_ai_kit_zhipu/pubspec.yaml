@@ -13,9 +13,9 @@ dependencies:
     sdk: flutter
   flutter_ai_kit:
     path: ../flutter_ai_kit
-  dio: ^5.0.0
+  dio: ^5.11.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^6.0.0

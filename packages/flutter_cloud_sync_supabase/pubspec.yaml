@@ -14,12 +14,12 @@ dependencies:
     sdk: flutter
   flutter_cloud_sync:
     path: ../flutter_cloud_sync
-  supabase_flutter: ^2.0.0
+  supabase_flutter: ^2.18.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
   # This package is a Flutter plugin

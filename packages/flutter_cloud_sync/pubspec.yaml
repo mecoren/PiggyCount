@@ -12,8 +12,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  meta: ^1.9.0
-  shared_preferences: ^2.2.2
+  meta: ^1.19.0
+  shared_preferences: ^2.5.6
   # 与应用主 pubspec 保持一致（批次8：win32 6.x 连锁，share_plus 13 同批）
   flutter_secure_storage: ^11.2.0
   # L3 循环依赖解除：core 不再依赖任何 provider 包（supabase/webdav/
@@ -25,9 +25,9 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
-  mockito: ^5.4.0
-  build_runner: ^2.4.0
+  flutter_lints: ^6.0.0
+  mockito: ^5.8.1
+  build_runner: ^2.16.1
   crypto: ^3.0.5
 
 flutter:
