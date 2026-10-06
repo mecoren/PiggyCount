@@ -7,6 +7,8 @@
 // 不依赖真实网络 / 数据库 / UI 框架。
 
 
+import 'dart:async';
+
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -357,7 +359,8 @@ void main() {
       expect(states.any((s) => s is CheckingState), isTrue);
     });
 
-    test('W1 并行化：getStatus 并发执行，串行慢账本不再线性累积等待', () async {
+    test('W1 并行化：getStatus 真并发（同一时刻在途数 = 账本数），串行必红',
+        () async {
       deps.activeConfig = const CloudServiceConfig(
         type: CloudBackendType.webdav,
         name: 'webdav',
@@ -375,16 +378,24 @@ void main() {
       };
       deps.summaryChoice = SummaryChoice.skip;
 
-      // 每个 getStatus 挂起 300ms 才返回；串行实现需 ≥ 900ms，
-      // 并行实现应接近单个调用的时长
-      deps.getStatusDelay = const Duration(milliseconds: 300);
-      final sw = Stopwatch()..start();
+      // 判据是「同一时刻有几个 getStatus 在途」，不是墙钟耗时。
+      //
+      // 为什么不再比耗时：旧写法是 3 个各挂 300ms 的真实延迟 + 一条
+      // `sw.elapsed < 800ms` 上限 —— 全仓唯一一处看机器脸的断言，地板
+      // 300ms、上限 800ms 只留 500ms 余量。GitHub runner（2 vCPU、两个
+      // suite 抢 CPU）上这点余量被调度抖动吃掉就假红，而被测的并行性
+      // 本身没问题（2026-10-05 那次 CI 的 1 例失败就长这样）。
+      //
+      // 现在的做法：让 3 个 getStatus 互相「等齐」——3 个同时在途才一起
+      // 放行。串行实现下第 1 个永远等不齐（只能等兜底超时放行），在途数
+      // 停在 1，断言**确定性**失败；并行实现下瞬间凑齐、毫秒级跑完。
+      deps.getStatusBarrier = deps.ledgers.length;
       await checker.runIfNeeded();
-      sw.stop();
 
       expect(deps.getStatusCallCount, 3);
-      expect(sw.elapsed, lessThan(const Duration(milliseconds: 800)),
-          reason: '串行实现下 3 × 300ms = 900ms；并行应约 300ms');
+      expect(deps.getStatusMaxInFlight, deps.ledgers.length,
+          reason: '三个账本的 getStatus 必须同时在途：串行实现会让前一个白等'
+              '兜底超时，W1 的并行化就等于没做');
     });
 
     test('W1 取消：检查阶段 requestCancel 后静默退出，不弹汇总/错误', () async {
@@ -1706,6 +1717,22 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   /// W1 并行化测试：getStatus 人为延迟（模拟慢速后端）
   Duration? getStatusDelay;
 
+  /// W1 并行化测试：让 getStatus 互相「等齐」——在途数达到该值才统一放行。
+  /// 串行实现下永远凑不齐（靠 [_barrierTimeout] 兜底放行），于是
+  /// [getStatusMaxInFlight] 停在 1，断言确定性失败，不依赖机器速度。
+  int? getStatusBarrier;
+
+  /// 观察到的「同一时刻在途」峰值：并行度的直接证据。
+  int getStatusMaxInFlight = 0;
+
+  int _inFlight = 0;
+  Completer<void>? _barrier;
+
+  /// 凑不齐时的兜底：到点必须放行，否则测试会一路挂到 30s 默认超时，
+  /// 而不是给出「在途数不足」这条可读的失败原因。串行下 3 个账本共等
+  /// 9s，离 30s 还有足够余量。
+  static const Duration _barrierTimeout = Duration(seconds: 3);
+
   Map<int,
           ({SyncPreview? preview, ImportData importData, int version,
               String? cloudFingerprint})>
@@ -1788,6 +1815,16 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   @override
   Future<SyncStatus> getStatus(int ledgerId) async {
     getStatusCallCount++;
+    final barrier = getStatusBarrier;
+    if (barrier != null) {
+      _inFlight++;
+      if (_inFlight > getStatusMaxInFlight) getStatusMaxInFlight = _inFlight;
+      _barrier ??= Completer<void>();
+      if (_inFlight >= barrier && !_barrier!.isCompleted) _barrier!.complete();
+      // 凑不齐就等到点放行：让断言去报「在途数不足」，而不是挂到超时。
+      await _barrier!.future.timeout(_barrierTimeout, onTimeout: () {});
+      _inFlight--;
+    }
     if (getStatusDelay != null) {
       await Future.delayed(getStatusDelay!);
     }
