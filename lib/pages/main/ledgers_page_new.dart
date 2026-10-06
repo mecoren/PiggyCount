@@ -1230,10 +1230,25 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       // 必须切到新账本 id 否则首页 header 胶囊继续显示「新建账本」、列表为
       // 空。已有账本时不动 currentLedger,保留用户当前所在账本。
       if (!mounted) return;
-      final currentLedger = await ref.read(currentLedgerProvider.future);
-      if (currentLedger == null) {
-        ref.read(currentLedgerIdProvider.notifier).state = newLedgerId;
-        ref.invalidate(currentLedgerProvider);
+      // riverpod 3：StreamProvider 在没有活跃订阅时处于 paused 状态，单独
+      // `read(.future)` 会永远停在 loading（2.x 里 read 会顺带初始化它）。
+      // 本页没有任何组件 watch currentLedgerProvider（只有 read / invalidate），
+      // 所以先建一个临时订阅保活，拿到首个值后关闭。
+      // riverpod 3：StreamProvider 在没有活跃订阅时处于 paused 状态，单独
+      // `read(.future)` 会永远停在 loading（2.x 的 read 会顺带初始化它）。
+      // 本页自身只 read / invalidate currentLedgerProvider，是否已有订阅取决于
+      // 当时挂在树上的其它组件（页面栈），故这里显式建一个临时订阅保活：
+      // 代价是一次订阅，收益是「创建第一个账本」这条路径不可能静默卡死。
+      final currentLedgerSub =
+          ref.listenManual(currentLedgerProvider, (_, __) {});
+      try {
+        final currentLedger = await ref.read(currentLedgerProvider.future);
+        if (currentLedger == null) {
+          ref.read(currentLedgerIdProvider.notifier).state = newLedgerId;
+          ref.invalidate(currentLedgerProvider);
+        }
+      } finally {
+        currentLedgerSub.close();
       }
 
       ref.read(ledgerListRefreshProvider.notifier).state++;
