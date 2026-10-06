@@ -48,7 +48,10 @@ Widget currencyFlag(
           ),
           fit: BoxFit.cover,
         )
-      : CountryFlag.fromCountryCode(country, width: width, height: height);
+      : CountryFlag.fromCountryCode(
+          country,
+          theme: ImageTheme(width: width, height: height),
+        );
   return ClipRRect(
     borderRadius: BorderRadius.circular(radius),
     child: SizedBox(width: width, height: height, child: flag),
