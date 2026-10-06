@@ -9,3 +9,6 @@ analyzer:
     # 全部来自 scripts/live_db/run_20260920/probe_uri.dart）。
     # 只排除该目录：scripts/i18n、scripts/tools 等被跟踪的脚本仍参与分析。
     - scripts/live_db/**
+    - build/**
+    - android/**
+    - ios/**

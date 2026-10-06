@@ -7,7 +7,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 ## 快速原则
 
 - **中文工作**：对话、commit message、文档、代码注释全部中文。commit 格式 `type(scope): 中文描述`，多批工作常在末尾附日期，如 `fix(sync): 同步一致性 D-1~D-4 修复 + 契约穷举守门测试（2026-09-27）`。
-- **Flutter 版本单一来源**：只改 `pubspec.yaml` 的 `environment.flutter`（当前 `3.44.3`），CI 用 `flutter-version-file: pubspec.yaml` 读取。**禁止**在 `.github/workflows/*.yml` 里另写版本号——历史上 `release.yml` 停留 3.27.3 而 `pubspec.lock` 已要求 >=3.44.0，漂移会让下一次打 tag 发版直接失败。
+- **Flutter 版本单一来源**：只改 `pubspec.yaml` 的 `environment.flutter`（当前 `3.47.6`），CI 用 `flutter-version-file: pubspec.yaml` 读取。**禁止**在 `.github/workflows/*.yml` 里另写版本号——历史上 `release.yml` 停留 3.27.3 而 `pubspec.lock` 已要求 >=3.44.0，漂移会让下一次打 tag 发版直接失败。
 - **应用版本单一来源**：真值在 `pubspec.yaml#version`（当前 `0.1.0`），描述**开发主线当前版本**。发版时 `release.yml` 不修改 `pubspec.yaml`，而是把 tag 名经 `--build-name` / `--build-number` 注入构建（`--build-number` 取 `github.run_number`）。因此**发版产物名只跟 tag 走**，与 `pubspec.yaml` 的当前值无关——不要再手工两处维护，也不要用 `sed` 改 `pubspec.yaml`。
 - **分层不可破**：UI 只碰 Provider；Provider 注入 Service / Repository；Service 只调 Repository；Repository 是数据库唯一入口。跨层调用一律 review 拒绝。
 - **写操作必须经 Repository**：任何改库操作都要走 Repository，由其内部经 `ChangeTracker`（`lib/cloud/sync/change_tracker.dart`）写入 `local_changes`。**绕过 Repository 直接写 DB 是严重 bug**——本地变更不会进 `local_changes`，云端同步静默丢数据。
@@ -28,8 +28,8 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 
 | 维度 | 选型 |
 | --- | --- |
-| 框架 | Flutter 3.44.3（stable）+ Dart SDK `^3.6.0`，`flutter_lints ^6.0.0` |
-| Android 构建 | compileSdk **37**（Android 17，`permission_handler_android 14.x` 硬要求）+ AGP **8.13.2** + Gradle 8.13 + NDK **28.2.13676358** + Java 17 / Kotlin 2.2.0（见 `android/app/build.gradle`、`android/settings.gradle`；compileSdk 37 的平台包在本机装成 `platforms/android-37.0`，AGP 8.12.x 找不到它，故 AGP 必须 ≥ 8.13） |
+| 框架 | Flutter 3.47.6（stable，Dart 3.13.5）+ Dart SDK `^3.6.0`，`flutter_lints ^6.0.0` |
+| Android 构建 | compileSdk **37**（Android 17，`permission_handler_android 14.x` 硬要求）+ AGP **9.1.0** + Gradle **9.3.1** + NDK **28.2.13676358** + Java 17 / Kotlin **2.4.0**（见 `android/app/build.gradle`、`android/settings.gradle`；compileSdk 37 的平台包在本机装成 `platforms/android-37.0`，AGP 8.12.x 找不到它。Flutter 3.47.6 的兼容矩阵已不含 AGP 8.x，故 AGP 9 / Gradle 9 / Kotlin 2.4 三者必须同批升；AGP 9 起 `resValues` build feature 默认关闭，靠 `android/gradle.properties` 的 `android.defaults.buildfeatures.resvalues=true` 显式打开，否则报 “Build Type debug contains custom resource values, but the feature is disabled”；`android/build.gradle` 已改用 `layout.buildDirectory` —— Gradle 9 移除了 `Project.buildDir`） |
 | 状态与 DI | Riverpod 2.5（`flutter_riverpod`）——唯一状态管理方案，同时承担 DI |
 | 本地数据库 | Drift 2.20 ORM + `sqlite3_flutter_libs` / `sqlite3`（`PiggyDatabase`，schemaVersion 49） |
 | 路由 | Navigator 1.0（`MaterialPageRoute` + `Navigator.push`），**不用** go_router / auto_route |

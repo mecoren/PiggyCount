@@ -17,9 +17,13 @@ allprojects {
     }
 }
 
-rootProject.buildDir = "../build"
+// Gradle 9 移除了 Project.buildDir（报 "Could not set unknown property 'buildDir'"），
+// 改用 layout.buildDirectory；写法对齐 Flutter 3.47.6 官方模板的 newBuildDir。
+def newBuildDir = rootProject.layout.buildDirectory.dir("../../build").get()
+rootProject.layout.buildDirectory.value(newBuildDir)
+
 subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    project.layout.buildDirectory.value(newBuildDir.dir(project.name))
 }
 subprojects {
     project.evaluationDependsOn(":app")

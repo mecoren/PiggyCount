@@ -11,7 +11,7 @@ environment:
   # 不要在 .github/workflows/*.yml 里再写 FLUTTER_VERSION：历史上 release.yml
   # 停留在 3.27.3，而 pubspec.lock 已要求 >=3.44.0，两者漂移会让下一次打 tag
   # 发版直接失败。
-  flutter: 3.44.3
+  flutter: 3.47.6
 
 dependencies:
   flutter:
