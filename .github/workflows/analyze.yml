@@ -53,7 +53,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # 本地镜像守卫（2026-10-02 新增）。
       # 开发机若设了 PUB_HOSTED_URL（如 pub.flutter-io.cn），`flutter pub get`
@@ -93,7 +93,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Flutter
         # 与 analyze job 同一份版本来源（pubspec.yaml），避免两处漂移

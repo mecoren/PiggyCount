@@ -67,7 +67,7 @@ jobs:
     steps:
       # fetch-depth 0 + fetch-tags：下面的 tag 归属 / 版本单调性校验需要完整历史与 tag。
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -154,7 +154,7 @@ jobs:
     needs: [audit]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -182,7 +182,7 @@ jobs:
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: "zulu"
           java-version: "17"
@@ -194,7 +194,7 @@ jobs:
       # 在第一步就失败（2026-09-29 发版 v0.1.0 实测踩到）。故显式覆盖 packages，
       # 只装真正需要的 platform-tools——不要删掉这个覆盖，否则会再次踩坑。
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
           packages: "platform-tools"
 
@@ -349,7 +349,7 @@ jobs:
           find build/app/outputs -name "piggycount-*"
 
       - name: Upload Android artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android
           if-no-files-found: error
@@ -463,7 +463,7 @@ jobs:
     needs: [audit]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -520,7 +520,7 @@ jobs:
 
       # 手动缓存 pub 依赖
       - name: Cache pub dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ steps.flutter-action.outputs.VERSION }}-${{ github.sha }}
@@ -849,7 +849,7 @@ jobs:
           echo "✅ Successfully uploaded to TestFlight!"
 
       - name: Upload iOS artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios
           path: |
@@ -869,7 +869,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -916,7 +916,7 @@ jobs:
           echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
           echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
       - name: Download Android artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: android
           path: ./dist/android
@@ -927,7 +927,7 @@ jobs:
           ls -R ./dist || true
 
       - name: Download iOS artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ios
           path: ./dist/ios
@@ -967,7 +967,7 @@ jobs:
 
       # job 级 if 已保证只在 publish=true 时进入本 job，此处无需再判发布意图
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.meta.outputs.tag_name }}
           name: ${{ steps.meta.outputs.release_name }}
