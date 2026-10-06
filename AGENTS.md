@@ -31,11 +31,11 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 | 框架 | Flutter 3.47.6（stable，Dart 3.13.5）+ Dart SDK `^3.6.0`，`flutter_lints ^6.0.0` |
 | Android 构建 | compileSdk **37**（Android 17，`permission_handler_android 14.x` 硬要求）+ AGP **9.1.0** + Gradle **9.3.1** + NDK **28.2.13676358** + Java 17 / Kotlin **2.4.0**（见 `android/app/build.gradle`、`android/settings.gradle`；compileSdk 37 的平台包在本机装成 `platforms/android-37.0`，AGP 8.12.x 找不到它。Flutter 3.47.6 的兼容矩阵已不含 AGP 8.x，故 AGP 9 / Gradle 9 / Kotlin 2.4 三者必须同批升；AGP 9 起 `resValues` build feature 默认关闭，靠 `android/gradle.properties` 的 `android.defaults.buildfeatures.resvalues=true` 显式打开，否则报 “Build Type debug contains custom resource values, but the feature is disabled”；`android/build.gradle` 已改用 `layout.buildDirectory` —— Gradle 9 移除了 `Project.buildDir`） |
 | 状态与 DI | Riverpod **3.4.3**（`flutter_riverpod`）——唯一状态管理方案，同时承担 DI（3.x 迁移要点见下方「Riverpod 3 迁移注意」） |
-| 本地数据库 | Drift 2.20 ORM + `sqlite3_flutter_libs` / `sqlite3`（`PiggyDatabase`，schemaVersion 49） |
+| 本地数据库 | Drift 2.35 ORM + `sqlite3_flutter_libs` / `sqlite3`（`PiggyDatabase`，schemaVersion 49）；Android 侧整库加密走自带的 `libsqlcipher.so`（见「版本约束注意」） |
 | 路由 | Navigator 1.0（`MaterialPageRoute` + `Navigator.push`），**不用** go_router / auto_route |
 | 云同步（自研） | `packages/flutter_cloud_sync`（核心）+ 各 provider 子包：`_supabase` / `_webdav` / `_s3` / `_icloud` |
 | AI（自研） | `packages/flutter_ai_kit`（6 种执行策略）+ `_zhipu`（GLM-4 / glm-4v-flash）+ `_openai` |
-| 加密 | E2EE = AES-256-GCM + Argon2id（`cryptography`，纯 Dart）；密钥存 `flutter_secure_storage`（iOS Keychain / Android Keystore） |
+| 加密 | E2EE = AES-256-GCM + Argon2id（`cryptography`，纯 Dart）；密钥存 `flutter_secure_storage`（iOS Keychain / Android Keystore）。**整库加密（SQLCipher）已于 2026-10-06 在 Android 启用** —— 详见下方「版本约束注意」 |
 | 网络 | `dio`（OTA 更新 / 汇率 / AI 调用等复杂 HTTP）+ `http`（轻量场景），自建云后端各用其 provider 子包的客户端 |
 | UI / 媒体 | Material 3、`fl_chart` 图表、`table_calendar`、`reorderable_grid_view`、`webview_flutter`、`flutter_svg` / `jovial_svg`、`image_picker` + `flutter_image_compress` + `image_cropper` |
 | 平台集成 | `home_widget`（桌面小组件）、`flutter_local_notifications` + `timezone`、`quick_actions`、`local_auth`（应用锁）、`app_links`（`piggycount://`）、`permission_handler` |
@@ -43,7 +43,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 | 测试 | `flutter_test` + `mocktail`（不用 mockito，避免 codegen）+ Drift `NativeDatabase.memory()` |
 | CI | GitHub Actions：`analyze.yml`（analyze 0-issue 门 + test 同步契约门）、`release.yml`（tag 触发多平台构建发布） |
 
-**版本约束注意**：`dependency_overrides` 只钉 `jni_flutter: 1.0.3`（1.0.4 已被 pub 撤回，而 `path_provider_android 2.3.1` 的 `^1.0.1` 仍会把 1.0.4 选为最高版——镜像源版本列表不带 retracted 标记，pub 不会自动避开；等上游换掉该依赖后可移除）；两条历史 pin 分别随 `record 7.1.1`（`record_platform_interface: 1.2.0`，record 7 的平台实现统一要求 `^2.1.0`）与 `image_cropper 12.2.1`（`image_cropper_platform_interface: 7.1.0`，12.x 与 8.x 配套）移除；`hooks.user_defines.sqlite3.source: system` 让 sqlite3 运行时动态查找，**不要删**——否则构建期会去 GitHub 下载预编译 libsqlite3 而在国内网络失败。`flutter_launcher_icons.ios: false`，iOS 图标手工维护（0.14.x 会重写 `Contents.json`）。
+**版本约束注意**：`dependency_overrides` 只钉 `jni_flutter: 1.0.3`（1.0.4 已被 pub 撤回，而 `path_provider_android 2.3.1` 的 `^1.0.1` 仍会把 1.0.4 选为最高版——镜像源版本列表不带 retracted 标记，pub 不会自动避开；等上游换掉该依赖后可移除）；两条历史 pin 分别随 `record 7.1.1`（`record_platform_interface: 1.2.0`，record 7 的平台实现统一要求 `^2.1.0`）与 `image_cropper 12.2.1`（`image_cropper_platform_interface: 7.1.0`，12.x 与 8.x 配套）移除；`hooks.user_defines.sqlite3` 用 `source: system` + `name_android: sqlcipher`，让 Android 运行时 `dlopen('libsqlcipher.so')` —— **整库加密已于 2026-10-06 启用**：三个 ABI 的库已入库到 `android/app/src/main/jniLibs/<abi>/libsqlcipher.so`（~16.45MB，即 `prd/sqlcipher_db_encryption/design.md` §7 的「入库」分支 —— 实测 GitHub release 会 302 到 `objects.githubusercontent.com`、国内直连超时 WinError 10060，构建期拉取会失败）。取库命令：`python scripts/fetch_sqlcipher_android_libs.py --mirror https://ghfast.top/`（按 sqlite3 包内 sha256 强校验）。**`name_android` 与 `jniLibs` 必须同在**：缺任一 ABI 的库，应用连 SQLite 都加载不了、起不来（护栏：`test/data/sqlcipher_android_packaging_contract_test.dart`）。`flutter_launcher_icons.ios: false`，iOS 图标手工维护（0.14.x 会重写 `Contents.json`）。
 
 **Riverpod 3 迁移注意**（2026-10-06 由 2.5 升到 3.4.3；`analyze --fatal-infos` 0 issue + 1842 测试全绿后落地）：
 
