@@ -324,11 +324,23 @@ return NativeDatabase.createInBackground(
    | 关闭（R6） | 密钥删除、文件头**回到明文**、行数不变（验收 6）|
 
    ⚠️ 探针自带安全网：动手前先复制一份 `<db>.probe-backup`，成功后删除；失败则**保留密钥**
-   （宁可加密可用，也不留打不开的死库）。跑完记得把 `name_android` 与 `jniLibs` 摘掉/删掉，
-   否则仓库处于"半启用"状态。
-3. **制品决定（技术已通，剩这一步）**：`jniLibs/` 里那 ~16.5MB 第三方二进制的处置 ——
-   直接入库（clone 即可构建，含许可随包分发义务）还是构建期由脚本/Gradle 拉取并校验。
-   本次刻意**未启用**（pubspec 里保留成注释配方），因此仓库现状不引入该二进制。
+  （宁可加密可用，也不留打不开的死库）。**探针跑完记得把现场恢复**：当年探针是在
+  「临时启用」状态下跑的，跑完要摘掉 `name_android` 并删掉 `jniLibs`；但**自 2026-10-06 起
+  本仓库已正式启用**（`name_android: sqlcipher` + 三 ABI 库入库），所以现在跑探针
+  **不需要**再恢复 —— 恢复反而会把仓库打回"半启用"状态。
+3. ✅ **制品决定已落定，并已正式启用（2026-10-06）** —— 选**入库**方案：
+   - `android/app/src/main/jniLibs/{arm64-v8a,armeabi-v7a,x86_64}/libsqlcipher.so`
+     已提交进仓库（合计 ~16.45MB）；`pubspec.yaml` 的
+     `hooks.user_defines.sqlite3` 已打开 `name_android: sqlcipher`。
+   - **为什么是入库而不是构建期拉取**：实测 `github.com/.../releases/download/...` 会
+     302 到 `objects.githubusercontent.com`，**国内直连超时**（`WinError 10060`），
+     脚本直接跑必然失败；入库换来「clone 即可构建」，与本项目一贯避免构建期外网
+     下载的原则一致（同 `source: system` 的初衷）。
+   - **取库脚本已配套更新**：`python scripts/fetch_sqlcipher_android_libs.py --mirror https://ghfast.top/`
+     —— 随 `sqlite3 3.5.2 → 3.7.0` 更新了三个 sha256（旧值全部失效），并新增
+     `--mirror` 参数（走镜像同样按包内 sha256 逐字节校验）。
+   - **本次验证**：APK 内三个 ABI 均出现 `libsqlcipher.so`；真机（Android 15）启动正常、
+     CloudSync 正常读库；`flutter analyze --fatal-infos` 0 issue、1842 测试全绿。
 4. **iOS 构建**：无 macOS，留给 CI 首次跑通时验证（iOS 侧同样需要自带库）。
 4. ✅ **R5 启动分流已落地**（采用判据②："曾启用"标记）。原先的坑：加密库 + 无密钥时
    探测返回 `unreadable`，而 `database_recovery_overlay` 对**非 ok** 就弹「数据可能
