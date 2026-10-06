@@ -28,7 +28,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 
 | 维度 | 选型 |
 | --- | --- |
-| 框架 | Flutter 3.44.3（stable）+ Dart SDK `^3.6.0`，`flutter_lints ^5.0.0` |
+| 框架 | Flutter 3.44.3（stable）+ Dart SDK `^3.6.0`，`flutter_lints ^6.0.0` |
 | Android 构建 | compileSdk **37**（Android 17，`permission_handler_android 14.x` 硬要求）+ AGP **8.13.2** + Gradle 8.13 + NDK **28.2.13676358** + Java 17 / Kotlin 2.2.0（见 `android/app/build.gradle`、`android/settings.gradle`；compileSdk 37 的平台包在本机装成 `platforms/android-37.0`，AGP 8.12.x 找不到它，故 AGP 必须 ≥ 8.13） |
 | 状态与 DI | Riverpod 2.5（`flutter_riverpod`）——唯一状态管理方案，同时承担 DI |
 | 本地数据库 | Drift 2.20 ORM + `sqlite3_flutter_libs` / `sqlite3`（`PiggyDatabase`，schemaVersion 49） |
