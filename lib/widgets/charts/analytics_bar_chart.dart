@@ -214,7 +214,9 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
                                       return const SizedBox.shrink();
                                     }
                                     return SideTitleWidget(
-                                      axisSide: meta.axisSide,
+                                      // fl_chart 1.x：axisSide 参数已移除，
+                                      // 改由必填的 meta 内部携带（含 axisSide）。
+                                      meta: meta,
                                       space: 4,
                                       // 轴标签是刻度，不是信息：读屏交给整条序列的
                                       // 摘要，这里排除避免混着念。
@@ -252,7 +254,8 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
                                       return const SizedBox.shrink();
                                     }
                                     return SideTitleWidget(
-                                      axisSide: meta.axisSide,
+                                      // 同上：fl_chart 1.x 用 meta 取代 axisSide。
+                                      meta: meta,
                                       space: 6,
                                       // 同上：日期轴是采样显示的，序列摘要里每个点都有
                                       child: ExcludeSemantics(

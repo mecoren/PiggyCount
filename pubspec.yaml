@@ -38,7 +38,7 @@ dependencies:
   path: ^1.9.0
   intl: ^0.20.2
   decimal: ^3.0.0
-  fl_chart: ^0.68.0
+  fl_chart: ^1.2.0
   shared_preferences: ^2.3.2
   # 停 7.3.1（2026-10-06 实测）：7.3.2 起依赖 nm ^0.6.0 → dbus ^0.8.0，而
   # flutter_local_notifications 22.x 的 Linux 实现（flutter_local_notifications_linux
