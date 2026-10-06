@@ -14,9 +14,13 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.wait.piggycount"
-    compileSdk = 36
+    // 37：permission_handler_android 14.x（permission_handler 13.x）硬要求
+    // compileSdk = 37，详见 pubspec.yaml 的 permission_handler 注释。
+    compileSdk = 37
     // Keep in sync with plugins' required NDK to avoid build warnings/errors.
-    ndkVersion = "27.0.12077973"
+    // 跟随 Flutter 3.44.3 的默认 NDK，同时满足 jni 包的 28.2.13676358 要求
+    // （原先钉 27.0.12077973，构建期会报插件要求更高 NDK）。
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

@@ -61,11 +61,10 @@ dependencies:
   # 才解（还要同步改 packages/flutter_cloud_sync 的 ^9.2.2）。故并入
   # flutter_secure_storage 那一批处理。
   share_plus: ^12.0.2
-  # 停 12.0.3（2026-10-06 核实）：13.x 的 BREAKING 是 permission_handler_android 14.x
-  # 要求 compileSdk 37，而本项目 android/app/build.gradle 钉在 compileSdk = 36；
-  # 且 13.0.2 起 Android 上 status 不再能判断 permanentlyDenied（voice_billing_helper
-  # 依赖该判断引导去设置）。升 13.x 需先抬 compileSdk 37 并回归 CI/发布链路，另立一批。
-  permission_handler: ^12.0.3
+  # 批次7：13.x 的 BREAKING 是 permission_handler_android 14.x 要求 compileSdk 37，
+  # 故本批同步把 android/app/build.gradle 的 compileSdk 抬到 37（CI 需能装
+  # Android SDK Platform 37；本机已有 android-37.1 + build-tools 37.0.0）。
+  permission_handler: ^13.0.2
   dio: ^5.4.3+1
   open_filex: ^4.4.0
   # 通知链必须同批升：18.x 约束 timezone <0.11.0，22.x 才是 ^0.11.0；

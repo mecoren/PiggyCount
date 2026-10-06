@@ -22,7 +22,10 @@ pluginManagement {
 plugins {
     id "dev.flutter.flutter-plugin-loader" version "1.0.0"
     // share_plus 12.x requires newer Android build tooling.
-    id "com.android.application" version "8.12.1" apply false
+    // 8.13.2（2026-10-06）：compileSdk = 37 时 AGP 8.12.1 只找 `platforms/android-37`，
+    // 而 SDK 包实际装成 `android-37.0`（Android 引入 minor API level），构建期报
+    // "Failed to find target with hash string 'android-37'"。8.13.x 能识别该命名。
+    id "com.android.application" version "8.13.2" apply false
     id "org.jetbrains.kotlin.android" version "2.2.0" apply false
 }
 

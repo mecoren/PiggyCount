@@ -96,8 +96,15 @@ class _AndroidAutoBillingPageState extends ConsumerState<AndroidAutoBillingPage>
       logger.info('AutoBilling', '📸 [AutoBilling] 准备请求存储权限');
       PermissionStatus status;
 
-      // Android 13+ 使用 photos，Android 13以下使用 storage
-      if (await Permission.photos.isRestricted || await Permission.photos.isPermanentlyDenied) {
+      // Android 13+ 使用 photos，Android 13以下使用 storage。
+      //
+      // 这里不再用 `Permission.photos.isPermanentlyDenied` 做前置判断：
+      // permission_handler 13.x 起 Android 的永久拒绝无法从 status 读到
+      // （只能看 request() 的结果），保留旧写法会让被永久拒绝的设备误走
+      // photos 分支（后续 !isGranted 的 storage 兜底也救不回来）。
+      // isRestricted（设备管理策略）仍可先读，命中就直接走 storage 兜底。
+      final photosStatus = await Permission.photos.status;
+      if (photosStatus.isRestricted) {
         // 如果photos权限受限，尝试使用storage
         status = await Permission.storage.request();
         logger.info('AutoBilling', '📸 [AutoBilling] 存储权限请求结果: $status');

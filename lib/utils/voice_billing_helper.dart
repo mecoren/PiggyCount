@@ -76,7 +76,22 @@ class VoiceBillingHelper {
         return;
       }
 
-      // Android 特殊处理：如果权限被永久拒绝，引导用户去设置
+      // 如果权限未授予，先发起请求（iOS 和 Android 首次都会弹出系统对话框）。
+      //
+      // permission_handler 13.x 起，Android 的「永久拒绝」只能从 request() 的
+      // 结果判断（status 检测不到，官方 ANDROID_PERMANENTLY_DENIED_FIX_GUIDE），
+      // 所以下面的 permanentlyDenied 分支必须放在 request 之后。
+      if (!status.isGranted) {
+        logger.info('VoiceBilling', '权限未授予，发起权限请求...');
+        status = await Permission.microphone.request();
+        logger.info('VoiceBilling', '请求后的权限状态: $status');
+        logger.info('VoiceBilling', '  - isGranted: ${status.isGranted}');
+        logger.info('VoiceBilling', '  - isDenied: ${status.isDenied}');
+        logger.info('VoiceBilling',
+            '  - isPermanentlyDenied: ${status.isPermanentlyDenied}');
+      }
+
+      // Android 特殊处理：权限被永久拒绝 → 引导用户去应用设置
       if (status.isPermanentlyDenied) {
         logger.info('VoiceBilling', 'Android 权限被永久拒绝，弹出引导对话框');
         if (!context.mounted) return;
@@ -95,21 +110,12 @@ class VoiceBillingHelper {
         return;
       }
 
-      // 如果权限未授予，请求权限（iOS 和 Android 首次都会弹出系统对话框）
       if (!status.isGranted) {
-        logger.info('VoiceBilling', '权限未授予，发起权限请求...');
-        status = await Permission.microphone.request();
-        logger.info('VoiceBilling', '请求后的权限状态: $status');
-        logger.info('VoiceBilling', '  - isGranted: ${status.isGranted}');
-        logger.info('VoiceBilling', '  - isDenied: ${status.isDenied}');
-
-        if (!status.isGranted) {
-          logger.warning('VoiceBilling', '用户拒绝了权限请求');
-          if (!context.mounted) return;
-          // 用户拒绝后，显示提示
-          showToast(context, l10n.voiceRecordingPermissionDenied);
-          return;
-        }
+        logger.warning('VoiceBilling', '用户拒绝了权限请求');
+        if (!context.mounted) return;
+        // 用户拒绝后，显示提示
+        showToast(context, l10n.voiceRecordingPermissionDenied);
+        return;
       }
 
       logger.info('VoiceBilling', '✓ 麦克风权限已授予，准备开始录音');
