@@ -46,7 +46,7 @@ dependencies:
   # 的 nm 探测改进，对本项目（Android/iOS）无实际影响。
   connectivity_plus: ^7.3.1
   csv: ^8.0.0
-  file_picker: ^8.1.2
+  file_picker: ^10.2.4
   supabase_flutter: ^2.5.6
   crypto: ^3.0.5
   uuid: ^4.5.1
@@ -55,7 +55,12 @@ dependencies:
   url_launcher: ^6.3.0
   in_app_review: ^2.0.9
   http: ^1.2.2
-  share_plus: ^12.0.1
+  # 停 12.x（2026-10-06 实测）：share_plus >=13.1.0 依赖 win32 ^6.0.1，而当前
+  # flutter_secure_storage 9.x 的 Windows 实现（flutter_secure_storage_windows
+  # ^3.1.2）锁 win32 ^5.0.0，两者互斥；只有把 flutter_secure_storage 升到 10/11
+  # 才解（还要同步改 packages/flutter_cloud_sync 的 ^9.2.2）。故并入
+  # flutter_secure_storage 那一批处理。
+  share_plus: ^12.0.2
   # 停 12.0.3（2026-10-06 核实）：13.x 的 BREAKING 是 permission_handler_android 14.x
   # 要求 compileSdk 37，而本项目 android/app/build.gradle 钉在 compileSdk = 36；
   # 且 13.0.2 起 Android 上 status 不再能判断 permanentlyDenied（voice_billing_helper
@@ -81,8 +86,8 @@ dependencies:
   flutter_image_compress: ^2.3.0
   image_cropper: ^10.0.0
   gbk_codec: ^0.4.0
-  app_links: ^6.4.1
-  record: ^5.1.2
+  app_links: ^7.2.1
+  record: ^7.1.1
   yaml: ^3.1.2
   qr_flutter: ^4.1.0
   gal: ^2.3.0
@@ -130,8 +135,11 @@ dev_dependencies:
   path_provider_platform_interface: ^2.1.0
 
 dependency_overrides:
-  # Fix record_linux compatibility issue (we target iOS/Android only)
-  record_platform_interface: 1.2.0
+  # 2026-10-06：原 `record_platform_interface: 1.2.0` pin 已移除。record 7 的官方
+  # 平台实现（record_android 2.2.0 / record_linux 2.1.2 / record_windows 2.3.0）
+  # 统一要求 record_platform_interface ^2.1.0，继续钉 1.2.0 会让录音调用 1.2.0
+  # 的接口而与新实现不匹配（编译不报，运行时才炸）。原 pin 是为修当年的
+  # record_linux 兼容问题，record 7 的新 linux 实现已不需要。
   # 遗留 pin:7.2.0 曾要求 Flutter >= 3.27.6 (Color.toARGB32),当时不可用。
   # 当前工具链已是 3.44.3,理论上可以放开;但 image_cropper 主包仍锁在
   # 10.0.0+1,放开会导致 platform_interface 跳到 8.x 与主包 API 不匹配。
