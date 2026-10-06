@@ -199,20 +199,22 @@ hooks:
   user_defines:
     sqlite3:
       source: system
-      # ── 让 Android 用上 SQLCipher 的**已验证**配方（本次未启用，见下）──
-      # ① python scripts/fetch_sqlcipher_android_libs.py
-      #    → 校验 sha256 后把 libsqlcipher.so 落到
-      #      android/app/src/main/jniLibs/{arm64-v8a,armeabi-v7a,x86_64}/
-      # ② 打开下面这一行（`source: system` 时 hook 支持 `name_$targetOS` 指定库名，
-      #    见 sqlite3 包的 lib/src/hook/compile/description.dart:44-49）
-      #      name_android: sqlcipher
-      # 已实测通过（2026-10-05，Android 15 x86_64 模拟器）：APK 内出现
-      # lib/x86_64/libsqlcipher.so（5.67MB、含 cipher_export），运行态日志
-      # `SQLite 引擎: SQLCipher 4.18.0 community (SQLite 3.53.4)`。
-      # **没开**的原因不是技术：jniLibs 里那 ~16.5MB 第三方二进制是入库还是构建期
-      # 下载，属许可/制品决定（design.md §7）。在此之前保持 Android 跑上游
-      # SQLite —— 反正没有开关 UI 就产生不了密钥，而"有密钥但引擎不支持"已被
-      # DbEncryptionUnsupportedException 硬拦（不会静默写明文）。
+      # ── Android 已启用 SQLCipher（2026-10-06）──
+      # 库来源：`python scripts/fetch_sqlcipher_android_libs.py --mirror https://ghfast.top/`
+      #   → 按 sqlite3 包内 asset_hashes.dart 的 sha256 校验后，落到
+      #     android/app/src/main/jniLibs/{arm64-v8a,armeabi-v7a,x86_64}/libsqlcipher.so
+      #   → **三个 ABI 的 .so 已入库**（~16.45MB，即 design.md §7 的"入库"分支）：
+      #     实测 GitHub release 会 302 到 objects.githubusercontent.com，国内直连超时
+      #     （WinError 10060），构建期拉取会失败，故入库换取"clone 即可构建"。
+      # 本行让 `source: system` 的 hook 改用该库（hook 支持 `name_$targetOS`，
+      # 见 sqlite3 包 lib/src/hook/compile/description.dart:44-49）：
+      name_android: sqlcipher
+      # 护栏：test/data/sqlcipher_android_packaging_contract_test.dart —— 开了本行
+      # 却缺任一 ABI 的库时会直接失败（那种状态下应用连 SQLite 都加载不了、起不来）。
+      # 历史实测（2026-10-05，Android 15 x86_64 模拟器）：APK 内出现
+      # lib/x86_64/libsqlcipher.so（含 cipher_export），运行态日志
+      # `SQLite 引擎: SQLCipher 4.18.0 community (SQLite 3.53.4)`；加密后文件头
+      # 非明文、持钥可读、关闭后回到明文。
 
 # adaptive_* 三个素材由 scripts/gen_icons_from_image.py 生成(从用户提供的源图抠图);
 # monochrome 是 Android 13+ themed icon(Pixel 动态图标)的单色镂空层,见 issue #186。

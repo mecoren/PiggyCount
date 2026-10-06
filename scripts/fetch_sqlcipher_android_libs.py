@@ -19,7 +19,10 @@ Android 产物：APK 的 `lib/<abi>/` 里只有 `sqlite3_flutter_libs` 打的上
 # 校验和从哪来
 
 取自 `sqlite3` 包自带的 `lib/src/hook/asset_hashes.dart`（release tag
-`sqlite3-3.5.2`），**不手抄**：升级 sqlite3 时请同步更新这两处并重跑本脚本。
+`sqlite3-3.7.0`），**不手抄**：升级 sqlite3 时请同步更新这两处并重跑本脚本。
+
+⚠️ 2026-10-06：随 sqlite3 3.5.2 → 3.7.0 升级，三个 Android 资产的 sha256 已全部
+变化（旧值取自 3.5.2，留着会一直校验失败），已按 3.7.0 的 asset_hashes.dart 更新。
 
 # 用法
 
@@ -38,8 +41,8 @@ import sys
 import urllib.request
 from pathlib import Path
 
-RELEASE_TAG = "sqlite3-3.5.2"
-URL = (
+RELEASE_TAG = "sqlite3-3.7.0"
+_GITHUB_URL = (
     "https://github.com/simolus3/sqlite3.dart/releases/download/"
     f"{RELEASE_TAG}/{{filename}}"
 )
@@ -49,17 +52,17 @@ ASSETS = [
     (
         "libsqlcipher.arm64.android.so",
         "arm64-v8a",
-        "b5a4be982aabc22ca89e7ffe7803952c41544d5f19cbc242fdd4a1d362d0fbae",
+        "cd99b7a3c78270f2925ddc936802df94eaf2d764122bd1ae1504edc18a7de24a",
     ),
     (
         "libsqlcipher.arm.android.so",
         "armeabi-v7a",
-        "071689c646acda9ae2c42eb2a0e3e4b7205c6cea21c02843c772c6766cfc3137",
+        "d576bf3c24c1c31a386c64ee3897fd8fea4c0b707834e613e4750354d06dc946",
     ),
     (
         "libsqlcipher.x64.android.so",
         "x86_64",
-        "fc3e68a05a68f0c14cf3bcde5e6dc70d59b07a4ee4cdeeca23f0072396fb16f7",
+        "dd55e20fc8fbfaba3d141e6df5e470f476b56cb332939e37c317609f26f9aa5b",
     ),
 ]
 
@@ -75,10 +78,21 @@ def sha256_of(path: Path) -> str:
     return h.hexdigest()
 
 
-def fetch(filename: str) -> bytes:
-    url = URL.format(filename=filename)
+def fetch(filename: str, mirror: str | None = None) -> bytes:
+    """下载单个资产。
+
+    `mirror` 是 GitHub 加速前缀（如 `https://ghfast.top/`）：实测（2026-10-06）
+    `github.com/.../releases/download/...` 会 302 到 objects.githubusercontent.com，
+    国内直连会超时（WinError 10060），必须借加速镜像。走镜像同样安全 —— 下文
+    仍会按 sqlite3 包内的 sha256 逐字节校验。
+    """
+    url = (
+        f"{mirror.rstrip('/')}/{_GITHUB_URL.format(filename=filename)}"
+        if mirror
+        else _GITHUB_URL.format(filename=filename)
+    )
     print(f"  下载 {url}")
-    with urllib.request.urlopen(url, timeout=120) as resp:
+    with urllib.request.urlopen(url, timeout=300) as resp:
         return resp.read()
 
 
@@ -86,6 +100,12 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--check", action="store_true", help="只校验已落位的文件，不下载"
+    )
+    parser.add_argument(
+        "--mirror",
+        default=None,
+        help="GitHub 加速前缀（如 https://ghfast.top/）。国内直连 github.com 的 "
+        "release 下载会超时，用镜像即可；内容仍按 sha256 强校验。",
     )
     args = parser.parse_args()
 
@@ -104,7 +124,7 @@ def main() -> int:
             continue
 
         try:
-            data = fetch(filename)
+            data = fetch(filename, mirror=args.mirror)
         except Exception as e:  # noqa: BLE001 - 脚本入口，直接报清楚即可
             failures.append(f"{filename} 下载失败: {e}")
             continue
