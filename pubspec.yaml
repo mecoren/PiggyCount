@@ -40,6 +40,10 @@ dependencies:
   decimal: ^3.0.0
   fl_chart: ^0.68.0
   shared_preferences: ^2.3.2
+  # 暂缓 7.x（2026-10-06 实测解析失败）：connectivity_plus >=7.3.2 依赖 nm ^0.6.0
+  # → dbus ^0.8.0，而 flutter_local_notifications 17.x 的 Linux 实现依赖
+  # flutter_local_notifications_linux ^4.0.1 → dbus ^0.7.8，两者互斥。
+  # 待 flutter_local_notifications 升到 22.x（Linux 实现换 8.x）后再一并升。
   connectivity_plus: ^6.1.0
   csv: ^5.0.2
   file_picker: ^8.1.2
@@ -47,12 +51,16 @@ dependencies:
   crypto: ^3.0.5
   uuid: ^4.5.1
   flutter_svg: ^2.0.10+1
-  package_info_plus: ^8.0.2
+  package_info_plus: ^9.0.1
   url_launcher: ^6.3.0
   in_app_review: ^2.0.9
   http: ^1.2.2
   share_plus: ^12.0.1
-  permission_handler: ^11.3.1
+  # 停 12.0.3（2026-10-06 核实）：13.x 的 BREAKING 是 permission_handler_android 14.x
+  # 要求 compileSdk 37，而本项目 android/app/build.gradle 钉在 compileSdk = 36；
+  # 且 13.0.2 起 Android 上 status 不再能判断 permanentlyDenied（voice_billing_helper
+  # 依赖该判断引导去设置）。升 13.x 需先抬 compileSdk 37 并回归 CI/发布链路，另立一批。
+  permission_handler: ^12.0.3
   dio: ^5.4.3+1
   open_filex: ^4.4.0
   flutter_local_notifications: ^17.2.2
