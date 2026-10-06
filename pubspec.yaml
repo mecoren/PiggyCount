@@ -209,6 +209,13 @@ hooks:
       # 本行让 `source: system` 的 hook 改用该库（hook 支持 `name_$targetOS`，
       # 见 sqlite3 包 lib/src/hook/compile/description.dart:44-49）：
       name_android: sqlcipher
+      # Windows 同理，让本地单测也跑在 SQLCipher 上（否则 test/support 的能力探测
+      # 探不到 cipher_version，会把加密相关用例整体 skip 掉）。
+      # 需自备 `sqlcipher.dll` 并确保它在 PATH 上 —— 与 sqlite3.dll 同一个目录即可
+      # （本机放在 `D:\DevTools\sqlite3-bin\`）。取自同一 release 的
+      # `sqlcipher.x64.windows.dll`（2026-10-06 实测可用、sha256 校验通过）。
+      # 该 dll 属本机工具链、不入库；CI 跑的是 linux，此项不生效。
+      name_windows: sqlcipher
       # 护栏：test/data/sqlcipher_android_packaging_contract_test.dart —— 开了本行
       # 却缺任一 ABI 的库时会直接失败（那种状态下应用连 SQLite 都加载不了、起不来）。
       # 历史实测（2026-10-05，Android 15 x86_64 模拟器）：APK 内出现
