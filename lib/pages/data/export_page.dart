@@ -176,8 +176,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
           account: t.accountId != null ? accountMap[t.accountId] : null,
           toAccount: accountMap[t.toAccountId],
           allCategories: allCategories,
-          tagNames:
-              (tagsMap[t.id] ?? const []).map((tag) => tag.name).toList(),
+          tagNames: (tagsMap[t.id] ?? const []).map((tag) => tag.name).toList(),
           attachmentFileNames: (attachmentsMap[t.id] ?? const [])
               .map((att) => att.fileName)
               .toList(),
@@ -190,7 +189,9 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         }
       }
 
-      final csvStr = const ListToCsvConverter(eol: '\n').convert(rows);
+      // csv 8.x：ListToCsvConverter 已随 7.0 重写移除，改由 Csv 编解码器承担。
+      // 保持行尾 '\n'（默认是 '\r\n'）与旧行为一致。
+      final csvStr = Csv(lineDelimiter: '\n').encode(rows);
       final ts = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       final path = p.join(directory, 'piggycount_$ts.csv');
 

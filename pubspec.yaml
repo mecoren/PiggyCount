@@ -45,7 +45,7 @@ dependencies:
   # flutter_local_notifications_linux ^4.0.1 → dbus ^0.7.8，两者互斥。
   # 待 flutter_local_notifications 升到 22.x（Linux 实现换 8.x）后再一并升。
   connectivity_plus: ^6.1.0
-  csv: ^5.0.2
+  csv: ^8.0.0
   file_picker: ^8.1.2
   supabase_flutter: ^2.5.6
   crypto: ^3.0.5
@@ -83,6 +83,8 @@ dependencies:
   yaml: ^3.1.2
   qr_flutter: ^4.1.0
   gal: ^2.3.0
+  # 停 3.x（2026-10-06 实测）：archive 4.x 与 excel ^4.0.6（其依赖 archive ^3.6.1）
+  # 互斥，excel 已是最新版无解；只能等 excel 侧放开，或改走别的 xlsx 方案。
   archive: ^3.6.1
   flutter_ai_kit:
     path: packages/flutter_ai_kit
