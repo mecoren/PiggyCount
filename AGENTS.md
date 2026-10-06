@@ -2,7 +2,7 @@
 
 > 本文件是本项目 AI 编码工具的**单一真相源**。其它工具入口若存在，只应引用本文件，不要重复维护规则。
 
-PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人记账 / 支出追踪 App。业务数据全部落在本地 SQLite（Drift），云端同步由用户自备（Supabase / WebDAV / S3 / iCloud），开发者不接触用户数据；无广告、无追踪、无埋点。目标平台 Android 5.0+（minSdk 23）与 iOS 15.5+，另含 Android / iOS 桌面小组件。许可证为 BSL 商业源代码许可证（个人 / 学习 / 开源贡献免费，商用需授权）。
+PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人记账 / 支出追踪 App。业务数据全部落在本地 SQLite（Drift），云端同步由用户自备（Supabase / WebDAV / S3 / iCloud），开发者不接触用户数据；无广告、无追踪、无埋点。目标平台 Android 7.0+（minSdk 24，取 Flutter 默认 `flutter.minSdkVersion`）与 iOS 15.5+，另含 Android / iOS 桌面小组件。许可证为 BSL 商业源代码许可证（个人 / 学习 / 开源贡献免费，商用需授权）。
 
 ## 快速原则
 
@@ -17,7 +17,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 - **同步契约有穷举守门测试**：`test/cloud/sync_contract_coverage_test.dart` 校验「指纹白名单 ↔ diff 覆盖字段」逐一对应。相关测试变红通常意味着「某字段进了指纹却没进 diff」或「检测到了却应用不下去」——**不要直接改测试来通过**，先定位真实缺口。
 - **合并路径有实体删除语义（2026-10-03）**：`computeDiff(cloudMeta:)` 会为「对端已删、本地还在」的账户 / 分类 / 标签 / 预算 / 周期规则 / 手动汇率覆盖产出 `SyncChange(type: deleted, entityDelete: …)`，**默认不勾选**（SYNC-05 口径），用户勾选后由 `applySyncChanges` 经 Repository 删除。没有它，这些实体只 upsert：删除永不传播、merge-then-publish 把残留推回云端、指纹永久不一致。四道闸门缺一不可：**version ≥ 8**（旧快照无删除语义）／**该段 `skippedItems` 无解析损坏**／**本地有 syncId**／**本地无未推送 local_changes**（`createAccount`/`createCategory`/`setOverride` 建行即自动生成 UUID syncId，光看 syncId 挡不住"本机刚建未上传"）。另有引用守卫 `BaseRepository.getSyncEntityReferences()`，**刻意放在 apply 侧**（`_applyEntityDeletes`）而不是预览侧：预览那一刻本地交易还在，「删账户 + 删它的交易」这种最常见的组合会因为账户仍被引用而不进候选 → 用户删完交易后本地已与云端一致 → 没有未勾选的删除 → S1 守卫放行 → force 回传把账户又写回云端 → **对端刚删的账户复活**。放 apply 侧按"交易落库后"的引用判定可单轮收敛；用户没勾引用交易时则拦下实体删除、不留悬空外键（那种场景交易变更必然未勾选，S1 守卫本就拦回传）。未勾选时靠 `shouldSkipMergePublish` 的 S1 守卫跳过回传防复活，**三个合并入口（启动检查一键应用/逐个确认 + 云同步页下载同步 + 账本页对比合并）必须共用这一个判据**，手动入口绕过它就等于给了"在启动检查拒绝删除、在手动入口把删除复活回去"的路径；且三个入口**都必须把跳过回传这件事告知用户**（`syncSkippedPublishUnselectedDelete`），静默跳过会让用户以为同步完了。服务层不得塞面向用户的文案（实体无专属名字时留空串，由 UI 的种类标签兜底），也不得把 `type` 之类原始枚举漏给 UI。自定义字段定义走的是 D-4 的**静默**镜像删除（`mirrorDeleteAbsentCustomFields`），语义与本条**故意不同**，改任一侧都要想清楚另一侧。守门测试：`test/cloud/sync_diff_entity_delete_test.dart`。
 - **改 schema 必须升版本 + 幂等迁移**：`lib/data/db.dart` 的 `schemaVersion`（当前 **49**）递增，`MigrationStrategy` 追加迁移块；迁移必须幂等、可重入。**禁止删除字段**（老用户数据会丢），必须废弃时加 `_deprecated_` 前缀保留。
-- **改 Drift 表 / `@JsonSerializable` / `@freezed` 后必跑 build_runner**：`dart run build_runner build --delete-conflicting-outputs`；`*.g.dart` / `*.freezed.dart` **必须提交**，不要加 `.gitignore`。
+- **改 Drift 表 / `@JsonSerializable` / `@freezed` 后必跑 build_runner**：`dart run build_runner build`（build_runner 2.15 起 `--delete-conflicting-outputs` 已被移除，带上也只会被忽略）；`*.g.dart` / `*.freezed.dart` **必须提交**，不要加 `.gitignore`。
 - **UI 强制走 Design Token**：颜色 / 间距 / 圆角 / 字体全部取 `lib/styles/tokens.dart` 的 `PiggyTokens` / `PiggyDimens` / `PiggyTextTokens` / `PiggyChartTokens` / `PiggyPosterTokens`。直接用 `Colors.white` / `Colors.black` / `Colors.grey.shadeXXX` 在暗黑模式下会出错。
 - **文案禁硬编码**：所有面向用户的文案进 `lib/l10n/app_*.arb`，UI 用 `AppLocalizations.of(context)!.key` 引用。缺英文（`app_en.arb`，模板文件）会直接显示 key。
 - **零告警门禁**：CI 用 `flutter analyze --fatal-infos`（基线 0 error / 0 warning / 0 info，2026-09-18 起）。本地提交前必须 `flutter analyze` 干净。
@@ -29,6 +29,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 | 维度 | 选型 |
 | --- | --- |
 | 框架 | Flutter 3.44.3（stable）+ Dart SDK `^3.6.0`，`flutter_lints ^5.0.0` |
+| Android 构建 | compileSdk **37**（Android 17，`permission_handler_android 14.x` 硬要求）+ AGP **8.13.2** + Gradle 8.13 + NDK **28.2.13676358** + Java 17 / Kotlin 2.2.0（见 `android/app/build.gradle`、`android/settings.gradle`；compileSdk 37 的平台包在本机装成 `platforms/android-37.0`，AGP 8.12.x 找不到它，故 AGP 必须 ≥ 8.13） |
 | 状态与 DI | Riverpod 2.5（`flutter_riverpod`）——唯一状态管理方案，同时承担 DI |
 | 本地数据库 | Drift 2.20 ORM + `sqlite3_flutter_libs` / `sqlite3`（`PiggyDatabase`，schemaVersion 49） |
 | 路由 | Navigator 1.0（`MaterialPageRoute` + `Navigator.push`），**不用** go_router / auto_route |
@@ -42,7 +43,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 | 测试 | `flutter_test` + `mocktail`（不用 mockito，避免 codegen）+ Drift `NativeDatabase.memory()` |
 | CI | GitHub Actions：`analyze.yml`（analyze 0-issue 门 + test 同步契约门）、`release.yml`（tag 触发多平台构建发布） |
 
-**版本约束注意**：`dependency_overrides` 钉死 `record_platform_interface: 1.2.0`（修 record_linux 兼容）与 `image_cropper_platform_interface: 7.1.0`（7.2.0 要求 Flutter >= 3.27.6）；`hooks.user_defines.sqlite3.source: system` 让 sqlite3 运行时动态查找，**不要删**——否则构建期会去 GitHub 下载预编译 libsqlite3 而在国内网络失败。`flutter_launcher_icons.ios: false`，iOS 图标手工维护（0.14.x 会重写 `Contents.json`）。
+**版本约束注意**：`dependency_overrides` 只钉 `image_cropper_platform_interface: 7.1.0`（7.2.0 要求 Flutter >= 3.27.6；`record_platform_interface` 的 1.2.0 pin 已随 record 7.1.1 移除——record 7 的平台实现统一要求 `^2.1.0`，继续钉 1.2.0 会编译通过但运行时崩）；`hooks.user_defines.sqlite3.source: system` 让 sqlite3 运行时动态查找，**不要删**——否则构建期会去 GitHub 下载预编译 libsqlite3 而在国内网络失败。`flutter_launcher_icons.ios: false`，iOS 图标手工维护（0.14.x 会重写 `Contents.json`）。
 
 ## 架构边界
 
@@ -123,7 +124,8 @@ test/                    # 镜像 lib/ 结构（ai/backup/cloud/data/encryption/
 ```bash
 # 依赖与代码生成
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs   # 改 db.dart / freezed / JsonSerializable 后必跑
+dart run build_runner build       # 改 db.dart / freezed / JsonSerializable 后必跑
+                                  # （2.15 起 --delete-conflicting-outputs 已移除）
 dart run build_runner watch                                # 开发期监听
 
 # 质量门禁（提交/PR 前本机跑通同等检查）
