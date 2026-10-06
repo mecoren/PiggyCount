@@ -281,19 +281,19 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
 
     try {
       // 选择文件
-      FilePickerResult? result;
+      List<PlatformFile> files;
       try {
-        result = await FilePicker.platform.pickFiles(
+        files = await FilePicker.pickFiles(
           type: FileType.custom,
           allowedExtensions: ['zip'],
         );
       } catch (e) {
-        result = await FilePicker.platform.pickFiles(type: FileType.any);
+        files = await FilePicker.pickFiles(type: FileType.any);
       }
 
-      if (result == null || result.files.isEmpty || !mounted) return;
+      if (files.isEmpty || !mounted) return;
 
-      final filePath = result.files.first.path;
+      final filePath = files.first.path;
       if (filePath == null) {
         showToast(context, l10n.configImportNoFilePath);
         return;

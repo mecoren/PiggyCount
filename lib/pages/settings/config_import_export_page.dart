@@ -182,16 +182,16 @@ class _ConfigImportExportPageState
 
     try {
       // Step 1: 选择文件（使用 FilePickerHelper 处理部分设备不支持扩展名过滤的问题）
-      final result = await FilePickerHelper.pickYamlFile();
+      final picked = await FilePickerHelper.pickYamlFile();
 
-      if (result == null || result.files.isEmpty) {
+      if (picked == null) {
         if (mounted) {
           setState(() => _isImporting = false);
         }
         return;
       }
 
-      final filePath = result.files.first.path;
+      final filePath = picked.path;
       if (filePath == null) {
         if (!mounted) return;
         throw Exception(AppLocalizations.of(context).configImportNoFilePath);

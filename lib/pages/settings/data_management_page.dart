@@ -420,14 +420,14 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
   }
 
   Future<void> _selectImportFile() async {
-    final pickerResult = await FilePicker.platform.pickFiles(
+    final files = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['gz', 'tar'],
     );
 
-    if (pickerResult == null || pickerResult.files.isEmpty) return;
+    if (files.isEmpty) return;
 
-    final filePath = pickerResult.files.first.path;
+    final filePath = files.first.path;
     if (filePath == null) return;
 
     final service = ref.read(attachmentExportImportServiceProvider);

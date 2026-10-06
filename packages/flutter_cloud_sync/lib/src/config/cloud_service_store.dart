@@ -62,15 +62,14 @@ class CloudServiceStore {
     lastMigrationErrorMessage = e.toString();
   }
 
-  /// 安全存储实例。Android 使用 EncryptedSharedPreferences 加密。
+  /// 安全存储实例。Android 侧默认即加密存储
+  /// （flutter_secure_storage 10 起弃用 EncryptedSharedPreferences，改用自带 cipher，
+  /// 故不再需要显式 aOptions）。
   /// 构造注入（P1）：测试可替换为损坏/假实现验证硬失败语义。
   final FlutterSecureStorage _secure;
 
   CloudServiceStore({FlutterSecureStorage? secureStorage})
-      : _secure = secureStorage ??
-            const FlutterSecureStorage(
-              aOptions: AndroidOptions(encryptedSharedPreferences: true),
-            );
+      : _secure = secureStorage ?? const FlutterSecureStorage();
 
   /// 读取配置 JSON：优先安全存储；SharedPreferences 仅作旧版本明文
   /// 数据的迁移回退（读到后迁移到安全存储并删除明文）。

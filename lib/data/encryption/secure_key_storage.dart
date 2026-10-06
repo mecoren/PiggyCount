@@ -36,10 +36,10 @@ class SecureKeyStorage {
                 synchronizable: false,
               ),
               // Android: 启用 EncryptedSharedPreferences，旧设备保护更强
-              aOptions: AndroidOptions(
-                encryptedSharedPreferences: true,
-                resetOnError: true,
-              ),
+              // 11.x：AndroidOptions 已移除 encryptedSharedPreferences
+              // （10.0 起 Jetpack Security 弃用，改用插件自带 cipher，默认即加密存储）；
+              // resetOnError 现在默认 true，此处显式写出以免依赖默认值。
+              aOptions: AndroidOptions(resetOnError: true),
             );
 
   /// 保存 AES-256 密钥（32 字节）

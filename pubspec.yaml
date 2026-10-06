@@ -46,21 +46,22 @@ dependencies:
   # 的 nm 探测改进，对本项目（Android/iOS）无实际影响。
   connectivity_plus: ^7.3.1
   csv: ^8.0.0
-  file_picker: ^10.2.4
+  # 批次8：12.x 之前锁 win32 ^5.9，与 share_plus 13 / package_info_plus 10 /
+  # flutter_secure_storage 11 的 win32 ^6 互斥；13.x 才改用 win32 ^6。
+  file_picker: ^13.1.0
   supabase_flutter: ^2.5.6
   crypto: ^3.0.5
   uuid: ^4.5.1
   flutter_svg: ^2.0.10+1
-  package_info_plus: ^9.0.1
+  # 批次8：10.x 才改用 win32 ^6，与 share_plus 13 / flutter_secure_storage 11
+  # 同批升（9.x 锁 win32 ^5，会把 share_plus 13 挡在门外）。
+  package_info_plus: ^10.2.2
   url_launcher: ^6.3.0
   in_app_review: ^2.0.9
   http: ^1.2.2
-  # 停 12.x（2026-10-06 实测）：share_plus >=13.1.0 依赖 win32 ^6.0.1，而当前
-  # flutter_secure_storage 9.x 的 Windows 实现（flutter_secure_storage_windows
-  # ^3.1.2）锁 win32 ^5.0.0，两者互斥；只有把 flutter_secure_storage 升到 10/11
-  # 才解（还要同步改 packages/flutter_cloud_sync 的 ^9.2.2）。故并入
-  # flutter_secure_storage 那一批处理。
-  share_plus: ^12.0.2
+  # 批次8：13.x 要求 win32 ^6.0.1，与 flutter_secure_storage 10/11 同批才解
+  # （见下方 flutter_secure_storage 注释）。
+  share_plus: ^13.3.1
   # 批次7：13.x 的 BREAKING 是 permission_handler_android 14.x 要求 compileSdk 37，
   # 故本批同步把 android/app/build.gradle 的 compileSdk 抬到 37（CI 需能装
   # Android SDK Platform 37；本机已有 android-37.1 + build-tools 37.0.0）。
@@ -119,7 +120,10 @@ dependencies:
   # E2EE 同步加密: AES-256-GCM + Argon2id (pure Dart, 全平台)
   cryptography: ^2.7.0
   # 密钥安全存储: iOS Keychain / Android Keystore
-  flutter_secure_storage: ^9.2.2
+  # 批次8：10.x 起 macOS 侧拆为 flutter_secure_storage_darwin，Windows 实现改用
+  # win32 ^6（share_plus 13.x 同样要求 win32 ^6，两者必须同批升）；
+  # 子包 packages/flutter_cloud_sync 的约束已同步。
+  flutter_secure_storage: ^11.2.0
 
 dev_dependencies:
   flutter_test:
@@ -132,6 +136,9 @@ dev_dependencies:
   mocktail: ^1.0.4
   # 测试中 mock getApplicationDocumentsDirectory(附件二进制同步测试)
   path_provider_platform_interface: ^2.1.0
+  # file_picker 12+ 的 PlatformFile 是 abstract base class 且不再导出 XFile，
+  # test/services/file_reader_memory_test.dart 需要自建 Fake 时显式声明
+  cross_file: ^0.3.5
 
 dependency_overrides:
   # 2026-10-06：原 `record_platform_interface: 1.2.0` pin 已移除。record 7 的官方

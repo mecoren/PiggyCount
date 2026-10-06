@@ -19,32 +19,36 @@ class FilePickerHelper {
   ///
   /// 如果用户取消选择，返回 null。
   /// 如果选择的文件扩展名不匹配且 [validateExtension] 为 true，抛出 [FileExtensionException]。
-  static Future<FilePickerResult?> pickFileWithExtensions({
+  static Future<PlatformFile?> pickFileWithExtensions({
     required List<String> allowedExtensions,
     bool validateExtension = true,
   }) async {
-    FilePickerResult? result;
+    PlatformFile? picked;
 
+    // file_picker 12+（federated 重写）改为静态 `FilePicker.pickFiles`，
+    // 返回 List<PlatformFile>：空列表即用户取消（不再有 FilePickerResult 包装）。
     try {
       // 尝试使用扩展名过滤
-      result = await FilePicker.platform.pickFiles(
+      final files = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: allowedExtensions,
       );
+      picked = files.isEmpty ? null : files.first;
     } on PlatformException catch (e) {
       // 设备不支持扩展名过滤，fallback 到选择任意文件
       logger.warning('FilePickerHelper', '设备不支持扩展名过滤，fallback 到选择任意文件: $e');
-      result = await FilePicker.platform.pickFiles(type: FileType.any);
+      final files = await FilePicker.pickFiles(type: FileType.any);
+      picked = files.isEmpty ? null : files.first;
     }
 
     // 用户取消选择
-    if (result == null || result.files.isEmpty) {
+    if (picked == null) {
       return null;
     }
 
     // 验证扩展名
     if (validateExtension) {
-      final filePath = result.files.first.path;
+      final filePath = picked.path;
       if (filePath != null) {
         final fileName = filePath.toLowerCase();
         final hasValidExtension = allowedExtensions.any(
@@ -60,11 +64,11 @@ class FilePickerHelper {
       }
     }
 
-    return result;
+    return picked;
   }
 
   /// 选择 YAML 配置文件 (.yml, .yaml)
-  static Future<FilePickerResult?> pickYamlFile() async {
+  static Future<PlatformFile?> pickYamlFile() async {
     return pickFileWithExtensions(
       allowedExtensions: ['yml', 'yaml'],
       validateExtension: true,
@@ -72,7 +76,7 @@ class FilePickerHelper {
   }
 
   /// 选择压缩归档文件 (.gz, .tar, .tar.gz)
-  static Future<FilePickerResult?> pickArchiveFile() async {
+  static Future<PlatformFile?> pickArchiveFile() async {
     return pickFileWithExtensions(
       allowedExtensions: ['gz', 'tar'],
       validateExtension: true,

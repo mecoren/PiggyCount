@@ -29,9 +29,8 @@ class AppLockService {
   /// wipe 阈值：连续失败达此次数且用户开启 wipe 开关时，提供清除数据选项。
   static const int kWipeAfterAttempts = 20;
 
-  static final FlutterSecureStorage _secure = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  // 11.x：Android 侧默认即加密存储（见 secure_key_storage.dart 的说明）
+  static final FlutterSecureStorage _secure = const FlutterSecureStorage();
 
   /// 测试注入：内存安全存储（避免平台通道），置非空即启用。
   @visibleForTesting

@@ -27,9 +27,9 @@ class DatabaseKeyService {
   /// 密钥长度（字节）。32B = 256 位，SQLCipher 推荐值。
   static const int keyBytes = 32;
 
-  static const FlutterSecureStorage _secure = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  // 11.x：Android 侧默认即加密存储（见 secure_key_storage.dart 的说明），
+  // 不再需要显式 encryptedSharedPreferences。
+  static const FlutterSecureStorage _secure = FlutterSecureStorage();
 
   /// 测试注入：内存安全存储，置非空即启用（避免平台通道）。
   /// 与 `AiPrivacyConsentStore.testSecureStore` 同款。

@@ -780,16 +780,16 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
 
     try {
       // 选择文件（使用 FilePickerHelper 处理部分设备不支持扩展名过滤的问题）
-      final result = await FilePickerHelper.pickYamlFile();
+      final picked = await FilePickerHelper.pickYamlFile();
 
-      if (result == null || result.files.isEmpty) {
+      if (picked == null) {
         if (context.mounted) {
           showToast(context, l10n.welcomeImportNoFile);
         }
         return;
       }
 
-      final filePath = result.files.single.path;
+      final filePath = picked.path;
       if (filePath == null) {
         if (context.mounted) {
           showToast(context, l10n.welcomeImportNoFile);
@@ -946,13 +946,13 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
 
     try {
       // 选择附件归档文件（使用 FilePickerHelper 处理部分设备不支持扩展名过滤的问题）
-      final result = await FilePickerHelper.pickArchiveFile();
+      final picked = await FilePickerHelper.pickArchiveFile();
 
-      if (result == null || result.files.isEmpty) {
+      if (picked == null) {
         return;
       }
 
-      final filePath = result.files.single.path;
+      final filePath = picked.path;
       if (filePath == null) {
         return;
       }

@@ -14,7 +14,8 @@ dependencies:
     sdk: flutter
   meta: ^1.9.0
   shared_preferences: ^2.2.2
-  flutter_secure_storage: ^9.2.2
+  # 与应用主 pubspec 保持一致（批次8：win32 6.x 连锁，share_plus 13 同批）
+  flutter_secure_storage: ^11.2.0
   # L3 循环依赖解除：core 不再依赖任何 provider 包（supabase/webdav/
   # icloud/s3）。此前 core 内的 createCloudServices 工厂反向依赖全部
   # provider，而 provider 又依赖 core 形成循环；工厂已迁至 app 层

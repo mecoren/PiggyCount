@@ -11,10 +11,49 @@ library;
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:cross_file/cross_file.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:piggycount/services/import/file_reader.dart';
+
+/// file_picker 12+ 把 PlatformFile 改成了 abstract base class（没有公开构造、
+/// 也没有 bytes/size 属性），所以测试里按接口自建最小实现，同时覆盖
+/// 「有本地路径」与「只有内存字节」两条支路。
+final class _FakePlatformFile extends PlatformFile {
+  _FakePlatformFile({required this.name, this.filePath, this.bytes});
+
+  @override
+  final String name;
+  final String? filePath;
+  final Uint8List? bytes;
+
+  @override
+  Uri get uri =>
+      filePath != null ? Uri.file(filePath!) : Uri.parse('memory://$name');
+
+  @override
+  XFile get xFile => XFile(filePath ?? name);
+
+  @override
+  int? lengthSync() =>
+      bytes?.length ?? (filePath == null ? 0 : File(filePath!).lengthSync());
+
+  @override
+  Future<int?> length() async => lengthSync();
+
+  @override
+  Future<Uint8List> readAsBytes() async =>
+      bytes ??
+      (filePath == null
+          ? Uint8List(0)
+          : File(filePath!).readAsBytesSync());
+
+  @override
+  Stream<Uint8List> readAsByteStream() async* {
+    yield await readAsBytes();
+  }
+}
 
 void main() {
   late Directory tmp;
@@ -23,7 +62,7 @@ void main() {
   tearDown(() => tmp.deleteSync(recursive: true));
 
   PlatformFile picked(String name, String path) =>
-      PlatformFile(name: name, path: path, size: File(path).lengthSync());
+      _FakePlatformFile(name: name, filePath: path);
 
   test('1.5MB 非 ASCII CSV 逐字符还原，进度单调到 1.0', () async {
     final lines = <String>['日期,金额,备注'];
@@ -86,11 +125,11 @@ void main() {
     expect(
         await FileReaderService.readFile(picked('empty.csv', empty.path)), '');
 
-    final inMem = PlatformFile(
-        name: 'mem.csv', size: 3, bytes: Uint8List.fromList('abc'.codeUnits));
+    final inMem = _FakePlatformFile(
+        name: 'mem.csv', bytes: Uint8List.fromList('abc'.codeUnits));
     expect(await FileReaderService.readFile(inMem), 'abc');
 
-    final noBytes = PlatformFile(name: 'none.csv', size: 0);
+    final noBytes = _FakePlatformFile(name: 'none.csv');
     expect(await FileReaderService.readFile(noBytes), '');
   });
 }

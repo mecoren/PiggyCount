@@ -30,7 +30,15 @@ class FileReaderService {
     // 读取文件字节
     final Uint8List bytes;
     if (file.path == null || file.path!.isEmpty) {
-      bytes = file.bytes ?? Uint8List(0);
+      // file_picker 12+ 去掉了 withData / PlatformFile.bytes，
+      // 无本地路径（web / blob / 沙盒）时按需读取；读失败按空文件处理。
+      Uint8List? inMemory;
+      try {
+        inMemory = await file.readAsBytes();
+      } catch (_) {
+        inMemory = null;
+      }
+      bytes = inMemory ?? Uint8List(0);
       if (bytes.isEmpty) return '';
     } else {
       bytes = await _readFileWithProgress(
