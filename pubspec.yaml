@@ -23,7 +23,7 @@ dependencies:
   meta: ^1.16.0
   flutter_riverpod: ^2.5.1
   collection: ^1.18.0
-  drift: ^2.20.2
+  drift: ^2.35.1
   # **必须保留**（2026-10-05 实测结论）：它是 Android 上唯一真正进 APK 的
   # SQLite native 库。移除它会让 APK 的 `lib/x86_64/` 只剩 libflutter.so 等，
   # 一个 SQLite 库都没有 → 应用起不来。
@@ -109,7 +109,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   build_runner: ^2.4.10
-  drift_dev: ^2.20.2
+  drift_dev: ^2.35.1
   flutter_launcher_icons: ^0.14.4
   # Testing framework enhancements
   mocktail: ^1.0.4
