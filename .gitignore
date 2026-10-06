@@ -86,3 +86,8 @@ scripts/webdav_test/data_*/
 
 # live_db roundtrip test fixtures contain real-looking ledger dumps
 scripts/live_db/
+
+# uiautomator dump 的残留：2026-08-16 曾误提交 home.xml，2026-10-07 移除
+home.xml
+window_dump.xml
+

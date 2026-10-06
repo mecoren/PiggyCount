@@ -7,7 +7,7 @@
 ![Release](https://img.shields.io/github/v/release/mecoren/PiggyCount?label=latest&color=green)
 ![Downloads](https://img.shields.io/github/downloads/mecoren/PiggyCount/total?color=blue)
 ![Last commit](https://img.shields.io/github/last-commit/mecoren/PiggyCount)
-![Flutter](https://img.shields.io/badge/Flutter-3.27%2B-02569B?logo=flutter)
+![Flutter](https://img.shields.io/badge/Flutter-3.47.6-02569B?logo=flutter)
 
 **你的数据,你做主的开源记账应用**
 
@@ -33,7 +33,7 @@
 | ❌ 高级功能付费墙 | ✅ **完全免费**(包括 AI 识别 / 语音记账) |
 | ❌ 广告 / 理财推荐 | ✅ **零广告 / 零追踪 / 零数据收集** |
 
-> **平台支持**:🤖 Android 5.0+ · 🍎 iOS 15.5+
+> **平台支持**:🤖 Android 7.0+（minSdk 24） · 🍎 iOS 15.5+
 >
 > ~~📱 HarmonyOS — [已停止更新](https://github.com/TNT-Likely/piggycount-openharmony)~~
 
@@ -176,7 +176,7 @@
 
 ### 技术栈
 
-- **Flutter 3.27+** · 跨平台 UI 框架
+- **Flutter 3.47.6** · 跨平台 UI 框架（Android 侧 compileSdk 37 / AGP 9 / Gradle 9 / Kotlin 2.4）
 - **Riverpod** · 状态管理
 - **Drift (SQLite)** · 本地数据库 ORM
 - **WebDAV / S3** · 云端同步多方案
@@ -187,8 +187,8 @@
 # 安装依赖
 flutter pub get
 
-# 代码生成
-dart run build_runner build --delete-conflicting-outputs
+# 代码生成（build_runner 2.15 起 --delete-conflicting-outputs 已移除，带上会被忽略）
+dart run build_runner build
 
 # 运行应用
 flutter run --flavor dev

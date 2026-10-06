@@ -7,7 +7,7 @@
 ![Release](https://img.shields.io/github/v/release/mecoren/PiggyCount?label=latest&color=green)
 ![Downloads](https://img.shields.io/github/downloads/mecoren/PiggyCount/total?color=blue)
 ![Last commit](https://img.shields.io/github/last-commit/mecoren/PiggyCount)
-![Flutter](https://img.shields.io/badge/Flutter-3.27%2B-02569B?logo=flutter)
+![Flutter](https://img.shields.io/badge/Flutter-3.47.6-02569B?logo=flutter)
 
 **Your Data, Your Control — Open Source Accounting App**
 
@@ -33,7 +33,7 @@ A lightweight, open-source, privacy-first **personal finance** and **expense tra
 | ❌ Premium features behind paywalls | ✅ **Completely free** (including AI recognition / voice input) |
 | ❌ Ads / financial product recommendations | ✅ **Zero ads / zero tracking / zero data collection** |
 
-> **Platform support**: 🤖 Android 5.0+ · 🍎 iOS 15.5+
+> **Platform support**: 🤖 Android 7.0+ (minSdk 24) · 🍎 iOS 15.5+
 >
 > ~~📱 HarmonyOS — [Discontinued](https://github.com/TNT-Likely/piggycount-openharmony)~~
 
@@ -154,7 +154,7 @@ PiggyCount offers WebDAV / S3 self-hosted sync options. Your data, your control.
 
 ### Tech Stack
 
-- **Flutter 3.27+** · Cross-platform UI framework
+- **Flutter 3.47.6** · Cross-platform UI framework (Android: compileSdk 37 / AGP 9 / Gradle 9 / Kotlin 2.4)
 - **Riverpod** · State management
 - **Drift (SQLite)** · Local database ORM
 - **WebDAV / S3** · Multi-option cloud sync
@@ -166,7 +166,7 @@ PiggyCount offers WebDAV / S3 self-hosted sync options. Your data, your control.
 flutter pub get
 
 # Code generation
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build   # --delete-conflicting-outputs was removed in build_runner 2.15
 
 # Run app
 flutter run --flavor dev
