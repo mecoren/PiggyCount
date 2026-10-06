@@ -6,7 +6,8 @@ homepage: https://github.com/mecoren/PiggyCount
 repository: https://github.com/mecoren/PiggyCount/tree/main/packages/flutter_cloud_sync_s3
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  # xml 7.x 要求 Dart ^3.11.0，故把声明下界一并抬高（根工程为 Dart 3.13.5）
+  sdk: '>=3.11.0 <4.0.0'
   flutter: '>=3.0.0'
 
 dependencies:
@@ -27,7 +28,11 @@ dependencies:
   convert: ^3.1.1
 
   # XML 解析
-  xml: ^6.3.0
+  # 7.x（2026-10-06）：其 BREAKING 集中在 namespace（解析期解析、低层 API 默认
+  # 不再解析 namespace、XmlName 变不可变、插入节点改为移动而非抛异常）。本包
+  # 只做**只读解析**且一律用 local-name 匹配（findAllLocal / findChildLocal 走
+  # child.name.local），既不构造 DOM 也不用 XmlBuilder，故不受影响。
+  xml: ^7.1.0
 
 dev_dependencies:
   flutter_test:
