@@ -246,8 +246,9 @@ class LocalAccountRepository implements AccountRepository {
     await (db.delete(db.accounts)..where((a) => a.id.equals(id))).go();
   }
 
-  /// 「以成员身份加入的共享账本」ledger id 集合 —— **个人资产统计一律排除
-  /// 这些账本的交易**。加入他人共享账本时,Owner 的历史流水会同步到本机并
+  /// [共享账本已下线] 「以成员身份加入的共享账本」ledger id 集合 ——
+  /// **个人资产统计一律排除这些账本的交易**。云端协作下线后无新增成员账本,
+  /// 仅存量 `is_shared=1 && my_role!='owner'` 行会命中;保留以免口径漂移。加入他人共享账本时,Owner 的历史流水会同步到本机并
   /// 挂在本地账户行上,若计入会把别人账本的收支算进自己的净资产,且与
   /// Web/服务端口径(成员侧不计共享账本)永久不一致。
   /// 注意:**自己 Own 的共享账本不排除** —— 那是自己的账本分享给别人,

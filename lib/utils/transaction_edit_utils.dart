@@ -23,8 +23,9 @@ class TransactionEditUtils {
     // 同步下来,这里拿到的已有值也不会因为「定义看不见」而被清掉。
     final customValues = await repo.getValuesForTransaction(transaction.id);
 
-    // §7 共享账本:加 TransactionTagOverrides → synthetic id 加进列表,
-    // picker 显示选中
+    // [共享账本已下线] §7 共享账本:加 TransactionTagOverrides → synthetic id
+    // 加进列表,picker 显示选中。云端协作已下线,但存量交易仍可能带 override
+    // 行,这段回显必须保留。
     if (repo is LocalRepository && transaction.syncId != null) {
       final overrides = await (repo.db.select(repo.db.transactionTagOverrides)
             ..where((t) => t.transactionSyncId.equals(transaction.syncId!)))

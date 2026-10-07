@@ -302,9 +302,8 @@ class _CategorySelectorDialogState
 
   @override
   Widget build(BuildContext context) {
-    // §7 共享账本:WS shared_resource_change 推送后 tick bump 触发 rebuild
-    // → 下方 FutureBuilder 拿到新 Future 重查 SharedLedgerCategories。
-    // 否则 A 改分类名 B 这边 picker 显示旧名,要重启 app。
+    // [共享账本已下线] §7 共享账本:WS shared_resource_change 推送后 tick bump
+    // 触发 rebuild 重查 SharedLedgerCategories(该 tick 现已无生产者)。
     ref.watch(sharedResourceRefreshProvider);
     final l10n = AppLocalizations.of(context);
 

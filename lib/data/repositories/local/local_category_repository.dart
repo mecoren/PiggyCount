@@ -644,8 +644,9 @@ class LocalCategoryRepository implements CategoryRepository {
     ).watchSingleOrNull();
   }
 
-  /// SharedLedgerCategories 表变化时 re-emit。用 tableUpdates 监听 + 每次
-  /// 重查找匹配的 syncId(synthetic id 是 hashCode 派生,反查只能扫表)。
+  /// [共享账本已下线] SharedLedgerCategories 表变化时 re-emit(该表已无写入方,
+  /// 仅存量 synthetic id 反查会用到)。用 tableUpdates 监听 + 每次重查找匹配的
+  /// syncId(synthetic id 是 hashCode 派生,反查只能扫表)。
   Stream<Category?> _watchSharedCategoryBySyntheticId(int syntheticId) {
     final ctrl = StreamController<Category?>();
     StreamSubscription? sub;
@@ -698,7 +699,8 @@ class LocalCategoryRepository implements CategoryRepository {
 
   @override
   Stream<List<Transaction>> watchTransactionsByCategory(int categoryId, {int? ledgerId}) {
-    // §7 共享账本:负 id 表 SharedLedger 分类 — 走 categorySyncIdOverride 过滤。
+    // [共享账本已下线] §7 共享账本:负 id 表 SharedLedger 分类 — 走
+    // categorySyncIdOverride 过滤(仅存量 override 数据命中)。
     if (categoryId < 0) {
       return _watchTxByCategorySyntheticId(categoryId, ledgerId);
     }

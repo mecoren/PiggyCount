@@ -166,7 +166,8 @@ class _LedgerCardState extends ConsumerState<LedgerCard> {
                           ),
                         ),
 
-                        // v24: 共享账本 🤝 角标 + 成员数
+                        // [共享账本已下线] v24 共享账本 🤝 角标 + 成员数。
+                        // 仅存量 isShared 账本会渲染,新建账本恒为 false。
                         if (ledger.isShared) ...[
                           const SizedBox(width: 6),
                           Icon(

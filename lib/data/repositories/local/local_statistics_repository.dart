@@ -41,8 +41,9 @@ class LocalStatisticsRepository implements StatisticsRepository {
       int? id = c?.id;
       String name = c?.name ?? '未分类';
       String? icon = c?.icon;
-      // §7 共享账本:Editor 写的 tx categoryId 为空,但 categorySyncIdOverride
-      // 指向 Owner 的分类 syncId — 查 SharedLedgerCategories 兜底。
+      // [共享账本已下线] §7 共享账本:Editor 写的 tx categoryId 为空,但
+      // categorySyncIdOverride 指向 Owner 的分类 syncId — 查
+      // SharedLedgerCategories 兜底(仅存量 override 数据命中)。
       if (c == null && t.categorySyncIdOverride != null) {
         final s = shared[t.categorySyncIdOverride!];
         if (s != null) {
@@ -63,8 +64,8 @@ class LocalStatisticsRepository implements StatisticsRepository {
     return list;
   }
 
-  /// 加载当前账本的 SharedLedger 分类索引(by syncId)。单人账本返回空 map,
-  /// 共享账本返回 Owner user-global 的镜像。
+  /// [共享账本已下线] 加载当前账本的 SharedLedger 分类索引(by syncId)。
+  /// 单人账本返回空 map;共享账本(仅存量数据)返回 Owner user-global 的镜像。
   Future<Map<String, SharedLedgerCategory>> _loadSharedCategoriesForLedger(
       int ledgerId) async {
     final ledger = await (db.select(db.ledgers)

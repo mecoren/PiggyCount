@@ -31,7 +31,8 @@ class LedgerDisplayItem {
   /// remote-only 项的 `id` 是仅用于 UI 唯一化的占位 hashCode。
   final String? remoteSyncId;
 
-  /// v24 共享账本字段:>1 时显示 🤝 角标。
+  /// [共享账本已下线] v24 共享账本字段:>1 时显示 🤝 角标。
+  /// 云端协作已下线,新建账本恒为 false / 1 / 'owner';保留只为兼容存量账本行。
   final bool isShared;
 
   /// v24 共享账本字段:含 Owner 在内的成员数,UI 显示 "🤝 N人"。

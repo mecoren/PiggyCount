@@ -421,7 +421,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
 
   /// 本地账本的「⋯」菜单条目（项目锚点浮层菜单，不铺遮罩色）。
   ///
-  /// myRole 沿自 v24 共享账本(云端协同已下线):存量 Editor 角色的账本
+  /// [共享账本已下线] myRole 沿自 v24 共享账本(云端协同已下线):存量 Editor 角色的账本
   /// 隐藏 edit / clear / delete 等 owner-only 操作,仅保留预算/上传/仅删本地。
   /// 手动上传仅对快照同步类后端开放。
   ///

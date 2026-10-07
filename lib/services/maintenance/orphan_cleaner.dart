@@ -186,7 +186,8 @@ class OrphanCleaner {
     await (db.delete(db.categories)..where((t) => t.id.equals(id))).go();
   }
 
-  /// A9:SharedLedgerCategories 复合主键 (ledger_sync_id, sync_id)。
+  /// [共享账本已下线] A9:SharedLedgerCategories 复合主键
+  /// (ledger_sync_id, sync_id)。清理历史残留行的通道,保留。
   Future<void> _deleteSharedCategory(OrphanRecord r) async {
     final syncId = r.syncId;
     final ledgerSyncId = r.extra?['ledgerSyncId'] as String?;

@@ -801,8 +801,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       ref.read(attachmentListRefreshProvider.notifier).state++;
     }
     // 更新标签关联
-    // §7 共享账本:tag.id < 0 是 synthetic(Owner tag from SharedLedger*),
-    // 主表 Tags 没该行,不能直接写 transaction_tags.tag_id。分两类:
+    // [共享账本已下线] §7 共享账本:tag.id < 0 是 synthetic(Owner tag from
+    // SharedLedger*),主表 Tags 没该行,不能直接写 transaction_tags.tag_id。
+    // synthetic 分支现已不可达,但下方 delete 仍负责清存量 override,保留。分两类:
     // - 正数 id → 写 transaction_tags 主表(老路径)
     // - 负数 id → 走 SharedLedgerTags 反查 syncId → 写 transaction_tag_overrides
     final normalTagIds = res.tagIds.where((id) => id >= 0).toList();

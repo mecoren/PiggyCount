@@ -378,8 +378,8 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     final primary = ref.watch(primaryColorProvider);
     final currentLedgerAsync = ref.watch(currentLedgerProvider);
     final currentCurrency = currentLedgerAsync.asData?.value?.currency ?? 'CNY';
-    // WS shared_resource_change 推 Owner 账户更新后 rebuild,重查 SharedLedger
-    // Accounts。
+    // [共享账本已下线] WS shared_resource_change 推 Owner 账户更新后 rebuild,
+    // 重查 SharedLedgerAccounts(该 tick 现已无生产者)。
     ref.watch(sharedResourceRefreshProvider);
 
     return FutureBuilder<List<Account>>(

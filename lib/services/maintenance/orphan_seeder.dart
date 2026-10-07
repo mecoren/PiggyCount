@@ -182,6 +182,7 @@ class OrphanSeeder {
     return 1;
   }
 
+  /// [共享账本已下线] 自测用:造一条失主的共享 tag override 记录(A10)。
   Future<int> _seedTxTagOverrideMissingTx() async {
     final ghostTxSyncId = 'seed-ghost-tx-${_rand.nextInt(99999)}';
     await db.into(db.transactionTagOverrides).insert(

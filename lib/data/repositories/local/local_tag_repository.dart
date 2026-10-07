@@ -203,7 +203,7 @@ class LocalTagRepository implements TagRepository {
     final rows = await query.get();
     final out = rows.map((row) => row.readTable(db.tags)).toList();
 
-    // §7 共享账本:加 TransactionTagOverrides
+    // [共享账本已下线] §7 共享账本:加 TransactionTagOverrides(存量 override 回显)
     final tx = await (db.select(db.transactions)
           ..where((t) => t.id.equals(transactionId)))
         .getSingleOrNull();
@@ -502,9 +502,9 @@ class LocalTagRepository implements TagRepository {
 
   @override
   Stream<Tag?> watchTag(int tagId) {
-    // §7 共享账本:负 id 是 SharedLedgerTags 的 synthetic id（_syntheticIdForSyncId
-    // 派生）。标签详情页传过来时去 shared 表反查转 synthetic Tag，跟
-    // getTagsForTransaction 路径一致。
+    // [共享账本已下线] §7 共享账本:负 id 是 SharedLedgerTags 的 synthetic id
+    // （_syntheticIdForSyncId 派生）。标签详情页传过来时去 shared 表反查转
+    // synthetic Tag，跟 getTagsForTransaction 路径一致（仅存量数据命中）。
     if (tagId < 0) return _watchSharedTagBySyntheticId(tagId);
     return (db.select(db.tags)
       ..where((t) => t.id.equals(tagId))).watchSingleOrNull();
@@ -547,7 +547,8 @@ class LocalTagRepository implements TagRepository {
     return ctrl.stream;
   }
 
-  /// 共享账本:synthetic tag 下的交易 — 经 TransactionTagOverrides(tagSyncId)反查。
+  /// [共享账本已下线] 共享账本:synthetic tag 下的交易 — 经
+  /// TransactionTagOverrides(tagSyncId)反查(仅存量 override 数据命中)。
   Stream<List<Transaction>> _watchSharedTxByTagSyntheticId(
       int syntheticId, int? ledgerId,
       {DateTime? start, DateTime? end}) {

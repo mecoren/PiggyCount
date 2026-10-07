@@ -23,8 +23,9 @@ final allTagsProvider = FutureProvider<List<Tag>>((ref) async {
   return await repo.getAllTags();
 });
 
-/// §7 共享账本 picker:按当前 ledger 过滤后的 tags。
+/// [共享账本已下线] §7 共享账本 picker:按当前 ledger 过滤后的 tags。
 /// Editor + 共享账本 → 只看 Owner mirror tags;单人账本 / Owner → 排除 mirror。
+/// 云端协作已下线后 Editor 分支运行期不可达,保留仅为兼容存量 shared 行。
 final tagsForCurrentLedgerProvider = FutureProvider<List<Tag>>((ref) async {
   ref.watch(tagListRefreshProvider);
   ref.watch(sharedResourceRefreshProvider); // WS 推送后强制 rebuild

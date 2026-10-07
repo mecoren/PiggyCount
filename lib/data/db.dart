@@ -29,7 +29,8 @@ class Ledgers extends Table {
   // id(A/B 本地 id 必然不一致)。v21 migration 里已为旧数据把 id 回填成
   // syncId 以兼容。
   TextColumn get syncId => text().nullable()();
-  // v24: 共享账本字段 — server 端 LedgerMember.role 同步下来
+  // [共享账本已下线] v24 共享账本字段 — server 端 LedgerMember.role 同步下来。
+  // 云端协作已下线后无写入方;保留以兼容存量行 + 维持 schema(禁止删列)。
   TextColumn get myRole =>
       text().withDefault(const Constant('owner'))(); // owner / editor
   IntColumn get memberCount => integer().withDefault(const Constant(1))();
@@ -183,10 +184,12 @@ class Transactions extends Table {
   TextColumn get note => text().nullable()();
   IntColumn get recurringId => integer().nullable()(); // 关联到重复交易模板
   TextColumn get syncId => text().nullable()(); // 跨设备同步唯一标识 (UUID)
-  // v24: 共享账本"谁记的"显示
+  // [共享账本已下线] v24 共享账本"谁记的"显示。CSV 导入导出仍在写这两列,不可删。
   TextColumn get createdByUserId => text().nullable()();
   TextColumn get lastEditedByUserId => text().nullable()();
-  // v25: 共享账本 sync_id override(§7 决策)
+  // [共享账本已下线] v25 共享账本 sync_id override(§7 决策)。本地已无新写入方,
+  // 但存量交易与云快照(transactions_json / sync_fingerprint / sync_diff_service)
+  // 仍会携带这些字段,必须保留。
   // Editor 在共享账本下记 tx 时,选 Owner 的 SharedLedger{Categories,Accounts,Tags}
   // 行,但本地 Categories/Accounts/Tags 主表没有对应 int id。这些 override
   // 字段直接存 Owner 的 syncId 字符串,categoryId / accountId 留 null;sync push
@@ -480,7 +483,9 @@ class TransactionTags extends Table {
   IntColumn get tagId => integer()(); // 标签ID
 }
 
-// v27: 共享账本 §7 — 交易标签 sync_id override
+// [共享账本已下线] v27: 共享账本 §7 — 交易标签 sync_id override。
+// 无新写入方,但存量 override 行与快照指纹计数
+// (transactions_sync_manager.dart) 仍引用本表,不可删。
 // Editor 在共享账本下记 tx 选 Owner 的 tag,Tag 主表没该行(SharedLedgerTags
 // 才有),传统 transaction_tags.tag_id 没法存 (本地 int id 不存在)。这张
 // override 表按 (transaction_id, tag_sync_id) 存,sync push 时 union 进 tagIds
@@ -579,9 +584,10 @@ class Budgets extends Table {
 // 共享账本(v24)
 // ============================================================================
 
-/// 账本成员镜像表。server `LedgerMember` 表的本地副本,用于"X 记的"显示 +
-/// 离线渲染。`GET /api/v1/ledgers/{id}/members` 拉来后写入;`member_change`
-/// WS 事件触发增量更新。
+/// [共享账本已下线] 账本成员镜像表(**全库零读写,纯死 schema**)。
+/// server `LedgerMember` 表的本地副本,历史上用于"X 记的"显示 + 离线渲染;
+/// 云端协同下线后既无写入方也无读取方。保留仅为维持 schema 稳定
+/// (AGENTS.md 禁止删列,删表须走新增 DROP 迁移)。
 class LedgerMembers extends Table {
   TextColumn get ledgerSyncId => text()(); // ledger.syncId(全 user 唯一)
   TextColumn get userId => text()();
@@ -596,9 +602,10 @@ class LedgerMembers extends Table {
   Set<Column> get primaryKey => {ledgerSyncId, userId};
 }
 
-/// 共享账本里 Owner 的 user-global 分类镜像。Editor 在共享账本下打开"选分类"
-/// 弹窗读这表(而非自己的 Categories)。`GET /api/v1/ledgers/{id}/shared-resources`
-/// 拉来落库;`shared_resource_change` WS 事件增量更新。
+/// [共享账本已下线] 共享账本里 Owner 的 user-global 分类镜像。
+/// Editor 在共享账本下打开"选分类"弹窗读这表(而非自己的 Categories);
+/// 历史上由 `GET .../shared-resources` 拉取 + WS `shared_resource_change`
+/// 增量更新,现已无写入方。保留供 picker / 统计 / 孤儿扫描的存量兼容分支读取。
 class SharedLedgerCategories extends Table {
   TextColumn get ledgerSyncId => text()();
   TextColumn get syncId => text()(); // Owner 的 user-global category sync_id
@@ -623,7 +630,8 @@ class SharedLedgerCategories extends Table {
   Set<Column> get primaryKey => {ledgerSyncId, syncId};
 }
 
-/// 共享账本里 Owner 的 user-global 账户镜像。
+/// [共享账本已下线] 共享账本里 Owner 的 user-global 账户镜像。已无写入方,
+/// 保留供 picker / 交易 override 回显 / 孤儿扫描的存量兼容分支读取。
 class SharedLedgerAccounts extends Table {
   TextColumn get ledgerSyncId => text()();
   TextColumn get syncId => text()();
@@ -643,7 +651,8 @@ class SharedLedgerAccounts extends Table {
   Set<Column> get primaryKey => {ledgerSyncId, syncId};
 }
 
-/// 共享账本里 Owner 的 user-global 标签镜像。
+/// [共享账本已下线] 共享账本里 Owner 的 user-global 标签镜像。已无写入方,
+/// 保留供 picker / TransactionTagOverrides 回显的存量兼容分支读取。
 class SharedLedgerTags extends Table {
   TextColumn get ledgerSyncId => text()();
   TextColumn get syncId => text()();
@@ -1291,8 +1300,8 @@ class PiggyDatabase extends _$PiggyDatabase {
             logger.info('DB', '[DB Migration] v23 迁移完成: 回填 $updated 条分类');
           }
           if (from < 24) {
-            // v24: 共享账本完整 schema(合并自 v24/v25/v26/v27 的迭代,测试阶段
-            // 一次落地最终态)。
+            // [共享账本已下线] v24: 共享账本完整 schema(合并自 v24/v25/v26/v27
+            // 的迭代,测试阶段一次落地最终态)。表/列一律保留不删,仅作存量兼容。
             //
             // 重要:所有 ALTER / createTable 都包"存在则跳过"防御 — 用户从
             // 3.1.3 升级到带 bug 的 3.2.0 时 v25 ALTER 失败,但 v24 的 DDL

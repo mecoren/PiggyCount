@@ -176,9 +176,8 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
 
   @override
   Widget build(BuildContext context) {
-    // §7 共享账本:WS shared_resource_change 推送后 tick bump,触发 _loadAccounts
-    // 重查 SharedLedgerAccounts。否则 A 在 web/mobile 改账户名,B 的 picker
-    // 永远显示旧名,要重启 app。
+    // [共享账本已下线] §7 共享账本:WS shared_resource_change 推送后 tick bump,
+    // 触发 _loadAccounts 重查 SharedLedgerAccounts(该 tick 现已无生产者)。
     ref.listen<int>(sharedResourceRefreshProvider, (prev, next) {
       if (prev != next) _loadAccounts();
     });

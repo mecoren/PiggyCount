@@ -99,7 +99,8 @@ class BudgetPage extends ConsumerWidget {
 
   Widget _buildEmptyState(
       BuildContext context, WidgetRef ref, AppLocalizations l10n) {
-    // §7 共享账本 Editor 视角:预算空时不显示"添加"CTA(owner-only)
+    // [共享账本已下线] §7 共享账本 Editor 视角:预算空时不显示"添加"CTA
+    // (owner-only)。云端协作已下线,仅存量 editor 角色账本会命中。
     final currentLedger = ref.watch(currentLedgerProvider).asData?.value;
     final isEditorInShared = currentLedger != null &&
         currentLedger.isShared &&

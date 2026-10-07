@@ -224,7 +224,8 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
     );
   }
 
-  // Editor 视角下替代「新建标签」入口的权限说明(#436)
+  // [共享账本已下线] Editor 视角下替代「新建标签」入口的权限说明(#436)。
+  // 云端协作已下线,仅存量 editor 角色账本会走到。
   Widget _buildOwnerManagedHint(AppLocalizations l10n) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),

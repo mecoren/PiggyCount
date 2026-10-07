@@ -789,7 +789,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                             ),
                                           ),
                                         ),
-                                        // v24 共享账本:header 也显示 🤝 角标 + 成员数
+                                        // [共享账本已下线] v24 共享账本:header 也显示 🤝 角标 + 成员数
                                         if (!isEmpty && ledger.isShared) ...[
                                           const SizedBox(width: 4),
                                           Icon(

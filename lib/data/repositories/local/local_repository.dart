@@ -269,8 +269,8 @@ class LocalRepository extends BaseRepository {
         await (db.delete(db.transactionAttachments)
               ..where((ta) => ta.transactionId.isIn(txIds)))
             .go();
-        // 共享标签 override 按 tx.syncId 清理（该表主键是文本 syncId，
-        // 不能按 int id 删；此前批量删账本两条路径都漏了它）。
+        // [共享账本已下线] 共享标签 override 按 tx.syncId 清理（该表主键是文本
+        // syncId，不能按 int id 删）。仍负责清存量 override 行，保留。
         final txSyncIds = txs.map((t) => t.syncId).whereType<String>().toList();
         if (txSyncIds.isNotEmpty) {
           await (db.delete(db.transactionTagOverrides)
@@ -1348,8 +1348,9 @@ class LocalRepository extends BaseRepository {
     };
   }
 
-  /// v30:按 picker 给的账户 id 解析币种 —— 正数查主表;负数是共享账本
-  /// Owner 资源的 synthetic id(§7),查 SharedLedgerAccounts 镜像。
+  /// [共享账本已下线] v30:按 picker 给的账户 id 解析币种 —— 正数查主表;
+  /// 负数是共享账本 Owner 资源的 synthetic id(§7),查 SharedLedgerAccounts
+  /// 镜像(仅存量 synthetic id 命中)。
   /// (审查发现:金额弹窗对 synthetic 账户解析不到币种,外币被静默按本位币。)
   @override
   Future<String?> getAccountCurrencyByAnyId(int accountId) async {

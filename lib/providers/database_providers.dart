@@ -205,9 +205,8 @@ final accountForTxProvider =
     FutureProvider.family<Account?, ({int? accountId, String? syncIdOverride})>(
         (ref, key) async {
   ref.watch(syncGenerationProvider);
-  // §7 共享账本:WS shared_resource_change 推送时也强制重算,跟 picker /
-  // 洞察 等其它 widget 监听同一个 tick 一致;否则共享账户改名 tx 列表
-  // 不刷新。
+  // [共享账本已下线] §7 共享账本:WS shared_resource_change 推送时也强制重算,
+  // 跟 picker / 洞察等其它 widget 监听同一个 tick 一致(该 tick 现已无生产者)。
   ref.watch(sharedResourceRefreshProvider);
   final repo = ref.watch(repositoryProvider);
   if (key.accountId != null && key.accountId! >= 0) {

@@ -34,10 +34,12 @@ enum OrphanType {
   /// A8 预算分类失主
   budgetMissingCategory,
 
-  /// A9 共享二级分类失父
+  /// [共享账本已下线] A9 共享二级分类失父(scanner 读恒空的
+  /// shared_ledger_categories,仅历史库有数据时命中)。
   sharedCategoryMissingParent,
 
-  /// A10 TransactionTagOverrides 失主交易
+  /// [共享账本已下线] A10 TransactionTagOverrides 失主交易:存量 override 行的
+  /// 清理通道,必须保留。
   txTagOverrideMissingTx,
 
   /// B1 附件原图无引用
@@ -46,7 +48,8 @@ enum OrphanType {
   /// B2 分类自定义图标无引用
   fileOrphanCustomIcon,
 
-  /// B3 共享分类图标缓存无引用
+  /// [共享账本已下线] B3 共享分类图标缓存无引用:清理历史
+  /// `custom_icons/shared_*.png` 的通道,仍有用途,必须保留。
   fileOrphanSharedIcon,
 
   /// C1 local_changes 失主实体

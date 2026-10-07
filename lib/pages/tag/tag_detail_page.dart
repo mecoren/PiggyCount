@@ -570,8 +570,9 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
     final isAdjustment = t.type == 'adjustment';
     final isExpense = t.type == 'expense';
 
-    // 共享账本交易的分类挂在 categorySyncIdOverride(syncId)，转 synthetic id 查；
-    // 本地交易用 categoryId。两类 id 不重叠(本地正 / synthetic 负)。
+    // [共享账本已下线] 共享账本交易的分类挂在 categorySyncIdOverride(syncId)，
+    // 转 synthetic id 查(仅存量 override 数据命中);本地交易用 categoryId。
+    // 两类 id 不重叠(本地正 / synthetic 负)。
     final catKey = (t.categorySyncIdOverride != null &&
             t.categorySyncIdOverride!.isNotEmpty)
         ? syntheticIdForSyncId(t.categorySyncIdOverride!)

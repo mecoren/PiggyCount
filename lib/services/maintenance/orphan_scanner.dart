@@ -300,8 +300,9 @@ class OrphanScanner {
     }).toList();
   }
 
-  /// A9 — 共享二级分类的 `parent_sync_id` 在同 ledger 的 SharedLedgerCategories
-  /// 范围内不存在。复合主键 (ledger_sync_id, sync_id) → 用 NOT IN 子查询。
+  /// [共享账本已下线] A9 — 共享二级分类的 `parent_sync_id` 在同 ledger 的
+  /// SharedLedgerCategories 范围内不存在(该表恒空,仅历史库有数据时命中)。
+  /// 复合主键 (ledger_sync_id, sync_id) → 用 NOT IN 子查询。
   Future<List<OrphanRecord>> scanSharedCategoryMissingParent() async {
     final rows = await db.customSelect(
       '''
@@ -333,8 +334,8 @@ class OrphanScanner {
     }).toList();
   }
 
-  /// A10 — `TransactionTagOverrides.transaction_sync_id` 在 transactions 表
-  /// 不存在。
+  /// [共享账本已下线] A10 — `TransactionTagOverrides.transaction_sync_id` 在
+  /// transactions 表不存在。存量 override 行的清理通道,保留。
   Future<List<OrphanRecord>> scanTxTagOverrideMissingTx() async {
     final rows = await db.customSelect(
       '''

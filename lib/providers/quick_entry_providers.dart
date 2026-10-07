@@ -76,7 +76,7 @@ final quickEntryLastCategoryProvider =
     return category == null ? null : remembered;
   }
 
-  // 共享账本 Owner 分类的 synthetic id（负数）：
+  // [共享账本已下线] 共享账本 Owner 分类的 synthetic id（负数）：
   // **不能**复用 `findCategoryBySyntheticId` —— 它是全库扫描
   // （`SharedLedgerPickerFilter.findCategoryBySyntheticId` 里
   // `select(sharedLedgerCategories).get()` 没有按 ledgerSyncId 过滤），

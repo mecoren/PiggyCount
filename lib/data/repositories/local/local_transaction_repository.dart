@@ -1318,9 +1318,9 @@ class LocalTransactionRepository implements TransactionRepository {
 
   @override
   Future<DateTime?> getEarliestTransactionDate() async {
-    // 排除以成员身份加入的共享账本(is_shared=1 且 my_role!='owner')——与资产统计 /
-    // getAccountDailyBalances 同口径(#333),否则趋势「全部」起点会被别人账本的
-    // 早期流水拉前。自己 Own 的共享账本不排除。
+    // [共享账本已下线] 排除以成员身份加入的共享账本(is_shared=1 且
+    // my_role!='owner')——与资产统计 / getAccountDailyBalances 同口径(#333)。
+    // 云端协作下线后仅存量数据命中,保留以免趋势口径漂移。
     final sharedRows = await (db.selectOnly(db.ledgers)
           ..addColumns([db.ledgers.id])
           ..where(db.ledgers.isShared.equals(true) &
