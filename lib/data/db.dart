@@ -584,23 +584,9 @@ class Budgets extends Table {
 // 共享账本(v24)
 // ============================================================================
 
-/// [共享账本已下线] 账本成员镜像表(**全库零读写,纯死 schema**)。
-/// server `LedgerMember` 表的本地副本,历史上用于"X 记的"显示 + 离线渲染;
-/// 云端协同下线后既无写入方也无读取方。保留仅为维持 schema 稳定
-/// (AGENTS.md 禁止删列,删表须走新增 DROP 迁移)。
-class LedgerMembers extends Table {
-  TextColumn get ledgerSyncId => text()(); // ledger.syncId(全 user 唯一)
-  TextColumn get userId => text()();
-  TextColumn get email => text().nullable()();
-  TextColumn get displayName => text().nullable()();
-  TextColumn get avatarUrl => text().nullable()();
-  TextColumn get role => text()(); // owner / editor
-  DateTimeColumn get joinedAt => dateTime()();
-  DateTimeColumn get updatedAt => dateTime()(); // 本地更新时间,用于 cache 失效
-
-  @override
-  Set<Column> get primaryKey => {ledgerSyncId, userId};
-}
+// [共享账本已下线] 此处的 ledger_members(账本成员镜像表)已移除 —— 全库零读写
+// (仅 v24 建表,从未有写入方或读取方)。共享账本协作下线且项目无老用户,
+// 2026-10-07 起由 v50 迁移 DROP。下方三张 shared_ledger_* 镜像表暂留(见文件内标注)。
 
 /// [共享账本已下线] 共享账本里 Owner 的 user-global 分类镜像。
 /// Editor 在共享账本下打开"选分类"弹窗读这表(而非自己的 Categories);
@@ -678,7 +664,6 @@ class SharedLedgerTags extends Table {
   Budgets,
   TransactionAttachments,
   LocalChanges,
-  LedgerMembers,
   SharedLedgerCategories,
   SharedLedgerAccounts,
   SharedLedgerTags,
@@ -704,7 +689,7 @@ class PiggyDatabase extends _$PiggyDatabase {
 
   @override
   int get schemaVersion =>
-      49; // v49: 日历节假日本地缓存 — holiday_entries(date 主键,整年替换) + holiday_update_meta(单行 1:上次成功/尝试时间、连续失败数、自动更新开关);两张表都是「随时可整表重建」的本地缓存,不进同步白名单/指纹/diff/备份,也不挂 updated_at 触发器(与 exchange_rates 同定位) v48: 索引修复型迁移 — 补建 v10/v11/v12 只写进 onUpgrade 分支、onCreate 遗漏的 transaction_tags ×2 / budgets ×3 / transaction_attachments ×1 索引(2026-09-26 双端实测:新装库 EXPLAIN 报 SCAN transaction_tags,合并路径 tag 批量读固定 ~0.5s); v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+      50; // v50: 删除 ledger_members 死表(全库零读写;共享账本协作下线且项目无老用户,无需存量兼容); v49: 日历节假日本地缓存 — holiday_entries(date 主键,整年替换) + holiday_update_meta(单行 1:上次成功/尝试时间、连续失败数、自动更新开关);两张表都是「随时可整表重建」的本地缓存,不进同步白名单/指纹/diff/备份,也不挂 updated_at 触发器(与 exchange_rates 同定位) v48: 索引修复型迁移 — 补建 v10/v11/v12 只写进 onUpgrade 分支、onCreate 遗漏的 transaction_tags ×2 / budgets ×3 / transaction_attachments ×1 索引(2026-09-26 双端实测:新装库 EXPLAIN 报 SCAN transaction_tags,合并路径 tag 批量读固定 ~0.5s); v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   /// WAL 检查点后允许残留的字节数（见 [migration] 的 beforeOpen）。
   /// 公开给回归测试取期望值，别处不要依赖。
@@ -1338,8 +1323,7 @@ class PiggyDatabase extends _$PiggyDatabase {
             await _addColumnIfMissing('transactions', 'tag_sync_ids_override',
                 'ALTER TABLE transactions ADD COLUMN tag_sync_ids_override TEXT;');
 
-            await _createTableIfMissing(
-                migrator, 'ledger_members', ledgerMembers);
+            // [共享账本已下线] ledger_members 已由 v50 DROP,不再重建。
             await _createTableIfMissing(
                 migrator, 'shared_ledger_categories', sharedLedgerCategories);
             await _createTableIfMissing(
@@ -1770,6 +1754,14 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'CREATE INDEX IF NOT EXISTS idx_holiday_entries_year '
                 'ON holiday_entries(year);');
             logger.info('DBMigration', 'v49 迁移完成');
+          }
+          if (from < 50) {
+            // v50: 删除 ledger_members 死表 —— 全库零读写(仅 v24 建表,从未有
+            // 写入方或读取方)。共享账本协作已下线且项目尚无老用户,无需存量兼容。
+            // deleteTable 内部即 DROP TABLE IF EXISTS,幂等可重入。
+            logger.info('DBMigration', '开始迁移到 v50: 删除 ledger_members 死表');
+            await migrator.deleteTable('ledger_members');
+            logger.info('DBMigration', 'v50 迁移完成');
           }
         },
         onCreate: (m) async {

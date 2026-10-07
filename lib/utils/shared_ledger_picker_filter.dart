@@ -1,18 +1,20 @@
 /// [共享账本已下线] PiggyCount Cloud 多人协作账本已随云端协同整体下线
 /// (见 AGENTS.md「PiggyCount Cloud 协议已随云端协同整体下线」)。本文件及全库
-/// 其余 `[共享账本已下线]` 标注处都是**存量兼容代码**,不是活跃功能:
+/// 其余 `[共享账本已下线]` 标注处都是**残留代码**,不是活跃功能;项目尚无老用户,
+/// 因此不存在需要兼容的存量数据。
 ///
 /// - **无写入方**:`lib/` 内已无任何代码把 `ledgers.isShared` 置 true、写
-///   `myRole != 'owner'`,或向 `shared_ledger_*` / `ledger_members` 插数据
-///   (旧增量同步引擎 Path B 已整体删除,`lib/cloud/` 零 shared 引用),
-///   因此这些共享分支在运行期不可达、镜像表恒空。
-/// - **为何保留**:老用户库里可能存在历史共享账本数据 —— `isShared=true` 行、
-///   transactions 的 `*SyncIdOverride` 值、`transaction_tag_overrides` 行。
-///   删掉读取 / 回显分支会让存量数据的展示与编辑退化;schema 层按 AGENTS.md
-///   「禁止删除字段」更不可动。
-/// - **完整废弃的前提**:确认线上不存在任何存量共享账本数据后,再走「新增迁移
-///   DROP ledger_members / shared_ledger_* + 清理 override 列与全部 shared
-///   分支」的正式路径,并同步改 `test/` 中的共享账本用例。
+///   `myRole != 'owner'`,或向 `shared_ledger_*` 插数据(旧增量同步引擎 Path B
+///   已整体删除,`lib/cloud/` 零 shared 引用),因此这些共享分支在运行期不可达、
+///   镜像表恒空。
+/// - **已删除**:`ledger_members` 死表(全库零读写,仅 v24 建过)已由 **v50**
+///   迁移 DROP。
+/// - **暂留**:`shared_ledger_{categories,accounts,tags}` 三张镜像表、`ledgers`
+///   的 `isShared/myRole/memberCount/ownerUserId` 列、`transactions` 的
+///   `*SyncIdOverride` 列与 `transaction_tag_overrides` 表。它们仍被 picker /
+///   统计 / 孤儿扫描读取,且 override 字段进了整账本快照的指纹与 diff 契约 ——
+///   删除必须同步改 `sync_fingerprint.dart` / `transactions_json.dart` /
+///   `sync_diff_service.dart` 与契约守门测试,故本轮未动。
 ///
 /// 检索标记:全库 grep `[共享账本已下线]` 可列出所有残留位置。
 ///
