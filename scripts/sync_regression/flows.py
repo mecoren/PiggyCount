@@ -56,7 +56,13 @@ APPLY_ALL = MERGE_POLICY["apply"]            # 兼容旧调用点
 # （如「我的」）已经出现在语义树里就判定「到达首页」：模态的 barrier 会吃掉后续
 # tap，表现为随后的 open_mine 连点 6 轮失败。20261004 switch_backend.py 实测：
 # boot 返回 True、但「我的」怎么点都进不去 —— 只因语义树里「我的」是可见的。
-MODAL_MARKERS = BLOCKERS + OVERLAY + MERGE_BUTTONS
+# ★ DISCOVER 必须并入 MODAL_MARKERS（2026-10-07 r2 修复）：
+#   它同样是带全屏 barrier 的模态，若只在 dismiss_blockers 里单独处理而**不**计入
+#   「仍有模态」判据，则 `wait_settled` 的观测窗口漏看它 —— 弹窗在 12s 窗口之后才
+#   渲染时，boot() 会误报「首页就绪=True」，随后 barrier 吃掉所有 tap（open_mine 连点
+#   失败、b_first_sync 空等 1800s）。并入后：wait_settled 能捕获迟到的它并交
+#   dismiss_blockers 按 discover 策略处理（skip→跳过 / download→下载）。
+MODAL_MARKERS = BLOCKERS + OVERLAY + MERGE_BUTTONS + (DISCOVER,)
 
 
 def log(msg):
