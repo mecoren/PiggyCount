@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' as d;
 import 'package:flutter/foundation.dart' show compute;
 import 'package:uuid/uuid.dart';
+import '../cloud/sync/change_tracker.dart';
 import '../cloud/transactions_json.dart';
 import '../data/db.dart';
 import '../data/models/custom_field_values.dart';
@@ -2108,12 +2109,94 @@ Future<int> _purgeStaleLocalChanges(
         .go();
   }
 
+  final liveGlobalSyncIds = await _liveUserGlobalSyncIds(db);
+
+  // 悬挂变更（2026-10-07 修复，S3/WebDAV 双端实测复现）：
+  // user-global 实体的未推送**非删除**行，其 syncId 在本机现存表里已找不到。
+  //
+  // 产生时序：本机先删掉某 user-global 实体（账户/分类/标签/汇率覆盖），
+  // 快照随后拍摄 → 快照实体集天然不含它 → 上面「按快照实体清理」命中不了，
+  // 而它又不属于本账本（ledgerId=0）→ 第一条也命中不了 ⇒ 永久残留。
+  // 实测案例：分类「测-转账」（syncId b20c86b1…）在 R4 被本机删除，
+  // 恢复后 local_changes 仍留 1 行 `category/upsert/ledger_id=0`。
+  //
+  // 危害：`_localChangeEvidence` 的 `lc_n` 口径是 `ledger_id IN (ledgerId, 0)`，
+  // 一行悬挂的 user-global 行就让 `unpushed > 0` 恒真 → trust 门禁放行墙钟
+  // 分支 → 恢复后方向误判 localNewer（实测：云端 40012 / 本地 40011 仍报
+  // localNewer）→ UI 指引「上传」→ **云端较新副本被静默回退**。
+  // 本条即把「留下的行必是本机真实写入」这个不变式补齐（见
+  // transactions_sync_manager.dart 的 b 条注释）。
+  //
+  // 只动非 delete：delete 行承载「本机删掉了该实体」的合法待推送语义，必须留。
+  // 保留「实体仍存在但不在快照里」的行：那是本机新建、尚未上传的全局实体。
+  if (liveGlobalSyncIds.isEmpty) {
+    purged += await (db.delete(db.localChanges)
+          ..where((c) => c.pushedAt.isNull() &
+              c.ledgerId.equals(0) &
+              c.action.isNotIn(_nonUpsertActions) &
+              c.entityType.isIn(_userGlobalEntityTypeList) &
+              c.entitySyncId.isNotNull()))
+        .go();
+  } else {
+    purged += await (db.delete(db.localChanges)
+          ..where((c) => c.pushedAt.isNull() &
+              c.ledgerId.equals(0) &
+              c.action.isNotIn(_nonUpsertActions) &
+              c.entityType.isIn(_userGlobalEntityTypeList) &
+              c.entitySyncId.isNotNull() &
+              c.entitySyncId.isNotIn(liveGlobalSyncIds.toList())))
+        .go();
+  }
+
   if (purged > 0) {
     logger.info('DataImport',
         '恢复后清理过期的未推送变更 $purged 条（ledgerId=$ledgerId，'
-        '含 user-global ${globalSyncIds.length} 个快照实体的匹配行）');
+        '含 user-global ${globalSyncIds.length} 个快照实体的匹配行 + '
+        '本机现存全局实体 ${liveGlobalSyncIds.length} 个的悬挂行）');
   }
   return purged;
+}
+
+/// user-global 变更行里**不**参与「悬挂清理」的 action：删除与 server 标记。
+///
+/// `delete` 是「本机删掉了该实体」的合法待推送语义 —— 实体已不存在正是它的
+/// 预期状态，清掉就等于把这次删除静默吞掉。`server_marker` 是 pull 防重推
+/// 标记，与业务实体存在性无关。
+const List<String> _nonUpsertActions = <String>[
+  'delete',
+  ChangeTracker.serverMarkerAction,
+];
+
+/// [ChangeTracker.userGlobalEntityTypes] 的 List 形态（drift `isIn` 需要 List）。
+final List<String> _userGlobalEntityTypeList =
+    ChangeTracker.userGlobalEntityTypes.toList();
+
+/// 本机现存 user-global 实体的 syncId 全集（悬挂变更判定用）。
+///
+/// 四张表同口径取 `sync_id IS NOT NULL` 的行；判定语义是「该 syncId 在任何
+/// 一张 user-global 表里都找不到 ⟹ 该实体在本机已不存在」。空集与查询失败
+/// 由调用方分别处理（空集 = 本机没有任何全现实体，此时非删除行全部悬挂）。
+Future<Set<String>> _liveUserGlobalSyncIds(PiggyDatabase db) async {
+  final ids = <String>{};
+  void take(Iterable<String?> values) {
+    for (final v in values) {
+      if (v != null && v.isNotEmpty) ids.add(v);
+    }
+  }
+
+  take((await (db.select(db.accounts)..where((t) => t.syncId.isNotNull()))
+          .get())
+      .map((r) => r.syncId));
+  take((await (db.select(db.categories)..where((t) => t.syncId.isNotNull()))
+          .get())
+      .map((r) => r.syncId));
+  take((await (db.select(db.tags)..where((t) => t.syncId.isNotNull())).get())
+      .map((r) => r.syncId));
+  take((await (db.select(db.exchangeRateOverrides)
+            ..where((t) => t.syncId.isNotNull()))
+          .get())
+      .map((r) => r.syncId));
+  return ids;
 }
 
 /// H3 真覆盖（镜像云端）：删除「本地有 syncId 但 v8 快照中不存在」的实体。

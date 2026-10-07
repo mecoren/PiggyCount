@@ -289,6 +289,65 @@ void main() {
         .getSingle();
     expect(row.syncId, isNull);
   });
+
+  test('悬挂 user-global 变更（实体本机已不存在）在恢复后被清理'
+      '—— 不清则 unpushed 门禁恒真、方向误判 localNewer', () async {
+    final id = await addLedger('Main');
+    await addTx(id);
+
+    Future<void> addChange(String syncId, String action, int ledgerId) =>
+        db.into(db.localChanges).insert(LocalChangesCompanion.insert(
+              entityType: 'category',
+              entityId: 1,
+              entitySyncId: syncId,
+              ledgerId: ledgerId,
+              action: action,
+            ));
+
+    // ① 悬挂 upsert：本机先删掉了该全局实体（分类行已不存在），快照又拍摄于
+    //    删除之后 ⇒ 既不在快照实体集里、本地也找不到；在修复前两条既有清理
+    //    都命中不了它（2026-10-07 S3/WebDAV 实测：分类「测-转账」b20c86b1…）。
+    await addChange('cat-dangling', 'upsert', 0);
+    // ② 合法待推送 delete：实体不存在正是它的预期状态，必须保留
+    await addChange('cat-deleted', 'delete', 0);
+    // ③ 快照实体集内的未推送行：快照整体替换了它的权威内容 →
+    //    由现有「按快照实体清理」分支处理（语义不变）
+    await addChange('cat-in-snapshot', 'upsert', 0);
+    // ④ 账本内的未推送行：恢复后一律过期（原有语义，防回归）
+    await addChange('tx-scoped', 'upsert', id);
+
+    final snapshot = jsonEncode({
+      'version': 9,
+      'ledgerName': 'Main',
+      'currency': 'CNY',
+      'categories': [
+        {'name': '快照内分类', 'kind': 'expense', 'syncId': 'cat-in-snapshot'},
+      ],
+      // 快照必须非空：P1-1 守卫拒绝用空快照覆盖非空本地账本（返回 null）
+      'items': [
+        {'type': 'expense', 'amount': 1, 'categoryName': '快照内分类',
+         'happenedAt': '2026-08-01T00:00:00.000Z', 'syncId': 'tx-1'},
+      ],
+    });
+    final result = await restoreLedgerFromJson(
+        db: db, repo: repo, ledgerId: id, jsonStr: snapshot);
+    expect(result, isNotNull);
+
+    final keys = (await db.select(db.localChanges).get())
+        .map((c) => '${c.entitySyncId}/${c.action}')
+        .toSet();
+    expect(keys, isNot(contains('cat-dangling/upsert')),
+        reason: '悬挂 upsert 无处可推（实体已不存在），却让 _localChangeEvidence '
+            '的 lc_n（口径 ledger_id IN (ledgerId, 0)）恒 > 0 ⇒ trust 门禁放行'
+            '墙钟分支 ⇒ 恢复后本地 40011 / 云端 40012 仍报 localNewer ⇒ 按 UI '
+            '指引上传会把云端较新副本静默回退');
+    expect(keys, contains('cat-deleted/delete'),
+        reason: 'delete 行承载「本机删掉了该实体」的合法待推送语义，不得清掉');
+    expect(keys, isNot(contains('cat-in-snapshot/upsert')),
+        reason: '快照实体集内的未推送行由现有分支清理（语义不变）');
+    expect(keys, isNot(contains('tx-scoped/upsert')),
+        reason: '账本内未推送行在恢复时全部过期（原有语义不变）');
+  });
 }
 
 /// 测试辅助：解码 JSON 为 Map（避免每个测试文件重复写）
