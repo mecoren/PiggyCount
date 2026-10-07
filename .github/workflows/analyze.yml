@@ -118,5 +118,55 @@ jobs:
       #   * test/cloud/restore_preserves_local_only_columns_test.dart —— P1-5
       # 这三个文件若变红，通常意味着「某字段进了指纹却没进 diff」或
       # 「检测到了却应用不下去」——请勿直接改测试来通过。
+      #
+      # `--file-reporter expanded:<file>`（2026-10-07 新增）：控制台保持默认 reporter，
+      # 同时把**逐用例明细**落盘，供下一步在失败时提取「失败用例名」写成注解。
+      # 动机：`flutter test` 的失败明细只存在于作业日志里，而作业日志接口需要仓库
+      # admin 权限 ⇒ 外部排查者（含 AI 助手）拿不到「到底哪个用例红了」，只能干等
+      # 有人贴日志。注解是匿名可读的（`GET /repos/{o}/{r}/check-runs/{id}/annotations`）。
+      # ⚠️ **不要**改成 `flutter test | tee log`：管道背压会把计时敏感用例推过超时，
+      # 2026-09-19 实测一次全量跑出 8 例 `did not complete` 假失败。用 file-reporter。
       - name: flutter test
-        run: flutter test
+        run: flutter test --file-reporter expanded:ci_test.log
+
+      # 失败用例明细（2026-10-07 新增）。只在失败时跑，成功路径零开销。
+      # 1) 把每条失败用例写成 `::error::` 注解 —— 免登录即可从 API / 网页 Annotations 读到；
+      # 2) 把失败段落（`[E]` 行 + 紧随其后的 Expected/Actual 上下文）贴进 Job Summary，
+      #    让「哪个用例红了、红在哪一行」在两处都能直接看到。
+      - name: 失败用例明细（写注解 + Job Summary）
+        if: failure()
+        run: |
+          log=ci_test.log
+          if [ ! -f "$log" ]; then
+            echo "::warning::未生成 $log（测试可能在建库/解析阶段就失败）"
+            exit 0
+          fi
+          # expanded reporter 的失败行形如：
+          #   00:13 +41 -1: /path/to/foo_test.dart: 用例名 [E]
+          grep -aE '^[0-9]{2}:[0-9]{2} \+[0-9]+ -[0-9]+: .*\[E\]$' "$log" \
+            | tail -20 > fails_raw.txt || true
+          if [ ! -s fails_raw.txt ]; then
+            echo "::warning::未从 $log 解析出失败用例行，请查看完整作业日志"
+          else
+            # 注解里的 '%' 必须转义成 %25，否则会被 GitHub 截断。
+            sed 's/%/%25/g' fails_raw.txt | while IFS= read -r line; do
+              echo "::error title=失败用例::$line"
+            done
+          fi
+          {
+            echo '### flutter test 失败明细'
+            echo ''
+            echo '**失败用例**'
+            echo '```'
+            if [ -s fails_raw.txt ]; then cat fails_raw.txt; else echo '(未解析到 [E] 行)'; fi
+            echo '```'
+            echo '**失败上下文**（首个 `[E]` 行及其后续明细）'
+            echo '```'
+            awk '/^[0-9][0-9]:[0-9][0-9] /{keep=0} /\[E\]$/{keep=1} keep' "$log" \
+              | head -60
+            echo '```'
+            echo '**日志末尾 15 行**'
+            echo '```'
+            tail -15 "$log"
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"

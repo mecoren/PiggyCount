@@ -14,6 +14,9 @@ migrate_working_dir/
 assets/config.json
 /marketing/
 
+# CI 测试失败明细的中间产物（analyze.yml 的 test job；日志本体已被 *.log 覆盖）
+fails_raw.txt
+
 # AI / agent working files (local-only, never commit)
 .ai/
 .claude/
