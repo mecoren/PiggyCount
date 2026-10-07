@@ -8,7 +8,12 @@
 /// - 证据时间 `at` 来自业务表触碰列/创建列（真实写时刻），且单位换算正确；
 /// - `trusted` 仍是「本地确有未上云内容」的内容性断言，三条证据任一成立；
 /// - 新增的第三条用**同机时钟锚点**（本机上次成功上传时刻）证明，避免
-///   跨设备时钟偏移进入「静默放行覆盖云端」这一破坏性方向。
+///   跨设备时钟偏移进入「静默放行覆盖云端」这一破坏性方向；
+/// - 2026-10-07 追加**恢复地板**（本机上次成功整本恢复本账本的时刻）：恢复
+///   路径会把 ledgers 触碰列与预算/周期/汇率更新时间统统盖成恢复时刻，
+///   没有地板时 c 在恢复后必然成立 → 误判 localNewer → 按 UI 指引上传即
+///   静默回退云端较新副本（双端实测本地 5002 / 云端 5003 却报 localNewer）。
+///   地板之前（含）的痕迹一律作废。
 library;
 
 import 'package:drift/drift.dart' as d;
@@ -84,6 +89,20 @@ void main() {
         .write(const TransactionsCompanion(amount: d.Value(11.0)));
   }
 
+  /// 登记一条「快照恢复成功」指标行 = 恢复地板
+  /// （本机上次成功把外部快照整本写进本账本的时刻）。
+  /// 备份恢复 / 云端下载恢复 / 新建导入三条路径都按逐账本单元记这一行。
+  Future<void> insertRestoreFloor(DateTime ts,
+      {SyncOpOutcome outcome = SyncOpOutcome.success}) async {
+    await db.into(db.syncOpLog).insert(SyncOpLogCompanion.insert(
+          ts: d.Value(ts),
+          backend: 's3',
+          scenario: SyncOpScenario.snapshotRestore.label,
+          outcome: outcome.label,
+          ledgerId: const d.Value(1),
+        ));
+  }
+
   Future<({DateTime? at, bool trusted})> evidence() =>
       manager.localChangeEvidenceForTesting(1);
 
@@ -153,6 +172,67 @@ void main() {
       final e = await evidence();
       expect(e.at!.difference(DateTime.now()).abs().inSeconds, lessThan(5),
           reason: 'at 必须是所有候选写时刻里的最大值，而非某一路来源');
+    });
+  });
+
+  group('恢复地板（2026-10-07 修复）：恢复不是本机编辑', () {
+    test('恢复路径盖的 updated_at 被地板作废（不再误判 localNewer）', () async {
+      await insertUploadAnchor(
+          DateTime.now().subtract(const Duration(minutes: 30)));
+      // 恢复路径的真身：importData → repo.updateLedger(名字/币种) 是一条
+      // **不带 updated_at 的普通 UPDATE**，`trg_ledgers_touch_updated_at`
+      // 随即把 ledgers.updated_at 盖成「恢复时刻」。
+      await repo.updateLedger(id: 1, name: 'L2');
+
+      // 对照：地板缺失时，这条痕迹晚于上传锚点 → c 成立 → trusted=true。
+      // 这正是 2026-10-07 双端实测里「恢复后本地 5002 / 云端 5003 却报
+      // localNewer、按 UI 指引上传后云端较新副本被静默回退」的那一步。
+      expect((await evidence()).trusted, isTrue,
+          reason: '对照断言：没有地板时本机痕迹确实落在上传锚点之后');
+
+      await insertRestoreFloor(DateTime.now());
+
+      final e = await evidence();
+      expect(e.trusted, isFalse, reason: '恢复写入的痕迹不是「未上云内容」的证据 → 必须作废');
+      expect(e.at, isNull,
+          reason: '地板把唯一候选痕迹滤空 → at=null，交 core 走 count 兜底/unknown');
+    });
+
+    test('恢复之后的真实编辑仍被承认（地板只作废恢复时刻的痕迹）', () async {
+      await insertUploadAnchor(
+          DateTime.now().subtract(const Duration(minutes: 60)));
+      await insertRestoreFloor(
+          DateTime.now().subtract(const Duration(seconds: 30)));
+      await repo.updateLedger(id: 1, name: 'L2'); // 恢复之后的本机编辑
+
+      final e = await evidence();
+      expect(e.trusted, isTrue, reason: '痕迹晚于地板与上传锚点 → 确有未上云内容，方向仲裁应正常放行');
+      expect(e.at, isNotNull);
+    });
+
+    test('soft_fail 的恢复行不抬地板（本地数据未动）', () async {
+      await insertUploadAnchor(
+          DateTime.now().subtract(const Duration(minutes: 30)));
+      await repo.updateLedger(id: 1, name: 'L2');
+      // 云端对象缺失 / 空快照守卫触发：恢复流程报 soft_fail 但**本地数据
+      // 未被替换**，不得作废本机真实编辑痕迹。
+      await insertRestoreFloor(DateTime.now(), outcome: SyncOpOutcome.softFail);
+
+      expect((await evidence()).trusted, isTrue);
+    });
+
+    test('地板不误伤 local_changes 未推送行（b 仍成立）', () async {
+      await insertRestoreFloor(DateTime.now());
+      await db.into(db.localChanges).insert(LocalChangesCompanion.insert(
+            entityType: 'transaction',
+            entityId: 1,
+            entitySyncId: 'sync-1',
+            ledgerId: 1,
+            action: 'upsert',
+          ));
+      expect((await evidence()).trusted, isTrue,
+          reason: '恢复事务内已清空陈旧行（_purgeStaleLocalChanges），'
+              '留下的行必是本机真实写入，b 不设地板');
     });
   });
 }

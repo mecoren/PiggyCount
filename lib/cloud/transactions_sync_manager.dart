@@ -928,13 +928,36 @@ class TransactionsSyncManager implements SyncService {
   /// `snapshot_upload`+`success` 的 `MAX(ts)`（本机时钟；配合内存
   /// `_recentUpload` 取较新者）= 本机上次成功上传该账本的时刻。
   ///
+  /// **恢复地板**（2026-10-07 修复，「从备份恢复 → 上传」静默回退云端）：
+  /// 再读一个下限：`sync_op_log` 中本账本 `snapshot_restore`+`success` 的
+  /// `MAX(ts)` = 本机上次**成功把外部快照整本写进本账本**的时刻（备份恢复 /
+  /// 云端下载恢复 / 新建导入，三条路径都按逐账本单元记这一行）。
+  ///
+  /// 为什么必须单独设这个下限：上面 2/3 两类证据列在恢复路径上会被**统一
+  /// 盖成恢复时刻** —— `ledgers` 由 `importData → repo.updateLedger(名字/币种)`
+  /// 触发 `trg_ledgers_touch_updated_at`；`budgets` / `recurring_transactions` /
+  /// `exchange_rate_overrides` 由仓储更新路径显式写 `now()`；跨设备恢复时
+  /// `accounts` / `categories` / `tags` 也会因「云端值与本地不同」而被 UPDATE
+  /// 盖章。于是恢复刚结束，持久痕迹（恢复时刻）必然晚于上传锚点（更早），
+  /// c 的推断「持久痕迹晚于上次上传 ⟹ 本地有未上云内容」**必然为真**，方向
+  /// 仲裁判 localNewer，UI 指引「上传覆盖」→ 云端较新的唯一副本被静默回退
+  /// （2026-10-07 双端实测：恢复后本地 5002 / 云端 5003，却报 localNewer）。
+  /// 恢复**不是本机编辑**，物理上却无法在证据列这一层区分，故在读取侧划地板：
+  /// 地板之前（含）的痕迹一律不作数 —— 恢复后无人工编辑时退化为「无证据」
+  /// （at=null、trusted=false），由 core 走 count 兜底或 unknown 让用户确认。
+  /// 保守方向：地板只可能把 localNewer 降级为 unknown/count 判据，绝不会
+  /// 制造出「本地较新」的放行。
+  ///
   /// `trusted` 门禁**不放松**，仍是「本地确有未上云内容」这一内容性断言
   /// （旧实现的 `unpushed > 0` 就是这个断言，只是生产恒 0 而失效）。三条
   /// 证据任一成立即可信：
   /// a. 本 session 写路径已登记（`_recentLocalChangeAt`，原有语义）；
   /// b. `local_changes` 存在未推送行（原有语义；生产恒 0，兼容测试装配
   ///    与未来重新注入 tracker）；
-  /// c. **新增**：持久写入痕迹**晚于本机上次成功上传本账本的时刻**。
+  /// c. **新增**：持久写入痕迹**晚于本机上次成功上传本账本的时刻**，
+  ///    且**晚于本机上次成功整本恢复本账本的时刻**（恢复地板，见上）。
+  ///    两条同时成立才认 c —— 恢复地板缺失（本机从未整本恢复过该账本）
+  ///    时退化为原有语义，零行为变化。
   ///
   /// 为什么 c 要用「同机时钟锚点」而不是直接 `at != null`：方向仲裁里
   /// `localAt > remoteAt` 会**静默放行覆盖云端**（破坏性方向），而 remoteAt
@@ -960,6 +983,7 @@ class TransactionsSyncManager implements SyncService {
 
     DateTime? persistedAt; // 持久化写入痕迹的最大值（本机时钟）
     DateTime? anchor; // 本机上次成功上传本账本的时刻（同机时钟锚点）
+    DateTime? restoreFloor; // 本机上次成功整本恢复本账本的时刻（证据下限）
     var unpushed = 0; // local_changes 未推送行数（叠加证据，生产恒 0）
 
     // ②③④⑤ 单条 SQL（避免 N 次往返）
@@ -997,13 +1021,25 @@ class TransactionsSyncManager implements SyncService {
           (SELECT MAX(ts) FROM sync_op_log
             WHERE ledger_id = ?
               AND scenario = 'snapshot_upload'
-              AND outcome = 'success') AS up_a
+              AND outcome = 'success') AS up_a,
+          -- 恢复地板（2026-10-07）：本机上一次**成功**把外部快照整本写进本
+          -- 账本的时刻。备份恢复（CloudBackupService.restoreBackup）、云端
+          -- 下载恢复（downloadAndRestoreToCurrentLedger / downloadRemoteLedger）、
+          -- 云端账本新建导入（_importRemoteLedger）三条路径都按逐账本单元
+          -- 记这一行。取 success 一种结局是有意的：soft_fail（云端对象缺失 /
+          -- 空快照守卫拒绝覆盖）**本地数据未动**，不构成「本地被外部内容替换」，
+          -- 不能抬地板，否则会把真实的本机编辑证据一起作废。
+          (SELECT MAX(ts) FROM sync_op_log
+            WHERE ledger_id = ?
+              AND scenario = 'snapshot_restore'
+              AND outcome = 'success') AS rs_a
         ''',
-        // 占位符共 13 个（tx_u/bg_u/bg_c/rc_u/rc_c/lg_u/lg_c/cf_u/cf_c/
-        // att_c/lc_c/lc_n/up_a），
+        // 占位符共 14 个（tx_u/bg_u/bg_c/rc_u/rc_c/lg_u/lg_c/cf_u/cf_c/
+        // att_c/lc_c/lc_n/up_a/rs_a），
         // 必须与下面 variables 数量一致 —— 少给会整条语句抛错并被 catch 吞成
         // 「无证据」，静默退化为恒 unknown（用测试正面断言钉住）。
         variables: [
+          drift.Variable.withInt(ledgerId),
           drift.Variable.withInt(ledgerId),
           drift.Variable.withInt(ledgerId),
           drift.Variable.withInt(ledgerId),
@@ -1055,6 +1091,7 @@ class TransactionsSyncManager implements SyncService {
 
       unpushed = row.read<int?>('lc_n') ?? 0;
       anchor = readAt('up_a');
+      restoreFloor = readAt('rs_a');
     } catch (e) {
       // 读取失败：退回「无持久证据」——trust 门禁随之为 false，仲裁方按
       // unknown 处理（保守多弹窗，绝不凭缺失证据放行覆盖）
@@ -1068,28 +1105,51 @@ class TransactionsSyncManager implements SyncService {
       anchor = memAnchor;
     }
 
+    // 恢复地板先落地为「痕迹是否在地板之后」的判据：
+    //   - 地板缺失（本机从未成功整本恢复过该账本，绝大多数用户）→ 全 true，
+    //     与原语义逐位相同；
+    //   - 地板存在 → 只有**恢复之后**出现的痕迹才算「本机编辑」，恢复自己
+    //     盖的那批恢复时刻戳（含内存 `_recentLocalChangeAt`：备份恢复路径
+    //     不在本类里、清不掉它，只能在读取侧统一过滤）一并作废。
+    var recentChangeValid = recentChange != null;
+    var persistedValid = persistedAt != null;
+    if (restoreFloor != null) {
+      recentChangeValid =
+          recentChange != null && recentChange.isAfter(restoreFloor);
+      persistedValid = persistedAt != null && persistedAt.isAfter(restoreFloor);
+    }
+
     final candidates = <DateTime>[
-      if (recentChange != null) recentChange,
-      if (persistedAt != null) persistedAt,
-    ];
-    if (candidates.isEmpty) return (at: null, trusted: false);
-    candidates.sort();
+      if (recentChangeValid) recentChange!,
+      if (persistedValid) persistedAt!,
+    ]..sort();
+
+    // b（local_changes 未推送行）在地板之下依然算数，故空候选不等于无证据：
+    // 恢复事务内已清空陈旧行（_purgeStaleLocalChanges，见 data_import_service
+    // .dart），留下的行必是本机真实写入（恢复自身走 recordChanges:false +
+    // withRecordingSuppressed，不会伪造行）。顺带修正原实现的一处小瑕疵：
+    // 它 `candidates.isEmpty ⇒ 直接返回`，把 b 也一并短路了。
+    if (candidates.isEmpty && unpushed == 0) {
+      return (at: null, trusted: false);
+    }
 
     // trust 门禁 = 「本地确有未上云内容」的三条证据（任一成立）：
     //   a. 本 session 写路径已登记（原有语义）；
     //   b. local_changes 存在未推送行（原有语义；生产恒 0，兼容测试装配
-    //      与未来重新注入 tracker）；
-    //   c. 【新增】持久写入痕迹**晚于本机上次成功上传本账本的时刻** ——
+    //      与未来重新注入 tracker）；恢复事务内已 purge 陈旧行（
+    //      _purgeStaleLocalChanges），故留下的行必是本机真实写入 —— 无需
+    //      再过恢复地板；
+    //   c. 持久写入痕迹**晚于本机上次成功上传本账本的时刻**，且（新）
+    //      **晚于本机上次成功整本恢复本账本的时刻** ——
     //      两端同为本机时钟，无跨设备偏移风险，可直接断言「本地在我们
-    //      上次上传之后又写过本快照内容」⟹ 确有未上云内容。
+    //      上次上传/上次恢复之后又写过本快照内容」⟹ 确有未上云内容。
     //      反例边界：若该账本本机从未上传（无锚点），c 不成立 → 退回
     //      a/b；跨设备场景（对方快照 vs 我的本地）本就无法用同机时钟
     //      判定，保持 unknown 让用户确认才是正确取舍。
     final wroteAfterLastUpload =
-        persistedAt != null && anchor != null && persistedAt.isAfter(anchor);
-    final trusted =
-        recentChange != null || unpushed > 0 || wroteAfterLastUpload;
-    return (at: candidates.last, trusted: trusted);
+        persistedValid && anchor != null && persistedAt!.isAfter(anchor);
+    final trusted = recentChangeValid || unpushed > 0 || wroteAfterLastUpload;
+    return (at: candidates.isEmpty ? null : candidates.last, trusted: trusted);
   }
 
   /// 方向判断用的本地墙钟（getStatus 透传给 flutter_cloud_sync 做展示级

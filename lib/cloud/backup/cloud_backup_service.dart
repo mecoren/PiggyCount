@@ -119,7 +119,10 @@ class CloudBackupService {
   /// P0-1：备份场景埋点（含 backend 分组）。备份恢复的软失败
   /// （单账本 failed>0 但整体流程完成）单独计 soft_fail。
   void _recordMetrics(SyncOpOutcome outcome,
-      {Object? error, Duration? duration, SyncOpScenario? scenario}) {
+      {Object? error,
+      Duration? duration,
+      SyncOpScenario? scenario,
+      int? ledgerId}) {
     final m = metrics;
     if (m == null) return;
     m.recordUnawaited(SyncOpRecord(
@@ -129,6 +132,7 @@ class CloudBackupService {
       errorClass: error == null && outcome == SyncOpOutcome.success
           ? null
           : SyncMetricsService.classifyError(error),
+      ledgerId: ledgerId,
       duration: duration,
     ));
   }
@@ -350,9 +354,17 @@ class CloudBackupService {
       await storage.uploadBinaryOrFallback(
           path: '$backupDir/$fileName', bytes: zipData);
 
-      logger.info('Backup',
+      // 两个体积**分开标注**：此前只写 `(跳过=N, ${_fmtBytes(attTotalBytes)})`，
+      // 紧跟在「备份完成」后面，极易被读成**整包 zip 体积**。实测该字段报
+      // 128KB，而「从备份恢复」列表里同一个备份显示 3.7 MB、云端实测
+      // 3,891,707B，相差约 30 倍。数字本身没错 —— 它是**去重附件的原始
+      // 字节和**（7 个附件 14009+…+23337 = 131212B ≈ 128.1KB），
+      // 缺的是主语。同文件上方阈值告警写的就是「附件总量」，此处补齐。
+      logger.info(
+          'Backup',
           '备份完成: $fileName 账本=${ledgers.length} 附件=$attPacked '
-          '(跳过=$attSkipped, ${_fmtBytes(attTotalBytes)})');
+              '(跳过=$attSkipped, 附件总量=${_fmtBytes(attTotalBytes)}, '
+              '整包=${_fmtBytes(zipData.length)})');
       _recordMetrics(SyncOpOutcome.success, duration: watch.elapsed);
       return (
         ledgers: ledgers.length,
@@ -478,6 +490,7 @@ class CloudBackupService {
       for (final name in ledgerEntries) {
         final remoteId =
             int.parse(_ledgerEntryPattern.firstMatch(name)!.group(1)!);
+        final ledgerWatch = Stopwatch()..start();
         try {
           final jsonStr = await _resolveInnerJson(
               utf8.decode(entries[name]!.content as List<int>));
@@ -500,6 +513,7 @@ class CloudBackupService {
             }
           }
 
+          final int restoredLedgerId;
           if (target != null) {
             final restored = await restoreLedgerFromJson(
                 db: db, repo: repo, ledgerId: target.id, jsonStr: jsonStr);
@@ -508,6 +522,7 @@ class CloudBackupService {
               throw fcs.CloudSyncException('空快照被拒绝覆盖本地账本: $name');
             }
             skippedRecurring += restored.skippedRecurring;
+            restoredLedgerId = target.id;
           } else {
             final imported = await _importNewLedgerFromBackup(
                 remoteId: remoteId, jsonStr: jsonStr);
@@ -515,8 +530,23 @@ class CloudBackupService {
               throw fcs.CloudSyncException('备份账本导入失败: $name');
             }
             skippedRecurring += imported.skippedRecurring;
+            restoredLedgerId = imported.ledgerId;
           }
           success++;
+          // 恢复地板证据（2026-10-07）：逐账本记录「本机已用外部快照整本
+          // 替换本账本内容」的成功时刻，供 TransactionsSyncManager
+          // ._localChangeEvidence 作方向仲裁的证据下限 —— 恢复路径会把
+          // ledgers 触碰列与预算/周期/汇率更新时间统统盖成恢复时刻，
+          // 不设地板会让恢复后立刻判 localNewer、静默回退云端较新副本。
+          // 口径与云端恢复路径（downloadAndRestoreToCurrentLedger /
+          // _importRemoteLedger）的逐账本记录一致；上面那条整轮记录不带
+          // ledgerId，专供「一轮恢复的整体耗时/软失败」观测，不参与地板。
+          // 指标口径代价：一轮恢复会多出「N 条逐账本 success + 1 条整轮」，
+          // 与云端全量恢复（fullRestoreAllRemoteLedgers 逐账本计数）同口径。
+          _recordMetrics(SyncOpOutcome.success,
+              scenario: SyncOpScenario.snapshotRestore,
+              ledgerId: restoredLedgerId,
+              duration: ledgerWatch.elapsed);
         } catch (e) {
           failed++;
           logger.warning('Backup', '恢复备份账本失败: $name - $e');
