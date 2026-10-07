@@ -161,14 +161,46 @@ def dismiss_blockers(port, rounds=6, discover="skip", merge="apply", verbose=Tru
     return uidrv.has_key(xml, "我的") and not left
 
 
-def boot(port, tag=None, discover="skip", merge="apply", cold=True):
-    """冷启动到首页。cold=True 先 force-stop，确保走完整的启动同步检查。"""
+def wait_settled(port, seconds=12.0, discover="skip", merge="apply", poll=3.0):
+    """冷启动后的「稳定观察期」：等启动同步检查的弹窗**迟到登场**。
+
+    为什么需要：该检查要等云端探测完才渲染弹窗，而 dismiss_blockers 只依据
+    **当前** dump 判定 —— 启动后头几秒「无模态 + 有『我的』」就已成立，于是
+    误报「已就绪」，随后弹出的 modal barrier 会吃掉所有 tap。
+    实测（20261007）：B 端 R1 首次同步因此空等到 harness 超时（12.9 分钟、
+    RSS 548→604MB、除 [mem] 外零日志），而服务端 8 个账本 JSON 早已下完、
+    始终没人点「下载」。
+
+    返回 True = 观察期内（或清理后重新起算的观察期内）界面始终干净。
+    """
+    if seconds <= 0:
+        return True
+    t0 = time.time()
+    while time.time() - t0 < seconds:
+        time.sleep(poll)
+        if any(m in uidrv.dump_xml(port) for m in MODAL_MARKERS):
+            log("稳定观察期捕获迟到的启动弹窗，重新清理")
+            if not dismiss_blockers(port, rounds=6, discover=discover, merge=merge):
+                return False
+            t0 = time.time()      # 清理后重新起算观察期
+    return True
+
+
+def boot(port, tag=None, discover="skip", merge="apply", cold=True, settle=12.0):
+    """冷启动到首页。cold=True 先 force-stop，确保走完整的启动同步检查。
+
+    settle: 判定就绪后**再观察**的秒数（默认 12s = 3 轮 poll，见 wait_settled）。
+        传 0 关闭 —— 需要「启动后立刻取快照」的调用点可关掉，代价是可能漏掉
+        迟到的启动弹窗。要跑「首次同步 / 引导下载」类路径时**不要**关。
+    """
     if cold:
         uidrv.shell(port, f"am force-stop {PKG}")
         time.sleep(2)
     uidrv.launch(port)
     log(f"{port} 启动中 ...")
     ok = dismiss_blockers(port, discover=discover, merge=merge)
+    if ok:
+        ok = wait_settled(port, seconds=settle, discover=discover, merge=merge)
     if tag:
         uidrv.dump_xml(port, f"{tag}_{port}_home")
     log(f"{port} 首页就绪={ok}")
@@ -201,23 +233,48 @@ def open_sync_page(port, tag=None):
 
 
 # ---------------------------------------------------------------- 上传 / 下载
-def _confirm_dialog(port, keys, timeout=60):
-    """等待确认弹窗并点其中一个 key。返回点中的 key 或 None。"""
-    t0 = time.time()
-    while time.time() - t0 < timeout:
-        xml = uidrv.dump_xml(port)
-        for k in keys:
-            n = uidrv.find(xml, k)
-            if n:
-                uidrv.tap(port, n["cx"], n["cy"])
-                log(f"确认弹窗点「{k}」")
-                return k
-        time.sleep(3)
-    return None
+def _confirm_dialog(port, keys, timeout=60, rounds=3, next_timeout=8):
+    """逐层点掉危险确认弹窗，返回**最后**点中的 key（一个都没点到则 None）。
+
+    ★ 全量上传 / 全量下载是**两层**确认：第一层「覆盖上传」，第二层
+      「再次确认：覆盖后云端原有数据无法恢复，确定要继续吗？」。
+      只点一层会把流程卡死 —— 实测 20261007：`_converge.py` 用了单层版本，
+      卡在第二层 130s，期间**一个字节都没发出去**（服务端零请求），
+      而日志里已经打印过「确认弹窗点『确定』」，极易误判成上传慢。
+      `round.py` 自带的 `confirm_loop` 是循环版本，故既有编排器未受影响；
+      这里把能力补回公共封装，避免下一个调用者再踩。
+
+    next_timeout: 第二层起的等待上限（短）—— 此时正常情况已无确认键。
+    """
+    clicked = []
+    for _ in range(rounds):
+        t0 = time.time()
+        limit = timeout if not clicked else next_timeout
+        hit = None
+        while time.time() - t0 < limit:
+            xml = uidrv.dump_xml(port)
+            for k in keys:
+                n = uidrv.find(xml, k)
+                if n:
+                    uidrv.tap(port, n["cx"], n["cy"])
+                    log(f"确认弹窗点「{k}」(第 {len(clicked) + 1} 层)")
+                    hit = k
+                    break
+            if hit:
+                break
+            time.sleep(3)
+        if not hit:
+            break
+        clicked.append(hit)
+        time.sleep(2)
+    return clicked[-1] if clicked else None
 
 
 def upload_full(port, tag, confirm_keys=("覆盖上传", "确定", "确认")):
-    """同步页 → 全量上传 → 确认 → 等到完成。"""
+    """同步页 → 全量上传 → **逐层**确认 → 等到完成。
+
+    确认是两层（见 `_confirm_dialog`），`_confirm_dialog` 会循环点掉。
+    """
     uidrv.dump_xml(port, f"{tag}_{port}_before_upload")
     n = uidrv.find(uidrv.dump_xml(port), "全量上传")
     if not n:
@@ -252,7 +309,7 @@ def wait_upload_done(port, tag, timeout=2400):
 
 
 def download_full(port, tag, confirm_keys=("覆盖下载", "确定", "确认")):
-    """同步页 → 全量下载 → 确认 → 等到完成。"""
+    """同步页 → 全量下载 → **逐层**确认 → 等到完成（确认是两层，见 `_confirm_dialog`）。"""
     n = uidrv.find(uidrv.dump_xml(port), "全量下载")
     if not n:
         log("未找到「全量下载」")
@@ -358,3 +415,315 @@ def tap_and_type(port, key, text, preclear=True):
     uidrv.shell(port, f"input text '{text}'")
     time.sleep(1)
     return True
+
+
+# ---------------------------------------------------------------- 页面内滚动
+def scroll_to_top(port, times=4):
+    """把当前页面滚回顶部。
+
+    同步页很长（上传/下载/自动同步/备份三件套/恢复/加密…），目标按钮常在屏外，
+    直接 `find` 会一无所获；而 `input swipe` 从上往下滑 = 内容向下 = 视图回到顶部。
+    """
+    for _ in range(times):
+        uidrv.shell(port, "input swipe 600 800 600 2200 250")
+        time.sleep(0.8)
+
+
+def tap_in_page(port, key, wait=3.0, max_scroll=4, bottom=2578):
+    """在当前页找 key 并点击；找不到就向下滚一点再找。
+
+    bottom：只点**可点且中心在屏幕内**的节点（dump 里会出现屏外 bounds，
+    照它 tap 会点到状态栏/导航栏）。1200×2608 屏取 2578 留出导航条高度。
+    """
+    for i in range(max_scroll):
+        xml = uidrv.dump_xml(port)
+        n = uidrv.find(xml, key)
+        if n and n["cy"] <= bottom:
+            log(f"tap {key!r} @ {n['cx']},{n['cy']} (轮{i+1})")
+            uidrv.tap(port, n["cx"], n["cy"])
+            time.sleep(wait)
+            return True
+        uidrv.shell(port, "input swipe 600 1900 600 1100 250")
+        time.sleep(1.0)
+    log(f"[FAIL] 页内找不到可点的 {key!r}")
+    return False
+
+
+# ---------------------------------------------------------------- 备份 / 恢复
+# 文案全部取自 lib/l10n/app_zh.arb（勿凭印象写匹配键）：
+#   backupSuccessMessage  = 备份已上传：piggycount-bak/{fileName}
+#   backupFailedXxxMessage= 备份失败，请检查网络后重试。 / 云端认证失败…
+#   backupRunningStatus / backupPackingProgress = 正在创建备份… / 正在打包账本 x/y…
+#   backupListEmptyMessage= 云端还没有备份。
+#   restoreConfirm1Message= 将使用 {date} 的备份覆盖本地全部账本数据…
+#   restoreResultMessage  = 恢复完成：成功 {n} 个，失败 {m} 个。
+#   dangerConfirmCountdown= 确认（{seconds}秒）  ← 危险确认按钮**倒计时期间禁用**
+BACKUP_UPLOADED = "备份已上传："
+BACKUP_PREFIX = "piggycount-bak/"
+BACKUP_FAILED = "备份失败"
+BACKUP_RUNNING = ("正在创建备份", "正在打包账本")
+BACKUP_LIST_EMPTY = "云端还没有备份"
+RESTORE_CONFIRM1 = "将使用"          # restoreConfirm1Message 的稳定前缀
+RESTORE_RESULT = "恢复完成："
+RESTORE_RUNNING = ("正在从备份恢复", "正在恢复账本")
+LAST_BACKUP = "最近备份："
+LAST_BACKUP_NONE = "最近备份：尚无记录"
+# 危险确认按钮的倒计时形态：确认（5秒）→ 归零后才变成可点的「确定」
+COUNTDOWN_RE = re.compile(r"确认（\d+秒）")
+# `[Backup] 备份完成: …` 的**两种形态**都要吃下：
+#   旧（2026-10-07 之前的构建）：(跳过=0, 128KB)            ← 尾字段其实是附件原始字节和
+#   新（P3 修复后）        ：(跳过=0, 附件总量=128KB, 整包=3.7MB)
+# 只认新格式会让 harness 在未含修复的构建上静默失效，故尾两组设为可选。
+# 真机样本（run_20261007_s3/*_fulltest.txt）：
+#   [Backup] 备份完成: PiggyCount-2026-10-07.zip 账本=8 附件=7 (跳过=0, 128KB)
+BACKUP_DONE_RE = re.compile(
+    r"\[Backup\] 备份完成: (\S+) 账本=(\d+) 附件=(\d+) "
+    r"\(跳过=(\d+),\s*(?:附件总量=)?([^,)]+?)(?:,\s*整包=([^)]+))?\)")
+RESTORE_DONE_RE = re.compile(
+    r"\[Backup\] 备份恢复完成: (\S+) 成功=(\d+) 失败=(\d+)")
+
+
+def _descs(xml):
+    """全部非空 content-desc（Flutter 文本落在这里，`text` 恒为空）。"""
+    return [m for m in re.findall(r'content-desc="([^"]*)"', xml) if m]
+
+
+def last_backup_caption(port):
+    """读「最近备份：<日期> · <成功|失败>」/「最近备份：尚无记录」。
+
+    ★ 只作**旁证与报告引用**，绝不能单独当完成判据 —— 见 backup_now 的说明。
+    """
+    for d in _descs(uidrv.dump_xml(port)):
+        if d.startswith(LAST_BACKUP):
+            return d
+    return None
+
+
+def parse_backup_done_line(text):
+    """从日志文本里解析 `[Backup] 备份完成: …`（返回 None 表示没有）。
+
+    兼容两种格式（见 BACKUP_DONE_RE）：旧构建没有「整包」字段时 `zipBytes=None`
+    —— 此时**不能**拿附件字节和冒充整包体积（那正是 2026-10-07 报告 §6.1/§6.5
+    记录的文案歧义：128KB 被读成整包，实际整包 3,891,707B）。
+    """
+    m = BACKUP_DONE_RE.search(text or "")
+    if not m:
+        return None
+    tail, zip_bytes = m.group(5).strip(), m.group(6)
+    return {"fileName": m.group(1), "ledgers": int(m.group(2)),
+            "attachments": int(m.group(3)), "attachmentsSkipped": int(m.group(4)),
+            "attachmentsBytes": None if zip_bytes else tail,
+            "zipBytes": zip_bytes.strip() if zip_bytes else None,
+            "raw": m.group(0)}
+
+
+def _dismiss_plain_dialog(port, keys=("确定", "关闭", "完成"), wait=2.5):
+    """点掉一个普通信息/结果弹窗（无倒计时）。"""
+    xml = uidrv.dump_xml(port)
+    for k in keys:
+        n = uidrv.find(xml, k)
+        if n and not COUNTDOWN_RE.search(n["desc"] + n["text"]):
+            uidrv.tap(port, n["cx"], n["cy"])
+            time.sleep(wait)
+            return True
+    return False
+
+
+def backup_now(port, tag, probe=None, timeout=600, poll=5.0):
+    """同步页 →「立即备份」→ 判定完成。返回证据字典（失败返回 None）。
+
+    ★ 旧判据是**假阳性**，别再抄：`"最近备份" in xml and "尚无记录" not in xml`
+      只反映「**当天**有没有过备份」，与本次操作无关 —— 同日补跑、甚至上一阶段
+      （S3 段）留下的记录都会让它恒真，于是**备份尚未落盘就报成功**。
+      2026-10-07 实测踩中，报告 §6.4 留档。
+
+    现在的判据 = **本次操作自己的产物**，三层互相独立：
+      ① 结果弹窗「备份已上传：piggycount-bak/<fileName>」（backupSuccessMessage）。
+         进入前先清掉可能残留的结果弹窗，保证它只可能来自本次操作。
+      ② logcat 的 `[Backup] 备份完成: <file> 账本=N 附件=N (跳过=N, 附件总量=X, 整包=Y)`。
+         结构化交叉校验：账本数应等于本地账本数、整包体积应 > 0。
+         开跑前 `logcat -c`，所以这行也必然来自本次。
+      ③ 可选 probe(fileName)：服务端落盘核验。WebDAV 本地测试服务可直接查
+         `scripts/webdav_test/data/piggycount/piggycount-bak/`；S3 侧暂无列举工具，
+         传 None 表示**未做服务端独立核验**（如实记进 evidence，别当已验）。
+    """
+    # 清残留结果弹窗
+    for _ in range(3):
+        xml = uidrv.dump_xml(port)
+        if BACKUP_UPLOADED not in xml and BACKUP_FAILED not in xml:
+            break
+        if not _dismiss_plain_dialog(port):
+            break
+
+    before = last_backup_caption(port)         # 旁证：仅用于报告
+    uidrv.shell(port, "logcat -c")
+    if not tap_in_page(port, "立即备份", wait=4.0):
+        return None
+
+    uidrv.dump_xml(port, f"{tag}_{port}_backupnow_tapped")
+    t0 = time.time()
+    ev = {"fileName": None, "dialogSeen": False, "failed": False,
+          "log": None, "probe": None, "captionBefore": before,
+          "captionAfter": None, "seconds": None}
+    while time.time() - t0 < timeout:
+        xml = uidrv.dump_xml(port)
+        if BACKUP_UPLOADED in xml:
+            for d in _descs(xml):
+                if d.startswith(BACKUP_UPLOADED):
+                    ev["fileName"] = d.split(BACKUP_PREFIX, 1)[-1].strip()
+                    break
+            ev["dialogSeen"] = True
+        if BACKUP_FAILED in xml:
+            ev["failed"] = True
+        raw = logcat(port, fresh=False)
+        ev["log"] = parse_backup_done_line(raw) or ev["log"]
+        if ev["dialogSeen"] or ev["failed"]:
+            break
+        if not any(k in xml for k in BACKUP_RUNNING) and ev["log"]:
+            break                              # 弹窗已收起但日志已到
+        time.sleep(poll)
+
+    ev["seconds"] = round(time.time() - t0, 1)
+    uidrv.dump_xml(port, f"{tag}_{port}_backupnow_done")
+    with open(os.path.join(RW, f"{tag}_{port}_logcat.txt"), "w",
+              encoding="utf-8", errors="replace", newline="") as f:
+        f.write(logcat(port, fresh=False))
+    # 弹窗收起后才读得到刷新后的「最近备份」卡片
+    _dismiss_plain_dialog(port)
+    ev["captionAfter"] = last_backup_caption(port)
+    if probe and ev["fileName"]:
+        try:
+            ev["probe"] = bool(probe(ev["fileName"]))
+        except Exception as e:                 # noqa: BLE001 —— 探测失败不掩盖主判据
+            ev["probe"] = f"probe_error: {e}"
+
+    ok = (ev["dialogSeen"] and not ev["failed"] and ev["log"] is not None)
+    log(f"立即备份 完成={ok} 文件={ev['fileName']} 日志={ev['log']} "
+        f"服务端核验={ev['probe']} ({ev['seconds']}s)")
+    return ev if ok else None
+
+
+def read_prefs(port, name):
+    """读设备端 FlutterSharedPreferences.xml 并解析成 {key: value}（只读）。
+
+    结构性证据（不受 UI 文案/前序用例污染），定时备份开关一类断言优先用它。
+    本函数**只读**；本模块的约定仍是「绝不改写 shared_prefs / secure storage」。
+    """
+    raw = uidrv.adb(port, "exec-out", "run-as", PKG, "cat",
+                    f"/data/data/{PKG}/shared_prefs/FlutterSharedPreferences.xml")
+    with open(os.path.join(RW, name + ".xml"), "w", encoding="utf-8",
+              errors="replace", newline="") as f:
+        f.write(raw)
+    out = {}
+    for m in re.finditer(
+            r'<(\w+) name="([^"]*)"(?: value="([^"]*)")?\s*(?:/>|>(.*?)</\1>)', raw):
+        typ, k, v, inner = m.groups()
+        out[k] = v if v is not None else (inner or "")
+    return out
+
+
+def set_backup_auto(port, tag, on=True):
+    """同步页 →「定时备份」开关 + 读 prefs 校验（结构性证据，非 UI 文本）。
+
+    返回 {enabled, time, requested}（缺失的键为 None）。
+    """
+    scroll_to_top(port)
+    tap_in_page(port, "定时备份", wait=3.5)
+    uidrv.dump_xml(port, f"{tag}_{port}_backupauto")
+    prefs = read_prefs(port, f"{tag}_{port}_prefs")
+    return {"enabled": prefs.get("flutter.backup_auto_enabled"),
+            "time": prefs.get("flutter.backup_time"),
+            "requested": on}
+
+
+def confirm_danger_dialogs(port, rounds=2, timeout=90, wait=3.0):
+    """点掉危险确认弹窗（**逐关等倒计时归零**）。返回实际点掉的关数。
+
+    弹窗按钮在倒计时期间是 `确认（N秒）` 且 **disabled**（`_DangerConfirmDialog`），
+    直接点「确定」会误伤或干脆点不到 —— 必须等它变成真正的 okLabel 再点。
+    （早期 harness 用 `"（" not in desc` 这个 hack 判断，现按文案正规化。）
+    """
+    done = 0
+    t0 = time.time()
+    while done < rounds and time.time() - t0 < timeout:
+        xml = uidrv.dump_xml(port)
+        if not COUNTDOWN_RE.search(xml):
+            n = uidrv.find(xml, "确定") or uidrv.find(xml, "确认")
+            if n:
+                uidrv.tap(port, n["cx"], n["cy"])
+                done += 1
+                log(f"危险确认第 {done} 关已点")
+                time.sleep(wait)
+                continue
+        if done == 0 and RESTORE_CONFIRM1 not in xml:
+            break                              # 压根没进确认流程
+        time.sleep(2)
+    return done
+
+
+def restore_from_backup(port, tag, pick=None, timeout=900, poll=8.0):
+    """同步页 →「从备份恢复」→ 选备份 → 两关危险确认 → 判定完成。
+
+    判据是**本次操作的直接产物**：结果弹窗
+    `恢复完成：成功 {success} 个，失败 {failed} 个。`（restoreResultMessage），
+    解析出 success/failed 并**要求 failed == 0**。
+    （旧 harness 用「`恢复中` 不在界面上」当完成判据 —— 和 §6.4 同类缺陷：
+    一个「某文案不存在」的判据在流程没真正开始时也成立。）
+
+    pick: 选哪条备份。None = 列表里第一条含「PiggyCount」的可点项；
+          传 str 则按子串匹配（如 '2026-10-07'）。
+    """
+    scroll_to_top(port)
+    if not tap_in_page(port, "从备份恢复", wait=4.0):
+        return None
+    xml = uidrv.dump_xml(port, f"{tag}_{port}_restore_sheet")
+    if BACKUP_LIST_EMPTY in xml:
+        log("[FAIL] 云端还没有备份，无法恢复")
+        return None
+
+    key = pick or "PiggyCount"
+    cands = [n for n in uidrv.nodes(xml)
+             if n["clickable"] and (key in n["desc"] or key in n["text"])]
+    if not cands:
+        log(f"[FAIL] 备份列表里找不到 {key!r}")
+        return None
+    uidrv.tap(port, cands[0]["cx"], cands[0]["cy"])
+    log(f"选择备份 {cands[0]['desc'][:80]!r}")
+    time.sleep(4)
+    uidrv.dump_xml(port, f"{tag}_{port}_restore_pick")
+
+    # 危险确认是两关，各带 5s 倒计时（见 confirm_danger_dialogs）
+    uidrv.shell(port, "logcat -c")
+    rounds = confirm_danger_dialogs(port, rounds=2)
+    uidrv.dump_xml(port, f"{tag}_{port}_restore_confirm")
+
+    t0 = time.time()
+    ev = {"success": None, "failed": None, "seconds": None, "rounds": rounds,
+          "raw": None}
+    while time.time() - t0 < timeout:
+        xml = uidrv.dump_xml(port)
+        if RESTORE_RESULT in xml:
+            for d in _descs(xml):
+                m = re.search(r"成功\s*(\d+)\s*个，失败\s*(\d+)\s*个", d)
+                if m:
+                    ev["success"], ev["failed"] = int(m.group(1)), int(m.group(2))
+                    break
+        m = RESTORE_DONE_RE.search(logcat(port, fresh=False))
+        if m:
+            # 日志里的结构化行（[Backup] 备份恢复完成: <file> 成功=N 失败=M …）
+            # 与结果弹窗互为印证；弹窗被漏采（转场太快）时仍能判定。
+            ev["success"], ev["failed"] = int(m.group(2)), int(m.group(3))
+            ev["raw"] = m.group(0)
+        if ev["success"] is not None:
+            break                              # 弹窗或日志任一给出结论即收工
+        if rounds == 0 and not any(k in xml for k in RESTORE_RUNNING):
+            break                              # 确认没点成，别空等到超时
+        time.sleep(poll)
+
+    ev["seconds"] = round(time.time() - t0, 1)
+    uidrv.dump_xml(port, f"{tag}_{port}_restore_done")
+    _dismiss_plain_dialog(port)
+    ok = ev["success"] is not None and (ev["failed"] or 0) == 0
+    log(f"从备份恢复 完成={ok} 成功={ev['success']} 失败={ev['failed']} "
+        f"确认关数={rounds} ({ev['seconds']}s)")
+    return ev if ok else None

@@ -45,6 +45,9 @@ def main():
     # 4) 推附件
     files = sorted(f for f in os.listdir(ATT_DIR) if not f.startswith("."))
     print(f"push {len(files)} 个附件 ...")
+    # ★ 必须先建目录：A 端从没落过附件时 `app_flutter/attachments/` 不存在，
+    #   下面的 `run-as cp` 会**静默失败**（不报错、附件为空），实测踩过。
+    runas("mkdir -p app_flutter/attachments")
     for f in files:
         sh("push", os.path.join(ATT_DIR, f), f"{TMP}/{f}")
     # 逐个 cp（sh -c 带通配在 run-as 下不稳，逐个最保险）
@@ -55,7 +58,11 @@ def main():
     # 5) 校验
     print("\n--- 设备端校验 ---")
     print(runas("ls -l app_flutter/piggycount.sqlite").strip())
-    print("附件:", runas("ls app_flutter/attachments/").split())
+    landed = runas("ls app_flutter/attachments/").split()
+    print("附件:", landed)
+    if len(landed) != len(files):
+        print(f"  [FAIL] 附件落地数 {len(landed)} != 源 {len(files)}")
+        sys.exit(1)
     sh("shell", f"rm -f {TMP}/seed.sqlite")
 
 
