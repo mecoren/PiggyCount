@@ -100,6 +100,17 @@ void main() {
             .content as List<int>)) as Map<String, dynamic>;
     expect(meta['count'], 1);
 
+    // 1.5) gzip trailer 硬校验（**不依赖外部工具**）。
+    // 动机（2026-10-07 的真实回归）：M13 把 gzip 改成流式后，archive 3.6.1 的
+    // `GZipEncoder.encode(stream, output:)` 把 trailer 的 ISIZE 写成了 0，产物
+    // 不再是合法 gzip。而 Windows 的 bsdtar / libarchive **不校验 ISIZE**，
+    // 所以本地全绿、只有 Linux CI 的 GNU tar 报 `Error is not recoverable`——
+    // 定位成本很高。这里用纯 Dart 直接读末 4 字节（ISIZE = 原始长度 mod 2^32，
+    // 小端），把这条判据钉死在与平台安装了什么 tar 无关的地方。
+    expect(bytes.length, greaterThan(18), reason: '至少要有 10 字节头 + 8 字节 trailer');
+    expect(gzipIsize(bytes), tarData.length,
+        reason: 'gzip trailer 的 ISIZE 必须等于解压后长度（写 0 时 gzip -t / GNU tar 直接拒收）');
+
     // 2) 系统 tar：外部工具必须能读（跨端兼容的硬证据）
     final tarOk = await _systemTarList(exportPath);
     if (tarOk == null) {
@@ -120,6 +131,12 @@ void main() {
     expect(crypto.sha256.convert(restored).toString(), sha,
         reason: '导入还原必须与原内容逐字节一致');
   });
+}
+
+/// 读 gzip trailer 的 ISIZE（末 4 字节，小端）= 原始长度 mod 2^32。
+int gzipIsize(List<int> gz) {
+  final b = gz.sublist(gz.length - 4);
+  return b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24);
 }
 
 /// 用系统 `tar -tzf` 列目录；命令不可用时返回 null（交由调用方 skip）。

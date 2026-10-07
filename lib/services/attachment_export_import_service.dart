@@ -162,11 +162,21 @@ class AttachmentExportImportService {
         tarEncoder.finish();
         await tarOutput.close();
 
-        final gzInput = InputFileStream(tarPath);
-        final gzOutput = OutputFileStream(exportPath);
-        GZipEncoder().encode(gzInput, output: gzOutput);
-        await gzInput.close();
-        await gzOutput.close();
+        // 2026-10-07 修复：**不要**用 `GZipEncoder().encode(stream, output:)`。
+        // archive 3.6.1 那条流式分支会把 gzip trailer 的 ISIZE（末 4 字节，
+        // 「原始长度 mod 2^32」）写成 **0** —— `gzip_encoder.dart:102` 取的是
+        // `data.length`，而前面的 `Deflate` 早已把这个 InputFileStream 读空，
+        // 于是读到的是"剩余长度 0"。产物因此**不是合法 gzip**：
+        //   * `gzip -t` → `invalid compressed data--length error`（exit 1）
+        //   * GNU tar 的 `-z`（走 gzip/zlib 严格校验）→ `Error is not recoverable`（exit 2）
+        //   * bsdtar / libarchive 不校验 ISIZE ⇒ 看不出问题（这正是它只在 Linux CI
+        //     暴露、本地 Windows 一路绿灯的原因）
+        // 注意只有"传流"会中招：传 `List<int>` 时 `data.length` 就是真长度，所以
+        // 仓库里其它 `GZipEncoder().encode(bytes)` 调用点不受影响。
+        // 改用 dart:io 的 gzip 编解码器：同样流式（峰值保持常数级，不退回 M13 之前
+        // 的"整包进内存"），但 CRC32 / ISIZE 由标准实现写出。
+        final gzSink = File(exportPath).openWrite();
+        await File(tarPath).openRead().transform(gzip.encoder).pipe(gzSink);
       } finally {
         // 无论成败都清掉临时目录（tar 中间产物）
         if (await tempDir.exists()) {
