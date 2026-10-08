@@ -62,7 +62,7 @@
 
 ### 1. `lib/theme.dart` — BeeTheme 类（核心主题定义）
 
-**文件路径**: `d:\DevTools\project\PiggyCount\lib\theme.dart`
+**文件路径**: `lib/theme.dart`
 
 定义品牌色和亮/暗两套 `ThemeData`：
 
@@ -102,7 +102,7 @@ class BeeTheme {
 
 ### 2. `lib/styles/tokens.dart` — Design Token 系统
 
-**文件路径**: `d:\DevTools\project\PiggyCount\lib\styles\tokens.dart`
+**文件路径**: `lib/styles/tokens.dart`
 
 这是一个完整的 **Design Token 系统**，包含以下 Token 类：
 
@@ -138,7 +138,7 @@ BeeTokens 包含 12 类颜色 Token：
 
 ### 3. `lib/main.dart` — 主题组装和 MaterialApp 配置
 
-**文件路径**: `d:\DevTools\project\PiggyCount\lib\main.dart`
+**文件路径**: `lib/main.dart`
 
 在 `build()` 方法中，主题的组装流程是：
 
@@ -166,7 +166,7 @@ MaterialApp(
 
 ### `lib/providers/theme_providers.dart`
 
-**文件路径**: `d:\DevTools\project\PiggyCount\lib\providers\theme_providers.dart`
+**文件路径**: `lib/providers/theme_providers.dart`
 
 |Provider|类型|默认值|用途|
 | ----------| ------| --------| -----------------------------------|
@@ -234,7 +234,7 @@ MaterialApp(
 
 ## 六、pubspec.yaml 主题相关依赖
 
-**文件路径**: `d:\DevTools\project\PiggyCount\pubspec.yaml`
+**文件路径**: `pubspec.yaml`
 
 项目没有直接的主题/UI组件库依赖。主题相关的间接依赖：
 
@@ -393,7 +393,7 @@ dependencies:
 
 ### 1. `lib/theme.dart` — BeeTheme 类（核心主题定义）
 
-**文件路径**: `d:\DevTools\project\PiggyCount\lib\theme.dart`
+**文件路径**: `lib/theme.dart`
 
 定义品牌色和亮/暗两套 `ThemeData`：
 
@@ -433,7 +433,7 @@ class BeeTheme {
 
 ### 2. `lib/styles/tokens.dart` — Design Token 系统
 
-**文件路径**: `d:\DevTools\project\PiggyCount\lib\styles\tokens.dart`
+**文件路径**: `lib/styles/tokens.dart`
 
 这是一个完整的 **Design Token 系统**，包含以下 Token 类：
 
@@ -469,7 +469,7 @@ BeeTokens 包含 12 类颜色 Token：
 
 ### 3. `lib/main.dart` — 主题组装和 MaterialApp 配置
 
-**文件路径**: `d:\DevTools\project\PiggyCount\lib\main.dart`
+**文件路径**: `lib/main.dart`
 
 在 `build()` 方法中，主题的组装流程是：
 
@@ -497,7 +497,7 @@ MaterialApp(
 
 ### `lib/providers/theme_providers.dart`
 
-**文件路径**: `d:\DevTools\project\PiggyCount\lib\providers\theme_providers.dart`
+**文件路径**: `lib/providers/theme_providers.dart`
 
 |Provider|类型|默认值|用途|
 | ----------| ------| --------| -----------------------------------|
@@ -565,7 +565,7 @@ MaterialApp(
 
 ## 六、pubspec.yaml 主题相关依赖
 
-**文件路径**: `d:\DevTools\project\PiggyCount\pubspec.yaml`
+**文件路径**: `pubspec.yaml`
 
 项目没有直接的主题/UI组件库依赖。主题相关的间接依赖：
 
@@ -706,11 +706,11 @@ dependencies:
 
 |文件|行数|关键颜色值|
 | ------| -------------------------| ------------------------------------------------------|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\home_page.dart`|301, 423, 529|`Color(0xFF1E1E1E)` (深色模式卡片背景，重复3次)|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\mine_page.dart`|945, 952, 959, 966, 972|`0xFFF59E0B`​, `0xFFF97316`​, `0xFF8B5CF6`​, `0xFF818CF8` (自定义颜色)|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\personalize_page.dart`|25-52|大量 `Color(0x...)` 定义主题色板（共28种主题颜色，此为合理场景）|
-|`d:\DevTools\project\PiggyCount\lib\pages\report\annual_report_page.dart`|446-1546|大量 `Color(0xFF4CAF50)`​(绿), `0xFFFF5252`​(红), `0xFFFFD700`​(金), `0xFFC0C0C0`​(银), `0xFFCD7F32`​(铜), `0xFF666666`(灰)|
-|`d:\DevTools\project\PiggyCount\lib\pages\account\accounts_page.dart`|1778|`Color(0xFF48484A)` (深色模式灰色文字)|
+|`lib/pages/main/home_page.dart`|301, 423, 529|`Color(0xFF1E1E1E)` (深色模式卡片背景，重复3次)|
+|`lib/pages/main/mine_page.dart`|945, 952, 959, 966, 972|`0xFFF59E0B`​, `0xFFF97316`​, `0xFF8B5CF6`​, `0xFF818CF8` (自定义颜色)|
+|`lib/pages/settings/personalize_page.dart`|25-52|大量 `Color(0x...)` 定义主题色板（共28种主题颜色，此为合理场景）|
+|`lib/pages/report/annual_report_page.dart`|446-1546|大量 `Color(0xFF4CAF50)`​(绿), `0xFFFF5252`​(红), `0xFFFFD700`​(金), `0xFFC0C0C0`​(银), `0xFFCD7F32`​(铜), `0xFF666666`(灰)|
+|`lib/pages/account/accounts_page.dart`|1778|`Color(0xFF48484A)` (深色模式灰色文字)|
 
 **关键发现：**  `home_page.dart`​ 中深色模式下卡片背景色 `Color(0xFF1E1E1E)`​ 重复了三次（第301、423、529行），应提取为 BeeTokens 常量。`annual_report_page.dart`​ 中的红绿色值 `0xFF4CAF50`​ / `0xFFFF5252` 在整个文件中被广泛重复使用。
 
@@ -734,13 +734,13 @@ dependencies:
 
 |文件|使用次数|主要颜色|
 | ------| ----------| --------------------------|
-|`d:\DevTools\project\PiggyCount\lib\pages\ai\ai_provider_manage_page.dart`|9|`Colors.orange`​, `Colors.red`​, `Colors.green`|
-|`d:\DevTools\project\PiggyCount\lib\pages\automation\ios_auto_billing_page.dart`|10|`Colors.green`​, `Colors.orange`|
-|`d:\DevTools\project\PiggyCount\lib\pages\category\category_manage_page.dart`|7|`Colors.orange`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\shortcuts_guide_page.dart`|8|`Colors.orange`​, `Colors.green`​, `Colors.blue`​, `Colors.red`​, `Colors.purple`​, `Colors.amber`|
-|`d:\DevTools\project\PiggyCount\lib\pages\cloud\config_import_export_page.dart`|8|`Colors.green`​, `Colors.orange`|
-|`d:\DevTools\project\PiggyCount\lib\pages\account\account_edit_page.dart`|5|`Colors.red`|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\ledgers_page_new.dart`|5|`Colors.red`​, `Colors.redAccent`​, `Colors.orange`​, `Colors.blue`​, `Colors.orange`|
+|`lib/pages/ai/ai_provider_manage_page.dart`|9|`Colors.orange`​, `Colors.red`​, `Colors.green`|
+|`lib/pages/automation/ios_auto_billing_page.dart`|10|`Colors.green`​, `Colors.orange`|
+|`lib/pages/category/category_manage_page.dart`|7|`Colors.orange`|
+|`lib/pages/settings/shortcuts_guide_page.dart`|8|`Colors.orange`​, `Colors.green`​, `Colors.blue`​, `Colors.red`​, `Colors.purple`​, `Colors.amber`|
+|`lib/pages/cloud/config_import_export_page.dart`|8|`Colors.green`​, `Colors.orange`|
+|`lib/pages/account/account_edit_page.dart`|5|`Colors.red`|
+|`lib/pages/main/ledgers_page_new.dart`|5|`Colors.red`​, `Colors.redAccent`​, `Colors.orange`​, `Colors.blue`​, `Colors.orange`|
 
 **代表性代码片段：**
 
@@ -766,12 +766,12 @@ return Colors.green;
 
 |文件|行数|
 | ------| -----------------------------------|
-|`d:\DevTools\project\PiggyCount\lib\pages\ai\ai_chat_page.dart`|175, 178, 268, 406, 412, 462, 465|
-|`d:\DevTools\project\PiggyCount\lib\pages\calendar\calendar_page.dart`|237, 260, 343, 365|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\home_page.dart`|816, 827, 841, 950, 992|
-|`d:\DevTools\project\PiggyCount\lib\pages\auth\splash_page.dart`|31, 64, 75, 78, 108, 133|
-|`d:\DevTools\project\PiggyCount\lib\pages\category\icon_picker_page.dart`|285|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\log_center_page.dart`|168, 209, 373|
+|`lib/pages/ai/ai_chat_page.dart`|175, 178, 268, 406, 412, 462, 465|
+|`lib/pages/calendar/calendar_page.dart`|237, 260, 343, 365|
+|`lib/pages/main/home_page.dart`|816, 827, 841, 950, 992|
+|`lib/pages/auth/splash_page.dart`|31, 64, 75, 78, 108, 133|
+|`lib/pages/category/icon_picker_page.dart`|285|
+|`lib/pages/settings/log_center_page.dart`|168, 209, 373|
 
 **需要注意：**  `home_page.dart`​ 的 `withOpacity`​ 调用（第816、827、841、950、992行）全部是作用在 `Theme.of(context).textTheme.bodyMedium?.color`​ 等主题颜色上，而非基础颜色上。同时该项目已有不少文件在使用更新的 `.withValues(alpha:)`​ API。建议统一替换剩余 `withOpacity`。
 
@@ -785,39 +785,39 @@ return Colors.green;
 
 |文件|
 | ------|
-|`d:\DevTools\project\PiggyCount\lib\pages\ai\ai_settings_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\budget\budget_edit_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\budget\widgets\category_budget_tile.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\auth\login_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\cloud\piggycount_cloud_sync_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\category\category_edit_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\category\category_manage_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\category\icon_picker_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\mine_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\home_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\data\import_confirm_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\transaction\recurring_transaction_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\transaction\category_detail_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\transaction\search_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\analytics_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\about_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\cloud\cloud_service_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\maintenance\orphan_cleanup_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\appearance_settings_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\cloud\cloud_sync_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\cloud\invite_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\cloud\join_shared_ledger_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\tag\tag_detail_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\tag\tag_manage_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\tag\widgets\tag_selector.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\font_settings_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\data_management_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\language_settings_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\log_center_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\personalize_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\reminder_settings_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\shortcuts_guide_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\smart_billing_page.dart`|
+|`lib/pages/ai/ai_settings_page.dart`|
+|`lib/pages/budget/budget_edit_page.dart`|
+|`lib/pages/budget/widgets/category_budget_tile.dart`|
+|`lib/pages/auth/login_page.dart`|
+|`lib/pages/cloud/piggycount_cloud_sync_page.dart`|
+|`lib/pages/category/category_edit_page.dart`|
+|`lib/pages/category/category_manage_page.dart`|
+|`lib/pages/category/icon_picker_page.dart`|
+|`lib/pages/main/mine_page.dart`|
+|`lib/pages/main/home_page.dart`|
+|`lib/pages/data/import_confirm_page.dart`|
+|`lib/pages/transaction/recurring_transaction_page.dart`|
+|`lib/pages/transaction/category_detail_page.dart`|
+|`lib/pages/transaction/search_page.dart`|
+|`lib/pages/main/analytics_page.dart`|
+|`lib/pages/settings/about_page.dart`|
+|`lib/pages/cloud/cloud_service_page.dart`|
+|`lib/pages/maintenance/orphan_cleanup_page.dart`|
+|`lib/pages/settings/appearance_settings_page.dart`|
+|`lib/pages/cloud/cloud_sync_page.dart`|
+|`lib/pages/cloud/invite_page.dart`|
+|`lib/pages/cloud/join_shared_ledger_page.dart`|
+|`lib/pages/tag/tag_detail_page.dart`|
+|`lib/pages/tag/tag_manage_page.dart`|
+|`lib/pages/tag/widgets/tag_selector.dart`|
+|`lib/pages/settings/font_settings_page.dart`|
+|`lib/pages/settings/data_management_page.dart`|
+|`lib/pages/settings/language_settings_page.dart`|
+|`lib/pages/settings/log_center_page.dart`|
+|`lib/pages/settings/personalize_page.dart`|
+|`lib/pages/settings/reminder_settings_page.dart`|
+|`lib/pages/settings/shortcuts_guide_page.dart`|
+|`lib/pages/settings/smart_billing_page.dart`|
 
 **代表性问题示例（home_page.dart 第673行 vs 第108-109行）：**
 
@@ -835,7 +835,7 @@ backgroundColor: BeeTokens.scaffoldBackground(context),
 
 ## 检查点 3：关键页面的间距一致性
 
-### 3.1 home_page.dart (`d:\DevTools\project\PiggyCount\lib\pages\main\home_page.dart`)
+### 3.1 home_page.dart (`lib/pages/main/home_page.dart`)
 
 **自定义 padding/margin 使用情况：**
 
@@ -851,7 +851,7 @@ backgroundColor: BeeTokens.scaffoldBackground(context),
 
 **评估：**  起始提醒卡片的三张卡片间距一致（重用 `EdgeInsets.fromLTRB(12, 4, 12, 8)`），但这是重复的常量硬编码而非抽取的间距常量。
 
-### 3.2 accounts_page.dart (`d:\DevTools\project\PiggyCount\lib\pages\account\accounts_page.dart`)
+### 3.2 accounts_page.dart (`lib/pages/account/accounts_page.dart`)
 
 |位置|间距值|说明|
 | ---------| --------| --------------------|
@@ -859,7 +859,7 @@ backgroundColor: BeeTokens.scaffoldBackground(context),
 
 **评估：**  使用了 `ui_scale_extensions.dart`​ 的 `.scaled()`​ 方法，比 `home_page.dart` 更灵活。
 
-### 3.3 transaction_editor_page.dart (`d:\DevTools\project\PiggyCount\lib\pages\transaction\transaction_editor_page.dart`)
+### 3.3 transaction_editor_page.dart (`lib/pages/transaction/transaction_editor_page.dart`)
 
 |位置|间距值|说明|
 | ---------| --------| -------------------------------|
@@ -885,7 +885,7 @@ backgroundColor: BeeTokens.scaffoldBackground(context),
 
 ### 4.1 widgets/ui/ 提供的组件
 
-`d:\DevTools\project\PiggyCount\lib\widgets\ui\` 目录提供了以下12个组件：
+`lib/widgets/ui` 目录提供了以下12个组件：
 
 |组件文件|功能|
 | ----------| -------------------------------|
@@ -911,10 +911,10 @@ backgroundColor: BeeTokens.scaffoldBackground(context),
 
 |文件|说明|
 | ------| -----------------------------------------------------------|
-|`d:\DevTools\project\PiggyCount\lib\pages\auth\app_lock_screen.dart`|应用锁屏 - 使用 `BeeTokens`​ + `PinEntryPad` 等自定义组件|
-|`d:\DevTools\project\PiggyCount\lib\pages\auth\splash_page.dart`|启动页 - 仅使用原生 Material 组件，甚至没有使用 BeeTokens|
-|`d:\DevTools\project\PiggyCount\lib\pages\budget\widgets\budget_progress_bar.dart`|预算进度条组件 - 使用 `BeeTokens` 但没使用 ui 组件|
-|`d:\DevTools\project\PiggyCount\lib\pages\budget\widgets\category_budget_tile.dart`|分类预算瓦片 - 使用 `BeeTokens` 但没使用 ui 组件|
+|`lib/pages/auth/app_lock_screen.dart`|应用锁屏 - 使用 `BeeTokens`​ + `PinEntryPad` 等自定义组件|
+|`lib/pages/auth/splash_page.dart`|启动页 - 仅使用原生 Material 组件，甚至没有使用 BeeTokens|
+|`lib/pages/budget/widgets/budget_progress_bar.dart`|预算进度条组件 - 使用 `BeeTokens` 但没使用 ui 组件|
+|`lib/pages/budget/widgets/category_budget_tile.dart`|分类预算瓦片 - 使用 `BeeTokens` 但没使用 ui 组件|
 
 **重点关注：**  `auth/splash_page.dart`​ 不仅没有使用 `widgets/ui/`​，甚至没有导入 `styles/tokens.dart`（BeeTokens），是完全脱离 Token 体系的页面。
 
@@ -1044,11 +1044,11 @@ lib/widgets/
 
 |文件|行数|关键颜色值|
 | ------| -------------------------| ------------------------------------------------------|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\home_page.dart`|301, 423, 529|`Color(0xFF1E1E1E)` (深色模式卡片背景，重复3次)|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\mine_page.dart`|945, 952, 959, 966, 972|`0xFFF59E0B`​, `0xFFF97316`​, `0xFF8B5CF6`​, `0xFF818CF8` (自定义颜色)|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\personalize_page.dart`|25-52|大量 `Color(0x...)` 定义主题色板（共28种主题颜色，此为合理场景）|
-|`d:\DevTools\project\PiggyCount\lib\pages\report\annual_report_page.dart`|446-1546|大量 `Color(0xFF4CAF50)`​(绿), `0xFFFF5252`​(红), `0xFFFFD700`​(金), `0xFFC0C0C0`​(银), `0xFFCD7F32`​(铜), `0xFF666666`(灰)|
-|`d:\DevTools\project\PiggyCount\lib\pages\account\accounts_page.dart`|1778|`Color(0xFF48484A)` (深色模式灰色文字)|
+|`lib/pages/main/home_page.dart`|301, 423, 529|`Color(0xFF1E1E1E)` (深色模式卡片背景，重复3次)|
+|`lib/pages/main/mine_page.dart`|945, 952, 959, 966, 972|`0xFFF59E0B`​, `0xFFF97316`​, `0xFF8B5CF6`​, `0xFF818CF8` (自定义颜色)|
+|`lib/pages/settings/personalize_page.dart`|25-52|大量 `Color(0x...)` 定义主题色板（共28种主题颜色，此为合理场景）|
+|`lib/pages/report/annual_report_page.dart`|446-1546|大量 `Color(0xFF4CAF50)`​(绿), `0xFFFF5252`​(红), `0xFFFFD700`​(金), `0xFFC0C0C0`​(银), `0xFFCD7F32`​(铜), `0xFF666666`(灰)|
+|`lib/pages/account/accounts_page.dart`|1778|`Color(0xFF48484A)` (深色模式灰色文字)|
 
 **关键发现：**  `home_page.dart`​ 中深色模式下卡片背景色 `Color(0xFF1E1E1E)`​ 重复了三次（第301、423、529行），应提取为 BeeTokens 常量。`annual_report_page.dart`​ 中的红绿色值 `0xFF4CAF50`​ / `0xFFFF5252` 在整个文件中被广泛重复使用。
 
@@ -1072,13 +1072,13 @@ lib/widgets/
 
 |文件|使用次数|主要颜色|
 | ------| ----------| --------------------------|
-|`d:\DevTools\project\PiggyCount\lib\pages\ai\ai_provider_manage_page.dart`|9|`Colors.orange`​, `Colors.red`​, `Colors.green`|
-|`d:\DevTools\project\PiggyCount\lib\pages\automation\ios_auto_billing_page.dart`|10|`Colors.green`​, `Colors.orange`|
-|`d:\DevTools\project\PiggyCount\lib\pages\category\category_manage_page.dart`|7|`Colors.orange`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\shortcuts_guide_page.dart`|8|`Colors.orange`​, `Colors.green`​, `Colors.blue`​, `Colors.red`​, `Colors.purple`​, `Colors.amber`|
-|`d:\DevTools\project\PiggyCount\lib\pages\cloud\config_import_export_page.dart`|8|`Colors.green`​, `Colors.orange`|
-|`d:\DevTools\project\PiggyCount\lib\pages\account\account_edit_page.dart`|5|`Colors.red`|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\ledgers_page_new.dart`|5|`Colors.red`​, `Colors.redAccent`​, `Colors.orange`​, `Colors.blue`​, `Colors.orange`|
+|`lib/pages/ai/ai_provider_manage_page.dart`|9|`Colors.orange`​, `Colors.red`​, `Colors.green`|
+|`lib/pages/automation/ios_auto_billing_page.dart`|10|`Colors.green`​, `Colors.orange`|
+|`lib/pages/category/category_manage_page.dart`|7|`Colors.orange`|
+|`lib/pages/settings/shortcuts_guide_page.dart`|8|`Colors.orange`​, `Colors.green`​, `Colors.blue`​, `Colors.red`​, `Colors.purple`​, `Colors.amber`|
+|`lib/pages/cloud/config_import_export_page.dart`|8|`Colors.green`​, `Colors.orange`|
+|`lib/pages/account/account_edit_page.dart`|5|`Colors.red`|
+|`lib/pages/main/ledgers_page_new.dart`|5|`Colors.red`​, `Colors.redAccent`​, `Colors.orange`​, `Colors.blue`​, `Colors.orange`|
 
 **代表性代码片段：**
 
@@ -1104,12 +1104,12 @@ return Colors.green;
 
 |文件|行数|
 | ------| -----------------------------------|
-|`d:\DevTools\project\PiggyCount\lib\pages\ai\ai_chat_page.dart`|175, 178, 268, 406, 412, 462, 465|
-|`d:\DevTools\project\PiggyCount\lib\pages\calendar\calendar_page.dart`|237, 260, 343, 365|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\home_page.dart`|816, 827, 841, 950, 992|
-|`d:\DevTools\project\PiggyCount\lib\pages\auth\splash_page.dart`|31, 64, 75, 78, 108, 133|
-|`d:\DevTools\project\PiggyCount\lib\pages\category\icon_picker_page.dart`|285|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\log_center_page.dart`|168, 209, 373|
+|`lib/pages/ai/ai_chat_page.dart`|175, 178, 268, 406, 412, 462, 465|
+|`lib/pages/calendar/calendar_page.dart`|237, 260, 343, 365|
+|`lib/pages/main/home_page.dart`|816, 827, 841, 950, 992|
+|`lib/pages/auth/splash_page.dart`|31, 64, 75, 78, 108, 133|
+|`lib/pages/category/icon_picker_page.dart`|285|
+|`lib/pages/settings/log_center_page.dart`|168, 209, 373|
 
 **需要注意：**  `home_page.dart`​ 的 `withOpacity`​ 调用（第816、827、841、950、992行）全部是作用在 `Theme.of(context).textTheme.bodyMedium?.color`​ 等主题颜色上，而非基础颜色上。同时该项目已有不少文件在使用更新的 `.withValues(alpha:)`​ API。建议统一替换剩余 `withOpacity`。
 
@@ -1123,39 +1123,39 @@ return Colors.green;
 
 |文件|
 | ------|
-|`d:\DevTools\project\PiggyCount\lib\pages\ai\ai_settings_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\budget\budget_edit_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\budget\widgets\category_budget_tile.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\auth\login_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\cloud\piggycount_cloud_sync_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\category\category_edit_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\category\category_manage_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\category\icon_picker_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\mine_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\home_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\data\import_confirm_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\transaction\recurring_transaction_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\transaction\category_detail_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\transaction\search_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\main\analytics_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\about_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\cloud\cloud_service_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\maintenance\orphan_cleanup_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\appearance_settings_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\cloud\cloud_sync_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\cloud\invite_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\cloud\join_shared_ledger_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\tag\tag_detail_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\tag\tag_manage_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\tag\widgets\tag_selector.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\font_settings_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\data_management_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\language_settings_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\log_center_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\personalize_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\reminder_settings_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\shortcuts_guide_page.dart`|
-|`d:\DevTools\project\PiggyCount\lib\pages\settings\smart_billing_page.dart`|
+|`lib/pages/ai/ai_settings_page.dart`|
+|`lib/pages/budget/budget_edit_page.dart`|
+|`lib/pages/budget/widgets/category_budget_tile.dart`|
+|`lib/pages/auth/login_page.dart`|
+|`lib/pages/cloud/piggycount_cloud_sync_page.dart`|
+|`lib/pages/category/category_edit_page.dart`|
+|`lib/pages/category/category_manage_page.dart`|
+|`lib/pages/category/icon_picker_page.dart`|
+|`lib/pages/main/mine_page.dart`|
+|`lib/pages/main/home_page.dart`|
+|`lib/pages/data/import_confirm_page.dart`|
+|`lib/pages/transaction/recurring_transaction_page.dart`|
+|`lib/pages/transaction/category_detail_page.dart`|
+|`lib/pages/transaction/search_page.dart`|
+|`lib/pages/main/analytics_page.dart`|
+|`lib/pages/settings/about_page.dart`|
+|`lib/pages/cloud/cloud_service_page.dart`|
+|`lib/pages/maintenance/orphan_cleanup_page.dart`|
+|`lib/pages/settings/appearance_settings_page.dart`|
+|`lib/pages/cloud/cloud_sync_page.dart`|
+|`lib/pages/cloud/invite_page.dart`|
+|`lib/pages/cloud/join_shared_ledger_page.dart`|
+|`lib/pages/tag/tag_detail_page.dart`|
+|`lib/pages/tag/tag_manage_page.dart`|
+|`lib/pages/tag/widgets/tag_selector.dart`|
+|`lib/pages/settings/font_settings_page.dart`|
+|`lib/pages/settings/data_management_page.dart`|
+|`lib/pages/settings/language_settings_page.dart`|
+|`lib/pages/settings/log_center_page.dart`|
+|`lib/pages/settings/personalize_page.dart`|
+|`lib/pages/settings/reminder_settings_page.dart`|
+|`lib/pages/settings/shortcuts_guide_page.dart`|
+|`lib/pages/settings/smart_billing_page.dart`|
 
 **代表性问题示例（home_page.dart 第673行 vs 第108-109行）：**
 
@@ -1173,7 +1173,7 @@ backgroundColor: BeeTokens.scaffoldBackground(context),
 
 ## 检查点 3：关键页面的间距一致性
 
-### 3.1 home_page.dart (`d:\DevTools\project\PiggyCount\lib\pages\main\home_page.dart`)
+### 3.1 home_page.dart (`lib/pages/main/home_page.dart`)
 
 **自定义 padding/margin 使用情况：**
 
@@ -1189,7 +1189,7 @@ backgroundColor: BeeTokens.scaffoldBackground(context),
 
 **评估：**  起始提醒卡片的三张卡片间距一致（重用 `EdgeInsets.fromLTRB(12, 4, 12, 8)`），但这是重复的常量硬编码而非抽取的间距常量。
 
-### 3.2 accounts_page.dart (`d:\DevTools\project\PiggyCount\lib\pages\account\accounts_page.dart`)
+### 3.2 accounts_page.dart (`lib/pages/account/accounts_page.dart`)
 
 |位置|间距值|说明|
 | ---------| --------| --------------------|
@@ -1197,7 +1197,7 @@ backgroundColor: BeeTokens.scaffoldBackground(context),
 
 **评估：**  使用了 `ui_scale_extensions.dart`​ 的 `.scaled()`​ 方法，比 `home_page.dart` 更灵活。
 
-### 3.3 transaction_editor_page.dart (`d:\DevTools\project\PiggyCount\lib\pages\transaction\transaction_editor_page.dart`)
+### 3.3 transaction_editor_page.dart (`lib/pages/transaction/transaction_editor_page.dart`)
 
 |位置|间距值|说明|
 | ---------| --------| -------------------------------|
@@ -1223,7 +1223,7 @@ backgroundColor: BeeTokens.scaffoldBackground(context),
 
 ### 4.1 widgets/ui/ 提供的组件
 
-`d:\DevTools\project\PiggyCount\lib\widgets\ui\` 目录提供了以下12个组件：
+`lib/widgets/ui` 目录提供了以下12个组件：
 
 |组件文件|功能|
 | ----------| -------------------------------|
@@ -1249,10 +1249,10 @@ backgroundColor: BeeTokens.scaffoldBackground(context),
 
 |文件|说明|
 | ------| -----------------------------------------------------------|
-|`d:\DevTools\project\PiggyCount\lib\pages\auth\app_lock_screen.dart`|应用锁屏 - 使用 `BeeTokens`​ + `PinEntryPad` 等自定义组件|
-|`d:\DevTools\project\PiggyCount\lib\pages\auth\splash_page.dart`|启动页 - 仅使用原生 Material 组件，甚至没有使用 BeeTokens|
-|`d:\DevTools\project\PiggyCount\lib\pages\budget\widgets\budget_progress_bar.dart`|预算进度条组件 - 使用 `BeeTokens` 但没使用 ui 组件|
-|`d:\DevTools\project\PiggyCount\lib\pages\budget\widgets\category_budget_tile.dart`|分类预算瓦片 - 使用 `BeeTokens` 但没使用 ui 组件|
+|`lib/pages/auth/app_lock_screen.dart`|应用锁屏 - 使用 `BeeTokens`​ + `PinEntryPad` 等自定义组件|
+|`lib/pages/auth/splash_page.dart`|启动页 - 仅使用原生 Material 组件，甚至没有使用 BeeTokens|
+|`lib/pages/budget/widgets/budget_progress_bar.dart`|预算进度条组件 - 使用 `BeeTokens` 但没使用 ui 组件|
+|`lib/pages/budget/widgets/category_budget_tile.dart`|分类预算瓦片 - 使用 `BeeTokens` 但没使用 ui 组件|
 
 **重点关注：**  `auth/splash_page.dart`​ 不仅没有使用 `widgets/ui/`​，甚至没有导入 `styles/tokens.dart`（BeeTokens），是完全脱离 Token 体系的页面。
 

@@ -17,7 +17,7 @@
 
 ### 2.1 当前 enable 流程的问题
 
-[encryption_service_impl.dart:70-97](file:///c:/Develop/project/00_AI/PiggyCount/lib/data/encryption/encryption_service_impl.dart#L70-L97)：
+[encryption_service_impl.dart:70-97](../../lib/data/encryption/encryption_service_impl.dart#L70-L97)：
 
 ```dart
 Future<void> enable({required String password}) async {
@@ -40,17 +40,17 @@ Future<void> enable({required String password}) async {
 
 | 原语 | 位置 | 用途 |
 |------|------|------|
-| `CiphertextFormat.decode` | [ciphertext_format.dart:63](file:///c:/Develop/project/00_AI/PiggyCount/lib/data/encryption/ciphertext_format.dart#L63) | 从密文解析出 salt + encryptedBytes |
-| `CiphertextFormat.isEncrypted` | [ciphertext_format.dart:27](file:///c:/Develop/project/00_AI/PiggyCount/lib/data/encryption/ciphertext_format.dart#L27) | 判断字符串是否为 BEECRYPT1 密文 |
+| `CiphertextFormat.decode` | [ciphertext_format.dart:63](../../lib/data/encryption/ciphertext_format.dart#L63) | 从密文解析出 salt + encryptedBytes |
+| `CiphertextFormat.isEncrypted` | [ciphertext_format.dart:27](../../lib/data/encryption/ciphertext_format.dart#L27) | 判断字符串是否为 BEECRYPT1 密文 |
 | `Argon2KeyDerivation.deriveKey` | argon2_key_derivation.dart | password + salt → key |
-| `AesGcmCipher.decrypt` | [aes_gcm_cipher.dart:62](file:///c:/Develop/project/00_AI/PiggyCount/lib/data/encryption/aes_gcm_cipher.dart#L62) | 解密 nonce‖ct‖mac，GCM 验证失败抛 `SecretBoxAuthenticationError` |
-| `SecureKeyStorage.saveKey/saveSalt/saveVerifier` | [secure_key_storage.dart](file:///c:/Develop/project/00_AI/PiggyCount/lib/data/encryption/secure_key_storage.dart) | 持久化到 Keychain/Keystore |
+| `AesGcmCipher.decrypt` | [aes_gcm_cipher.dart:62](../../lib/data/encryption/aes_gcm_cipher.dart#L62) | 解密 nonce‖ct‖mac，GCM 验证失败抛 `SecretBoxAuthenticationError` |
+| `SecureKeyStorage.saveKey/saveSalt/saveVerifier` | [secure_key_storage.dart](../../lib/data/encryption/secure_key_storage.dart) | 持久化到 Keychain/Keystore |
 
 无需新增算法原语，只需在 `EncryptionServiceImpl` 中编排这些已有原语。
 
 ### 2.3 TransactionsSyncManager 的 raw storage 访问
 
-[transactions_sync_manager.dart:110-139](file:///c:/Develop/project/00_AI/PiggyCount/lib/cloud/transactions_sync_manager.dart#L110-L139) 的 `reEncryptCloudAndReinit` 已经展示了"取未装饰的 raw storage"模式：
+[transactions_sync_manager.dart:110-139](../../lib/cloud/transactions_sync_manager.dart#L110-L139) 的 `reEncryptCloudAndReinit` 已经展示了"取未装饰的 raw storage"模式：
 
 ```dart
 final rawStorage = _provider?.storage;
@@ -176,12 +176,12 @@ CloudStorageService? get rawStorage => _rawStorage;
 
 ### 步骤 1：Domain 层新增接口方法
 
-修改 [lib/domain/encryption/encryption_service.dart](file:///c:/Develop/project/00_AI/PiggyCount/lib/domain/encryption/encryption_service.dart)：
+修改 [lib/domain/encryption/encryption_service.dart](../../lib/domain/encryption/encryption_service.dart)：
 - 在 `EncryptionService` 抽象类中新增 `enableFromCloud` 方法签名（含详细文档注释）
 
 ### 步骤 2：Data 层实现 enableFromCloud
 
-修改 [lib/data/encryption/encryption_service_impl.dart](file:///c:/Develop/project/00_AI/PiggyCount/lib/data/encryption/encryption_service_impl.dart)：
+修改 [lib/data/encryption/encryption_service_impl.dart](../../lib/data/encryption/encryption_service_impl.dart)：
 
 ```dart
 @override
@@ -263,7 +263,7 @@ for (final f in files) {
 
 ### 步骤 3：TransactionsSyncManager 暴露 rawStorage
 
-修改 [lib/cloud/transactions_sync_manager.dart](file:///c:/Develop/project/00_AI/PiggyCount/lib/cloud/transactions_sync_manager.dart)：
+修改 [lib/cloud/transactions_sync_manager.dart](../../lib/cloud/transactions_sync_manager.dart)：
 
 - 新增私有字段 `CloudStorageService? _rawStorage;`
 - 在 `_initialize()` 中装饰前缓存：`_rawStorage = _provider?.storage;`
@@ -272,7 +272,7 @@ for (final f in files) {
 
 ### 步骤 4：UI 层切换调用
 
-修改 [lib/pages/cloud/encryption_settings_page.dart](file:///c:/Develop/project/00_AI/PiggyCount/lib/pages/cloud/encryption_settings_page.dart) 的 `_onSetPassword()`：
+修改 [lib/pages/cloud/encryption_settings_page.dart](../../lib/pages/cloud/encryption_settings_page.dart) 的 `_onSetPassword()`：
 
 ```dart
 final service = ref.read(encryptionServiceProvider);

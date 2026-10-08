@@ -3,7 +3,7 @@
 > 文档版本：v1.0
 > 最后更新：2026-07-25
 > 作者：wait
-> 信息源：项目源码（d:\DevTools\project\PiggyCount）+ [docs/contributing/CONTRIBUTING_ZH.md](file:///d:/DevTools/project/PiggyCount/docs/contributing/CONTRIBUTING_ZH.md) + [analysis_options.yaml](file:///d:/DevTools/project/PiggyCount/analysis_options.yaml) + [docs/design/DESIGN_TOKENS.md](file:///d:/DevTools/project/PiggyCount/docs/design/DESIGN_TOKENS.md)
+> 信息源：项目源码（本仓库）+ [docs/contributing/CONTRIBUTING_ZH.md](../docs/contributing/CONTRIBUTING_ZH.md) + [analysis_options.yaml](../analysis_options.yaml) + [docs/design/DESIGN_TOKENS.md](../docs/design/DESIGN_TOKENS.md)
 
 ---
 
@@ -86,11 +86,11 @@ flowchart TB
 
 | 项 | 要求 | 来源 |
 |---|---|---|
-| Flutter SDK | 3.27.0+ | [pubspec.yaml](file:///d:/DevTools/project/PiggyCount/pubspec.yaml) environment sdk `^3.6.0` |
+| Flutter SDK | 3.27.0+ | [pubspec.yaml](../pubspec.yaml) environment sdk `^3.6.0` |
 | Dart SDK | 3.6.0+ | 同上 |
-| Android minSdk | 23 | [android/app/build.gradle](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle) |
+| Android minSdk | 23 | [android/app/build.gradle](../android/app/build.gradle) |
 | Android compileSdk | 36 | 同上 |
-| iOS最低版本 | 15.5 | [README.md](file:///d:/DevTools/project/PiggyCount/README.md) |
+| iOS最低版本 | 15.5 | [README.md](../README.md) |
 | IDE | VS Code / Android Studio | 推荐 Flutter 插件 |
 
 ### 4.2 初始化步骤
@@ -226,7 +226,7 @@ PiggyCount/
 
 ### 6.1 Lint 配置
 
-**实现位置**：[analysis_options.yaml](file:///d:/DevTools/project/PiggyCount/analysis_options.yaml)
+**实现位置**：[analysis_options.yaml](../analysis_options.yaml)
 
 ```yaml
 include: package:flutter_lints/flutter.yaml
@@ -393,7 +393,7 @@ flowchart TB
 
 #### 7.3.2 autoDispose 使用
 
-**实现位置**：[statistics_providers.dart](file:///d:/DevTools/project/PiggyCount/lib/providers/statistics_providers.dart) 等多处
+**实现位置**：[statistics_providers.dart](../lib/providers/statistics_providers.dart) 等多处
 
 ```dart
 // ✅ 推荐：列表/统计类 provider 用 autoDispose，离开页面即释放
@@ -443,7 +443,7 @@ class MyPage extends ConsumerWidget {
 
 ### 8.1 表定义规范
 
-**实现位置**：[lib/data/db.dart](file:///d:/DevTools/project/PiggyCount/lib/data/db.dart)
+**实现位置**：[lib/data/db.dart](../lib/data/db.dart)
 
 - **表名**：使用复数形式（`Transactions`、`Categories`、`Ledgers`）
 - **字段名**：camelCase
@@ -470,7 +470,7 @@ class Transactions extends Table with AutoIncrementMixin {
 
 ### 8.2 Schema 版本与迁移
 
-- 当前 schemaVersion = 31（详见 [07-data-model.md](file:///d:/DevTools/project/PiggyCount/docoments/07-data-model.md)）
+- 当前 schemaVersion = 31（详见 [07-data-model.md](07-data-model.md)）
 - 新增表/字段必须新增 schemaVersion + MigrationStep
 - 迁移必须幂等（使用 `CREATE INDEX IF NOT EXISTS`、`ALTER TABLE ADD COLUMN` 前判断）
 - 禁止删除字段（向后兼容），若必须删除，使用 `_deprecated_` 前缀保留
@@ -512,7 +512,7 @@ final sql = "SELECT * FROM transactions WHERE ledger_id = $ledgerId";
 
 ### 9.1 Design Token 系统（强制）
 
-**实现位置**：[lib/styles/tokens.dart](file:///d:/DevTools/project/PiggyCount/lib/styles/tokens.dart)
+**实现位置**：[lib/styles/tokens.dart](../lib/styles/tokens.dart)
 
 > ⚠️ **强制规则**：所有 UI 组件**必须使用 Design Token**，禁止直接使用 `Colors.white`/`Colors.black`/`Colors.grey.shadeXXX`。
 
@@ -589,7 +589,7 @@ return const TransactionListItem(transaction: tx);
 
 - 长列表 item、复杂图表、动画组件用 `RepaintBoundary` 包裹
 - 避免滚动时引发不必要的重绘
-- 示例：[annual_report_page.dart](file:///d:/DevTools/project/PiggyCount/lib/pages/report/annual_report_page.dart)
+- 示例：[annual_report_page.dart](../lib/pages/report/annual_report_page.dart)
 
 #### 9.2.4 Key 使用
 
@@ -613,14 +613,14 @@ Dismissible(
 
 ### 9.3 性能优化要点
 
-- **预加载 + Stream 切换**：首屏用快照数据，100ms 后切 Stream（参考 [transaction_list.dart](file:///d:/DevTools/project/PiggyCount/lib/widgets/biz/transaction_list.dart)）
+- **预加载 + Stream 切换**：首屏用快照数据，100ms 后切 Stream（参考 [transaction_list.dart](../lib/widgets/biz/transaction_list.dart)）
 - **FlutterListView**：长列表用 `flutter_list_view` 包，支持精准 `jumpToIndex`
 - **避免在 build 中创建对象**：用 `const` 或成员变量缓存
 - **autoDispose**：列表/统计类 Provider 必须加 `autoDispose`
 
 ### 9.4 国际化（i18n）规范
 
-**实现位置**：[lib/l10n/](file:///d:/DevTools/project/PiggyCount/lib/l10n)
+**实现位置**：[lib/l10n/](../lib/l10n)
 
 #### 9.4.1 添加新文案
 
@@ -655,7 +655,7 @@ ElevatedButton(onPressed: ..., child: Text(l10n.confirm))
 
 ### 10.1 修改原则
 
-⚠️ **同步引擎是项目最核心模块**，修改前必须阅读 [06-data-sync-and-offline.md](file:///d:/DevTools/project/PiggyCount/docoments/06-data-sync-and-offline.md) 与 [09-error-handling.md](file:///d:/DevTools/project/PiggyCount/docoments/09-error-handling.md)。
+⚠️ **同步引擎是项目最核心模块**，修改前必须阅读 [06-data-sync-and-offline.md](06-data-sync-and-offline.md) 与 [09-error-handling.md](09-error-handling.md)。
 
 - 修改 push/pull 流程必须有对应单元测试
 - 新增 CloudSyncException 子类必须同步更新错误处理表
@@ -696,9 +696,9 @@ flowchart LR
 
 ### 11.2 测试工具
 
-- **mocktail**：Mock 依赖项（[pubspec.yaml dev_dependencies](file:///d:/DevTools/project/PiggyCount/pubspec.yaml)）
+- **mocktail**：Mock 依赖项（[pubspec.yaml dev_dependencies](../pubspec.yaml)）
 - **drift 内存数据库**：`NativeDatabase.memory()`，不污染真实数据库
-- **FakePiggyCountCloudProvider**：SyncEngine E2E 测试用（详见 [10-testing-strategy.md](file:///d:/DevTools/project/PiggyCount/docoments/10-testing-strategy.md)）
+- **FakePiggyCountCloudProvider**：SyncEngine E2E 测试用（详见 [10-testing-strategy.md](10-testing-strategy.md)）
 
 ### 11.3 命名约定
 
@@ -868,7 +868,7 @@ PR 合并前必须满足：
 - `flutter test` 全部通过
 - CI 构建成功
 
-详见 [13-build-release.md](file:///d:/DevTools/project/PiggyCount/docoments/13-build-release.md)。
+详见 [13-build-release.md](13-build-release.md)。
 
 ---
 
@@ -933,7 +933,7 @@ flutter run
 git commit -m "feat: 添加意大利语翻译"
 ```
 
-详见 [docs/contributing/CONTRIBUTING_ZH.md](file:///d:/DevTools/project/PiggyCount/docs/contributing/CONTRIBUTING_ZH.md) 翻译贡献章节。
+详见 [docs/contributing/CONTRIBUTING_ZH.md](../docs/contributing/CONTRIBUTING_ZH.md) 翻译贡献章节。
 
 ---
 
@@ -967,8 +967,8 @@ git commit -m "feat: 添加意大利语翻译"
 #### 16.2.2 异步错误处理
 
 - 所有 `async` 方法必须有错误处理（try/catch 或 `.catchError`）
-- 网络请求必须设超时（参考 [11-performance.md](file:///d:/DevTools/project/PiggyCount/docoments/11-performance.md) 4.4.3 节）
-- 关键路径失败必须 `logger.error()` 记录（参考 [14-logging.md](file:///d:/DevTools/project/PiggyCount/docoments/14-logging.md)）
+- 网络请求必须设超时（参考 [11-performance.md](11-performance.md) 4.4.3 节）
+- 关键路径失败必须 `logger.error()` 记录（参考 [14-logging.md](14-logging.md)）
 
 #### 16.2.3 文件组织
 
@@ -978,7 +978,7 @@ git commit -m "feat: 添加意大利语翻译"
 
 #### 16.2.4 性能敏感操作
 
-- 大数据解析放 `compute()` isolate（参考 [import_confirm_page.dart:71](file:///d:/DevTools/project/PiggyCount/lib/pages/data/import_confirm_page.dart)）
+- 大数据解析放 `compute()` isolate（参考 [import_confirm_page.dart:71](../lib/pages/data/import_confirm_page.dart)）
 - 图片加载使用 `cached_network_image` 缓存
 - 长列表用 `FlutterListView` 而非 `ListView.builder`
 
@@ -1018,24 +1018,24 @@ git commit -m "feat: 添加意大利语翻译"
 
 ### 18.1 项目内文档
 
-- [README.md](file:///d:/DevTools/project/PiggyCount/README.md) — 项目介绍
-- [docs/contributing/CONTRIBUTING_ZH.md](file:///d:/DevTools/project/PiggyCount/docs/contributing/CONTRIBUTING_ZH.md) — 完整贡献指南
-- [docs/design/DESIGN_TOKENS.md](file:///d:/DevTools/project/PiggyCount/docs/design/DESIGN_TOKENS.md) — Design Token 完整对照表
-- [PRIVACY.md](file:///d:/DevTools/project/PiggyCount/PRIVACY.md) — 隐私政策
-- [LICENSE](file:///d:/DevTools/project/PiggyCount/LICENSE) — BSL 许可证
+- [README.md](../README.md) — 项目介绍
+- [docs/contributing/CONTRIBUTING_ZH.md](../docs/contributing/CONTRIBUTING_ZH.md) — 完整贡献指南
+- [docs/design/DESIGN_TOKENS.md](../docs/design/DESIGN_TOKENS.md) — Design Token 完整对照表
+- [PRIVACY.md](../PRIVACY.md) — 隐私政策
+- [LICENSE](../LICENSE) — BSL 许可证
 
 ### 18.2 工程文档系列
 
-- [01-project-overview.md](file:///d:/DevTools/project/PiggyCount/docoments/01-project-overview.md) — 项目总览
-- [04-system-architecture.md](file:///d:/DevTools/project/PiggyCount/docoments/04-system-architecture.md) — 系统架构
-- [06-data-sync-and-offline.md](file:///d:/DevTools/project/PiggyCount/docoments/06-data-sync-and-offline.md) — 数据同步
-- [07-data-model.md](file:///d:/DevTools/project/PiggyCount/docoments/07-data-model.md) — 数据模型
-- [08-api-and-data-access.md](file:///d:/DevTools/project/PiggyCount/docoments/08-api-and-data-access.md) — 数据访问层
-- [10-testing-strategy.md](file:///d:/DevTools/project/PiggyCount/docoments/10-testing-strategy.md) — 测试策略
-- [11-performance.md](file:///d:/DevTools/project/PiggyCount/docoments/11-performance.md) — 性能优化
-- [12-security.md](file:///d:/DevTools/project/PiggyCount/docoments/12-security.md) — 安全机制
-- [13-build-release.md](file:///d:/DevTools/project/PiggyCount/docoments/13-build-release.md) — 构建发布
-- [14-logging.md](file:///d:/DevTools/project/PiggyCount/docoments/14-logging.md) — 日志规范
+- [01-project-overview.md](01-project-overview.md) — 项目总览
+- [04-system-architecture.md](04-system-architecture.md) — 系统架构
+- [06-data-sync-and-offline.md](06-data-sync-and-offline.md) — 数据同步
+- [07-data-model.md](07-data-model.md) — 数据模型
+- [08-api-and-data-access.md](08-api-and-data-access.md) — 数据访问层
+- [10-testing-strategy.md](10-testing-strategy.md) — 测试策略
+- [11-performance.md](11-performance.md) — 性能优化
+- [12-security.md](12-security.md) — 安全机制
+- [13-build-release.md](13-build-release.md) — 构建发布
+- [14-logging.md](14-logging.md) — 日志规范
 
 ### 18.3 外部资源
 

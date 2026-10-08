@@ -45,7 +45,7 @@ PiggyCount 是一款离线优先的记账应用,涉及本地数据库、云同�
 
 - 本文**只讲错误处理与容错**,不讲同步流程(同步流程见 [06 数据同步与多设备离线机制](./06-data-sync-and-offline.md))
 - 本文**只讲测试相关的错误模拟**,不讲测试策略本身(测试策略见 [10 测试策略](./10-testing-strategy.md))
-- 本文**只讲日志记录的位置**,不讲日志系统设计(日志系统见 [14 日志规范与可观测性建议](./14-logging-observability.md))
+- 本文**只讲日志记录的位置**,不讲日志系统设计(日志系统见 [14 日志规范与可观测性建议](./14-logging.md))
 
 ### 1.3 信息来源
 
@@ -543,7 +543,7 @@ flowchart TD
 |---|---|---|---|
 | 1 | `lib/data/repositories/exceptions.dart` 完整异常清单未读取 | §3.9 | 阅读该文件补充 |
 | 2 | `dio` 拦截器的完整错误处理链未展开 | §3.6 | 阅读 `PiggyCountCloudStorageService` 拦截器配置 |
-| 3 | `LoggerService` 的错误记录格式与级别未展开 | §3.7 | 在 [14 日志规范](./14-logging-observability.md) 补充 |
+| 3 | `LoggerService` 的错误记录格式与级别未展开 | §3.7 | 在 [14 日志规范](./14-logging.md) 补充 |
 | 4 | 普通 Repository 调用是否内置 retry 未确认 | §3.4.2 | grep `retry` 在 `local_repository.dart` 中的使用 |
 | 5 | 迁移失败的回滚机制是否存在未确认 | §4.2 | 阅读 `MigrationStrategy` 完整实现 |
 | 6 | AI 调用错误的完整处理链未展开 | §3.8 | 阅读 `flutter_ai_kit` 各 strategy 实现 |
@@ -559,6 +559,6 @@ flowchart TD
 - [06 数据同步与多设备离线机制](./06-data-sync-and-offline.md) — 同步错误处理深入
 - [08 接口与数据访问设计](./08-api-and-data-access.md) — Repository 异常体系
 - [10 测试策略](./10-testing-strategy.md) — 错误模拟测试
-- [14 日志规范与可观测性建议](./14-logging-observability.md) — 错误日志记录
+- [14 日志规范与可观测性建议](./14-logging.md) — 错误日志记录
 - [16 已知问题与技术债务](./16-known-issues.md) — 错误处理相关债务
 - [INDEX](./INDEX.md) — 完整文档索引

@@ -23,7 +23,7 @@ audience: 一年经验的开发者
 
 ### 1.1 项目定位
 
-PiggyCount(小猪记账)是一款**轻量、开源、隐私可控**的个人财务管理与支出追踪应用。项目由个人开发者维护,源代码托管于 GitHub:`https://github.com/mecoren/PiggyCount`(本仓库本地路径 `d:\DevTools\project\PiggyCount`)。应用以 Flutter 构建,同时支持 Android 5.0+ 与 iOS 15.5+,并通过 PiggyCount Cloud 自带 PWA 提供 Web 端访问能力。
+PiggyCount(小猪记账)是一款**轻量、开源、隐私可控**的个人财务管理与支出追踪应用。项目由个人开发者维护,源代码托管于 GitHub:`https://github.com/mecoren/PiggyCount`(本仓库)。应用以 Flutter 构建,同时支持 Android 5.0+ 与 iOS 15.5+,并通过 PiggyCount Cloud 自带 PWA 提供 Web 端访问能力。
 
 依据:`README.md` L41-55、`pubspec.yaml` L1-7。
 
@@ -194,7 +194,7 @@ PiggyCount 主代码位于 `lib/` 下,按职责分目录:
 
 | 平台 | 原生代码位置 | 关键内容 |
 |---|---|---|
-| Android | `android/app/src/main/kotlin/com/tntlikely/piggycount/` | `MainActivity.kt`、`LoggerPlugin.kt`、桌面小组件、AppLink、截图监听服务 |
+| Android | `android/app/src/main/kotlin/com/wait/piggycount/` | `MainActivity.kt`、`LoggerPlugin.kt`、桌面小组件、AppLink、截图监听服务 |
 | iOS | `ios/Runner/` + `ios/PiggyCountWidget/` | `AppDelegate.swift`、`AppIntentsBridge.swift`、`AutoBillingAppIntent.swift`、WidgetExtension |
 
 依据:`android/` 与 `ios/` 目录结构。
@@ -348,7 +348,7 @@ flowchart LR
 
 ### 6.2 文档使用约束
 
-1. **第一事实来源**:本地代码 `d:\DevTools\project\PiggyCount` 是最高依据,网络资料与 GitHub 仓库如有冲突以本地代码为准。
+1. **第一事实来源**:本仓库本地代码是最高依据,网络资料与 GitHub 仓库如有冲突以本地代码为准。
 2. **不编造**:信息不足时使用 `[推断]`、`[建议方案]`、`[待补充]` 标注,绝不编造具体实现细节。
 3. **术语一致**:所有文档必须遵守 [02 术语表](./02-glossary.md) 的统一术语。
 4. **交叉引用**:文档间使用相对链接,相同概念只做摘要 + 链接原文,避免重复。
@@ -368,7 +368,7 @@ flowchart LR
 | 1 | GitHub 仓库地址:任务描述 `mecoren/PiggyCount` 与 README 引用 `mecoren/PiggyCount` 不一致,本文档以任务描述为准 | §1.1 | 用户确认仓库归属 |
 | 2 | 项目版本号:`pubspec.yaml` 声明 `version: 0.0.1`,实际发布版本由 CI tag 注入,无法从代码确认当前线上版本 | §1.1 | 查 GitHub Release 页面 |
 | 3 | 作者信息:文档 `author` 字段统一写 `wait`,待用户补充 | 文档 frontmatter | 用户补充 |
-| 4 | CHANGELOG:项目根目录无 CHANGELOG.md,版本演进只能从 db.dart schemaVersion 与 git tag 反推 | §4.3、[17 版本演进](./17-roadmap.md) | 从 git log 或 Release Notes 提取 |
+| 4 | CHANGELOG:项目根目录无 CHANGELOG.md,版本演进只能从 db.dart schemaVersion 与 git tag 反推 | §4.3、[17 版本演进](./17-version-evolution.md) | 从 git log 或 Release Notes 提取 |
 | 5 | `.docs/` 目录:代码注释大量引用 `.docs/concurrent-fullpush-bloat.md`、`.docs/full-pull-refactor/`、`.docs/2fa-design.md` 等设计文档,但目录实际不存在 | 同步相关文档 | 用户确认是否补提交设计文档 |
 
 ---

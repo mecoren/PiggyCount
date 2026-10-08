@@ -3,7 +3,7 @@
 > 文档版本：v1.0
 > 最后更新：2026-07-25
 > 作者：wait
-> 信息源：d:\DevTools\project\PiggyCount\docoments\ 目录下全部 17 篇文档
+> 信息源：docoments 目录下全部 17 篇文档
 
 ---
 
@@ -46,7 +46,7 @@
 
 ### 第一部分：项目认知
 
-#### [01. 项目总览](file:///d:/DevTools/project/PiggyCount/docoments/01-project-overview.md)
+#### [01. 项目总览](01-project-overview.md)
 
 **内容**：项目背景、核心定位（隐私优先 + 离线优先）、技术选型、平台支持、核心功能矩阵、相关仓库（PiggyCount-Cloud / PiggyCount-Website 等）。
 
@@ -56,7 +56,7 @@
 
 ---
 
-#### [02. 术语表](file:///d:/DevTools/project/PiggyCount/docoments/02-glossary.md)
+#### [02. 术语表](02-glossary.md)
 
 **内容**：业务术语（账本/账户/分类/标签/预算/周期交易等）与技术术语（syncId/override 字段/LWW/Lazy prime 等）的中英文对照与定义。
 
@@ -66,7 +66,7 @@
 
 ---
 
-#### [03. 技术栈](file:///d:/DevTools/project/PiggyCount/docoments/03-tech-stack.md)
+#### [03. 技术栈](03-tech-stack.md)
 
 **内容**：60+ 依赖包分类详解（状态管理 / 数据存储 / 网络 / 云同步 / AI / 平台集成 / UI / 工具），Flutter / Dart SDK 版本要求，本地路径包（flutter_ai_kit / flutter_cloud_sync）说明。
 
@@ -78,7 +78,7 @@
 
 ### 第二部分：架构与模块
 
-#### [04. 系统架构](file:///d:/DevTools/project/PiggyCount/docoments/04-system-architecture.md)
+#### [04. 系统架构](04-system-architecture.md)
 
 **内容**：五层架构（UI → Provider → Service → Repository → Data）、同步引擎旁路设计、模块依赖关系图、关键架构决策（为何 Repository 三层架构、为何 ChangeTracker 模式）。
 
@@ -88,7 +88,7 @@
 
 ---
 
-#### [05. 核心模块](file:///d:/DevTools/project/PiggyCount/docoments/05-core-modules.md)
+#### [05. 核心模块](05-core-modules.md)
 
 **内容**：12 个核心模块详解（账本管理 / 交易管理 / 账户管理 / 分类 / 标签 / 预算 / 周期交易 / 附件 / AI 记账 / 云同步 / 通知提醒 / 数据导入导出），模块间交互关系。
 
@@ -98,7 +98,7 @@
 
 ---
 
-#### [06. 数据同步与离线](file:///d:/DevTools/project/PiggyCount/docoments/06-data-sync-and-offline.md)
+#### [06. 数据同步与离线](06-data-sync-and-offline.md)
 
 **内容**：四层同步架构（Provider 抽象 / Manager / SyncEngine / Riverpod）、5 种同步后端（PiggyCount Cloud / iCloud / Supabase / WebDAV / S3）、push/pull/fullPush/fullPull 流程、离线优先策略、ChangeTracker 设计、单飞锁、LookupCache、Lazy prime 优化。
 
@@ -110,7 +110,7 @@
 
 ### 第三部分：数据与接口
 
-#### [07. 数据模型](file:///d:/DevTools/project/PiggyCount/docoments/07-data-model.md)
+#### [07. 数据模型](07-data-model.md)
 
 **内容**：Drift 表完整 ER 图、字段说明、索引设计、schemaVersion（当前 51，见 lib/data/db.dart）的迁移策略、local_changes / entity_change_watermarks / sync_pull_errors 表的作用。（注：sync_state 表已于 v37 DROP；共享账本镜像表与 `*SyncIdOverride` 列已于 v50 / v51 DROP。）
 
@@ -120,7 +120,7 @@
 
 ---
 
-#### [08. API 与数据访问](file:///d:/DevTools/project/PiggyCount/docoments/08-api-and-data-access.md)
+#### [08. API 与数据访问](08-api-and-data-access.md)
 
 **内容**：三层 Repository 架构（抽象接口 / 本地实现 / 聚合委托）、Repository 公开 API 速查、Provider 注入方式、Stream 响应式查询、参数化查询规范。
 
@@ -130,7 +130,7 @@
 
 ---
 
-#### [09. 错误处理](file:///d:/DevTools/project/PiggyCount/docoments/09-error-handling.md)
+#### [09. 错误处理](09-error-handling.md)
 
 **内容**：CloudSyncException 异常层级、sync_pull_errors 表隔离设计、SQLite busy retry 机制、401 自动 refresh token、用户侧错误提示策略、错误恢复流程。
 
@@ -142,7 +142,7 @@
 
 ### 第四部分：质量保障
 
-#### [10. 测试策略](file:///d:/DevTools/project/PiggyCount/docoments/10-testing-strategy.md)
+#### [10. 测试策略](10-testing-strategy.md)
 
 **内容**：测试分层（单元 / Widget / 集成）、测试工具（mocktail / 内存数据库 / FakePiggyCountCloudProvider）、现有覆盖分析（57 文件 451 用例）、测试缺口识别、TDD 建议。
 
@@ -152,7 +152,7 @@
 
 ---
 
-#### [11. 性能优化](file:///d:/DevTools/project/PiggyCount/docoments/11-performance.md)
+#### [11. 性能优化](11-performance.md)
 
 **内容**：数据库索引设计、后台 Isolate 执行、整页事务 + busy retry、LookupCache 消除 N+1、Lazy prime 优化、多层单飞锁、启动并行预加载、FlutterListView 惰性渲染、autoDispose 状态管理、图片附件优化。
 
@@ -162,7 +162,7 @@
 
 ---
 
-#### [12. 安全机制](file:///d:/DevTools/project/PiggyCount/docoments/12-security.md)
+#### [12. 安全机制](12-security.md)
 
 **内容**：本地数据安全、应用锁（PIN/生物识别）、凭证存储、网络通信安全、AI 隐私保护、数据导出安全、权限管理、输入验证、开源审计性、隐私政策与实现不符问题汇总。
 
@@ -174,7 +174,7 @@
 
 ### 第五部分：工程实践
 
-#### [13. 构建发布](file:///d:/DevTools/project/PiggyCount/docoments/13-build-release.md)
+#### [13. 构建发布](13-build-release.md)
 
 **内容**：CI/CD pipeline（GitHub Actions release.yml）、Android 多 flavor + ABI Splits + 签名注入、iOS 签名 + TestFlight 上传、产物命名规则、版本号管理、Google Play 上传、应用内 OTA 更新机制、GitHub 镜像加速。
 
@@ -184,7 +184,7 @@
 
 ---
 
-#### [14. 日志规范](file:///d:/DevTools/project/PiggyCount/docoments/14-logging.md)
+#### [14. 日志规范](14-logging.md)
 
 **内容**：LoggerService 单例设计、LogEntry 循环缓冲（2000 条）、SharedPreferences 持久化（48h 过期）、日志查看界面、日志级别使用规范、性能日志、更新模块日志、同步日志、第三方日志、反模式。
 
@@ -194,7 +194,7 @@
 
 ---
 
-#### [15. 开发规范](file:///d:/DevTools/project/PiggyCount/docoments/15-development-guidelines.md)
+#### [15. 开发规范](15-development-guidelines.md)
 
 **内容**：开发环境、项目目录结构、代码风格（命名/格式化/import/空安全/注释）、五层架构分层规则、Riverpod 状态管理规范、Drift 数据库规范、Design Token 系统强制使用、UI 开发规范、国际化规范、同步引擎开发规范、测试规范、Git 提交规范（Conventional Commits 中文）、PR 流程、CI 检查、代码生成、翻译贡献、常见陷阱、Code Review 检查清单。
 
@@ -204,7 +204,7 @@
 
 ---
 
-#### [16. 已知问题](file:///d:/DevTools/project/PiggyCount/docoments/16-known-issues.md)
+#### [16. 已知问题](16-known-issues.md)
 
 **内容**：按 P0/P1/P2/P3 优先级分级的所有已知问题，涵盖隐私政策不符、PIN 安全薄弱、SQLite 明文、网络通信风险、AI 隐私不足、性能瓶颈、测试缺口、代码质量、文档不一致、平台兼容性等。短期/中期/长期改进路线。
 
@@ -214,7 +214,7 @@
 
 ---
 
-#### [17. 版本演进](file:///d:/DevTools/project/PiggyCount/docoments/17-version-evolution.md)
+#### [17. 版本演进](17-version-evolution.md)
 
 **内容**：基于 schemaVersion 1→31 的完整迁移历史，重建项目从单设备基础功能 → 同步基础设施 → 共享账本与多币种的演进时间线。包含每个版本的设计决策、回填策略、历史教训（v23 移除运行时推导、v24 幂等 ALTER 必要性、v30 向后兼容设计）。
 
@@ -381,8 +381,8 @@
 ### 更新原则
 
 1. **代码变更同步**：任何架构/数据模型/同步引擎变更必须同步更新对应文档
-2. **新增问题登记**：新发现的问题添加到 [16-known-issues.md](file:///d:/DevTools/project/PiggyCount/docoments/16-known-issues.md)
-3. **版本演进追加**：每次 schemaVersion 升级在 [17-version-evolution.md](file:///d:/DevTools/project/PiggyCount/docoments/17-version-evolution.md) 第 4 节追加
+2. **新增问题登记**：新发现的问题添加到 [16-known-issues.md](16-known-issues.md)
+3. **版本演进追加**：每次 schemaVersion 升级在 [17-version-evolution.md](17-version-evolution.md) 第 4 节追加
 4. **信息缺口闭环**：`[待补充]` 标记的内容补充后需移除标记
 5. **PR 同步**：重大 PR 应包含文档更新
 
@@ -407,18 +407,17 @@
 
 ### 项目内文档
 
-- [README.md](file:///d:/DevTools/project/PiggyCount/README.md) — 项目介绍（中英双语）
-- [README_EN.md](file:///d:/DevTools/project/PiggyCount/README_EN.md) — English README
-- [PRIVACY.md](file:///d:/DevTools/project/PiggyCount/PRIVACY.md) — 隐私政策
-- [LICENSE](file:///d:/DevTools/project/PiggyCount/LICENSE) — BSL 许可证
-- [docs/contributing/CONTRIBUTING_ZH.md](file:///d:/DevTools/project/PiggyCount/docs/contributing/CONTRIBUTING_ZH.md) — 贡献指南（中文）
-- [docs/contributing/CONTRIBUTING_EN.md](file:///d:/DevTools/project/PiggyCount/docs/contributing/CONTRIBUTING_EN.md) — Contribution Guide (English)
-- [docs/design/DESIGN_TOKENS.md](file:///d:/DevTools/project/PiggyCount/docs/design/DESIGN_TOKENS.md) — Design Token 完整对照表
-- [docs/cloud-setup.md](file:///d:/DevTools/project/PiggyCount/docs/cloud-setup.md) — 云同步配置教程
-- [docs/cloud-setup_EN.md](file:///d:/DevTools/project/PiggyCount/docs/cloud-setup_EN.md) — Cloud Setup Guide
-- [docs/donate/README_ZH.md](file:///d:/DevTools/project/PiggyCount/docs/donate/README_ZH.md) — 捐赠说明
-- [assets/header_skins/README.md](file:///d:/DevTools/project/PiggyCount/assets/header_skins/README.md) — 皮肤贡献规范
-- [lib/ai/README.md](file:///d:/DevTools/project/PiggyCount/lib/ai/README.md) — AI 模块说明
+- [README.md](../README.md) — 项目介绍（中英双语）
+- [README_EN.md](../README_EN.md) — English README
+- [PRIVACY.md](../PRIVACY.md) — 隐私政策
+- [LICENSE](../LICENSE) — BSL 许可证
+- [docs/contributing/CONTRIBUTING_ZH.md](../docs/contributing/CONTRIBUTING_ZH.md) — 贡献指南（中文）
+- [docs/contributing/CONTRIBUTING_EN.md](../docs/contributing/CONTRIBUTING_EN.md) — Contribution Guide (English)
+- [docs/design/DESIGN_TOKENS.md](../docs/design/DESIGN_TOKENS.md) — Design Token 完整对照表
+- [docs/cloud-setup.md](../docs/cloud-setup.md) — 云同步配置教程
+- [docs/cloud-setup_EN.md](../docs/cloud-setup_EN.md) — Cloud Setup Guide
+- [assets/header_skins/README.md](../assets/header_skins/README.md) — 皮肤贡献规范
+- [lib/ai/README.md](../lib/ai/README.md) — AI 模块说明
 
 ### 外部资源
 
@@ -446,23 +445,23 @@
 
 | 编号 | 文档 | 主要关键词 |
 |---|---|---|
-| 01 | [项目总览](file:///d:/DevTools/project/PiggyCount/docoments/01-project-overview.md) | 项目背景、核心定位、平台支持 |
-| 02 | [术语表](file:///d:/DevTools/project/PiggyCount/docoments/02-glossary.md) | 业务术语、技术术语、中英对照 |
-| 03 | [技术栈](file:///d:/DevTools/project/PiggyCount/docoments/03-tech-stack.md) | Flutter、Riverpod、Drift、依赖包 |
-| 04 | [系统架构](file:///d:/DevTools/project/PiggyCount/docoments/04-system-architecture.md) | 五层架构、同步引擎、模块依赖 |
-| 05 | [核心模块](file:///d:/DevTools/project/PiggyCount/docoments/05-core-modules.md) | 12 个模块、模块交互 |
-| 06 | [数据同步与离线](file:///d:/DevTools/project/PiggyCount/docoments/06-data-sync-and-offline.md) | 四层同步、5 种后端、push/pull、单飞锁 |
-| 07 | [数据模型](file:///d:/DevTools/project/PiggyCount/docoments/07-data-model.md) | 21 张表、ER 图、迁移策略 |
-| 08 | [API 与数据访问](file:///d:/DevTools/project/PiggyCount/docoments/08-api-and-data-access.md) | Repository 三层、API 速查 |
-| 09 | [错误处理](file:///d:/DevTools/project/PiggyCount/docoments/09-error-handling.md) | 异常层级、sync_pull_errors、401 refresh |
-| 10 | [测试策略](file:///d:/DevTools/project/PiggyCount/docoments/10-testing-strategy.md) | 测试分层、mocktail、覆盖率 |
-| 11 | [性能优化](file:///d:/DevTools/project/PiggyCount/docoments/11-performance.md) | 索引、Isolate、LookupCache、Lazy prime |
-| 12 | [安全机制](file:///d:/DevTools/project/PiggyCount/docoments/12-security.md) | 应用锁、凭证存储、AI 隐私、网络通信 |
-| 13 | [构建发布](file:///d:/DevTools/project/PiggyCount/docoments/13-build-release.md) | CI/CD、多 flavor、签名、OTA |
-| 14 | [日志规范](file:///d:/DevTools/project/PiggyCount/docoments/14-logging.md) | LoggerService、级别规范、持久化 |
-| 15 | [开发规范](file:///d:/DevTools/project/PiggyCount/docoments/15-development-guidelines.md) | 代码风格、Design Token、PR 流程 |
-| 16 | [已知问题](file:///d:/DevTools/project/PiggyCount/docoments/16-known-issues.md) | P0-P3 分级、改进路线 |
-| 17 | [版本演进](file:///d:/DevTools/project/PiggyCount/docoments/17-version-evolution.md) | schemaVersion 1→31、迁移模式 |
+| 01 | [项目总览](01-project-overview.md) | 项目背景、核心定位、平台支持 |
+| 02 | [术语表](02-glossary.md) | 业务术语、技术术语、中英对照 |
+| 03 | [技术栈](03-tech-stack.md) | Flutter、Riverpod、Drift、依赖包 |
+| 04 | [系统架构](04-system-architecture.md) | 五层架构、同步引擎、模块依赖 |
+| 05 | [核心模块](05-core-modules.md) | 12 个模块、模块交互 |
+| 06 | [数据同步与离线](06-data-sync-and-offline.md) | 四层同步、5 种后端、push/pull、单飞锁 |
+| 07 | [数据模型](07-data-model.md) | 21 张表、ER 图、迁移策略 |
+| 08 | [API 与数据访问](08-api-and-data-access.md) | Repository 三层、API 速查 |
+| 09 | [错误处理](09-error-handling.md) | 异常层级、sync_pull_errors、401 refresh |
+| 10 | [测试策略](10-testing-strategy.md) | 测试分层、mocktail、覆盖率 |
+| 11 | [性能优化](11-performance.md) | 索引、Isolate、LookupCache、Lazy prime |
+| 12 | [安全机制](12-security.md) | 应用锁、凭证存储、AI 隐私、网络通信 |
+| 13 | [构建发布](13-build-release.md) | CI/CD、多 flavor、签名、OTA |
+| 14 | [日志规范](14-logging.md) | LoggerService、级别规范、持久化 |
+| 15 | [开发规范](15-development-guidelines.md) | 代码风格、Design Token、PR 流程 |
+| 16 | [已知问题](16-known-issues.md) | P0-P3 分级、改进路线 |
+| 17 | [版本演进](17-version-evolution.md) | schemaVersion 1→31、迁移模式 |
 
 ---
 
@@ -470,31 +469,31 @@
 
 ### 我是新开发者，从哪开始？
 
-→ 阅读 [01 项目总览](file:///d:/DevTools/project/PiggyCount/docoments/01-project-overview.md) → [15 开发规范](file:///d:/DevTools/project/PiggyCount/docoments/15-development-guidelines.md)
+→ 阅读 [01 项目总览](01-project-overview.md) → [15 开发规范](15-development-guidelines.md)
 
 ### 我想修改同步引擎
 
-→ 阅读 [06 数据同步与离线](file:///d:/DevTools/project/PiggyCount/docoments/06-data-sync-and-offline.md) → [09 错误处理](file:///d:/DevTools/project/PiggyCount/docoments/09-error-handling.md) → [11 性能优化](file:///d:/DevTools/project/PiggyCount/docoments/11-performance.md)
+→ 阅读 [06 数据同步与离线](06-data-sync-and-offline.md) → [09 错误处理](09-error-handling.md) → [11 性能优化](11-performance.md)
 
 ### 我想添加新数据库表
 
-→ 阅读 [07 数据模型](file:///d:/DevTools/project/PiggyCount/docoments/07-data-model.md) → [08 API 与数据访问](file:///d:/DevTools/project/PiggyCount/docoments/08-api-and-data-access.md) → [17 版本演进](file:///d:/DevTools/project/PiggyCount/docoments/17-version-evolution.md) 第 6 节迁移模式
+→ 阅读 [07 数据模型](07-data-model.md) → [08 API 与数据访问](08-api-and-data-access.md) → [17 版本演进](17-version-evolution.md) 第 6 节迁移模式
 
 ### 我想提交 PR
 
-→ 阅读 [15 开发规范](file:///d:/DevTools/project/PiggyCount/docoments/15-development-guidelines.md) → [10 测试策略](file:///d:/DevTools/project/PiggyCount/docoments/10-testing-strategy.md) → [13 构建发布](file:///d:/DevTools/project/PiggyCount/docoments/13-build-release.md)
+→ 阅读 [15 开发规范](15-development-guidelines.md) → [10 测试策略](10-testing-strategy.md) → [13 构建发布](13-build-release.md)
 
 ### 我想了解安全机制
 
-→ 阅读 [12 安全机制](file:///d:/DevTools/project/PiggyCount/docoments/12-security.md) → [16 已知问题](file:///d:/DevTools/project/PiggyCount/docoments/16-known-issues.md)
+→ 阅读 [12 安全机制](12-security.md) → [16 已知问题](16-known-issues.md)
 
 ### 我想发布新版本
 
-→ 阅读 [13 构建发布](file:///d:/DevTools/project/PiggyCount/docoments/13-build-release.md)
+→ 阅读 [13 构建发布](13-build-release.md)
 
 ### 我想了解项目历史
 
-→ 阅读 [17 版本演进](file:///d:/DevTools/project/PiggyCount/docoments/17-version-evolution.md)
+→ 阅读 [17 版本演进](17-version-evolution.md)
 
 ---
 
@@ -530,7 +529,7 @@
 
 ### 代码引用规范
 
-- 文件引用：`[文件名](file:///绝对路径)` 或 `[文件名:行号](file:///绝对路径#L123-L145)`
+- 文件引用：`[文件名](相对路径)` 或 `[文件名:行号](相对路径#L123-L145)`，例如 `[db.dart](../lib/data/db.dart#L120)`。**禁止** `file:///` 绝对路径（含盘符 / 机器目录，换机即失效；2026-10-08 已全量改写为相对引用）
 - 代码块：使用三反引号 + 语言标识（dart / yaml / sql / mermaid / bash）
 - 不在代码块中包含行号
 

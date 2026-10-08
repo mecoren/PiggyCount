@@ -598,7 +598,7 @@ flowchart TD
 
 ### 6.3 平台特定代码约束
 
-- Android 原生代码位于 `android/app/src/main/kotlin/com/tntlikely/piggycount/`
+- Android 原生代码位于 `android/app/src/main/kotlin/com/wait/piggycount/`
 - iOS 原生代码位于 `ios/Runner/` 与 `ios/PiggyCountWidget/`
 - 平台特定功能(如截图监听、AppLink)通过 method channel / app_links 桥接
 - 共享逻辑必须在 Dart 层,平台特定逻辑在原生层

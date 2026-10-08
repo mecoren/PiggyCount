@@ -91,7 +91,7 @@ DismissedState (overlay detach)
 
 ### 2.1 启动钩子现状
 
-`BeeApp._BeeAppState.initState()`（[lib/app.dart:86-108](file:///c:\Develop\project\00_AI\PiggyCount\lib\app.dart)）当前流程：
+`BeeApp._BeeAppState.initState()`（[lib/app.dart:86-108](../../lib/app.dart)）当前流程：
 
 ```
 initState
@@ -103,7 +103,7 @@ initState
        └─ _setupQuickActions()
 ```
 
-`_refreshLedgersStatusInBackground()`（[lib/app.dart:159-209](file:///c:\Develop\project\00_AI\PiggyCount\lib\app.dart)）内部：
+`_refreshLedgersStatusInBackground()`（[lib/app.dart:159-209](../../lib/app.dart)）内部：
 - 路径 A：调 `syncService.refreshAllLedgersStatus()` 仅预热状态，**不拉数据、不合并**
 - 路径 B：调 `_triggerInitialCloudSync(engine)` 自动 push/pull
 
@@ -111,14 +111,14 @@ initState
 
 | 资产 | 位置 | 复用方式 |
 |------|------|---------|
-| `downloadAndPreview(ledgerId)` | [transactions_sync_manager.dart:380](file:///c:\Develop\project\00_AI\PiggyCount\lib\cloud\transactions_sync_manager.dart) | 直接调用，返回 `SyncPreview?` |
-| `applyPreviewChanges(...)` | [transactions_sync_manager.dart:422](file:///c:\Develop\project\00_AI\PiggyCount\lib\cloud\transactions_sync_manager.dart) | 直接调用，应用选中变更 |
-| `getStatus(ledgerId)` | [transactions_sync_manager.dart:443](file:///c:\Develop\project\00_AI\PiggyCount\lib\cloud\transactions_sync_manager.dart) | 直接调用，返回 `SyncStatus` |
+| `downloadAndPreview(ledgerId)` | [transactions_sync_manager.dart:380](../../lib/cloud/transactions_sync_manager.dart) | 直接调用，返回 `SyncPreview?` |
+| `applyPreviewChanges(...)` | [transactions_sync_manager.dart:422](../../lib/cloud/transactions_sync_manager.dart) | 直接调用，应用选中变更 |
+| `getStatus(ledgerId)` | [transactions_sync_manager.dart:443](../../lib/cloud/transactions_sync_manager.dart) | 直接调用，返回 `SyncStatus` |
 | `downloadAndRestoreToCurrentLedger` | transactions_sync_manager.dart:328 | 旧格式全量替换兜底 |
-| `showSyncPreviewDialog` | [sync_preview_dialog.dart:12](file:///c:\Develop\project\00_AI\PiggyCount\lib\pages\cloud\sync_preview_dialog.dart) | 直接调用，`barrierDismissible: false` |
-| `AppDialog.confirm/info/error` | [widgets/ui/dialog.dart](file:///c:\Develop\project\00_AI\PiggyCount\lib\widgets\ui\dialog.dart) | 提示框 + 结果摘要 |
+| `showSyncPreviewDialog` | [sync_preview_dialog.dart:12](../../lib/pages/cloud/sync_preview_dialog.dart) | 直接调用，`barrierDismissible: false` |
+| `AppDialog.confirm/info/error` | [widgets/ui/dialog.dart](../../lib/widgets/ui/dialog.dart) | 提示框 + 结果摘要 |
 | `PostProcessor.runAfterDownload(ref)` | cloud_sync_page.dart 引用 | 应用后刷新 UI providers |
-| `globalNavigatorKey` | [main.dart:42](file:///c:\Develop\project\00_AI\PiggyCount\lib\main.dart) | 无 BuildContext 时拿 context 弹窗 |
+| `globalNavigatorKey` | [main.dart:42](../../lib/main.dart) | 无 BuildContext 时拿 context 弹窗 |
 
 ### 2.3 关键约束
 
@@ -163,7 +163,7 @@ class StartupSyncChecker {
 
 ### 3.2 触发点：`BeeApp.initState` 的 `addPostFrameCallback`
 
-**决策**：在 [app.dart:104-107](file:///c:\Develop\project\00_AI\PiggyCount\lib\app.dart) 的 `addPostFrameCallback` 内追加 `StartupSyncChecker(ref).runIfNeeded()`，与 `_setupAppLinkListener` / `_setupQuickActions` 并列。
+**决策**：在 [app.dart:104-107](../../lib/app.dart) 的 `addPostFrameCallback` 内追加 `StartupSyncChecker(ref).runIfNeeded()`，与 `_setupAppLinkListener` / `_setupQuickActions` 并列。
 
 **理由**：
 - `addPostFrameCallback` 保证首帧渲染完成、`context` 可用、`globalNavigatorKey.currentContext` 非 null
@@ -195,7 +195,7 @@ class StartupSyncChecker {
 **决策**：直接调 `ref.read(repositoryProvider).getAllLedgers()` 拿所有账本（含 id + name）。
 
 **理由**：
-- `repositoryProvider` 是 `Provider<BaseRepository>`（[database_providers.dart:23](file:///c:\Develop\project\00_AI\PiggyCount\lib\providers\database_providers.dart)），`BaseRepository.getAllLedgers()` 透传到 `LedgerRepository.getAllLedgers()` 返回 `Future<List<Ledger>>`
+- `repositoryProvider` 是 `Provider<BaseRepository>`（[database_providers.dart:23](../../lib/providers/database_providers.dart)），`BaseRepository.getAllLedgers()` 透传到 `LedgerRepository.getAllLedgers()` 返回 `Future<List<Ledger>>`
 - `Ledger` 类型来自 `lib/data/db.g.dart`（drift 生成），含 `id`、`name`、`currency` 等字段
 - 与 `app.dart:241`、`sync_providers.dart:902` 等多处现有用法一致
 
@@ -238,7 +238,7 @@ class StartupSyncChecker {
 
 ### 步骤 2：在 `BeeApp.initState` 接入
 
-**文件**：[lib/app.dart](file:///c:\Develop\project\00_AI\PiggyCount\lib\app.dart)（修改 line 104-107 的 `addPostFrameCallback`）
+**文件**：[lib/app.dart](../../lib/app.dart)（修改 line 104-107 的 `addPostFrameCallback`）
 
 **变更**：
 
@@ -391,7 +391,7 @@ BeeApp.initState
 | 新建 | `lib/cloud/startup_sync_checker.dart` | 核心编排器 + WidgetRefDeps |
 | 新建 | `lib/cloud/startup_sync_overlay.dart` | 状态机 + controller + overlay widget |
 | 新建 | `test/cloud/startup_sync_checker_test.dart` | 28 个单元测试 |
-| 修改 | [lib/app.dart](file:///c:\Develop\project\00_AI\PiggyCount\lib\app.dart) | `_runStartupSyncCheck` + overlay 生命周期管理 |
+| 修改 | [lib/app.dart](../../lib/app.dart) | `_runStartupSyncCheck` + overlay 生命周期管理 |
 | 修改 | `lib/l10n/app_*.arb` (4 个文件) | 新增 13 条文案（中/英/韩/繁中） |
 
 ## 8. 不做的事

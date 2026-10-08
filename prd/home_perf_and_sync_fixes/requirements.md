@@ -10,7 +10,7 @@
 
 ### A 组 — P1 首页空列表回退缓存（用户原始报告）
 
-**问题**：[home_page.dart:1042-1043](file:///C:/Develop/project/00_AI/PiggyCount/lib/pages/main/home_page.dart#L1042-L1043) 用 `streamData != null && streamData.isNotEmpty` 判断流是否返回。当 Drift stream 合法 emit `[]`（删除最后一笔后）时被当作"未加载"，回退到启动时缓存的 `cachedFullData`（不随单笔删除更新），导致旧记录残留。
+**问题**：[home_page.dart:1042-1043](../../lib/pages/main/home_page.dart#L1042-L1043) 用 `streamData != null && streamData.isNotEmpty` 判断流是否返回。当 Drift stream 合法 emit `[]`（删除最后一笔后）时被当作"未加载"，回退到启动时缓存的 `cachedFullData`（不随单笔删除更新），导致旧记录残留。
 
 **验收标准**：
 - AC-A1：stream 已 emit 空列表时，首页显示空状态（`AppEmpty`），而非缓存旧数据。
@@ -20,9 +20,9 @@
 ### B 组 — P2 全量物化 + 缺复合索引（用户原始报告）
 
 **问题**：
-1. [local_transaction_repository.dart:95](file:///C:/Develop/project/00_AI/PiggyCount/lib/data/repositories/local/local_transaction_repository.dart#L95) `watchTransactionsWithCategoryAll` 查询全部交易并 JOIN + 二次 hydration。
-2. [transaction_list.dart:290](file:///C:/Develop/project/00_AI/PiggyCount/lib/widgets/biz/transaction_list.dart#L290) `_buildFlatItems` 每次 build 全量内存分组。
-3. [db.dart](file:///C:/Develop/project/00_AI/PiggyCount/lib/data/db.dart) transactions 表只有 `idx_transactions_sync_id`，**无** `(ledger_id, happened_at)` 复合索引，月度/年度/日期范围查询全表扫描。
+1. [local_transaction_repository.dart:95](../../lib/data/repositories/local/local_transaction_repository.dart#L95) `watchTransactionsWithCategoryAll` 查询全部交易并 JOIN + 二次 hydration。
+2. [transaction_list.dart:290](../../lib/widgets/biz/transaction_list.dart#L290) `_buildFlatItems` 每次 build 全量内存分组。
+3. [db.dart](../../lib/data/db.dart) transactions 表只有 `idx_transactions_sync_id`，**无** `(ledger_id, happened_at)` 复合索引，月度/年度/日期范围查询全表扫描。
 
 **验收标准**：
 - AC-B1：v32 迁移新增 `idx_transactions_ledger_happened ON transactions(ledger_id, happened_at)` 复合索引。
@@ -35,9 +35,9 @@
 **问题**：`TransactionTagOverrides` 表用 `transactionSyncId`（text）作主键。三处删除路径只按 int id 删 `transactionTags` + `transactionAttachments` + 主表，**漏删 `transaction_tag_overrides`**，留下孤儿行，导致共享账本 Editor 视角 `_hydrateSharedOverridesFull` LEFT JOIN 挂载幽灵标签。
 
 涉及文件：
-1. [local_transaction_repository.dart:576-587](file:///C:/Develop/project/00_AI/PiggyCount/lib/data/repositories/local/local_transaction_repository.dart#L576-L587) `deleteTransaction`（单条，被 `deleteTransactionBySyncId` 复用）
-2. [local_transaction_repository.dart:1481-1507](file:///C:/Develop/project/00_AI/PiggyCount/lib/data/repositories/local/local_transaction_repository.dart#L1481-L1507) `deleteTransactionsBatchBySyncIds`（批量）
-3. [sync_engine_apply.dart:73-81](file:///C:/Develop/project/00_AI/PiggyCount/lib/cloud/sync/sync_engine_apply.dart#L73-L81) `_applyTransactionChange` delete 路径（远端推送）
+1. [local_transaction_repository.dart:576-587](../../lib/data/repositories/local/local_transaction_repository.dart#L576-L587) `deleteTransaction`（单条，被 `deleteTransactionBySyncId` 复用）
+2. [local_transaction_repository.dart:1481-1507](../../lib/data/repositories/local/local_transaction_repository.dart#L1481-L1507) `deleteTransactionsBatchBySyncIds`（批量）
+3. [sync_engine_apply.dart:73-81](../../lib/cloud/sync/sync_engine_apply.dart#L73-L81) `_applyTransactionChange` delete 路径（远端推送）
 
 **验收标准**：
 - AC-C1：三处删除路径均清理 `transaction_tag_overrides`（按 `transactionSyncId` 删除）。
@@ -47,9 +47,9 @@
 ### D 组 — P1/P2 Repository N+1 查询（新发现）
 
 **问题**：
-1. [local_transaction_repository.dart:1322-1365](file:///C:/Develop/project/00_AI/PiggyCount/lib/data/repositories/local/local_transaction_repository.dart#L1322-L1365) `getTransactionsByDateRange` 教科书级 N+1：每条 tx 4 次 SELECT，tag 查询嵌套 N×M。100 条 → 500 次 SELECT。
-2. [local_transaction_repository.dart:1043-1053](file:///C:/Develop/project/00_AI/PiggyCount/lib/data/repositories/local/local_transaction_repository.dart#L1043-L1053) `getTransactionsByDate` 的 category 仍逐条 SELECT（tags/attachments/accounts 已批量化）。
-3. [local_transaction_repository.dart:613-617](file:///C:/Develop/project/00_AI/PiggyCount/lib/data/repositories/local/local_transaction_repository.dart#L613-L617) `_deleteAttachmentsForTransaction` 文件引用计数逐个查。
+1. [local_transaction_repository.dart:1322-1365](../../lib/data/repositories/local/local_transaction_repository.dart#L1322-L1365) `getTransactionsByDateRange` 教科书级 N+1：每条 tx 4 次 SELECT，tag 查询嵌套 N×M。100 条 → 500 次 SELECT。
+2. [local_transaction_repository.dart:1043-1053](../../lib/data/repositories/local/local_transaction_repository.dart#L1043-L1053) `getTransactionsByDate` 的 category 仍逐条 SELECT（tags/attachments/accounts 已批量化）。
+3. [local_transaction_repository.dart:613-617](../../lib/data/repositories/local/local_transaction_repository.dart#L613-L617) `_deleteAttachmentsForTransaction` 文件引用计数逐个查。
 
 **验收标准**：
 - AC-D1：`getTransactionsByDateRange` 重写为批量查询（照抄 `getTransactionsByDate` 模式），返回结果顺序与字段不变。
@@ -60,10 +60,10 @@
 ### E 组 — P2 状态管理 / 缓存陈旧（新发现）
 
 **问题**：
-1. [home_page.dart:627-636](file:///C:/Develop/project/00_AI/PiggyCount/lib/pages/main/home_page.dart#L627-L636) 账本切换用 `Future.microtask` 异步清缓存，当前 build 已读到旧 cache，配合 A 组 bug 导致切换后第一帧显示旧账本数据。
-2. [statistics_providers.dart:32,68](file:///C:/Develop/project/00_AI/PiggyCount/lib/providers/statistics_providers.dart#L32) `lastCountsAllProvider` / `lastMonthlyTotalsProvider`（family）非 autoDispose，永久驻留 + 切账本时短暂陈旧。
-3. [sync_diff_service.dart:119-124](file:///C:/Develop/project/00_AI/PiggyCount/lib/cloud/sync_diff_service.dart#L119-L124) 本地 `syncId == null` 的交易（CSV 导入产生）不进 `localBySyncId`，云端推送同条 → 误判 added → 本地重复。
-4. [local_repository.dart:1100,1139](file:///C:/Develop/project/00_AI/PiggyCount/lib/data/repositories/local/local_repository.dart#L1100) null-syncId 交易的 mutation 跳过 change log，永不触发 sync push。
+1. [home_page.dart:627-636](../../lib/pages/main/home_page.dart#L627-L636) 账本切换用 `Future.microtask` 异步清缓存，当前 build 已读到旧 cache，配合 A 组 bug 导致切换后第一帧显示旧账本数据。
+2. [statistics_providers.dart:32,68](../../lib/providers/statistics_providers.dart#L32) `lastCountsAllProvider` / `lastMonthlyTotalsProvider`（family）非 autoDispose，永久驻留 + 切账本时短暂陈旧。
+3. [sync_diff_service.dart:119-124](../../lib/cloud/sync_diff_service.dart#L119-L124) 本地 `syncId == null` 的交易（CSV 导入产生）不进 `localBySyncId`，云端推送同条 → 误判 added → 本地重复。
+4. [local_repository.dart:1100,1139](../../lib/data/repositories/local/local_repository.dart#L1100) null-syncId 交易的 mutation 跳过 change log，永不触发 sync push。
 
 **验收标准**：
 - AC-E1：账本切换时同步清空 `cachedTransactionsProvider`（移除 microtask）。
@@ -73,9 +73,9 @@
 
 ### F 组 — P3 清理项（低优先，建议一并处理）
 
-1. [main.dart:424](file:///C:/Develop/project/00_AI/PiggyCount/lib/main.dart#L424) `appLinks.uriLinkStream.listen` 返回的 subscription 未保存/cancel。
-2. [ui_state_providers.dart:187](file:///C:/Develop/project/00_AI/PiggyCount/lib/providers/ui_state_providers.dart#L187) `cachedTransactionsWithCategoryProvider` 是死代码（无写入，仅一处 invalidate）。
-3. [sync_engine_realtime.dart:394-448](file:///C:/Develop/project/00_AI/PiggyCount/lib/cloud/sync/sync_engine_realtime.dart#L394-L448) `fetchAndStoreSharedResources` 逐条 insert，可改 batch。
+1. [main.dart:424](../../lib/main.dart#L424) `appLinks.uriLinkStream.listen` 返回的 subscription 未保存/cancel。
+2. [ui_state_providers.dart:187](../../lib/providers/ui_state_providers.dart#L187) `cachedTransactionsWithCategoryProvider` 是死代码（无写入，仅一处 invalidate）。
+3. [sync_engine_realtime.dart:394-448](../../lib/cloud/sync/sync_engine_realtime.dart#L394-L448) `fetchAndStoreSharedResources` 逐条 insert，可改 batch。
 4. db.dart 缺 `account_id` / `category_id` / `to_account_id` 单列索引（级联删除/统计用）。
 
 **验收标准**：F 组为可选优化，不设硬性 AC；若实施需保证现有测试不回归。

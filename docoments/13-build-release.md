@@ -3,7 +3,7 @@
 > 文档版本：v1.0
 > 最后更新：2026-07-25
 > 作者：wait
-> 信息源：项目源码（d:\DevTools\project\PiggyCount）+ CI 配置文件
+> 信息源：项目源码（本仓库）+ CI 配置文件
 >
 > ⚠️ **本文档为 2026-07 历史留存**：发版流程的**唯一真相源**是仓库根目录 `AGENTS.md` 的「发版流程」章节。下文若与代码 / `AGENTS.md` 冲突，一律以后两者为准。本轮已同步修正：产物命名、版本注入方式、Google Play 轨道。
 
@@ -119,7 +119,7 @@ flowchart TB
 
 ### 4.1 项目构建配置（pubspec.yaml）
 
-**实现位置**：[pubspec.yaml](file:///d:/DevTools/project/PiggyCount/pubspec.yaml)
+**实现位置**：[pubspec.yaml](../pubspec.yaml)
 
 - **应用名**：`piggycount`（第 1 行）
 - **初始版本**：`version: 0.1.0`（第 4 行，代表开发主线版本；发版时由 tag 经 `--build-name` 注入，**不写回本字段**）
@@ -136,7 +136,7 @@ flowchart TB
 
 #### 4.2.1 android/app/build.gradle 关键配置
 
-**实现位置**：[android/app/build.gradle](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle](../android/app/build.gradle)
 
 | 配置项 | 值 | 说明 |
 |---|---|---|
@@ -151,7 +151,7 @@ flowchart TB
 
 #### 4.2.2 signingConfigs（签名配置）
 
-**实现位置**：[android/app/build.gradle:82-136](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:82-136](../android/app/build.gradle)
 
 ```gradle
 // 优先读 key.properties（不提交 VCS）
@@ -173,7 +173,7 @@ if (keystorePropertiesFile.exists()) {
 
 #### 4.2.3 buildTypes（构建类型）
 
-**实现位置**：[android/app/build.gradle:138-153](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:138-153](../android/app/build.gradle)
 
 | 类型 | 配置 |
 |---|---|
@@ -182,7 +182,7 @@ if (keystorePropertiesFile.exists()) {
 
 #### 4.2.4 splits.abi（关键设计）
 
-**实现位置**：[android/app/build.gradle:73-80](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:73-80](../android/app/build.gradle)
 
 ```gradle
 splits {
@@ -199,7 +199,7 @@ splits {
 
 #### 4.2.5 16KB 页面大小支持
 
-**实现位置**：[android/app/build.gradle:156-160](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:156-160](../android/app/build.gradle)
 
 ```gradle
 packaging {
@@ -211,7 +211,7 @@ packaging {
 
 #### 4.2.6 variantFilter
 
-**实现位置**：[android/app/build.gradle:165-170](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:165-170](../android/app/build.gradle)
 
 ```gradle
 variantFilter { variant ->
@@ -223,7 +223,7 @@ variantFilter { variant ->
 
 #### 4.2.7 APK 命名规则
 
-**实现位置**：[android/app/build.gradle:178-202](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:178-202](../android/app/build.gradle)
 
 | ABI | 命名 |
 |---|---|
@@ -233,7 +233,7 @@ variantFilter { variant ->
 
 ### 4.3 AndroidManifest.xml
 
-**实现位置**：[android/app/src/main/AndroidManifest.xml](file:///d:/DevTools/project/PiggyCount/android/app/src/main/AndroidManifest.xml)
+**实现位置**：[android/app/src/main/AndroidManifest.xml](../android/app/src/main/AndroidManifest.xml)
 
 - **application label**：`@string/app_name`（由 flavor 的 resValue 注入）
 - **关键权限**：INTERNET、RECORD_AUDIO、WRITE_EXTERNAL_STORAGE（maxSdk=29）、READ_MEDIA_IMAGES、READ_EXTERNAL_STORAGE（maxSdk=32）、**REQUEST_INSTALL_PACKAGES**、POST_NOTIFICATIONS、SCHEDULE_EXACT_ALARM、USE_EXACT_ALARM、REQUEST_IGNORE_BATTERY_OPTIMIZATIONS、USE_BIOMETRIC 等
@@ -248,7 +248,7 @@ variantFilter { variant ->
 
 #### 4.4.1 ios/Runner/Info.plist
 
-**实现位置**：[ios/Runner/Info.plist](file:///d:/DevTools/project/PiggyCount/ios/Runner/Info.plist)
+**实现位置**：[ios/Runner/Info.plist](../ios/Runner/Info.plist)
 
 | 配置项 | 值 | 说明 |
 |---|---|---|
@@ -265,8 +265,8 @@ variantFilter { variant ->
 #### 4.4.2 Debug.xcconfig 与 Release.xcconfig
 
 **实现位置**：
-- [ios/Flutter/Debug.xcconfig](file:///d:/DevTools/project/PiggyCount/ios/Flutter/Debug.xcconfig)
-- [ios/Flutter/Release.xcconfig](file:///d:/DevTools/project/PiggyCount/ios/Flutter/Release.xcconfig)
+- [ios/Flutter/Debug.xcconfig](../ios/Flutter/Debug.xcconfig)
+- [ios/Flutter/Release.xcconfig](../ios/Flutter/Release.xcconfig)
 
 ```
 // Debug.xcconfig
@@ -286,7 +286,7 @@ PRODUCT_BUNDLE_IDENTIFIER=com.wait.piggycount
 
 #### 4.4.3 project.pbxproj 关键配置
 
-**实现位置**：[ios/Runner.xcodeproj/project.pbxproj](file:///d:/DevTools/project/PiggyCount/ios/Runner.xcodeproj/project.pbxproj)
+**实现位置**：[ios/Runner.xcodeproj/project.pbxproj](../ios/Runner.xcodeproj/project.pbxproj)
 
 | 配置项 | 值 |
 |---|---|
@@ -301,14 +301,14 @@ PRODUCT_BUNDLE_IDENTIFIER=com.wait.piggycount
 
 #### 4.4.4 ios/Runner/Runner.entitlements
 
-**实现位置**：[ios/Runner/Runner.entitlements](file:///d:/DevTools/project/PiggyCount/ios/Runner/Runner.entitlements)
+**实现位置**：[ios/Runner/Runner.entitlements](../ios/Runner/Runner.entitlements)
 
 - iCloud 容器 `iCloud.com.wait.piggycount`，CloudDocuments 服务
 - App Group：`group.com.wait.piggycount`（与 Widget 共享数据）
 
 #### 4.4.5 ios/Podfile
 
-**实现位置**：[ios/Podfile](file:///d:/DevTools/project/PiggyCount/ios/Podfile)
+**实现位置**：[ios/Podfile](../ios/Podfile)
 
 - **platform :ios, '15.5'**（注释说明：保留 15.5 是因 AppIntents API 仍要 iOS 16+ 弱链接 + 运行时回退）
 - `project 'Runner'` 映射 Debug/Profile/Release
@@ -331,7 +331,7 @@ PRODUCT_BUNDLE_IDENTIFIER=com.wait.piggycount
 
 ### 5.1 release.yml（主发布流程）
 
-**实现位置**：[.github/workflows/release.yml](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
+**实现位置**：[.github/workflows/release.yml](../.github/workflows/release.yml)
 
 **触发**：tag push (`v*`) 或 workflow_dispatch（手动，可选 tag_name、release_name、prerelease、dry_run 输入）
 **并发**：`cancel-in-progress: false`（发版宁可排队也不可腰斩）
@@ -415,7 +415,7 @@ flutter build apk --release --flavor prod \
   --dart-define=BUILD_TIME="$BUILD_TIME"
 ```
 
-**来源**：[release.yml 第 155-158 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
+**来源**：[release.yml 第 155-158 行](../.github/workflows/release.yml)
 
 Gradle `splits.abi` 自动产出 4 个 APK（arm64-v8a、armeabi-v7a、x86_64、universal）。
 
@@ -429,7 +429,7 @@ flutter build appbundle --release --flavor prod \
   --dart-define=GOOGLE_PLAY=true
 ```
 
-**来源**：[release.yml 第 187-191 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
+**来源**：[release.yml 第 187-191 行](../.github/workflows/release.yml)
 
 `GOOGLE_PLAY=true` 用于在 Dart 代码中通过 `bool.fromEnvironment('GOOGLE_PLAY')` 隐藏应用内更新入口与截屏自动记账功能。
 
@@ -455,7 +455,7 @@ flutter build appbundle --release --flavor prod \
 
 ### 7.1 Android flavor
 
-**实现位置**：[android/app/build.gradle:46-57](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)
+**实现位置**：[android/app/build.gradle:46-57](../android/app/build.gradle)
 
 ```gradle
 flavorDimensions += ["env"]
@@ -484,7 +484,7 @@ productFlavors {
 iOS 不使用 Xcode scheme flavor，而是用 Debug/Release 配置区分：
 - Debug = dev（`com.wait.piggycount.dev`，"小猪记账测试版"）
 - Release = prod（`com.wait.piggycount`，"小猪记账"）
-- 实现：[ios/Flutter/Debug.xcconfig](file:///d:/DevTools/project/PiggyCount/ios/Flutter/Debug.xcconfig) 与 [Release.xcconfig](file:///d:/DevTools/project/PiggyCount/ios/Flutter/Release.xcconfig)
+- 实现：[ios/Flutter/Debug.xcconfig](../ios/Flutter/Debug.xcconfig) 与 [Release.xcconfig](../ios/Flutter/Release.xcconfig)
 
 ### 7.3 图标差异
 
@@ -494,7 +494,7 @@ iOS 不使用 Xcode scheme flavor，而是用 Debug/Release 配置区分：
 
 ### 7.4 prod flavor 的临时 Manifest
 
-**实现位置**：[release.yml 第 170-185 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 170-185 行](../.github/workflows/release.yml)
 
 CI 构建 AAB 前动态写入 `android/app/src/prod/AndroidManifest.xml`，用 `tools:node="remove"` 移除：
 - `REQUEST_INSTALL_PACKAGES`
@@ -509,7 +509,7 @@ CI 构建 AAB 前动态写入 `android/app/src/prod/AndroidManifest.xml`，用 `
 
 ### 8.1 pubspec.yaml version 字段
 
-**实现位置**：[pubspec.yaml 第 4 行](file:///d:/DevTools/project/PiggyCount/pubspec.yaml)
+**实现位置**：[pubspec.yaml 第 4 行](../pubspec.yaml)
 
 ```yaml
 version: 0.1.0
@@ -519,7 +519,7 @@ version: 0.1.0
 
 ### 8.2 发版版本注入策略
 
-**实现位置**：[release.yml](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)（Android 与 iOS 两个 job 的 build 步骤）
+**实现位置**：[release.yml](../.github/workflows/release.yml)（Android 与 iOS 两个 job 的 build 步骤）
 
 ```bash
 BUILD_NAME="${VERSION#v}"                 # 去掉 tag 前缀 v
@@ -540,7 +540,7 @@ flutter build apk --release --flavor prod \
 
 ### 8.4 运行时版本读取
 
-**实现位置**：[lib/services/update/update_checker.dart:222-233](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_checker.dart)
+**实现位置**：[lib/services/update/update_checker.dart:222-233](../lib/services/update/update_checker.dart)
 
 ```dart
 static Future<AppInfo> _getAppInfo() async {
@@ -557,7 +557,7 @@ static Future<AppInfo> _getAppInfo() async {
 ```
 
 - 优先使用 CI 注入的 `CI_VERSION`，否则显示 `dev-{pubspec版本}`
-- 同样逻辑在 [lib/pages/settings/about_page.dart:460-474](file:///d:/DevTools/project/PiggyCount/lib/pages/settings/about_page.dart) 重复实现
+- 同样逻辑在 [lib/pages/settings/about_page.dart:460-474](../lib/pages/settings/about_page.dart) 重复实现
 
 ---
 
@@ -567,7 +567,7 @@ static Future<AppInfo> _getAppInfo() async {
 
 **配置文件**：`android/key.properties`（不提交 VCS，CI 动态生成）
 
-**CI 注入流程**（[release.yml 第 109-130 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)）：
+**CI 注入流程**（[release.yml 第 109-130 行](../.github/workflows/release.yml)）：
 
 ```bash
 echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/ci-release.keystore
@@ -583,13 +583,13 @@ printf '%s\n' \
 - `ANDROID_KEYSTORE_BASE64`：keystore 文件 base64 编码
 - `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`
 
-**Gradle 端读取**（[build.gradle 第 8-13 行](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)）：通过 `Properties` 加载 `rootProject.file('key.properties')`。
+**Gradle 端读取**（[build.gradle 第 8-13 行](../android/app/build.gradle)）：通过 `Properties` 加载 `rootProject.file('key.properties')`。
 
 **兜底**（无 secrets 时）：自动生成 `ci-debug.keystore`，保证 CI 不失败但产物不可上 Play。
 
 ### 9.2 iOS 签名
 
-**实现位置**：[release.yml 第 442-546 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 442-546 行](../.github/workflows/release.yml)
 
 **Secrets**：
 - `APPLE_CERTIFICATE_P12`：分发证书 P12 base64
@@ -606,7 +606,7 @@ printf '%s\n' \
 5. `security set-key-partition-list -S apple-tool:,apple:,codesign:`
 6. 动态生成 `ios/ExportOptions.plist`（method=app-store、signingStyle=manual、signingCertificate=Apple Distribution、provisioningProfiles 指定 PiggyCount_AppStore 和 PiggyCount_Widget_AppStore）
 
-**project.pbxproj 修改**（[release.yml 第 558-594 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)）：
+**project.pbxproj 修改**（[release.yml 第 558-594 行](../.github/workflows/release.yml)）：
 - sed 改 `CODE_SIGN_STYLE = Automatic` → `Manual`
 - sed 改 `CODE_SIGN_IDENTITY[sdk=iphoneos*]` 从 `iPhone Developer` → `Apple Distribution`
 - perl 为所有 buildSettings 插入 `DEVELOPMENT_TEAM = ${APPLE_TEAM_ID}`
@@ -617,7 +617,7 @@ printf '%s\n' \
 
 ### 9.3 Google Play 服务账号
 
-**实现位置**：[release.yml 第 257-349 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 257-349 行](../.github/workflows/release.yml)
 
 **Secret**：`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`（Google Play Developer API 服务账户 JSON）
 
@@ -629,7 +629,7 @@ printf '%s\n' \
 
 ### 10.1 Android APK 命名
 
-**实现位置**：[release.yml 第 205-246 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 205-246 行](../.github/workflows/release.yml)
 
 | Gradle 内部名 | 重命名为 | 说明 |
 |--------------|---------|------|
@@ -642,13 +642,13 @@ printf '%s\n' \
 
 ### 10.2 AAB 命名
 
-**实现位置**：[release.yml 第 240-244 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 240-244 行](../.github/workflows/release.yml)
 
 - `app-prod-release.aab` → `piggycount-<VERSION>.aab`（AAB 不按 ABI 拆，Google Play 按设备分发）
 
 ### 10.3 iOS 产物命名
 
-**实现位置**：[release.yml 第 659-674、691-720 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 659-674、691-720 行](../.github/workflows/release.yml)
 
 | 产物 | 命名 | 实现方式 |
 |------|------|---------|
@@ -663,7 +663,7 @@ printf '%s\n' \
 
 ### 11.1 Google Play 上传脚本
 
-**实现位置**：[release.yml 第 257-351 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 257-351 行](../.github/workflows/release.yml)
 
 **触发条件**：`(github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || github.event_name == 'workflow_dispatch'`
 
@@ -684,7 +684,7 @@ printf '%s\n' \
 
 ### 11.2 GitHub Release Artifacts
 
-**实现位置**：[release.yml 第 876-889 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 876-889 行](../.github/workflows/release.yml)
 
 ```yaml
 # 整个 release job 由 job 级 if: needs.audit.outputs.publish == 'true' 把守
@@ -703,7 +703,7 @@ printf '%s\n' \
 
 ### 11.3 TestFlight 上传
 
-**实现位置**：[release.yml 第 722-750 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 722-750 行](../.github/workflows/release.yml)
 
 ```bash
 xcrun altool --upload-app \
@@ -718,7 +718,7 @@ xcrun altool --upload-app \
 
 ### 11.4 Telegram 通知
 
-**实现位置**：[release.yml 第 891-934 行](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)
+**实现位置**：[release.yml 第 891-934 行](../.github/workflows/release.yml)
 
 `curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`，发送 Markdown 格式消息，含版本号、release 链接、commit 列表（URL 编码换行符 `%0A`）。
 
@@ -726,11 +726,11 @@ xcrun altool --upload-app \
 
 ## 12. 应用更新机制（OTA）
 
-**目录**：[lib/services/update/](file:///d:/DevTools/project/PiggyCount/lib/services/update/)（9 个文件）+ [lib/services/system/update_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/system/update_service.dart)（编排层）
+**目录**：[lib/services/update/](../lib/services/update)（9 个文件）+ [lib/services/system/update_service.dart](../lib/services/system/update_service.dart)（编排层）
 
 ### 12.1 update_checker.dart（版本检查）
 
-**实现位置**：[lib/services/update/update_checker.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_checker.dart)
+**实现位置**：[lib/services/update/update_checker.dart](../lib/services/update/update_checker.dart)
 
 - **API**：`https://api.github.com/repos/mecoren/PiggyCount/releases/latest`
 - **重试机制**：最多 3 次，每次间隔 1 秒
@@ -748,7 +748,7 @@ xcrun altool --upload-app \
 
 ### 12.2 update_downloader.dart（APK 下载）
 
-**实现位置**：[lib/services/update/update_downloader.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_downloader.dart)
+**实现位置**：[lib/services/update/update_downloader.dart](../lib/services/update/update_downloader.dart)
 
 - 使用 **Dio** HTTP 客户端，超时：connect 30s、receive 10min（大文件）、send 2min
 - **下载路径**：Android 用 `getExternalStorageDirectory()`，其他用 `getApplicationDocumentsDirectory()`
@@ -760,7 +760,7 @@ xcrun altool --upload-app \
 
 ### 12.3 update_installer.dart（APK 安装）
 
-**实现位置**：[lib/services/update/update_installer.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_installer.dart)
+**实现位置**：[lib/services/update/update_installer.dart](../lib/services/update/update_installer.dart)
 
 - **双安装路径**：
   - 生产环境（`bool.fromEnvironment('dart.vm.product')`）：先尝试 `_installApkWithIntent`（MethodChannel 调原生 Android Intent），失败兜底 `OpenFilex.open`
@@ -772,7 +772,7 @@ xcrun altool --upload-app \
 
 ### 12.4 update_cache.dart（版本检查缓存）
 
-**实现位置**：[lib/services/update/update_cache.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_cache.dart)
+**实现位置**：[lib/services/update/update_cache.dart](../lib/services/update/update_cache.dart)
 
 - **SharedPreferences keys**：`cached_apk_path`、`cached_apk_version`、`cached_apk_timestamp`
 - **APK 文件查找**：从 URL 提取版本号（正则 `piggycount-([0-9]+\.[0-9]+\.[0-9]+)\.apk`）
@@ -784,7 +784,7 @@ xcrun altool --upload-app \
 
 ### 12.5 github_mirror_service.dart（GitHub 镜像加速）
 
-**实现位置**：[lib/services/update/github_mirror_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/github_mirror_service.dart)
+**实现位置**：[lib/services/update/github_mirror_service.dart](../lib/services/update/github_mirror_service.dart)
 
 - **6 个镜像源**：
   1. `direct`：GitHub 直连（默认）
@@ -801,7 +801,7 @@ xcrun altool --upload-app \
 
 ### 12.6 update_notifications.dart（更新通知）
 
-**实现位置**：[lib/services/update/update_notifications.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_notifications.dart)
+**实现位置**：[lib/services/update/update_notifications.dart](../lib/services/update/update_notifications.dart)
 
 - **通知渠道**：`update_download`，Importance.low，无声音无振动
 - **Android 13+ 权限请求**：`requestNotificationsPermission()`
@@ -811,7 +811,7 @@ xcrun altool --upload-app \
 
 ### 12.7 update_permissions.dart（安装权限）
 
-**实现位置**：[lib/services/update/update_permissions.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_permissions.dart)
+**实现位置**：[lib/services/update/update_permissions.dart](../lib/services/update/update_permissions.dart)
 
 - **存储权限**：Android 10 及以下才申请 `Permission.storage`
 - **安装权限**：`Permission.requestInstallPackages`
@@ -819,7 +819,7 @@ xcrun altool --upload-app \
 
 ### 12.8 update_dialogs.dart（更新提示）
 
-**实现位置**：[lib/services/update/update_dialogs.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_dialogs.dart)
+**实现位置**：[lib/services/update/update_dialogs.dart](../lib/services/update/update_dialogs.dart)
 
 - **`showInstallDialog`**：下载完成后的安装确认
 - **`showNotificationGuideDialog`**：通知权限被拒后的引导（3 步图文教程）
@@ -830,7 +830,7 @@ xcrun altool --upload-app \
 
 ### 12.9 update_result.dart（结果模型）
 
-**实现位置**：[lib/services/update/update_result.dart](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_result.dart)
+**实现位置**：[lib/services/update/update_result.dart](../lib/services/update/update_result.dart)
 
 - `UpdateResult` 类：hasUpdate、success、message、filePath、version、downloadUrl、releaseNotes、type
 - `UpdateResultType` 枚举：downloadSuccess、alreadyLatest、userCancelled、permissionDenied、downloadFailed、installFailed、checkFailed
@@ -839,7 +839,7 @@ xcrun altool --upload-app \
 
 ### 12.10 update_service.dart（编排层）
 
-**实现位置**：[lib/services/system/update_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/system/update_service.dart)
+**实现位置**：[lib/services/system/update_service.dart](../lib/services/system/update_service.dart)
 
 - **`checkUpdate`**：转发到 `UpdateChecker.checkUpdate`
 - **`downloadAndInstallUpdate`**（第 68-305 行）：完整流程编排
@@ -995,7 +995,7 @@ static Future<String> selectFastestMirror(String testUrl) async {
 
 ### 14.1 --dart-define 用法
 
-**注入位置**：[release.yml](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)（Android 第 150-158、187-191 行；iOS 第 550-556、684-689 行）
+**注入位置**：[release.yml](../.github/workflows/release.yml)（Android 第 150-158、187-191 行；iOS 第 550-556、684-689 行）
 
 | 变量名 | 类型 | 默认 | 来源 |
 |--------|------|------|------|
@@ -1007,12 +1007,12 @@ static Future<String> selectFastestMirror(String testUrl) async {
 ### 14.2 代码读取位置
 
 **`String.fromEnvironment` 使用文件**：
-- [lib/services/update/update_checker.dart:224-226](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_checker.dart)：`GIT_COMMIT`、`BUILD_TIME`、`CI_VERSION`
-- [lib/services/system/update_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/system/update_service.dart)：`dart.vm.product`、`flavor`
-- [lib/services/update/update_installer.dart:48](file:///d:/DevTools/project/PiggyCount/lib/services/update/update_installer.dart)：`dart.vm.product`（区分生产/开发安装路径）
-- [lib/pages/settings/about_page.dart:24, 463-465](file:///d:/DevTools/project/PiggyCount/lib/pages/settings/about_page.dart)：`GOOGLE_PLAY`、`GIT_COMMIT`、`BUILD_TIME`、`CI_VERSION`
-- [lib/services/platform/screenshot_monitor_service.dart:9](file:///d:/DevTools/project/PiggyCount/lib/services/platform/screenshot_monitor_service.dart)：`GOOGLE_PLAY`
-- [lib/pages/settings/smart_billing_page.dart:18](file:///d:/DevTools/project/PiggyCount/lib/pages/settings/smart_billing_page.dart)：`GOOGLE_PLAY`
+- [lib/services/update/update_checker.dart:224-226](../lib/services/update/update_checker.dart)：`GIT_COMMIT`、`BUILD_TIME`、`CI_VERSION`
+- [lib/services/system/update_service.dart](../lib/services/system/update_service.dart)：`dart.vm.product`、`flavor`
+- [lib/services/update/update_installer.dart:48](../lib/services/update/update_installer.dart)：`dart.vm.product`（区分生产/开发安装路径）
+- [lib/pages/settings/about_page.dart:24, 463-465](../lib/pages/settings/about_page.dart)：`GOOGLE_PLAY`、`GIT_COMMIT`、`BUILD_TIME`、`CI_VERSION`
+- [lib/services/platform/screenshot_monitor_service.dart:9](../lib/services/platform/screenshot_monitor_service.dart)：`GOOGLE_PLAY`
+- [lib/pages/settings/smart_billing_page.dart:18](../lib/pages/settings/smart_billing_page.dart)：`GOOGLE_PLAY`
 
 ### 14.3 .env 文件
 
@@ -1024,7 +1024,7 @@ static Future<String> selectFastestMirror(String testUrl) async {
 
 ### 15.1 scripts/ 目录
 
-**位置**：[scripts/](file:///d:/DevTools/project/PiggyCount/scripts/)
+**位置**：[scripts/](../scripts)
 
 | 文件 | 用途 |
 |------|------|
@@ -1040,7 +1040,7 @@ static Future<String> selectFastestMirror(String testUrl) async {
 
 ### 15.3 flutter_launcher_icons
 
-**配置位置**：[pubspec.yaml:102-110](file:///d:/DevTools/project/PiggyCount/pubspec.yaml)
+**配置位置**：[pubspec.yaml:102-110](../pubspec.yaml)
 
 ```yaml
 flutter_launcher_icons:
@@ -1052,7 +1052,7 @@ flutter_launcher_icons:
   adaptive_icon_monochrome: assets/icon/adaptive_monochrome.png
 ```
 
-**重要注意事项**（[pubspec.yaml:105-106](file:///d:/DevTools/project/PiggyCount/pubspec.yaml) 注释）：legacy `mipmap ic_launcher.png` 已钉死为线上版本，重跑工具后必须 `git checkout main -- android/app/src/main/res/mipmap-*/ic_launcher.png` 恢复。
+**重要注意事项**（[pubspec.yaml:105-106](../pubspec.yaml) 注释）：legacy `mipmap ic_launcher.png` 已钉死为线上版本，重跑工具后必须 `git checkout main -- android/app/src/main/res/mipmap-*/ic_launcher.png` 恢复。
 
 ---
 
@@ -1082,20 +1082,20 @@ PiggyCount 项目实现了**完整的 Flutter 跨平台构建发布流水线**�
 ## 17. 参考与延伸阅读
 
 ### 17.1 相关文档
-- [03-tech-stack.md](file:///d:/DevTools/project/PiggyCount/docoments/03-tech-stack.md)：技术栈与依赖
-- [11-performance.md](file:///d:/DevTools/project/PiggyCount/docoments/11-performance.md)：性能优化（APK 缓存等）
-- [12-security.md](file:///d:/DevTools/project/PiggyCount/docoments/12-security.md)：安全机制（签名/凭证存储）
+- [03-tech-stack.md](03-tech-stack.md)：技术栈与依赖
+- [11-performance.md](11-performance.md)：性能优化（APK 缓存等）
+- [12-security.md](12-security.md)：安全机制（签名/凭证存储）
 
 ### 17.2 关键源码文件
-- [pubspec.yaml](file:///d:/DevTools/project/PiggyCount/pubspec.yaml)：项目依赖与版本
-- [android/app/build.gradle](file:///d:/DevTools/project/PiggyCount/android/app/build.gradle)：Android 构建配置
-- [android/app/src/main/AndroidManifest.xml](file:///d:/DevTools/project/PiggyCount/android/app/src/main/AndroidManifest.xml)：Android 权限
-- [ios/Runner/Info.plist](file:///d:/DevTools/project/PiggyCount/ios/Runner/Info.plist)：iOS 配置
-- [ios/Flutter/Debug.xcconfig](file:///d:/DevTools/project/PiggyCount/ios/Flutter/Debug.xcconfig) / [Release.xcconfig](file:///d:/DevTools/project/PiggyCount/ios/Flutter/Release.xcconfig)：iOS flavor 同步
-- [.github/workflows/release.yml](file:///d:/DevTools/project/PiggyCount/.github/workflows/release.yml)：CI/CD 主流程
-- [lib/services/update/](file:///d:/DevTools/project/PiggyCount/lib/services/update/)：OTA 更新模块
-- [lib/services/system/update_service.dart](file:///d:/DevTools/project/PiggyCount/lib/services/system/update_service.dart)：更新编排层
-- [scripts/](file:///d:/DevTools/project/PiggyCount/scripts/)：构建辅助脚本
+- [pubspec.yaml](../pubspec.yaml)：项目依赖与版本
+- [android/app/build.gradle](../android/app/build.gradle)：Android 构建配置
+- [android/app/src/main/AndroidManifest.xml](../android/app/src/main/AndroidManifest.xml)：Android 权限
+- [ios/Runner/Info.plist](../ios/Runner/Info.plist)：iOS 配置
+- [ios/Flutter/Debug.xcconfig](../ios/Flutter/Debug.xcconfig) / [Release.xcconfig](../ios/Flutter/Release.xcconfig)：iOS flavor 同步
+- [.github/workflows/release.yml](../.github/workflows/release.yml)：CI/CD 主流程
+- [lib/services/update/](../lib/services/update)：OTA 更新模块
+- [lib/services/system/update_service.dart](../lib/services/system/update_service.dart)：更新编排层
+- [scripts/](../scripts)：构建辅助脚本
 
 ### 17.3 外部参考
 - Flutter 构建发布：https://docs.flutter.dev/deployment
