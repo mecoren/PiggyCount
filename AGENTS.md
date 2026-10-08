@@ -7,6 +7,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 ## 快速原则
 
 - **中文工作**：对话、commit message、文档、代码注释全部中文。commit 格式 `type(scope): 中文描述`，多批工作常在末尾附日期，如 `fix(sync): 同步一致性 D-1~D-4 修复 + 契约穷举守门测试（2026-09-27）`。
+- **文件引用只写仓库内相对路径（2026-10-08）**：文档 / PRD / 注释 / PR 正文里引用文件，Markdown 链接写 `[db.dart](../lib/data/db.dart#L120)`（相对当前文件所在目录，可带 `#Lxx-Lyy` 片段），正文提及写 `lib/data/db.dart`。**三类路径一律禁止**：① `file:///` 绝对路径（含 `d:\DevTools\...`、`C:/Develop/...` 这类盘符 + 机器目录，换机必失效）；② 任何本机绝对路径；③ 指向**外部兄弟项目**的路径（如 `C:\Develop\project\00_AI\orbit`、`...\wait-home\mobile\...`，以及指向仓库外的相对链接 `../../../../wait-home/...`）—— 外部项目只能写成「外部项目 `orbit` / `wait-home` 的 `<该仓库内相对路径>`」。引用**已删除**的文件时不要留链接（点击落空），改写成代码文本 `` `sync_engine.dart:1122` ``。历史遗留：`docoments/`、`prd/` 里曾有 424 个 `file:///` 链接 + 143 处裸机器路径，2026-10-08 已全量改为相对引用，新增文档照此办理。`docoments/INDEX.md` 的「代码引用规范」是本条的细则来源。
 - **Flutter 版本单一来源**：只改 `pubspec.yaml` 的 `environment.flutter`（当前 `3.47.6`），CI 用 `flutter-version-file: pubspec.yaml` 读取。**禁止**在 `.github/workflows/*.yml` 里另写版本号——历史上 `release.yml` 停留 3.27.3 而 `pubspec.lock` 已要求 >=3.44.0，漂移会让下一次打 tag 发版直接失败。
 - **应用版本单一来源**：真值在 `pubspec.yaml#version`（当前 `0.1.0`），描述**开发主线当前版本**。发版时 `release.yml` 不修改 `pubspec.yaml`，而是把 tag 名经 `--build-name` / `--build-number` 注入构建（`--build-number` 取 `github.run_number`）。因此**发版产物名只跟 tag 走**，与 `pubspec.yaml` 的当前值无关——不要再手工两处维护，也不要用 `sed` 改 `pubspec.yaml`。
 - **分层不可破**：UI 只碰 Provider；Provider 注入 Service / Repository；Service 只调 Repository；Repository 是数据库唯一入口。跨层调用一律 review 拒绝。
