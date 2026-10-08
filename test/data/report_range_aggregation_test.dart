@@ -4,9 +4,7 @@
 // 1. `totalsByTag` 与单标签的 `getTagStats` **逐值相等** —— 标签维度进了报表，
 //    就必须和标签详情页同一个数，否则用户会看到两处不一致的标签统计；
 // 2. 口径与既有统计一致：`exclude_from_stats = 0`、`COALESCE(native_amount,
-//    amount)`、半开区间 `[start, end)`、多标签分别计入；
-// 3. 共享账本 Editor 侧走 `transaction_tag_overrides` 的标签链接不能漏
-//    （漏了就是同一笔记账在两个人的报表里数不一样）。
+//    amount)`、半开区间 `[start, end)`、多标签分别计入。
 library;
 
 import 'package:drift/drift.dart' as d;
@@ -143,39 +141,6 @@ void main() {
           ledgerId: 1, type: 'expense', start: month(1, 30).start, end: month(1, 30).end);
       expect(rows.length, 2);
       expect(rows.every((e) => e.total == 300), isTrue);
-    });
-
-    test('共享账本 override 标签（Editor 侧）合进同一张报表', () async {
-      await seedLedger(id: 7);
-      await db.into(db.ledgers).insert(LedgersCompanion.insert(
-            id: const d.Value(8),
-            name: '共享账本',
-            syncId: const d.Value('ledger-shared'),
-          ));
-      await seedTx(8, 66, syncId: 'tx-shared-1');
-      await db.into(db.sharedLedgerTags).insert(
-            SharedLedgerTagsCompanion.insert(
-              ledgerSyncId: 'ledger-shared',
-              syncId: 'owner-tag-1',
-              name: '房东的标签',
-              color: const d.Value('#123456'),
-              updatedAt: DateTime(2026, 9, 1),
-            ),
-          );
-      await db.into(db.transactionTagOverrides).insert(
-            TransactionTagOverridesCompanion.insert(
-              transactionSyncId: 'tx-shared-1',
-              tagSyncId: 'owner-tag-1',
-              createdAt: DateTime(2026, 9, 2),
-            ),
-          );
-
-      final rows = await repo.totalsByTag(
-          ledgerId: 8, type: 'expense', start: month(1, 30).start, end: month(1, 30).end);
-      expect(rows.single.name, '房东的标签');
-      expect(rows.single.total, 66);
-      // 负 synthetic id：与标签详情页共用同一派生，才能点进详情
-      expect(rows.single.id, lessThan(0));
     });
 
     test('回收站里的交易不带标签行进报表（v44 归档语义）', () async {

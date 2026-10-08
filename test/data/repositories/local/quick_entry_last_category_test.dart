@@ -3,10 +3,8 @@
 // 覆盖 requirements.md 的 AC-R1 全部 7 个场景，外加索引断言与两个边界。
 //
 // 本方法的记忆源刻意**从 transactions 派生**而非存 SharedPreferences：
-// 依据是本仓库对「派生数据 vs 缓存副本」的既有取舍（见 getNoteHistory 的注释），
-// 且共享账本的 synthetic id 由 Dart `String.hashCode` 派生，
-// 跨 VM 版本/平台无稳定性保证 —— 一旦持久化，某次 Flutter 升级后
-// 存下来的 id 就会指向另一个（或不存在）分类。这是正确性差异，不是性能差异。
+// 依据是本仓库对「派生数据 vs 缓存副本」的既有取舍（见 getNoteHistory 的注释）——
+// 缓存副本会与同步数据脱节。这是正确性差异，不是性能差异。
 //
 // 索引断言用 `quickEntryLastCategorySql`（仓库导出的同一份 SQL），
 // 而不是在测试里另抄一份字面量 —— 否则改仓库 SQL 就能骗过测试。
@@ -29,7 +27,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
 import 'package:piggycount/data/repositories/local/local_transaction_repository.dart';
-import 'package:piggycount/utils/shared_ledger_picker_filter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -215,36 +212,6 @@ void main() {
       );
 
       expect(await repo.getLastUsedCategoryId(ledgerId: 2, kind: 'expense'), isNull);
-    });
-
-    test('共享账本 Owner 分类：读取时派生负数 synthetic id，且等于 syntheticIdForSyncId', () async {
-      const override = 'owner-cat-sync-1';
-      await repo.addTransaction(
-        ledgerId: 1,
-        type: 'expense',
-        amount: 10,
-        categorySyncIdOverride: override,
-        happenedAt: DateTime(2026, 7, 1),
-      );
-
-      final result = await repo.getLastUsedCategoryId(ledgerId: 1, kind: 'expense');
-
-      expect(result, syntheticIdForSyncId(override));
-      expect(result, lessThan(0), reason: 'synthetic id 一律负数，用于与本地正数 id 区分');
-    });
-
-    test('本地 id 与 override 同时存在时优先返回本地正数 id', () async {
-      final food = await repo.createCategory(name: '餐饮', kind: 'expense');
-      await repo.addTransaction(
-        ledgerId: 1,
-        type: 'expense',
-        amount: 10,
-        categoryId: food,
-        categorySyncIdOverride: 'owner-cat-sync-1',
-        happenedAt: DateTime(2026, 7, 1),
-      );
-
-      expect(await repo.getLastUsedCategoryId(ledgerId: 1, kind: 'expense'), food);
     });
 
     test('scanLimit 生效：窗口内没有同类型交易时返回 null（退回网格，无正确性损失）', () async {

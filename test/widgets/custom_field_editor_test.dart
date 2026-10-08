@@ -79,9 +79,6 @@ void main() {
         currency: 'CNY',
         type: 'personal',
         createdAt: DateTime(2026, 1, 1),
-        myRole: 'owner',
-        memberCount: 1,
-        isShared: false,
         monthStartDay: 1,
       );
 

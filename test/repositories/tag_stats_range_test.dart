@@ -1,6 +1,5 @@
 // #461 标签详情页按 月/年/全部 时间维度筛选:
 // getTagStats / watchTransactionsByTag 增加可选 [start, end) 半开区间过滤。
-// 共享账本 synthetic tag(负 id)分支同样生效。
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:drift/drift.dart' show Value;
@@ -8,8 +7,6 @@ import 'package:drift/native.dart';
 
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
-import 'package:piggycount/utils/shared_ledger_picker_filter.dart'
-    show syntheticIdForSyncId;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -167,92 +164,4 @@ void main() {
     expect(list.single.nativeAmount, 720.0);
   });
 
-  group('共享账本 synthetic tag', () {
-    const ledgerSyncId = 'ledger-ext-1';
-    const tagSyncId = 'tag-s1';
-
-    Future<int> seedSharedLedger() async {
-      final lid = await db.into(db.ledgers).insert(LedgersCompanion.insert(
-            name: '共享账本',
-            type: const Value('shared'),
-            syncId: const Value(ledgerSyncId),
-            myRole: const Value('editor'),
-            isShared: const Value(true),
-          ));
-      await db.into(db.sharedLedgerTags).insert(SharedLedgerTagsCompanion.insert(
-            ledgerSyncId: ledgerSyncId,
-            syncId: tagSyncId,
-            name: '共享标签',
-            updatedAt: DateTime.utc(2026, 1, 1),
-          ));
-      return lid;
-    }
-
-    Future<void> seedSharedTx({
-      required int ledgerId,
-      required String txSyncId,
-      required DateTime happenedAt,
-      double amount = 100,
-    }) async {
-      await db.into(db.transactions).insert(TransactionsCompanion.insert(
-            ledgerId: ledgerId,
-            type: 'expense',
-            amount: amount,
-            happenedAt: Value(happenedAt),
-            syncId: Value(txSyncId),
-          ));
-      await db
-          .into(db.transactionTagOverrides)
-          .insert(TransactionTagOverridesCompanion.insert(
-            transactionSyncId: txSyncId,
-            tagSyncId: tagSyncId,
-            createdAt: DateTime.utc(2026, 1, 1),
-          ));
-    }
-
-    test('getTagStats 对 synthetic tag 同样按范围过滤', () async {
-      final lid = await seedSharedLedger();
-      await seedSharedTx(
-          ledgerId: lid,
-          txSyncId: 'tx-1',
-          happenedAt: DateTime(2026, 6, 10),
-          amount: 30);
-      await seedSharedTx(
-          ledgerId: lid,
-          txSyncId: 'tx-2',
-          happenedAt: DateTime(2026, 7, 10),
-          amount: 500);
-
-      final synthId = syntheticIdForSyncId(tagSyncId);
-      final stats = await repo.getTagStats(
-        synthId,
-        ledgerId: lid,
-        start: DateTime(2026, 6, 1),
-        end: DateTime(2026, 7, 1),
-      );
-
-      expect(stats.count, 1);
-      expect(stats.expense, 30.0);
-    });
-
-    test('watchTransactionsByTag 对 synthetic tag 同样按范围过滤', () async {
-      final lid = await seedSharedLedger();
-      await seedSharedTx(
-          ledgerId: lid, txSyncId: 'tx-1', happenedAt: DateTime(2026, 6, 10));
-      await seedSharedTx(
-          ledgerId: lid, txSyncId: 'tx-2', happenedAt: DateTime(2026, 7, 10));
-
-      final synthId = syntheticIdForSyncId(tagSyncId);
-      final list = await repo
-          .watchTransactionsByTag(
-            synthId,
-            ledgerId: lid,
-            start: DateTime(2026, 6, 1),
-            end: DateTime(2026, 7, 1),
-          )
-          .first;
-
-      expect(list.map((t) => t.syncId).toList(), ['tx-1']);
-    });
-  });
 }

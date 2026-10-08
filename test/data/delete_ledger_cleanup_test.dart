@@ -2,8 +2,8 @@
 ///
 /// 背景：旧实现 `changeTracker == null` 提前 return —— 非 Cloud 后端
 /// （S3/WebDAV/iCloud/Supabase 快照链路）删账本时 budgets /
-/// transaction_tags / transaction_attachments / transaction_tag_overrides
-/// 全部残留孤儿行；且 recurring_transactions 在**任何**模式都漏删。
+/// transaction_tags / transaction_attachments 全部残留孤儿行；且
+/// recurring_transactions 在**任何**模式都漏删。
 ///
 /// 本文件覆盖快照链路（tracker == null，与 S3/WebDAV 模式同构）：
 /// 删除账本后所有账本维度子表必须清空，且不影响其他账本。
@@ -76,13 +76,6 @@ void main() {
             localSha256: d.Value('hash-a'),
           ),
         );
-    await db.into(db.transactionTagOverrides).insert(
-          TransactionTagOverridesCompanion.insert(
-            transactionSyncId: 'tx-a',
-            tagSyncId: 'owner-tag-1',
-            createdAt: DateTime.utc(2026, 8, 1),
-          ),
-        );
     for (var i = 0; i < 2; i++) {
       await db.into(db.budgets).insert(BudgetsCompanion.insert(
             ledgerId: 2,
@@ -115,7 +108,6 @@ void main() {
         reason: 'budgets 孤儿行在快照模式下也必须清（M1）');
     expect(await db.select(db.transactionTags).get(), isEmpty);
     expect(await db.select(db.transactionAttachments).get(), isEmpty);
-    expect(await db.select(db.transactionTagOverrides).get(), isEmpty);
     // M2：任何模式此前都漏删的周期规则模板
     expect(await db.select(db.recurringTransactions).get(), isEmpty,
         reason: '孤儿周期模板有被生成器复活成悬空 ledgerId 交易的风险（M2）');

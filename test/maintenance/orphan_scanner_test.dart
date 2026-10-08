@@ -200,16 +200,6 @@ void main() {
           .length, 0);
     });
 
-    test('B3 共享分类图标缓存无引用', () async {
-      final dir = Directory('${tmp.path}/custom_icons');
-      await dir.create(recursive: true);
-      await File('${dir.path}/shared_abc123.png').writeAsBytes([1]);
-
-      final report = await scanner.scanAll();
-      expect(report.fileOrphans
-          .where((r) => r.type == OrphanType.fileOrphanSharedIcon)
-          .length, 1);
-    });
   });
 
   group('C 类 — 同步孤儿', () {

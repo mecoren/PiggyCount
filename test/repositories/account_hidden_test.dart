@@ -1,11 +1,12 @@
-/// 账户隐藏(issue #240)— Repository 层 + 选择器过滤 helper 测试。
+/// 账户隐藏(issue #240)— Repository 层测试。
 ///
 /// 覆盖:
 /// - `updateAccount(id, hidden: true)` 落值且记 user-global change(同步依赖)。
 /// - `setAccountHidden` 便捷法往返(true → false),内部走 `updateAccount`。
 /// - `updateAccount` 只改 name 时,`hidden` 不被动(absent 保护,不能被无意抹掉)。
-/// - `filterAccountsForLedger`(记账 `AccountSelector` / 转账 `transfer_form`
-///   共用的过滤 helper)排除 `hidden` 账户。
+///
+/// 选择器排除隐藏账户(#240)由调用方(account_selector / transfer_form)过滤
+/// 实现,端到端行为见 test/widgets/transfer_form_account_hidden_test.dart。
 ///
 /// 关键风险(见 CLAUDE.md 数据库访问规则 + 02-tech-design-app.md §三.1):隐藏开关
 /// 必须走会记 change 的 `updateAccount`,不能像 `updateAccountSortOrders` /
@@ -18,7 +19,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
 import 'package:piggycount/cloud/sync/change_tracker.dart';
-import 'package:piggycount/utils/shared_ledger_picker_filter.dart';
 
 void main() {
   // repo.createAccount 内部会 logger.debug(...),logger 单例首次使用时会
@@ -86,19 +86,8 @@ void main() {
     expect(a.name, 'A2');
   });
 
-  test('filterAccountsForLedger 排除 hidden 账户(单人账本/Owner 视角)', () async {
-    final lid = await repo.createLedger(name: 'L');
-    final visibleId = await repo.createAccount(ledgerId: lid, name: '可见');
-    final hiddenId = await repo.createAccount(ledgerId: lid, name: '隐藏');
-    await repo.setAccountHidden(hiddenId, true);
-
-    final all = await repo.getAllAccounts();
-    // ctx=null 模拟单人账本(记账/转账最常见场景)。
-    final filtered = await db.filterAccountsForLedger(all, null);
-
-    expect(filtered.map((a) => a.id), contains(visibleId));
-    expect(filtered.map((a) => a.id), isNot(contains(hiddenId)));
-  });
+  // 注:选择器排除隐藏账户(#240)由调用方(account_selector / transfer_form)
+  // 过滤实现,端到端行为见 test/widgets/transfer_form_account_hidden_test.dart。
 
   // ==========================================================================
   // D1 反向断言(账户隐藏 #240 统计层不动红线):隐藏账户仍计入净资产/资产构成。

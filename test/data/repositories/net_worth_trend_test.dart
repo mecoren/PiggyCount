@@ -92,24 +92,18 @@ void main() {
     expect(series.first.net, 1700.0);
   });
 
-  test('getEarliestTransactionDate 排除以成员身份加入的共享账本', () async {
-    // 自己账本(id=1,owner、非共享)
+  test('getEarliestTransactionDate 取全库最早一笔(跨账本)', () async {
     await db.into(db.ledgers).insert(LedgersCompanion.insert(name: '个人'));
-    // 以成员加入的共享账本(id=2,is_shared 且 my_role!=owner)
-    await db.into(db.ledgers).insert(LedgersCompanion.insert(
-        name: '共享',
-        isShared: const d.Value(true),
-        myRole: const d.Value('viewer')));
+    await db.into(db.ledgers).insert(LedgersCompanion.insert(name: '第二个账本'));
     final acc = await db.into(db.accounts).insert(AccountsCompanion.insert(
         ledgerId: 1, name: '现金', type: const d.Value('cash')));
-    // 共享账本(id=2)更早的交易 2026-01 —— 应被排除
+    // 第二个账本(id=2)更早的交易 2026-01 —— 全库起点应取这个
     await db.into(db.transactions).insert(TransactionsCompanion.insert(
         ledgerId: 2,
         type: 'expense',
         amount: 100,
         accountId: d.Value(acc),
         happenedAt: d.Value(DateTime(2026, 1, 5))));
-    // 自己账本(id=1)的交易 2026-03 —— 趋势起点应取这个
     await db.into(db.transactions).insert(TransactionsCompanion.insert(
         ledgerId: 1,
         type: 'expense',
@@ -118,7 +112,6 @@ void main() {
         happenedAt: d.Value(DateTime(2026, 3, 10))));
 
     final earliest = await repo.getEarliestTransactionDate();
-    // 排除共享账本 2026-01,起点 = 自己账本最早 2026-03
-    expect(earliest, DateTime(2026, 3, 10));
+    expect(earliest, DateTime(2026, 1, 5));
   });
 }

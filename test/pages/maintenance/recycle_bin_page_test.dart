@@ -51,9 +51,6 @@ void main() {
         type: 'personal',
         createdAt: DateTime(2026, 1, 1),
         syncId: 'ledger-1',
-        myRole: 'owner',
-        memberCount: 1,
-        isShared: false,
         monthStartDay: 1,
       );
 

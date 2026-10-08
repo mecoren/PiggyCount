@@ -11,8 +11,7 @@
 /// 为什么 #4 要拆到第三层测：页面拿到的已经是「provider 校验过的 id」，
 /// 用 provider 覆盖去喂一个不存在的 id 只能验证**页面**的兜底；
 /// 而「记忆到已被删除的分类 → 不预填」这条规则的主体在 provider 里
-/// （`getCategoryById` 复核 + 共享账本 synthetic id 必须属于当前账本），
-/// 只有跑真实 provider 才算验证了它。
+/// （`getCategoryById` 复核），只有跑真实 provider 才算验证了它。
 ///
 /// 落点断言的判别器用 `find.byType(AmountEditorSheet)`：金额表单是盖在
 /// 分类网格**之上**的模态路由，网格本身仍在树里，所以「网格在不在」
@@ -31,7 +30,6 @@ import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/pages/transaction/transaction_editor_page.dart';
 import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/providers/quick_entry_providers.dart';
-import 'package:piggycount/utils/shared_ledger_picker_filter.dart';
 import 'package:piggycount/widgets/biz/amount_editor_sheet.dart';
 import 'package:piggycount/widgets/category/category_selector.dart';
 import 'package:piggycount/widgets/category_icon.dart';
@@ -58,9 +56,6 @@ void main() {
         currency: 'CNY',
         type: 'personal',
         createdAt: DateTime(2026, 1, 1),
-        myRole: 'owner',
-        memberCount: 1,
-        isShared: false,
         monthStartDay: 1,
         syncId: syncId,
       );
@@ -657,65 +652,5 @@ void main() {
           isNull);
     });
 
-    test('共享账本 synthetic id 属于当前账本 → 返回该 synthetic id', () async {
-      const ledgerSync = 'ledger-sync-1';
-      const catSync = 'owner-cat-1';
-      await db
-          .into(db.ledgers)
-          .insert(cnyLedger(syncId: ledgerSync).toCompanion(true));
-      await db.into(db.sharedLedgerCategories).insert(
-            SharedLedgerCategoriesCompanion.insert(
-              ledgerSyncId: ledgerSync,
-              syncId: catSync,
-              name: '餐饮',
-              kind: 'expense',
-              updatedAt: DateTime(2026, 9, 1),
-            ),
-          );
-      await repo.addTransaction(
-        ledgerId: 1,
-        type: 'expense',
-        amount: 10,
-        categorySyncIdOverride: catSync,
-        happenedAt: DateTime(2026, 9, 1),
-      );
-
-      final c = container();
-      addTearDown(c.dispose);
-      expect(
-        await c.read(quickEntryLastCategoryProvider('expense').future),
-        syntheticIdForSyncId(catSync),
-      );
-    });
-
-    test('共享账本 synthetic id **不属于**当前账本 → 返回 null（跨账本不得串台）', () async {
-      const catSync = 'owner-cat-1';
-      // 当前账本没有 syncId；SharedLedger* 里的这条属于**别的**账本。
-      await db.into(db.ledgers).insert(cnyLedger().toCompanion(true));
-      await db.into(db.sharedLedgerCategories).insert(
-            SharedLedgerCategoriesCompanion.insert(
-              ledgerSyncId: 'other-ledger-sync',
-              syncId: catSync,
-              name: '餐饮',
-              kind: 'expense',
-              updatedAt: DateTime(2026, 9, 1),
-            ),
-          );
-      await repo.addTransaction(
-        ledgerId: 1,
-        type: 'expense',
-        amount: 10,
-        categorySyncIdOverride: catSync,
-        happenedAt: DateTime(2026, 9, 1),
-      );
-
-      final c = container();
-      addTearDown(c.dispose);
-      expect(
-        await c.read(quickEntryLastCategoryProvider('expense').future),
-        isNull,
-        reason: '不能复用全库扫描的 findCategoryBySyntheticId —— 会命中别的账本',
-      );
-    });
   });
 }
