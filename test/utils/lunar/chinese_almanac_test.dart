@@ -4,7 +4,7 @@ import 'package:piggycount/utils/lunar/lunar_calendar.dart';
 
 /// 历法副标签移植守门测试。
 ///
-/// 用**已知事实**锚定压缩表，防止 201 项 hex 表 / 196 项节气表在移植时抄错：
+/// 用**已知事实**锚定压缩表，防止 201 项 hex 表 / 197 项节气表在移植时抄错：
 /// 2026 春节 = 02-17（正月初一）、2026-10-01 = 国庆节、清明恒落 4/4–4/6、
 /// 秋分恒落 9/22–9/24、2026 = 丙午马年。
 void main() {
@@ -30,6 +30,20 @@ void main() {
       expect(LunarCalendar.lunarToSolar(2026, 13, 1), isNull);
       // 2026 无闰月时，标记为闰月即非法
       expect(LunarCalendar.lunarToSolar(2026, 6, 1, isLeapMonth: true), isNull);
+    });
+
+    test('1933 年闰五月为 30 天（原表月长错位回归）', () {
+      // 校准前 0x06e95 把闰五月记成 29 天，1933-07-22 起整月偏移一天
+      final lunar = LunarCalendar.solarToLunar(DateTime(1933, 7, 22));
+      expect(lunar, isNotNull);
+      expect(lunar!.month, 5);
+      expect(lunar.day, 30);
+      expect(lunar.isLeapMonth, isTrue);
+
+      final next = LunarCalendar.solarToLunar(DateTime(1933, 7, 23))!;
+      expect(next.month, 6);
+      expect(next.day, 1);
+      expect(next.isLeapMonth, isFalse);
     });
 
     test('月 / 日中文标签', () {
@@ -76,6 +90,16 @@ void main() {
 
       final midMonth = LunarCalendar.lunarToSolar(2026, 2, 15)!;
       expect(ChineseAlmanac.daySubLabel(midMonth), '十五');
+    });
+
+    test('1975 年节气可解析（原表该行被抄短，曾抛 RangeError 崩溃）', () {
+      expect(ChineseAlmanac.solarTermLabel(DateTime(1975, 7, 8)), '小暑');
+      expect(ChineseAlmanac.solarTermLabel(DateTime(1975, 7, 7)), isNull);
+    });
+
+    test('2013 立春 = 2/4（校准前误为 2/3）', () {
+      expect(ChineseAlmanac.solarTermLabel(DateTime(2013, 2, 4)), '立春');
+      expect(ChineseAlmanac.solarTermLabel(DateTime(2013, 2, 3)), isNull);
     });
 
     test('干支生肖年标签：2026 → 丙午马年', () {
