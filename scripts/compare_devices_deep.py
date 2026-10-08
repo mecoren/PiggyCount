@@ -18,9 +18,8 @@ except Exception:
 
 SYNC_TABLES = ["ledgers", "accounts", "categories", "tags", "transactions",
                "budgets", "recurring_transactions", "exchange_rate_overrides"]
-NONSYNC_TABLES = ["local_changes", "ledger_members", "shared_ledger_categories",
-                  "shared_ledger_accounts", "shared_ledger_tags", "transaction_tag_overrides",
-                  "conversations", "exchange_rates", "sync_pull_errors",
+NONSYNC_TABLES = ["local_changes", "conversations", "exchange_rates",
+                  "sync_pull_errors",
                   "entity_change_watermarks", "transaction_attachments", "transaction_tags"]
 
 

@@ -1468,7 +1468,6 @@ Future<List<dynamic>> _loadCategoryData(
     seriesFuture,
     repo.countByTypeInRange(
         ledgerId: ledgerId, type: type, start: start, end: end),
-    repo.getSharedSyntheticCategoriesForLedger(ledgerId),
     // 本期收支（结余用）
     repo.totalsInRange(ledgerId: ledgerId, start: start, end: end),
     prevTotalsFuture,
@@ -1485,17 +1484,15 @@ Future<List<dynamic>> _loadCategoryData(
         double total,
         int count
       })>;
-  final sharedSynthetic = results[3] as Map<int, db.Category>;
-  final aggregated =
-      await aggregateTopLevelCategories(hierarchyData, repo, sharedSynthetic);
+  final aggregated = await aggregateTopLevelCategories(hierarchyData, repo);
 
   return [
     aggregated,
     results[1],
     results[2],
+    results[3],
     results[4],
     results[5],
-    results[6],
   ];
 }
 
@@ -1526,7 +1523,6 @@ Future<List<dynamic>> _loadBalanceData(
     expenseSeriesFuture,
     repo.countByTypeInRange(
         ledgerId: ledgerId, type: 'income', start: start, end: end),
-    repo.getSharedSyntheticCategoriesForLedger(ledgerId),
     prevTotalsFuture,
     chartSeriesFuture,
   ]);
@@ -1541,9 +1537,7 @@ Future<List<dynamic>> _loadBalanceData(
         double total,
         int count
       })>;
-  final sharedSynthetic = results[6] as Map<int, db.Category>;
-  final aggregated =
-      await aggregateTopLevelCategories(hierarchyData, repo, sharedSynthetic);
+  final aggregated = await aggregateTopLevelCategories(hierarchyData, repo);
 
   // 结余序列在加载侧算：两份按日/按月序列各最长 6 桶×31 天，合并是纯函数，
   // 放在 build 里等于每次 setState 重排一遍（F2 顺手收的旧账）。
@@ -1556,9 +1550,9 @@ Future<List<dynamic>> _loadBalanceData(
     results[3],
     results[4],
     results[5],
-    results[7],
+    results[6],
     _calculateBalanceSeries(results[3], results[4]),
-    results[8],
+    results[7],
   ];
 }
 

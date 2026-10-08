@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db.dart';
-import '../../data/repositories/local/local_repository.dart';
 import '../../providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
@@ -11,7 +10,6 @@ import '../../services/billing/post_processor.dart';
 import '../../services/attachment_service.dart';
 import '../biz/amount_editor_sheet.dart';
 import '../../utils/account_type_utils.dart';
-import '../../utils/shared_ledger_picker_filter.dart';
 import '../ui/ui.dart';
 
 /// 转账表单组件
@@ -91,33 +89,9 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     return fromAccount?.currency == toAccount?.currency;
   }
 
-  /// 反查账户:正数 id → 主表 accounts;负数 synthetic id → 扫
-  /// SharedLedgerAccounts 找 syntheticIdForSyncId 命中(共享账本 Editor
-  /// 视角下 picker 给出的是 Owner 的 synthetic 账户)。
+  /// 反查账户(主表 accounts)。
   Future<Account?> _lookupAccount(int accountId) async {
-    final repo = ref.read(repositoryProvider);
-    if (accountId >= 0) return repo.getAccount(accountId);
-    if (repo is! LocalRepository) return null;
-    return repo.db.findAccountBySyntheticId(accountId);
-  }
-
-  /// 把 synthetic accountId(负数)反查回 Owner 的 syncId(正数 id 时返 null)。
-  /// 用 ledger.syncId 限定 SharedLedgerAccounts 的查询范围。
-  Future<String?> _resolveSyncIdByAccountId(int accountId, int ledgerId) async {
-    if (accountId >= 0) return null;
-    final repo = ref.read(repositoryProvider);
-    if (repo is! LocalRepository) return null;
-    final ledger = await (repo.db.select(repo.db.ledgers)
-          ..where((l) => l.id.equals(ledgerId)))
-        .getSingleOrNull();
-    if (ledger?.syncId == null) return null;
-    final rows = await (repo.db.select(repo.db.sharedLedgerAccounts)
-          ..where((t) => t.ledgerSyncId.equals(ledger!.syncId!)))
-        .get();
-    for (final r in rows) {
-      if (syntheticIdForSyncId(r.syncId) == accountId) return r.syncId;
-    }
-    return null;
+    return ref.read(repositoryProvider).getAccount(accountId);
   }
 
   // 当两个账户都选择后，自动弹出金额输入弹窗
@@ -171,20 +145,8 @@ class _TransferFormState extends ConsumerState<TransferForm> {
           final transferCategory = await ref.read(transferCategoryProvider.future);
           final transferCategoryId = transferCategory.id;
 
-          // §7 共享账本:Editor picker 给的是 synthetic Account(负数 id)。
-          // 写本地 Drift 时 accountId / toAccountId 留 null,override 字段
-          // 走 Owner 的 syncId;push 序列化时按 override 输出 payload。
-          final isSyntheticFrom =
-              _fromAccountId != null && _fromAccountId! < 0;
-          final isSyntheticTo = _toAccountId != null && _toAccountId! < 0;
-          final fromAccountForAdd = isSyntheticFrom ? null : _fromAccountId;
-          final toAccountForAdd = isSyntheticTo ? null : _toAccountId;
-          final fromOverride = isSyntheticFrom
-              ? await _resolveSyncIdByAccountId(_fromAccountId!, ledgerId)
-              : null;
-          final toOverride = isSyntheticTo
-              ? await _resolveSyncIdByAccountId(_toAccountId!, ledgerId)
-              : null;
+          final fromAccountForAdd = _fromAccountId;
+          final toAccountForAdd = _toAccountId;
 
           try {
             if (widget.editingTransactionId != null) {
@@ -197,17 +159,14 @@ class _TransferFormState extends ConsumerState<TransferForm> {
                 note: result.note,
                 happenedAt: result.date,
                 accountId: d.Value<int?>(fromAccountForAdd),
-                accountSyncIdOverride: fromOverride,
                 // v46 自定义字段:转账表单同样渲染录入分区,值必须随保存落库,
                 // 否则用户填了却静默丢弃。null = 本次未涉及(不改动)。
                 customValues: result.customValues,
               );
-              // 更新 toAccountId(同时写 toAccountSyncIdOverride,共享账本场景)
+              // 更新 toAccountId
               await repo.updateTransactionFields(
                 id: widget.editingTransactionId!,
                 toAccountId: d.Value<int?>(toAccountForAdd),
-                toAccountSyncIdOverride: toOverride,
-                writeToAccountSyncIdOverride: true,
               );
               // 更新标签
               if (result.tagIds.isNotEmpty) {
@@ -253,8 +212,6 @@ class _TransferFormState extends ConsumerState<TransferForm> {
                 categoryId: transferCategoryId, // 使用虚拟转账分类ID
                 accountId: fromAccountForAdd,
                 toAccountId: toAccountForAdd,
-                accountSyncIdOverride: fromOverride,
-                toAccountSyncIdOverride: toOverride,
                 note: result.note,
                 happenedAt: result.date,
                 // v46 自定义字段(同编辑分支,避免用户填了却被丢弃)
@@ -312,24 +269,17 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     );
   }
 
-  /// §7 共享账本:Editor 在共享账本下转账要选 Owner 的账户(SharedLedger
-  /// Accounts 镜像),而非自己的 user-global。跟 AccountPicker / category_selector
-  /// 一致用 filterAccountsForLedger 转 synthetic Account。
+  /// 转账账户候选:排除已隐藏账户(#240)。
   ///
-  /// 账户隐藏(#240)E1 钉住:编辑历史转账(editingTransactionId != null)时,
-  /// 若转出/转入账户当前已被隐藏(因而被上面 filterAccountsForLedger 排
-  /// 除),补回候选(hidden=true,build() 渲染网格时打「已隐藏」灰标),让用
-  /// 户能原样保存;其余隐藏账户仍不出现。新建转账场景不钉住。跟
+  /// 账户隐藏 E1 钉住:编辑历史转账(editingTransactionId != null)时,
+  /// 若转出/转入账户当前已被隐藏(因而被上面过滤排除),补回候选
+  /// (hidden=true,build() 渲染网格时打「已隐藏」灰标),让用户能原样保存;
+  /// 其余隐藏账户仍不出现。新建转账场景不钉住。跟
   /// AccountSelector.pinnedAccountId 同一范式(见 account_selector.dart)。
   Future<List<Account>> _loadFilteredAccounts() async {
     final repo = ref.read(repositoryProvider);
     final allAccounts = await repo.getAllAccounts();
-    var accounts = allAccounts;
-    if (repo is LocalRepository) {
-      final currentLedgerId = ref.read(currentLedgerIdProvider);
-      final ctx = await repo.db.loadLedgerPickerContext(currentLedgerId);
-      accounts = await repo.db.filterAccountsForLedger(allAccounts, ctx);
-    }
+    var accounts = allAccounts.where((a) => !a.hidden).toList();
 
     if (widget.editingTransactionId != null) {
       for (final pinnedId in {
@@ -349,9 +299,8 @@ class _TransferFormState extends ConsumerState<TransferForm> {
   }
 
   // FutureBuilder future 记忆化(审计 U8 同款):本组件在 build 里 future:
-  // _loadFilteredAccounts(),rebuild(选账户 setState / sharedResourceRefresh
-  // tick / 账本流更新)每次都会触发新的 getAllAccounts + filterAccountsForLedger
-  // 查询并闪 loading。账本/账本上下文/编辑对象不变时结果恒定,缓存上次
+  // _loadFilteredAccounts(),rebuild(选账户 setState / 账本流更新)每次都会触发
+  // 新的 getAllAccounts 查询并闪 loading。账本/账本上下文/编辑对象不变时结果恒定,缓存上次
   // future 让 rebuild 复用;账本切换(编辑态钉住集合也依赖 initial ids,
   // 一并入键)时失效。
   Future<List<Account>>? _accountsFuture;
@@ -378,9 +327,6 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     final primary = ref.watch(primaryColorProvider);
     final currentLedgerAsync = ref.watch(currentLedgerProvider);
     final currentCurrency = currentLedgerAsync.asData?.value?.currency ?? 'CNY';
-    // [共享账本已下线] WS shared_resource_change 推 Owner 账户更新后 rebuild,
-    // 重查 SharedLedgerAccounts(该 tick 现已无生产者)。
-    ref.watch(sharedResourceRefreshProvider);
 
     return FutureBuilder<List<Account>>(
       future: _loadFilteredAccountsCached(),

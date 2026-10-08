@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../utils/shared_ledger_picker_filter.dart';
 import 'database_providers.dart';
 import 'statistics_providers.dart';
 import 'sync_providers.dart';
@@ -42,8 +41,7 @@ final quickEntryModeEnabledInitProvider = FutureProvider<void>((ref) async {
 /// 1. 取 R1 的 [BaseRepository.getLastUsedCategoryId]（从 `transactions` 派生，
 ///    不存 pref —— 理由见该方法文档）；
 /// 2. **校验**（AC-R2 #4）：预填错分类的危害大于不预填，所以规则从紧 ——
-///    正数 id 必须还能查到该分类；共享账本的负数 synthetic id 不仅要能反查到，
-///    还必须属于**当前账本**；
+///    记忆到的 id 必须还能查到该分类；
 /// 3. 账本切换 / 云端同步到新数据后自动重算（watch 两个上游）。
 ///
 /// 用法：UI 侧用 `.value` **同步**读取。想要「点击即出表单、
@@ -63,34 +61,13 @@ final quickEntryLastCategoryProvider =
   //  前提经核查不成立，已回写修正。）
   ref.watch(statsRefreshProvider);
   final ledgerId = ref.watch(currentLedgerIdProvider);
-  final db = ref.watch(databaseProvider);
   final repo = ref.watch(repositoryProvider);
 
   final remembered =
       await repo.getLastUsedCategoryId(ledgerId: ledgerId, kind: kind);
   if (remembered == null) return null;
 
-  if (remembered >= 0) {
-    // 分类可能已被删除 —— 删了就静默不预填，交由用户重新选。
-    final category = await repo.getCategoryById(remembered);
-    return category == null ? null : remembered;
-  }
-
-  // [共享账本已下线] 共享账本 Owner 分类的 synthetic id（负数）：
-  // **不能**复用 `findCategoryBySyntheticId` —— 它是全库扫描
-  // （`SharedLedgerPickerFilter.findCategoryBySyntheticId` 里
-  // `select(sharedLedgerCategories).get()` 没有按 ledgerSyncId 过滤），
-  // 别的账本的分类同样会被命中，直接违反 AC-R2 #4 的「不属于当前账本」。
-  // 这里按当前账本的 ledgerSyncId 限定后再反查。
-  final ctx = await db.loadLedgerPickerContext(ledgerId);
-  final ledgerSyncId = ctx?.ledgerSyncId;
-  if (ledgerSyncId == null || ledgerSyncId.isEmpty) return null;
-
-  final rows = await (db.select(db.sharedLedgerCategories)
-        ..where((t) => t.ledgerSyncId.equals(ledgerSyncId)))
-      .get();
-  for (final row in rows) {
-    if (syntheticIdForSyncId(row.syncId) == remembered) return remembered;
-  }
-  return null;
+  // 分类可能已被删除 —— 删了就静默不预填，交由用户重新选。
+  final category = await repo.getCategoryById(remembered);
+  return category == null ? null : remembered;
 });

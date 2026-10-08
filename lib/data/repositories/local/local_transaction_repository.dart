@@ -9,7 +9,6 @@ import 'package:uuid/uuid.dart';
 
 import '../../db.dart';
 import '../../../utils/month_range.dart';
-import '../../../utils/shared_ledger_picker_filter.dart';
 import '../../../models/note_history.dart';
 import '../../models/custom_field_values.dart';
 import '../transaction_repository.dart';
@@ -40,7 +39,7 @@ import '../../../services/system/logger_service.dart';
 ///   `happened_at DESC, id DESC`，无需额外排序步骤；
 /// - `happened_at IS NOT NULL` 排除排序位置无意义的行（NULL 在 DESC 下落到末尾）。
 const String quickEntryLastCategorySql = '''
-SELECT type, category_id, category_sync_id_override
+SELECT type, category_id
 FROM transactions
 WHERE ledger_id = ? AND happened_at IS NOT NULL
 ORDER BY happened_at DESC, id DESC
@@ -140,7 +139,7 @@ class LocalTransactionRepository implements TransactionRepository {
       (t) => d.OrderingTerm(expression: t.happenedAt, mode: d.OrderingMode.desc)
     ]);
     final q = select.join(_txJoins());
-    return _watchTxJoinWithSharedHydration(q);
+    return _watchTxJoin(q);
   }
 
   @override
@@ -178,17 +177,11 @@ class LocalTransactionRepository implements TransactionRepository {
         (t) => d.OrderingTerm(expression: t.id, mode: d.OrderingMode.desc),
       ])
       ..limit(limit);
-    return _watchTxJoinWithSharedHydration(select.join(_txJoins()));
+    return _watchTxJoin(select.join(_txJoins()));
   }
 
-  /// §7 共享账本:把 Drift 主表 stream 跟 SharedLedger* 表更新合流,任一
-  /// 变化都重跑 hydration 并 emit。
-  ///
-  /// 单纯用 q.watch() 时,Drift 只 track query 里 join 到的表(transactions /
-  /// categories / accounts)。SharedLedger* 行被 WS handler 改了,stream 不会
-  /// re-emit → tx tile 显示旧名字/图标,跟 picker 不一致。这里手动加两路
-  /// db.tableUpdates(SharedLedger{Categories,Accounts}) 监听,触发时拿上一次
-  /// Drift 结果重 hydrate 再 emit。
+  /// 标准三连 LEFT JOIN 的结果流 → (t, category, account, toAccount) 元组流。
+  /// 所有 list 风格的 watch / get 共用,保证组装口径一致。
   Stream<
       List<
           ({
@@ -196,201 +189,16 @@ class LocalTransactionRepository implements TransactionRepository {
             Category? category,
             Account? account,
             Account? toAccount
-          })>> _watchTxJoinWithSharedHydration(d.JoinedSelectStatement q) {
-    late StreamController<
-        List<
-            ({
-              Transaction t,
-              Category? category,
-              Account? account,
-              Account? toAccount
-            })>> ctrl;
-    StreamSubscription? txSub;
-    StreamSubscription? sharedCatSub;
-    StreamSubscription? sharedAccSub;
-    List<d.TypedResult>? lastRows;
-
-    Future<void> rehydrate() async {
-      if (lastRows == null) return;
-      final out = lastRows!
-          .map((r) => (
-                t: r.readTable(db.transactions),
-                category: r.readTableOrNull(db.categories),
-                account: r.readTableOrNull(_fromAccountTable),
-                toAccount: r.readTableOrNull(_toAccountTable),
-              ))
-          .toList();
-      final hydrated = await _hydrateSharedOverrides(out);
-      if (!ctrl.isClosed) ctrl.add(hydrated);
-    }
-
-    ctrl = StreamController<
-        List<
-            ({
-              Transaction t,
-              Category? category,
-              Account? account,
-              Account? toAccount
-            })>>(
-      onListen: () {
-        txSub = q.watch().listen((rows) {
-          lastRows = rows;
-          rehydrate();
-        });
-        sharedCatSub = db
-            .tableUpdates(d.TableUpdateQuery.onTable(db.sharedLedgerCategories))
-            .listen((_) => rehydrate());
-        sharedAccSub = db
-            .tableUpdates(d.TableUpdateQuery.onTable(db.sharedLedgerAccounts))
-            .listen((_) => rehydrate());
-      },
-      onCancel: () async {
-        await txSub?.cancel();
-        await sharedCatSub?.cancel();
-        await sharedAccSub?.cancel();
-      },
-    );
-    return ctrl.stream;
-  }
-
-  /// §7 v25:Editor 在共享账本下记的 tx,主表 JOIN 不到 category / account 行,
-  /// 字段是 null。这里二次查 SharedLedger{Categories,Accounts} 按 syncId 找,
-  /// 转 synthetic 实体回填,UI 不用区分。
-  ///
-  /// 合并 category + from-account + to-account 三类 hydration:共用同一遍 rows
-  /// 扫描;每类各一个 batch query。
-  Future<
-      List<
-          ({
-            Transaction t,
-            Category? category,
-            Account? account,
-            Account? toAccount
-          })>> _hydrateSharedOverrides(
-    List<
-            ({
-              Transaction t,
-              Category? category,
-              Account? account,
-              Account? toAccount
-            })>
-        rows,
-  ) async {
-    // 1. 收集所有需要反查的 syncId(分类 / from 账户 / to 账户)
-    final catSyncIds = <String>{};
-    final accSyncIds = <String>{};
-    for (final r in rows) {
-      final cOv = r.t.categorySyncIdOverride;
-      if (r.category == null && cOv != null && cOv.isNotEmpty) {
-        catSyncIds.add(cOv);
-      }
-      final aOv = r.t.accountSyncIdOverride;
-      if (r.account == null && aOv != null && aOv.isNotEmpty) {
-        accSyncIds.add(aOv);
-      }
-      final tOv = r.t.toAccountSyncIdOverride;
-      if (r.toAccount == null && tOv != null && tOv.isNotEmpty) {
-        accSyncIds.add(tOv);
-      }
-    }
-    if (catSyncIds.isEmpty && accSyncIds.isEmpty) return rows;
-
-    // 2. 批量查 SharedLedger* 镜像表
-    final catBySyncId = <String, SharedLedgerCategory>{};
-    if (catSyncIds.isNotEmpty) {
-      final shared = await (db.select(db.sharedLedgerCategories)
-            ..where((t) => t.syncId.isIn(catSyncIds.toList())))
-          .get();
-      for (final s in shared) {
-        catBySyncId[s.syncId] = s;
-      }
-    }
-    final accBySyncId = <String, SharedLedgerAccount>{};
-    if (accSyncIds.isNotEmpty) {
-      final shared = await (db.select(db.sharedLedgerAccounts)
-            ..where((t) => t.syncId.isIn(accSyncIds.toList())))
-          .get();
-      for (final s in shared) {
-        accBySyncId[s.syncId] = s;
-      }
-    }
-
-    // 3. 回填到每行
-    return rows.map((r) {
-      Category? category = r.category;
-      Account? account = r.account;
-      Account? toAccount = r.toAccount;
-
-      final cOv = r.t.categorySyncIdOverride;
-      if (category == null && cOv != null && cOv.isNotEmpty) {
-        final s = catBySyncId[cOv];
-        if (s != null) category = _syntheticCategoryFromShared(s);
-      }
-      final aOv = r.t.accountSyncIdOverride;
-      if (account == null && aOv != null && aOv.isNotEmpty) {
-        final s = accBySyncId[aOv];
-        if (s != null) account = _syntheticAccountFromShared(s);
-      }
-      final tOv = r.t.toAccountSyncIdOverride;
-      if (toAccount == null && tOv != null && tOv.isNotEmpty) {
-        final s = accBySyncId[tOv];
-        if (s != null) toAccount = _syntheticAccountFromShared(s);
-      }
-
-      return (
-        t: r.t,
-        category: category,
-        account: account,
-        toAccount: toAccount,
-      );
-    }).toList();
-  }
-
-  /// SharedLedgerCategory → synthetic Category。用 syntheticIdForSyncId 而不
-  /// 是 -1 — 否则所有共享分类都拿到同一个 id,首页点击分类详情时反查不到
-  /// 目标 syncId,详情页 0 笔交易。改成 hash 派生后跟 picker / watchCategory
-  /// 路径对齐。
-  Category _syntheticCategoryFromShared(SharedLedgerCategory s) {
-    return Category(
-      id: syntheticIdForSyncId(s.syncId),
-      name: s.name,
-      kind: s.kind,
-      icon: s.icon,
-      sortOrder: s.sortOrder,
-      parentId: null,
-      level: s.level,
-      iconType: s.iconType,
-      customIconPath: s.iconType == 'custom' && s.iconCloudSha256 != null
-          ? 'custom_icons/shared_${s.iconCloudSha256}.png'
-          : null,
-      communityIconId: null,
-      syncId: s.syncId,
-    );
-  }
-
-  /// SharedLedgerAccount → synthetic Account。跟 accountForTxProvider 同款映射。
-  Account _syntheticAccountFromShared(SharedLedgerAccount s) {
-    return Account(
-      id: syntheticIdForSyncId(s.syncId),
-      ledgerId: 0,
-      name: s.name,
-      type: s.accountType,
-      currency: s.currency,
-      initialBalance: s.initialBalance ?? 0.0,
-      createdAt: null,
-      updatedAt: null,
-      sortOrder: 0,
-      creditLimit: s.creditLimit,
-      billingDay: s.billingDay,
-      paymentDueDay: s.paymentDueDay,
-      bankName: s.bankName,
-      cardLastFour: s.cardLastFour,
-      note: s.note,
-      syncId: s.syncId,
-      // SharedLedgerAccounts 镜像表没有 hidden 概念(隐藏是 Owner 侧个人状态,
-      // 不随共享账本镜像同步),synthetic 账户固定按「未隐藏」处理。
-      hidden: false,
-    );
+          })>> _watchTxJoin(d.JoinedSelectStatement q) {
+    return q.watch().map((rows) => [
+          for (final r in rows)
+            (
+              t: r.readTable(db.transactions),
+              category: r.readTableOrNull(db.categories),
+              account: r.readTableOrNull(_fromAccountTable),
+              toAccount: r.readTableOrNull(_toAccountTable),
+            ),
+        ]);
   }
 
   @override
@@ -417,7 +225,7 @@ class LocalTransactionRepository implements TransactionRepository {
                   expression: t.happenedAt, mode: d.OrderingMode.desc)
             ]))
           .join(_txJoins());
-      return _watchTxJoinWithSharedHydration(q);
+      return _watchTxJoin(q);
     });
   }
 
@@ -445,7 +253,7 @@ class LocalTransactionRepository implements TransactionRepository {
                 expression: t.happenedAt, mode: d.OrderingMode.desc)
           ]))
         .join(_txJoins());
-    return _watchTxJoinWithSharedHydration(q);
+    return _watchTxJoin(q);
   }
 
   @override
@@ -479,7 +287,7 @@ class LocalTransactionRepository implements TransactionRepository {
     } else {
       base.where(db.transactions.categoryId.equals(categoryId));
     }
-    return _watchTxJoinWithSharedHydration(base);
+    return _watchTxJoin(base);
   }
 
   static const _uuid = Uuid();
@@ -496,9 +304,6 @@ class LocalTransactionRepository implements TransactionRepository {
     String? note,
     String? syncId,
     int? recurringId,
-    String? categorySyncIdOverride,
-    String? accountSyncIdOverride,
-    String? toAccountSyncIdOverride,
     bool excludeFromStats = false,
     bool excludeFromBudget = false,
     String? currencyCode,
@@ -521,9 +326,6 @@ class LocalTransactionRepository implements TransactionRepository {
           note: d.Value(note),
           syncId: d.Value(syncId ?? _uuid.v4()),
           recurringId: d.Value(recurringId),
-          categorySyncIdOverride: d.Value(categorySyncIdOverride),
-          accountSyncIdOverride: d.Value(accountSyncIdOverride),
-          toAccountSyncIdOverride: d.Value(toAccountSyncIdOverride),
           excludeFromStats: d.Value(excludeFromStats),
           excludeFromBudget: d.Value(excludeFromBudget),
           currencyCode: d.Value(currencyCode),
@@ -643,9 +445,6 @@ class LocalTransactionRepository implements TransactionRepository {
     String? note,
     DateTime? happenedAt,
     dynamic accountId,
-    String? categorySyncIdOverride,
-    String? accountSyncIdOverride,
-    String? toAccountSyncIdOverride,
     bool? excludeFromStats,
     bool? excludeFromBudget,
     String? currencyCode,
@@ -687,9 +486,6 @@ class LocalTransactionRepository implements TransactionRepository {
         happenedAt:
             happenedAt != null ? d.Value(happenedAt) : const d.Value.absent(),
         accountId: accountIdValue,
-        categorySyncIdOverride: d.Value(categorySyncIdOverride),
-        accountSyncIdOverride: d.Value(accountSyncIdOverride),
-        toAccountSyncIdOverride: d.Value(toAccountSyncIdOverride),
         // null = 不更新(保持原值);非 null = 显式写入
         excludeFromStats: excludeFromStats == null
             ? const d.Value.absent()
@@ -714,10 +510,11 @@ class LocalTransactionRepository implements TransactionRepository {
     );
   }
 
-  /// 共享账本:在本地标记 tx 的创建人 / 编辑人,让 UI 能立即展示头像。
-  /// 服务端 push.py 已经会兜底注入 userId,但本地写入路径(addTransaction /
-  /// updateTransaction)不知道 currentUser 是谁,需要 UI 层在写完后调一下这个
-  /// 方法。
+  /// 在本地标记 tx 的创建人 / 编辑人。
+  ///
+  /// ⚠️ 共享账本协作下线后**已无调用方**（原调用方是共享账本的「谁记的」UI）；
+  /// 两列本身是本地专有列（不进快照），按「不删字段」规则保留，本方法随之保留
+  /// 以备将来重新启用（恢复路径的列回填见 `data_import_service`）。
   ///   - isCreate=true:同时写 createdByUserId + lastEditedByUserId(新建场景)
   ///   - isCreate=false:只写 lastEditedByUserId(编辑场景,createdByUserId
   ///     维持 first-write-wins)
@@ -736,25 +533,16 @@ class LocalTransactionRepository implements TransactionRepository {
 
   @override
   Future<void> deleteTransaction(int id) async {
-    // 先查出整行:syncId 用于级联清理 transaction_tag_overrides(该表用
-    // transactionSyncId 文本列作主键,不能按 int id 删)。不查则删除后留下孤儿行,
-    // 共享账本 Editor 视角 _hydrateSharedOverridesFull 会挂载幽灵标签。
-    final tx = await (db.select(db.transactions)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
-    if (tx == null) return;
-    await _deleteTransactionCascade(tx);
+    await _deleteTransactionCascade(id);
   }
 
-  /// 彻底删除一笔交易的级联：标签关联 → 附件(行+磁盘文件) → 共享标签
-  /// override → 交易本体。[deleteTransaction] 与回收站的 purge 共用这一份，
-  /// 避免"两条删除路径清理范围不一致"（历史上批量删除就漏过文件清理）。
+  /// 彻底删除一笔交易的级联：标签关联 → 附件(行+磁盘文件) → 交易本体。
+  /// [deleteTransaction] 与回收站的 purge 共用这一份，避免"两条删除路径清理
+  /// 范围不一致"（历史上批量删除就漏过文件清理）。
   ///
-  /// 传入 [tx] 而不是 id：回收站里的行已经不在 transactions 表，只能由
-  /// payload 反序列化出来再交给我们。
-  Future<void> _deleteTransactionCascade(Transaction tx) async {
-    final id = tx.id;
-    final syncId = tx.syncId;
-
+  /// 传 id 而非 Transaction：回收站里的行已经不在 transactions 表，级联清理
+  /// 只需 id 即可（transaction_tags / transaction_attachments 都是按 int id 挂）。
+  Future<void> _deleteTransactionCascade(int id) async {
     // 先删除关联的标签
     await (db.delete(db.transactionTags)
           ..where((tt) => tt.transactionId.equals(id)))
@@ -762,13 +550,6 @@ class LocalTransactionRepository implements TransactionRepository {
 
     // 再删除关联的附件
     await _deleteAttachmentsForTransaction(id);
-
-    // 级联清理共享标签 override(按 syncId 删)
-    if (syncId != null && syncId.isNotEmpty) {
-      await (db.delete(db.transactionTagOverrides)
-            ..where((o) => o.transactionSyncId.equals(syncId)))
-          .go();
-    }
 
     // 最后删除交易记录
     await (db.delete(db.transactions)..where((t) => t.id.equals(id))).go();
@@ -843,9 +624,9 @@ class LocalTransactionRepository implements TransactionRepository {
         .getSingleOrNull();
     if (tx == null) return false;
 
-    // 只搬交易本体：transaction_tags / transaction_attachments /
-    // transaction_tag_overrides 原地保留，恢复才是无损的，且附件文件不会被
-    // 30 天孤儿 GC 回收（GC 以 transaction_attachments 行为引用依据）。
+    // 只搬交易本体：transaction_tags / transaction_attachments 原地保留，
+    // 恢复才是无损的，且附件文件不会被 30 天孤儿 GC 回收（GC 以
+    // transaction_attachments 行为引用依据）。
     await db.transaction(() async {
       await db.into(db.deletedTransactions).insert(DeletedTransactionsCompanion(
             txId: d.Value(tx.id),
@@ -938,9 +719,9 @@ class LocalTransactionRepository implements TransactionRepository {
     if (row == null) return;
     final tx =
         Transaction.fromJson(jsonDecode(row.payload) as Map<String, dynamic>);
-    // 级联与彻底删除共用一份实现（标签行 / 附件行+磁盘文件 / override）。
+    // 级联与彻底删除共用一份实现（标签行 / 附件行+磁盘文件）。
     await db.transaction(() async {
-      await _deleteTransactionCascade(tx);
+      await _deleteTransactionCascade(tx.id);
       await (db.delete(db.deletedTransactions)
             ..where((t) => t.txId.equals(txId)))
           .go();
@@ -1061,7 +842,7 @@ class LocalTransactionRepository implements TransactionRepository {
           ..limit(limit))
         .join(_txJoins());
     final rows = await q.get();
-    final out = rows
+    return rows
         .map((r) => (
               t: r.readTable(db.transactions),
               category: r.readTableOrNull(db.categories),
@@ -1069,14 +850,12 @@ class LocalTransactionRepository implements TransactionRepository {
               toAccount: r.readTableOrNull(_toAccountTable),
             ))
         .toList();
-    return _hydrateSharedOverrides(out);
   }
 
   @override
   Future<List<NoteHistoryEntry>> getNoteHistory({
     required int ledgerId,
     int? categoryId,
-    String? categorySyncId,
     required NoteHistorySort sort,
     int limit = 20,
   }) async {
@@ -1089,11 +868,7 @@ class LocalTransactionRepository implements TransactionRepository {
     ];
     final variables = <d.Variable>[d.Variable.withInt(ledgerId)];
 
-    // 共享账本 Owner 分类以 syncId override 落库，优先使用它过滤。
-    if (categorySyncId != null && categorySyncId.isNotEmpty) {
-      whereClauses.add('category_sync_id_override = ?');
-      variables.add(d.Variable.withString(categorySyncId));
-    } else if (categoryId != null) {
+    if (categoryId != null) {
       whereClauses.add('category_id = ?');
       variables.add(d.Variable.withInt(categoryId));
     }
@@ -1166,14 +941,7 @@ class LocalTransactionRepository implements TransactionRepository {
       final localId = row.data['category_id'];
       if (localId is num) return localId.toInt();
 
-      final override = row.data['category_sync_id_override'];
-      // 共享账本 Owner 分类以 syncId override 落库，读取时派生负数 synthetic id。
-      // 绝不持久化该值（见方法文档）。
-      if (override is String && override.isNotEmpty) {
-        return syntheticIdForSyncId(override);
-      }
-
-      // 两者皆空 = 这笔没有分类。**不能提前中断** ——
+      // 无分类 = 这笔没有分类。**不能提前中断** ——
       // AC-R1 #4 要求继续往前找最近一笔「带分类」的交易。
     }
     return null;
@@ -1252,10 +1020,6 @@ class LocalTransactionRepository implements TransactionRepository {
     required int id,
     dynamic accountId,
     dynamic toAccountId,
-    String? accountSyncIdOverride,
-    String? toAccountSyncIdOverride,
-    bool writeAccountSyncIdOverride = false,
-    bool writeToAccountSyncIdOverride = false,
   }) async {
     // accountId / toAccountId 接受 null(absent / 不更新)、int(直接写)、
     // `d.Value<int?>`(显式 null 清空)三种语义,跟 updateTransaction 对齐。
@@ -1279,15 +1043,6 @@ class LocalTransactionRepository implements TransactionRepository {
       TransactionsCompanion(
         accountId: accountIdValue,
         toAccountId: toAccountIdValue,
-        // override 写入只在调用方明确要求时才动(否则保留 Drift 老值),
-        // 区别于 dart null 默认行为(=absent)。共享账本 Editor 场景:
-        // synthetic 账户 → accountId=null + 这里写 syncIdOverride。
-        accountSyncIdOverride: writeAccountSyncIdOverride
-            ? d.Value(accountSyncIdOverride)
-            : const d.Value.absent(),
-        toAccountSyncIdOverride: writeToAccountSyncIdOverride
-            ? d.Value(toAccountSyncIdOverride)
-            : const d.Value.absent(),
       ),
     );
   }
@@ -1318,17 +1073,7 @@ class LocalTransactionRepository implements TransactionRepository {
 
   @override
   Future<DateTime?> getEarliestTransactionDate() async {
-    // [共享账本已下线] 排除以成员身份加入的共享账本(is_shared=1 且
-    // my_role!='owner')——与资产统计 / getAccountDailyBalances 同口径(#333)。
-    // 云端协作下线后仅存量数据命中,保留以免趋势口径漂移。
-    final sharedRows = await (db.selectOnly(db.ledgers)
-          ..addColumns([db.ledgers.id])
-          ..where(db.ledgers.isShared.equals(true) &
-              db.ledgers.myRole.equals('owner').not()))
-        .get();
-    final sharedIds = sharedRows.map((r) => r.read(db.ledgers.id)!).toList();
     final row = await (db.select(db.transactions)
-          ..where((t) => t.ledgerId.isNotIn(sharedIds))
           ..orderBy([
             (t) => d.OrderingTerm(
                 expression: t.happenedAt, mode: d.OrderingMode.asc)
@@ -1556,197 +1301,7 @@ class LocalTransactionRepository implements TransactionRepository {
         account: tx.accountId != null ? accountsMap[tx.accountId] : null,
       );
     }).toList();
-    return _hydrateSharedOverridesFull(raw);
-  }
-
-  /// §7 共享账本统一 hydration:
-  /// - tx.categoryId 为空 + categorySyncIdOverride 非空 → 查 SharedLedgerCategories
-  ///   构造 synthetic Category(同 _hydrateSharedCategoryOverrides)
-  /// - tx.accountId 为空 + accountSyncIdOverride 非空 → 查 SharedLedgerAccounts
-  ///   构造 synthetic Account
-  /// - **按 `tx.syncId` 查 `transaction_tag_overrides` → SharedLedgerTags**
-  ///   union 到 tags 列表(synthetic id<0)
-  ///
-  /// ⚠️ 更正（2026-09-27）：此前这里写的是「tx.tagSyncIdsOverride 不为空 → 查
-  /// TransactionTagOverrides」，但实现从来**没有读** `transactions
-  /// .tag_sync_ids_override` —— 该列零写入方、零实际读取方（详见 `db.dart`
-  /// 该列的注释）。标签 override 的真实来源是 `transaction_tag_overrides`
-  /// 表，以 `tx.syncId` 关联。别按旧注释去找那条读取路径。
-  ///
-  /// 日历页 / 详情页等任何返回 tx + category + tags + account 完整 tuple 的查询
-  /// 都用这个 helper 兜底,跟 transaction_list 走 _hydrateSharedCategoryOverrides
-  /// 一致。
-  Future<
-      List<
-          ({
-            Transaction t,
-            Category? category,
-            List<Tag> tags,
-            List<TransactionAttachment> attachments,
-            Account? account,
-          })>> _hydrateSharedOverridesFull(
-    List<
-            ({
-              Transaction t,
-              Category? category,
-              List<Tag> tags,
-              List<TransactionAttachment> attachments,
-              Account? account,
-            })>
-        rows,
-  ) async {
-    if (rows.isEmpty) return rows;
-
-    // 收集需要 hydrate 的 syncId / tx.syncId
-    final catSyncIds = <String>{};
-    final accSyncIds = <String>{};
-    final txSyncIds = <String>{};
-    for (final r in rows) {
-      final cov = r.t.categorySyncIdOverride;
-      if (r.category == null && cov != null && cov.isNotEmpty) {
-        catSyncIds.add(cov);
-      }
-      final aov = r.t.accountSyncIdOverride;
-      if (r.account == null && aov != null && aov.isNotEmpty) {
-        accSyncIds.add(aov);
-      }
-      if (r.t.syncId != null && r.t.syncId!.isNotEmpty) {
-        txSyncIds.add(r.t.syncId!);
-      }
-    }
-
-    // 批量查共享分类
-    final sharedCatBySyncId = <String, SharedLedgerCategory>{};
-    if (catSyncIds.isNotEmpty) {
-      final list = await (db.select(db.sharedLedgerCategories)
-            ..where((t) => t.syncId.isIn(catSyncIds.toList())))
-          .get();
-      for (final s in list) {
-        sharedCatBySyncId[s.syncId] = s;
-      }
-    }
-
-    // 批量查共享账户
-    final sharedAccBySyncId = <String, SharedLedgerAccount>{};
-    if (accSyncIds.isNotEmpty) {
-      final list = await (db.select(db.sharedLedgerAccounts)
-            ..where((t) => t.syncId.isIn(accSyncIds.toList())))
-          .get();
-      for (final s in list) {
-        sharedAccBySyncId[s.syncId] = s;
-      }
-    }
-
-    // 批量查 tag overrides + shared tags
-    final tagOverridesByTxSyncId = <String, List<String>>{};
-    final sharedTagBySyncId = <String, SharedLedgerTag>{};
-    if (txSyncIds.isNotEmpty) {
-      final overrides = await (db.select(db.transactionTagOverrides)
-            ..where((t) => t.transactionSyncId.isIn(txSyncIds.toList())))
-          .get();
-      for (final ov in overrides) {
-        tagOverridesByTxSyncId
-            .putIfAbsent(ov.transactionSyncId, () => [])
-            .add(ov.tagSyncId);
-      }
-      if (overrides.isNotEmpty) {
-        final tagSids = overrides.map((o) => o.tagSyncId).toSet().toList();
-        final sharedTags = await (db.select(db.sharedLedgerTags)
-              ..where((t) => t.syncId.isIn(tagSids)))
-            .get();
-        for (final s in sharedTags) {
-          sharedTagBySyncId[s.syncId] = s;
-        }
-      }
-    }
-
-    return rows.map((r) {
-      Category? category = r.category;
-      Account? account = r.account;
-      List<Tag> tags = r.tags;
-
-      if (category == null) {
-        final cov = r.t.categorySyncIdOverride;
-        if (cov != null && cov.isNotEmpty) {
-          final s = sharedCatBySyncId[cov];
-          if (s != null) {
-            category = Category(
-              id: syntheticIdForSyncId(s.syncId),
-              name: s.name,
-              kind: s.kind,
-              icon: s.icon,
-              sortOrder: s.sortOrder,
-              parentId: null,
-              level: s.level,
-              iconType: s.iconType,
-              customIconPath:
-                  s.iconType == 'custom' && s.iconCloudSha256 != null
-                      ? 'custom_icons/shared_${s.iconCloudSha256}.png'
-                      : null,
-              communityIconId: null,
-              syncId: s.syncId,
-            );
-          }
-        }
-      }
-
-      if (account == null) {
-        final aov = r.t.accountSyncIdOverride;
-        if (aov != null && aov.isNotEmpty) {
-          final s = sharedAccBySyncId[aov];
-          if (s != null) {
-            account = Account(
-              id: syntheticIdForSyncId(s.syncId),
-              ledgerId: r.t.ledgerId,
-              name: s.name,
-              type: s.accountType,
-              currency: s.currency,
-              note: s.note,
-              initialBalance: s.initialBalance ?? 0.0,
-              sortOrder: 0,
-              creditLimit: s.creditLimit,
-              billingDay: s.billingDay,
-              paymentDueDay: s.paymentDueDay,
-              bankName: s.bankName,
-              cardLastFour: s.cardLastFour,
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-              syncId: s.syncId,
-              // SharedLedgerAccounts 镜像表没有 hidden 概念(隐藏是 Owner 侧
-              // 个人状态,不随共享账本镜像同步),synthetic 账户固定按「未隐藏」处理。
-              hidden: false,
-            );
-          }
-        }
-      }
-
-      final txSid = r.t.syncId;
-      if (txSid != null && tagOverridesByTxSyncId.containsKey(txSid)) {
-        final extra = <Tag>[];
-        for (final tagSid in tagOverridesByTxSyncId[txSid]!) {
-          final s = sharedTagBySyncId[tagSid];
-          if (s != null) {
-            extra.add(Tag(
-              id: syntheticIdForSyncId(s.syncId),
-              name: s.name,
-              color: s.color,
-              sortOrder: 0,
-              createdAt: DateTime.now(),
-              syncId: s.syncId,
-            ));
-          }
-        }
-        if (extra.isNotEmpty) tags = [...tags, ...extra];
-      }
-
-      return (
-        t: r.t,
-        category: category,
-        tags: tags,
-        attachments: r.attachments,
-        account: account,
-      );
-    }).toList();
+    return raw;
   }
 
   @override
@@ -1779,7 +1334,7 @@ class LocalTransactionRepository implements TransactionRepository {
     // 批量获取所有相关的 category, tags, attachments, account
     // 一次 isIn 查询,避免逐条 N+1(原实现 100 条交易 → 500 次 SELECT)。
     if (transactions.isEmpty) {
-      return _hydrateSharedOverridesFull(const []);
+      return const [];
     }
 
     final txIds = transactions.map((t) => t.id).toList();
@@ -1865,7 +1420,7 @@ class LocalTransactionRepository implements TransactionRepository {
       ));
     }
 
-    return _hydrateSharedOverridesFull(result);
+    return result;
   }
 
   @override
@@ -1998,17 +1553,6 @@ class LocalTransactionRepository implements TransactionRepository {
               // 跨设备丢失（与 native_amount 分裂同源问题）。
               excludeFromStats: d.Value(u.excludeFromStats),
               excludeFromBudget: d.Value(u.excludeFromBudget),
-              // 共享账本 override：null → absent（保留本地原值），
-              // 非 null → 写入（含空串"清空"语义）。与 currencyCode 同模式。
-              categorySyncIdOverride: u.categorySyncIdOverride == null
-                  ? const d.Value.absent()
-                  : d.Value(u.categorySyncIdOverride),
-              accountSyncIdOverride: u.accountSyncIdOverride == null
-                  ? const d.Value.absent()
-                  : d.Value(u.accountSyncIdOverride),
-              toAccountSyncIdOverride: u.toAccountSyncIdOverride == null
-                  ? const d.Value.absent()
-                  : d.Value(u.toAccountSyncIdOverride),
               // v8 G2 周期锚点：三态直写 —— null(不传)=不改动 /
               // Value(null)=清空 / Value(id)=写入。
               // 不写它会让「只改周期锚点」的差异被 diff 检测出来却**永远应用
@@ -2206,10 +1750,6 @@ class LocalTransactionRepository implements TransactionRepository {
           .go();
       await (db.delete(db.transactionAttachments)
             ..where((t) => t.transactionId.isIn(txIds)))
-          .go();
-      // 级联清理共享标签 override(按 syncId 批量删,避免孤儿行)
-      await (db.delete(db.transactionTagOverrides)
-            ..where((t) => t.transactionSyncId.isIn(syncIds)))
           .go();
       // 主表 DELETE WHERE IN — 一次 SQL 删 N 条
       final deleted = await (db.delete(db.transactions)

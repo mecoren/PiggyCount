@@ -13,7 +13,6 @@ import '../../utils/transaction_edit_utils.dart';
 import '../../utils/month_range.dart';
 import '../../services/billing/post_processor.dart';
 import '../../utils/category_utils.dart';
-import '../../utils/shared_ledger_picker_filter.dart';
 import '../../l10n/app_localizations.dart';
 import '../attachment/attachment_preview_page.dart';
 import '../transaction/category_detail_page.dart';
@@ -108,11 +107,11 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
     _loadLookups();
   }
 
-  /// 一次性取明细行要用的查表数据:分类(含共享账本 synthetic)+ 账户名。
+  /// 一次性取明细行要用的查表数据:分类 + 账户名。
   /// 随页加载而非常驻 stream:标签详情是短页面,不值得为它挂一条长订阅。
   Future<void> _loadLookups() async {
     final repo = ref.read(repositoryProvider);
-    final categories = await repo.getAllCategoriesIncludingShared();
+    final categories = await repo.getAllCategories();
     final accounts = await repo.getAllAccounts();
     if (mounted) {
       setState(() {
@@ -570,13 +569,7 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
     final isAdjustment = t.type == 'adjustment';
     final isExpense = t.type == 'expense';
 
-    // [共享账本已下线] 共享账本交易的分类挂在 categorySyncIdOverride(syncId)，
-    // 转 synthetic id 查(仅存量 override 数据命中);本地交易用 categoryId。
-    // 两类 id 不重叠(本地正 / synthetic 负)。
-    final catKey = (t.categorySyncIdOverride != null &&
-            t.categorySyncIdOverride!.isNotEmpty)
-        ? syntheticIdForSyncId(t.categorySyncIdOverride!)
-        : t.categoryId;
+    final catKey = t.categoryId;
     final category = catKey == null ? null : _categoryCache[catKey];
     final categoryName = isAdjustment
         ? l10n.adjustmentTransaction

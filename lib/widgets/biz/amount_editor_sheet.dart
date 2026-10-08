@@ -65,7 +65,6 @@ typedef AmountEditorResult = ({
 class AmountEditorSheet extends ConsumerStatefulWidget {
   final String categoryName; // 仅用于上层提交，不在UI展示
   final int? categoryId; // 当前本地分类ID，用于筛选历史备注
-  final String? categorySyncId; // 共享账本分类同步ID，用于筛选历史备注
   /// 分类位（P1-E，design.md 决策 4）：金额表达式行最左侧展示的分类。
   ///
   /// 只作为**初值**：用户可以通过分类位把它换成别的（见 [onPickCategory]），
@@ -116,7 +115,6 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
     super.key,
     required this.categoryName,
     this.categoryId,
-    this.categorySyncId,
     this.displayCategory,
     this.onPickCategory,
     required this.initialDate,
@@ -384,10 +382,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       scope: ref.read(noteHistoryScopeProvider),
       sort: ref.read(noteHistorySortProvider),
       // 换分类后（本表单不关闭）备注历史要跟着新分类重筛，所以读内部状态；
-      // widget.categoryId / categorySyncId 只作为没有 displayCategory 的
-      // 调用方（如转账）的显式覆盖。
+      // widget.categoryId 只作为没有 displayCategory 的调用方（如转账）的
+      // 显式覆盖。
       categoryId: _category?.id ?? widget.categoryId,
-      categorySyncId: _category?.syncId ?? widget.categorySyncId,
       limit: ref.read(noteHistoryLimitProvider),
     );
     if (!mounted) return; // 弹窗已关时不再 setState(widget 测试暴露的既有问题)
@@ -1232,7 +1229,6 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                             builder: (context) => NotePickerDialog(
                               ledgerId: widget.ledgerId,
                               categoryId: widget.categoryId,
-                              categorySyncId: widget.categorySyncId,
                               onNotePicked: (note) {
                                 setState(() {
                                   _noteCtrl.text = note;
@@ -1649,9 +1645,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
   /// 构建标签和附件选择行（一行显示）
   Widget _buildTagAndAttachmentRow() {
-    // §7 共享账本:用按当前 ledger 过滤后的 tags(Editor 视角下走 SharedLedgerTags,
-    // synthetic id 跟 tag picker 一致),否则编辑模式 tx 已选的 synthetic id 在
-    // 主表里找不到,显示"无标签"。
+    // 标签是 user-scoped,全部账本共用同一份。
     final allTagsAsync = ref.watch(tagsForCurrentLedgerProvider);
     final allTags = allTagsAsync.value ?? [];
 

@@ -3184,7 +3184,6 @@
       }
     }
   },
-  "budgetOnlyOwnerCanEdit": "只有帳本所有者能編輯預算",
   "transferSelectFromAccount": "請選擇轉出帳戶",
   "transferSelectToAccount": "請選擇轉入帳戶",
   "commonNoMessages": "暫無訊息",
@@ -3293,7 +3292,6 @@
       }
     }
   },
-  "tagSelectOwnerManaged": "共享帳本標籤由所有者管理",
   "syncHealthTitle": "同步健康",
   "syncHealthEmpty": "近 30 天暫無同步紀錄",
   "syncHealthRate": "近 30 天成功率：{rate}",

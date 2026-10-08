@@ -83,11 +83,11 @@ def inject_device(port, db_path):
     expense_cats, income_cats, transfer_cats = fetch_categories(cur)
     transfer_cat = transfer_cats[0] if transfer_cats else None
 
-    cur.execute("SELECT id, owner_user_id FROM ledgers WHERE id>=13 ORDER BY id")
-    new_ledgers = cur.fetchall()
+    cur.execute("SELECT id FROM ledgers WHERE id>=13 ORDER BY id")
+    new_ledgers = [r[0] for r in cur.fetchall()]
 
     total_added = 0
-    for lid, owner_uid in new_ledgers:
+    for lid in new_ledgers:
         cur.execute("SELECT COUNT(*) FROM transactions WHERE ledger_id=?", (lid,))
         existing = cur.fetchone()[0]
         need = TX_PER_LEDGER - existing
@@ -139,7 +139,8 @@ def inject_device(port, db_path):
                 note = f"测试明细-{ttype}"
             exclude_stats = 1 if random.random() < 0.05 else 0
             exclude_budget = 1 if random.random() < 0.05 else 0
-            created_by = owner_uid  # 共享账本记录创建者；个人账本 owner_uid 为 None
+            # 记录人:本地固定标识（共享账本已下线,不再按 ledgers.owner_user_id 取）
+            created_by = 'dev-local-owner'
 
             rows.append((
                 lid, ttype, amount, category_id, account_id, to_account_id,

@@ -294,10 +294,9 @@ final appSplashInitProvider = FutureProvider<void>((ref) async {
     logger.info(tag, '详情数据加载完成: ${DateTime.now().difference(stepTime).inMilliseconds}ms');
     stepTime = DateTime.now();
 
-    // [共享账本已下线] 组装完整的交易展示数据。account / toAccount 直接用 watch
-    // 时 JOIN 拿到的对象(D 方案);accountName 走 item.account?.name 优先,
-    // fallback 到 accountNameMap(存量共享账本 Editor 场景:主表 accountId 为
-    // null,需走 accountSyncIdOverride → SharedLedgerAccounts 反查)。
+    // 组装完整的交易展示数据。account / toAccount 直接用 watch 时 JOIN 拿到的
+    // 对象(D 方案);accountName 走 item.account?.name 优先,fallback 到
+    // accountNameMap。
     final fullTransactions = transactionsWithCategory.map((item) {
       final accName = item.account?.name ??
           (item.t.accountId != null

@@ -12,8 +12,7 @@ PiggyCount 测试数据注入脚本
 2. 账户按「类型 / 币种 / 隐藏状态 / 归属(账本)」多维度差异化。
 3. 命名不与现有数据冲突（现有 12 个账本 + 10 个 ledger_id=0 孤儿账户）。
 4. 遵循项目数据模型与约束：
-   - ledger: name/currency/type/created_at/sync_id(my_role/member_count/is_shared/
-     owner_user_id/month_start_day) 必填或带默认值。
+   - ledger: name/currency/type/created_at/sync_id/month_start_day 必填或带默认值。
    - account: ledger_id/name/type/currency/initial_balance/sort_order/hidden 必填；
      credit 类补充 credit_limit/billing_day/payment_due_day；银行卡补充 bank_name/card_last_four。
    - sync_id 一律使用真实 UUID(v4)，保证跨设备唯一。
@@ -56,12 +55,10 @@ FX_RATES = {
 # ---------------------------------------------------------------------------
 DEVICE_A = {
     "port": 16384,
-    "owner_user_id": "dev-owner-16384",
     "ledgers": [
         {
             "name": "日常消费账本", "currency": "CNY", "ledger_type": "personal",
-            "is_shared": 0, "my_role": "owner", "member_count": 1,
-            "owner_user_id": None, "month_start_day": 1,
+"month_start_day": 1,
             "accounts": [
                 {"name": "日常现金", "type": "cash", "currency": "CNY", "balance": 2000.0, "hidden": 0,
                  "note": "随手零钱"},
@@ -83,8 +80,7 @@ DEVICE_A = {
         },
         {
             "name": "海外旅行账本", "currency": "CNY", "ledger_type": "personal",
-            "is_shared": 0, "my_role": "owner", "member_count": 1,
-            "owner_user_id": None, "month_start_day": 5,
+"month_start_day": 5,
             "accounts": [
                 {"name": "美元现金", "type": "cash", "currency": "USD", "balance": 500.0, "hidden": 0},
                 {"name": "美元银行卡", "type": "bank_card", "currency": "USD", "balance": 3000.0, "hidden": 0,
@@ -105,8 +101,7 @@ DEVICE_A = {
         },
         {
             "name": "资产配置账本", "currency": "CNY", "ledger_type": "personal",
-            "is_shared": 0, "my_role": "owner", "member_count": 1,
-            "owner_user_id": None, "month_start_day": 1,
+"month_start_day": 1,
             "accounts": [
                 {"name": "配置现金", "type": "cash", "currency": "CNY", "balance": 10000.0, "hidden": 0},
                 {"name": "活期存款", "type": "bank_card", "currency": "CNY", "balance": 120000.0, "hidden": 0,
@@ -124,8 +119,7 @@ DEVICE_A = {
         },
         {
             "name": "创业公司账本", "currency": "CNY", "ledger_type": "personal",
-            "is_shared": 0, "my_role": "owner", "member_count": 1,
-            "owner_user_id": None, "month_start_day": 10,
+"month_start_day": 10,
             "accounts": [
                 {"name": "公司现金", "type": "cash", "currency": "CNY", "balance": 8000.0, "hidden": 0},
                 {"name": "对公基本户", "type": "bank_card", "currency": "CNY", "balance": 280000.0, "hidden": 0,
@@ -146,9 +140,8 @@ DEVICE_A = {
             ],
         },
         {
-            "name": "家庭共用账本", "currency": "CNY", "ledger_type": "shared",
-            "is_shared": 1, "my_role": "owner", "member_count": 2,
-            "owner_user_id": "dev-owner-16384", "month_start_day": 15,
+            "name": "家庭共用账本", "currency": "CNY", "ledger_type": "personal",
+            "month_start_day": 15,
             "accounts": [
                 {"name": "家庭公用金", "type": "cash", "currency": "CNY", "balance": 5000.0, "hidden": 0},
                 {"name": "家庭联名卡", "type": "bank_card", "currency": "CNY", "balance": 80000.0, "hidden": 0,
@@ -175,12 +168,10 @@ DEVICE_A = {
 # ---------------------------------------------------------------------------
 DEVICE_B = {
     "port": 16416,
-    "owner_user_id": "dev-owner-16416",
     "ledgers": [
         {
             "name": "学生生活账本", "currency": "CNY", "ledger_type": "personal",
-            "is_shared": 0, "my_role": "owner", "member_count": 1,
-            "owner_user_id": None, "month_start_day": 1,
+"month_start_day": 1,
             "accounts": [
                 {"name": "校园一卡通", "type": "other", "currency": "CNY", "balance": 300.0, "hidden": 0},
                 {"name": "饭卡", "type": "other", "currency": "CNY", "balance": 500.0, "hidden": 0},
@@ -199,8 +190,7 @@ DEVICE_B = {
         },
         {
             "name": "自由职业账本", "currency": "CNY", "ledger_type": "personal",
-            "is_shared": 0, "my_role": "owner", "member_count": 1,
-            "owner_user_id": None, "month_start_day": 5,
+"month_start_day": 5,
             "accounts": [
                 {"name": "业务收入卡", "type": "bank_card", "currency": "CNY", "balance": 60000.0, "hidden": 0,
                  "bank_name": "民生银行", "card_last_four": "7742"},
@@ -220,8 +210,7 @@ DEVICE_B = {
         },
         {
             "name": "跨境海淘账本", "currency": "CNY", "ledger_type": "personal",
-            "is_shared": 0, "my_role": "owner", "member_count": 1,
-            "owner_user_id": None, "month_start_day": 10,
+"month_start_day": 10,
             "accounts": [
                 {"name": "美元现金", "type": "cash", "currency": "USD", "balance": 800.0, "hidden": 0},
                 {"name": "美元信用卡", "type": "credit_card", "currency": "USD", "balance": -400.0, "hidden": 0,
@@ -242,8 +231,7 @@ DEVICE_B = {
         },
         {
             "name": "房产投资账本", "currency": "CNY", "ledger_type": "personal",
-            "is_shared": 0, "my_role": "owner", "member_count": 1,
-            "owner_user_id": None, "month_start_day": 15,
+"month_start_day": 15,
             "accounts": [
                 {"name": "房产现金", "type": "cash", "currency": "CNY", "balance": 20000.0, "hidden": 0},
                 {"name": "租金收款卡", "type": "bank_card", "currency": "CNY", "balance": 95000.0, "hidden": 0,
@@ -261,9 +249,8 @@ DEVICE_B = {
             ],
         },
         {
-            "name": "亲友共享账本", "currency": "CNY", "ledger_type": "shared",
-            "is_shared": 1, "my_role": "owner", "member_count": 3,
-            "owner_user_id": "dev-owner-16416", "month_start_day": 20,
+            "name": "亲友共享账本", "currency": "CNY", "ledger_type": "personal",
+            "month_start_day": 20,
             "accounts": [
                 {"name": "聚餐公摊金", "type": "cash", "currency": "CNY", "balance": 3000.0, "hidden": 0},
                 {"name": "群体联名卡", "type": "bank_card", "currency": "CNY", "balance": 40000.0, "hidden": 0,
@@ -311,7 +298,6 @@ def inject_device(spec):
 
         ledgers_added = 0
         accounts_added = 0
-        members_added = 0
 
         for lg in spec["ledgers"]:
             if lg["name"] in existing_ledger_names:
@@ -331,14 +317,12 @@ def inject_device(spec):
                 cur.execute(
                     """
                     INSERT INTO ledgers
-                        (name, currency, type, created_at, sync_id, my_role,
-                         member_count, is_shared, owner_user_id, month_start_day)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        (name, currency, type, created_at, sync_id, month_start_day)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     (
-                        lg["name"], lg["currency"], lg["ledger_type"], NOW, ledger_sync_id,
-                        lg["my_role"], lg["member_count"], lg["is_shared"],
-                        lg.get("owner_user_id"), lg["month_start_day"],
+                        lg["name"], lg["currency"], lg["ledger_type"], NOW,
+                        ledger_sync_id, lg["month_start_day"],
                     ),
                 )
                 ledger_id = cur.lastrowid
@@ -346,20 +330,7 @@ def inject_device(spec):
                 existing_ledger_names.add(lg["name"])
                 print(f"  [+账本] id={ledger_id} {lg['name']} "
                       f"(type={lg['ledger_type']}, cur={lg['currency']}, "
-                      f"shared={lg['is_shared']}, start_day={lg['month_start_day']})")
-
-            # 共享账本写入一条 owner 成员镜像，便于共享 UI 调试
-            if lg["is_shared"] == 1 and lg.get("owner_user_id"):
-                cur.execute(
-                    """
-                    INSERT OR IGNORE INTO ledger_members
-                        (ledger_sync_id, user_id, email, display_name, role, joined_at, updated_at)
-                    VALUES (?, ?, ?, ?, 'owner', ?, ?)
-                    """,
-                    (ledger_sync_id, lg["owner_user_id"], None,
-                     f"设备{port}主人", NOW, NOW),
-                )
-                members_added += cur.rowcount
+                      f"start_day={lg['month_start_day']})")
 
             for idx, acc in enumerate(lg["accounts"]):
                 if acc["name"] in existing_account_names:
@@ -401,7 +372,7 @@ def inject_device(spec):
 
         con.commit()
         print(f"  -> 新增账本 {ledgers_added} 个, 账户 {accounts_added} 个, "
-              f"共享成员 {members_added} 条, 汇率 {fx_added} 条")
+              f"汇率 {fx_added} 条")
     except Exception:
         con.rollback()
         raise

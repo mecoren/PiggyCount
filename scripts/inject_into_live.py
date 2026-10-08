@@ -72,7 +72,7 @@ def inject_ledgers_accounts(spec, db_path):
         existing_ledger_names = {r[0] for r in cur.execute("SELECT name FROM ledgers").fetchall()}
         existing_account_names = {r[0] for r in cur.execute("SELECT name FROM accounts").fetchall()}
 
-        ledgers_added = accounts_added = members_added = 0
+        ledgers_added = accounts_added = 0
         for lg in spec["ledgers"]:
             if lg["name"] in existing_ledger_names:
                 ledger_id = cur.execute("SELECT id FROM ledgers WHERE name=?", (lg["name"],)).fetchone()[0]
@@ -82,28 +82,17 @@ def inject_ledgers_accounts(spec, db_path):
                 ledger_sync_id = str(uuid.uuid4())
                 cur.execute(
                     """INSERT INTO ledgers
-                       (name, currency, type, created_at, sync_id, my_role,
-                        member_count, is_shared, owner_user_id, month_start_day)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (lg["name"], lg["currency"], lg["ledger_type"], NOW, ledger_sync_id,
-                     lg["my_role"], lg["member_count"], lg["is_shared"],
-                     lg.get("owner_user_id"), lg["month_start_day"]),
+                       (name, currency, type, created_at, sync_id, month_start_day)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (lg["name"], lg["currency"], lg["ledger_type"], NOW,
+                     ledger_sync_id, lg["month_start_day"]),
                 )
                 ledger_id = cur.lastrowid
                 ledgers_added += 1
                 existing_ledger_names.add(lg["name"])
                 print(f"  [+账本] id={ledger_id} {lg['name']} "
                       f"(type={lg['ledger_type']}, cur={lg['currency']}, "
-                      f"shared={lg['is_shared']}, start_day={lg['month_start_day']})")
-
-            if lg["is_shared"] == 1 and lg.get("owner_user_id"):
-                cur.execute(
-                    """INSERT OR IGNORE INTO ledger_members
-                       (ledger_sync_id, user_id, email, display_name, role, joined_at, updated_at)
-                       VALUES (?, ?, ?, ?, 'owner', ?, ?)""",
-                    (ledger_sync_id, lg["owner_user_id"], None, f"设备{port}主人", NOW, NOW),
-                )
-                members_added += cur.rowcount
+                      f"start_day={lg['month_start_day']})")
 
             for idx, acc in enumerate(lg["accounts"]):
                 if acc["name"] in existing_account_names:
@@ -135,7 +124,7 @@ def inject_ledgers_accounts(spec, db_path):
 
         con.commit()
         print(f"  -> 新增账本 {ledgers_added} 个, 账户 {accounts_added} 个, "
-              f"共享成员 {members_added} 条, 汇率 {fx_added} 条")
+              f"汇率 {fx_added} 条")
     except Exception:
         con.rollback()
         raise
@@ -170,13 +159,13 @@ def inject_transactions(spec, db_path):
             transfer.append(cid)
     transfer_cat = transfer[0] if transfer else None
 
-    cur.execute("SELECT id, name, owner_user_id FROM ledgers WHERE name IN (%s)"
+    cur.execute("SELECT id, name FROM ledgers WHERE name IN (%s)"
                 % ",".join("?" * len(target_names)), tuple(target_names))
     target_ledgers = cur.fetchall()
-    print(f"  目标账本(按名匹配): {[n for _, n, _ in target_ledgers]}")
+    print(f"  目标账本(按名匹配): {[n for _, n in target_ledgers]}")
 
     total_added = 0
-    for lid, lname, owner_uid in target_ledgers:
+    for lid, lname in target_ledgers:
         cur.execute("SELECT COUNT(*) FROM transactions WHERE ledger_id=?", (lid,))
         existing = cur.fetchone()[0]
         need = TX_PER_LEDGER - existing
@@ -226,7 +215,8 @@ def inject_transactions(spec, db_path):
             note = f"测试明细-{ttype}" if random.random() < 0.4 else None
             exclude_stats = 1 if random.random() < 0.05 else 0
             exclude_budget = 1 if random.random() < 0.05 else 0
-            created_by = owner_uid  # 共享账本记录创建者；个人账本为 NULL
+            # 记录人:本地固定标识（共享账本已下线）
+            created_by = 'dev-local-owner'
 
             rows.append((
                 lid, ttype, amount, category_id, account_id, to_account_id,

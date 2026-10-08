@@ -4,7 +4,7 @@
 /// 接 `List<OrphanRecord>` 按 `type` dispatch 到具体删除分支。UI 层按 type
 /// 分组显示、按 record 勾选。
 ///
-/// type 枚举跟 plan 文件里的 A1..A10 / B1..B3 / C1 一一对应,后续加新检测
+/// type 枚举跟 plan 文件里的 A1..A8 / B1..B2 / C1 一一对应,后续加新检测
 /// 项只需扩枚举 + scanner / cleaner 各加一个 case。
 library;
 
@@ -34,23 +34,11 @@ enum OrphanType {
   /// A8 预算分类失主
   budgetMissingCategory,
 
-  /// [共享账本已下线] A9 共享二级分类失父(scanner 读恒空的
-  /// shared_ledger_categories,仅历史库有数据时命中)。
-  sharedCategoryMissingParent,
-
-  /// [共享账本已下线] A10 TransactionTagOverrides 失主交易:存量 override 行的
-  /// 清理通道,必须保留。
-  txTagOverrideMissingTx,
-
   /// B1 附件原图无引用
   fileOrphanAttachment,
 
   /// B2 分类自定义图标无引用
   fileOrphanCustomIcon,
-
-  /// [共享账本已下线] B3 共享分类图标缓存无引用:清理历史
-  /// `custom_icons/shared_*.png` 的通道,仍有用途,必须保留。
-  fileOrphanSharedIcon,
 
   /// C1 local_changes 失主实体
   localChangeMissingEntity,
@@ -111,10 +99,10 @@ class OrphanScanReport {
     required this.syncOrphans,
   });
 
-  /// A1..A10
+  /// A1..A8
   final List<OrphanRecord> dbOrphans;
 
-  /// B1..B3
+  /// B1..B2
   final List<OrphanRecord> fileOrphans;
 
   /// C1

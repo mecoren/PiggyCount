@@ -86,11 +86,11 @@ TYPE_LABEL = {"cash": "现金", "bank_card": "储蓄卡", "credit_card": "信用
 
 # 5 个新账本(默认账本单独处理)
 NEW_LEDGERS = [
-    {"name": "日常消费账本", "tag": "日常", "currency": "CNY", "is_shared": 0, "my_role": "owner", "member_count": 1},
-    {"name": "海外旅行账本", "tag": "海外", "currency": "CNY", "is_shared": 0, "my_role": "owner", "member_count": 1},
-    {"name": "资产配置账本", "tag": "资产", "currency": "CNY", "is_shared": 0, "my_role": "owner", "member_count": 1},
-    {"name": "创业公司账本", "tag": "创业", "currency": "CNY", "is_shared": 0, "my_role": "owner", "member_count": 1},
-    {"name": "家庭共用账本", "tag": "家庭", "currency": "CNY", "is_shared": 1, "my_role": "owner", "member_count": 2, "owner_user_id": OWNER},
+    {"name": "日常消费账本", "tag": "日常", "currency": "CNY"},
+    {"name": "海外旅行账本", "tag": "海外", "currency": "CNY"},
+    {"name": "资产配置账本", "tag": "资产", "currency": "CNY"},
+    {"name": "创业公司账本", "tag": "创业", "currency": "CNY"},
+    {"name": "家庭共用账本", "tag": "家庭", "currency": "CNY"},
 ]
 
 # 自定义分类(TC- 前缀,避免与 60 seed 冲突)
@@ -145,36 +145,27 @@ def main():
 
     # ---------- 1) 账本 ----------
     print("=== 注入账本 ===")
-    all_ledgers = []  # (ledger_id, name, tag, is_shared, owner_uid)
+    all_ledgers = []  # (ledger_id, name, tag, created_by)
     # 默认账本:补 sync_id
     cur.execute("SELECT id, name FROM ledgers WHERE id=1")
     def_row = cur.fetchone()
     def_sync = str(uuid.uuid4())
     cur.execute("UPDATE ledgers SET sync_id=? WHERE id=1", (def_sync,))
-    all_ledgers.append((def_row[0], def_row[1], "默认", 0, None))
+    all_ledgers.append((def_row[0], def_row[1], "默认", OWNER))
     add_change(cur, "ledger", def_row[0], def_sync, def_row[0], changes)
     print(f"  [默认账本] id=1 补 sync_id={def_sync}")
 
     for lg in NEW_LEDGERS:
         sid = str(uuid.uuid4())
         cur.execute(
-            "INSERT INTO ledgers (name, currency, type, created_at, sync_id, my_role, "
-            "member_count, is_shared, owner_user_id, month_start_day) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (lg["name"], lg["currency"], "personal", NOW, sid, lg["my_role"],
-             lg["member_count"], lg["is_shared"], lg.get("owner_user_id"), 1),
+            "INSERT INTO ledgers (name, currency, type, created_at, sync_id, month_start_day) "
+            "VALUES (?,?,?,?,?,?)",
+            (lg["name"], lg["currency"], "personal", NOW, sid, 1),
         )
         lid = cur.lastrowid
         add_change(cur, "ledger", lid, sid, lid, changes)
-        if lg["is_shared"] == 1 and lg.get("owner_user_id"):
-            cur.execute(
-                "INSERT OR IGNORE INTO ledger_members "
-                "(ledger_sync_id, user_id, email, display_name, role, joined_at, updated_at) "
-                "VALUES (?,?,?,?,?,?,?)",
-                (sid, lg["owner_user_id"], None, "设备16384主人", "owner", NOW, NOW),
-            )
-        all_ledgers.append((lid, lg["name"], lg["tag"], lg["is_shared"], lg.get("owner_user_id")))
-        print(f"  [+账本] id={lid} {lg['name']} (shared={lg['is_shared']}, tag={lg['tag']})")
+        all_ledgers.append((lid, lg["name"], lg["tag"], OWNER))
+        print(f"  [+账本] id={lid} {lg['name']} (tag={lg['tag']})")
 
     # ---------- 2) 自定义分类 ----------
     print("=== 注入自定义分类 ===")
@@ -211,7 +202,7 @@ def main():
     print("=== 注入账户 ===")
     random.seed(16384)
     ledger_accounts = {}  # ledger_id -> [(acc_id, currency)]
-    for lid, lname, tag, is_shared, owner_uid in all_ledgers:
+    for lid, lname, tag, created_by in all_ledgers:
         specs = LEDGER_ACC_SPECS[tag]
         acc_ids = []
         used_names = set()
@@ -254,7 +245,7 @@ def main():
     print("=== 注入交易 ===")
     random.seed(16384)
     total_tx = 0
-    for lid, lname, tag, is_shared, owner_uid in all_ledgers:
+    for lid, lname, tag, created_by in all_ledgers:
         accs = ledger_accounts[lid]
         if not accs:
             continue
@@ -291,7 +282,7 @@ def main():
             note = f"测试明细-{ttype}" if random.random() < 0.4 else None
             exclude_stats = 1 if random.random() < 0.05 else 0
             exclude_budget = 1 if random.random() < 0.05 else 0
-            created_by = owner_uid  # 共享账本记创建者;个人账本 NULL
+            # 记录人:本地固定标识(共享账本已下线,取账本元组的 created_by)
             sid = str(uuid.uuid4())
             rows.append((lid, ttype, amount, category_id, account_id, to_account_id,
                          happened_at, note, sid, created_by, created_by,
@@ -324,7 +315,7 @@ def main():
     print("=== 注入预算 ===")
     random.seed(777)
     budget_count = 0
-    for lid, lname, tag, is_shared, owner_uid in all_ledgers:
+    for lid, lname, tag, created_by in all_ledgers:
         ex = custom_cat_ids.get("expense", [])
         n = 3 if lid % 2 == 0 else 2
         for j in range(n):
@@ -348,7 +339,7 @@ def main():
     print("=== 注入周期交易 ===")
     random.seed(999)
     rec_count = 0
-    for lid, lname, tag, is_shared, owner_uid in all_ledgers:
+    for lid, lname, tag, created_by in all_ledgers:
         accs = ledger_accounts[lid]
         if not accs:
             continue

@@ -2,8 +2,9 @@
 """契约内字段指纹：把「只比对同步契约内字段」的口径做成可复算的指纹。
 
 为什么单独做：直接 `select *` 求哈希会把**设备本地列**（created_at / updated_at /
-owner_user_id / created_by_user_id …）也算进去，这些列两端本来就不同（设计如此，
-见 compare_sync_final.py 的契约外字段块），会让「两端指纹不同」看起来像不一致。
+created_by_user_id / last_edited_by_user_id …）也算进去，这些列两端本来就不同
+（设计如此，见 compare_sync_final.py 的契约外字段块），会让「两端指纹不同」看起来
+像不一致。
 本脚本复用 compare_sync_final 的 SPEC + build()，只对**契约内字段**取指纹，
 于是它能把 compare 的「字段差异 = 0」压缩成一个可直接比对的短串。
 

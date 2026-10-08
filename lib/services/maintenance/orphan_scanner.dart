@@ -1,7 +1,7 @@
 /// 本地孤儿数据扫描器。
 ///
 /// 13 个 `scanXxx()` 方法各自独立,只查不改;`scanAll()` 一次跑完返
-/// [OrphanScanReport]。逻辑严格按 plan A1..A10 / B1..B3 / C1 实现。
+/// [OrphanScanReport]。逻辑严格按 plan A1..A8 / B1..B2 / C1 实现。
 ///
 /// 注意:
 /// - 文件类(B)依赖 `path_provider` 拿 app docs dir,测试时如要替换路径,
@@ -34,7 +34,7 @@ class OrphanScanner {
   /// 测试用:覆盖自定义图标目录路径。
   final String? iconsDirOverride;
 
-  /// 跑全部 13 项检测。
+  /// 跑全部 DB / 文件 / 同步检测。
   Future<OrphanScanReport> scanAll() async {
     final dbOrphans = <OrphanRecord>[
       ...await scanBudgetMissingLedger(),
@@ -45,13 +45,10 @@ class OrphanScanner {
       ...await scanTxMissingCategory(),
       ...await scanCategoryMissingParent(),
       ...await scanBudgetMissingCategory(),
-      ...await scanSharedCategoryMissingParent(),
-      ...await scanTxTagOverrideMissingTx(),
     ];
     final fileOrphans = <OrphanRecord>[
       ...await scanFileOrphanAttachments(),
       ...await scanFileOrphanCustomIcons(),
-      ...await scanFileOrphanSharedIcons(),
     ];
     final syncOrphans = <OrphanRecord>[
       ...await scanLocalChangeMissingEntity(),
@@ -184,8 +181,7 @@ class OrphanScanner {
 
   /// A5 — 交易的 `account_id` / `to_account_id` 在 accounts 表不存在。
   ///
-  /// Editor 在共享账本下记的 tx,主表 accountId 是 null + override 走 syncId,
-  /// 不算孤儿,这里只命中**非 null 的 account_id**。
+  /// 只命中**非 null 的 account_id**(null = 该笔本就没有账户,不是孤儿)。
   Future<List<OrphanRecord>> scanTxMissingAccount() async {
     final rows = await db.customSelect(
       '''
@@ -300,65 +296,6 @@ class OrphanScanner {
     }).toList();
   }
 
-  /// [共享账本已下线] A9 — 共享二级分类的 `parent_sync_id` 在同 ledger 的
-  /// SharedLedgerCategories 范围内不存在(该表恒空,仅历史库有数据时命中)。
-  /// 复合主键 (ledger_sync_id, sync_id) → 用 NOT IN 子查询。
-  Future<List<OrphanRecord>> scanSharedCategoryMissingParent() async {
-    final rows = await db.customSelect(
-      '''
-      SELECT child.ledger_sync_id, child.sync_id, child.name, child.parent_sync_id
-      FROM shared_ledger_categories child
-      WHERE COALESCE(child.level, 1) = 2
-        AND child.parent_sync_id IS NOT NULL
-        AND NOT EXISTS (
-          SELECT 1 FROM shared_ledger_categories parent
-          WHERE parent.ledger_sync_id = child.ledger_sync_id
-            AND parent.sync_id = child.parent_sync_id
-            AND COALESCE(parent.level, 1) = 1
-        )
-      ''',
-      readsFrom: {db.sharedLedgerCategories},
-    ).get();
-    return rows.map((row) {
-      final ledgerSyncId = row.read<String>('ledger_sync_id');
-      final syncId = row.read<String>('sync_id');
-      final name = row.readNullable<String>('name') ?? '';
-      final parentSyncId = row.readNullable<String>('parent_sync_id') ?? '';
-      return OrphanRecord(
-        type: OrphanType.sharedCategoryMissingParent,
-        syncId: syncId,
-        title: '共享二级分类「$name」',
-        subtitle: '父分类已删 (parentSyncId=$parentSyncId)',
-        extra: {'ledgerSyncId': ledgerSyncId},
-      );
-    }).toList();
-  }
-
-  /// [共享账本已下线] A10 — `TransactionTagOverrides.transaction_sync_id` 在
-  /// transactions 表不存在。存量 override 行的清理通道,保留。
-  Future<List<OrphanRecord>> scanTxTagOverrideMissingTx() async {
-    final rows = await db.customSelect(
-      '''
-      SELECT o.transaction_sync_id, o.tag_sync_id
-      FROM transaction_tag_overrides o
-      LEFT JOIN transactions t ON t.sync_id = o.transaction_sync_id
-      WHERE t.id IS NULL
-      ''',
-      readsFrom: {db.transactionTagOverrides, db.transactions},
-    ).get();
-    return rows.map((row) {
-      final txSyncId = row.read<String>('transaction_sync_id');
-      final tagSyncId = row.read<String>('tag_sync_id');
-      return OrphanRecord(
-        type: OrphanType.txTagOverrideMissingTx,
-        syncId: txSyncId,
-        title: '共享标签 override',
-        subtitle: '交易已删 (txSyncId=$txSyncId, tagSyncId=$tagSyncId)',
-        extra: {'tagSyncId': tagSyncId},
-      );
-    }).toList();
-  }
-
   // ─────────────────────────── B. 文件孤儿 ───────────────────────────
 
   /// B1 — `attachments/` 目录里的文件不在 `transaction_attachments.file_name`。
@@ -404,7 +341,6 @@ class OrphanScanner {
   ///
   /// `custom_icon_path` 存的是相对路径(如 `custom_icons/6_xxx.png`),取
   /// basename 比对磁盘文件名。
-  /// 不包括 `shared_<sha>.png`(那是 B3 共享缓存,独立处理)。
   Future<List<OrphanRecord>> scanFileOrphanCustomIcons() async {
     final dir = Directory(await _iconsDirPath());
     if (!await dir.exists()) return const [];
@@ -412,7 +348,6 @@ class OrphanScanner {
         .list(followLinks: false)
         .where((e) => e is File)
         .cast<File>()
-        .where((f) => !p.basename(f.path).startsWith('shared_'))
         .toList();
     if (filesOnDisk.isEmpty) return const [];
     final referenced = (await db
@@ -438,52 +373,6 @@ class OrphanScanner {
         type: OrphanType.fileOrphanCustomIcon,
         title: name,
         subtitle: '分类自定义图标无 DB 引用',
-        filePath: f.path,
-        sizeBytes: size,
-      ));
-    }
-    return result;
-  }
-
-  /// B3 — `custom_icons/shared_<sha>.png` 的 sha 不在
-  /// `SharedLedgerCategories.icon_cloud_sha256`。
-  Future<List<OrphanRecord>> scanFileOrphanSharedIcons() async {
-    final dir = Directory(await _iconsDirPath());
-    if (!await dir.exists()) return const [];
-    final filesOnDisk = await dir
-        .list(followLinks: false)
-        .where((e) => e is File)
-        .cast<File>()
-        .where((f) => p.basename(f.path).startsWith('shared_'))
-        .toList();
-    if (filesOnDisk.isEmpty) return const [];
-    final referenced = (await db
-            .customSelect(
-              "SELECT DISTINCT icon_cloud_sha256 FROM shared_ledger_categories "
-              "WHERE icon_cloud_sha256 IS NOT NULL AND icon_cloud_sha256 != ''",
-              readsFrom: {db.sharedLedgerCategories},
-            )
-            .get())
-        .map((r) => r.read<String>('icon_cloud_sha256'))
-        .toSet();
-    final result = <OrphanRecord>[];
-    for (final f in filesOnDisk) {
-      final name = p.basename(f.path);
-      // 解析 shared_<sha>.png
-      if (!name.startsWith('shared_')) continue;
-      final dotIdx = name.lastIndexOf('.');
-      final sha = dotIdx > 7 ? name.substring(7, dotIdx) : name.substring(7);
-      if (referenced.contains(sha)) continue;
-      int? size;
-      try {
-        size = await f.length();
-      } catch (_) {
-        size = null;
-      }
-      result.add(OrphanRecord(
-        type: OrphanType.fileOrphanSharedIcon,
-        title: name,
-        subtitle: '共享分类图标缓存无 DB 引用',
         filePath: f.path,
         sizeBytes: size,
       ));

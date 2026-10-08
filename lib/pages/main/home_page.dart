@@ -689,19 +689,11 @@ class _HomePageState extends ConsumerState<HomePage> {
       }
     });
 
-    // D 方案后:Drift JOIN + SharedLedger* table-watch 已经在 Repository 层
-    // 自动响应共享资源变化(分类 / 账户),tx stream 会重 emit 出带新 name
-    // 的记录。不再需要在 HomePage 强制 _streamBuilderKey++ / invalidate
-    // accountForTxProvider 这种激进刷新 — 那会让 Editor 编辑 tx 的本地
-    // push-pull 循环触发整个 StreamBuilder 子树重建("首页全局刷新"症状)。
-    // 如果有 forceStreamModeImmediate 的语义需要(强制把 preloaded 切到
-    // live stream),可以单独 listen sharedResourceRefreshProvider 处理,
-    // 但 StreamBuilder key 重建保持不动。
-    ref.listen<int>(sharedResourceRefreshProvider, (previous, next) {
-      if (previous != next) {
-        _transactionListKey.currentState?.forceStreamModeImmediate();
-      }
-    });
+    // D 方案后:Drift JOIN 已经在 Repository 层自动响应分类 / 账户变化,tx
+    // stream 会重 emit 出带新 name 的记录。不再需要在 HomePage 强制
+    // _streamBuilderKey++ / invalidate accountForTxProvider 这种激进刷新 ——
+    // 那会让编辑 tx 的本地 push-pull 循环触发整个 StreamBuilder 子树重建
+    // ("首页全局刷新"症状)。StreamBuilder key 重建保持不动。
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context), // ⭐ 自适应背景色
@@ -789,32 +781,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                                             ),
                                           ),
                                         ),
-                                        // [共享账本已下线] v24 共享账本:header 也显示 🤝 角标 + 成员数
-                                        if (!isEmpty && ledger.isShared) ...[
-                                          const SizedBox(width: 4),
-                                          Icon(
-                                            Icons.handshake,
-                                            size: 12,
-                                            color: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.color
-                                                ?.withValues(alpha: 0.7),
-                                          ),
-                                          const SizedBox(width: 1),
-                                          Text(
-                                            '${ledger.memberCount}',
-                                            style: PiggyTextTokens.label(
-                                                    context)
-                                                .copyWith(
-                                              color: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium
-                                                  ?.color
-                                                  ?.withValues(alpha: 0.7),
-                                            ),
-                                          ),
-                                        ],
                                         // 没账本时不显示下拉箭头(没东西可选)
                                         if (!isEmpty) ...[
                                           const SizedBox(width: 2),

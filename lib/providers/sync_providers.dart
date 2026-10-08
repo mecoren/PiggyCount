@@ -15,13 +15,6 @@ import 'database_providers.dart';
 import 'statistics_providers.dart';
 import 'encryption_providers.dart';
 
-/// 共享资源(分类/账户/标签)变更刷新信号。
-///
-/// 历史上由 PiggyCount Cloud 的 WS shared_resource_change 推送时 bump;
-/// 云端协同下线后无生产者,但 picker / 洞察等 15+ 处 widget 仍 watch 它,
-/// 保留定义以维持「无推送 = 不刷新」的现状语义。
-final sharedResourceRefreshProvider = StateProvider<int>((ref) => 0);
-
 // 同步状态（根据 ledgerId 与刷新 tick 缓存），避免因 UI 重建重复拉取
 final syncStatusProvider =
     FutureProvider.family<SyncStatus, int>((ref, ledgerId) async {
@@ -309,9 +302,6 @@ final localLedgersProvider =
         createdAt: ledger.createdAt,
         transactionCount: stats.transactionCount,
         balance: stats.balance,
-        isShared: ledger.isShared,
-        memberCount: ledger.memberCount,
-        myRole: ledger.myRole,
       ));
     }
 
@@ -387,9 +377,6 @@ final allLedgersProvider = FutureProvider<List<LedgerDisplayItem>>((ref) async {
         createdAt: ledger.createdAt,
         transactionCount: stats.transactionCount,
         balance: stats.balance,
-        isShared: ledger.isShared,
-        memberCount: ledger.memberCount,
-        myRole: ledger.myRole,
       ));
     }
 

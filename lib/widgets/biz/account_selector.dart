@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
 import '../../data/db.dart';
-import '../../data/repositories/local/local_repository.dart';
 import '../../styles/tokens.dart';
 import '../../utils/lru_cache.dart';
 import '../../utils/account_type_utils.dart';
-import '../../utils/shared_ledger_picker_filter.dart';
 import '../../providers.dart';
 import '../../services/system/logger_service.dart';
 import '../../l10n/app_localizations.dart';
@@ -83,12 +81,9 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
       // 获取所有账户,然后按当前账本币种 + 可交易类型筛选
       var allAccounts = await repo.getAllAccounts();
 
-      // §7 共享账本 picker 过滤:Editor + 共享账本 → 只看 Owner mirror 账户;
-      // 单人账本 / Owner 视角 → 排除 mirror 账户(只看自己 user-global)
-      if (repo is LocalRepository) {
-        final ctx = await repo.db.loadLedgerPickerContext(widget.ledgerId);
-        allAccounts = await repo.db.filterAccountsForLedger(allAccounts, ctx);
-      }
+      // 账户隐藏(#240):选择器不展示已隐藏账户(账户管理页「已隐藏」分区与
+      // 编辑历史交易时的 E1 钉住除外,见下方 pinnedAccountId 补回)。
+      allAccounts = allAccounts.where((a) => !a.hidden).toList();
 
       // v30:过滤币种 = 显式传入(记账所选币种)?? 账本本位币(旧行为)
       final wanted =
@@ -98,9 +93,9 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
               a.currency.toUpperCase() == wanted && isTradableType(a.type))
           .toList();
 
-      // 账户隐藏(#240)E1 钉住:above 的 filterAccountsForLedger 已排除隐藏
-      // 账户;若调用方传了 pinnedAccountId 且它因隐藏被排除,补回候选(带
-      // hidden=true,chip 渲染时打灰标)。账户不存在或本就未隐藏则不处理。
+      // 账户隐藏(#240)E1 钉住:above 已排除隐藏账户;若调用方传了
+      // pinnedAccountId 且它因隐藏被排除,补回候选(带 hidden=true,chip
+      // 渲染时打灰标)。账户不存在或本就未隐藏则不处理。
       final pinnedId = widget.pinnedAccountId;
       if (pinnedId != null && !accounts.any((a) => a.id == pinnedId)) {
         final pinned = await repo.getAccount(pinnedId);
@@ -176,11 +171,6 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
 
   @override
   Widget build(BuildContext context) {
-    // [共享账本已下线] §7 共享账本:WS shared_resource_change 推送后 tick bump,
-    // 触发 _loadAccounts 重查 SharedLedgerAccounts(该 tick 现已无生产者)。
-    ref.listen<int>(sharedResourceRefreshProvider, (prev, next) {
-      if (prev != next) _loadAccounts();
-    });
     if (_isLoading) {
       return SizedBox(
         height: 32,

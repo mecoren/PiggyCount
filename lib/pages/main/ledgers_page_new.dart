@@ -420,9 +420,6 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   }
 
   /// 本地账本的「⋯」菜单条目（项目锚点浮层菜单，不铺遮罩色）。
-  ///
-  /// [共享账本已下线] myRole 沿自 v24 共享账本(云端协同已下线):存量 Editor 角色的账本
-  /// 隐藏 edit / clear / delete 等 owner-only 操作,仅保留预算/上传/仅删本地。
   /// 手动上传仅对快照同步类后端开放。
   ///
   /// 分组：常规操作（编辑 / 预算 / 上传）与破坏性操作（清空 / 删除）之间插一条
@@ -430,42 +427,36 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
   List<PiggyMenuItem> _localLedgerMenuItems(
       BuildContext context, LedgerDisplayItem ledger) {
     final l10n = AppLocalizations.of(context);
-    final isOwner = ledger.myRole == 'owner';
     final canUpload = ref.read(syncServiceProvider) is TransactionsSyncManager;
     final destructive = <PiggyMenuItem>[
-      if (isOwner)
-        PiggyMenuItem.action(
-          value: 'clear',
-          icon: Icons.clear_all,
-          label: l10n.ledgersClear,
-          color: PiggyTokens.warning(context),
-        ),
-      // "仅删除本地"对 Owner 和 Editor 都可用 — 这是本地清理动作,
-      // 不影响 server。Editor 用这个清掉 Owner 已删账本残留;Owner
-      // 用来清不想要的本地副本但保留 server 数据。
+      PiggyMenuItem.action(
+        value: 'clear',
+        icon: Icons.clear_all,
+        label: l10n.ledgersClear,
+        color: PiggyTokens.warning(context),
+      ),
+      // "仅删除本地"—— 本地清理动作,不影响 server(清理不想要的本地副本
+      // 但保留 server 数据)。
       PiggyMenuItem.action(
         value: 'deleteLocal',
         icon: Icons.delete_outline,
         label: l10n.ledgersDeleteLocal,
         color: PiggyTokens.warning(context),
       ),
-      if (isOwner)
-        PiggyMenuItem.action(
-          value: 'delete',
-          icon: Icons.delete_forever_outlined,
-          label: l10n.ledgersDelete,
-          isDanger: true,
-        ),
+      PiggyMenuItem.action(
+        value: 'delete',
+        icon: Icons.delete_forever_outlined,
+        label: l10n.ledgersDelete,
+        isDanger: true,
+      ),
     ];
     return [
-      if (isOwner)
-        PiggyMenuItem.action(
-          value: 'edit',
-          icon: Icons.edit,
-          label: l10n.ledgersEdit,
-        ),
-      // 预算管理入口 — 每个账本独立预算,Owner/Editor 都能看(Editor 进
-      // BudgetPage 后 isEditorInShared 隐藏 + 按钮和编辑入口,只看不改)。
+      PiggyMenuItem.action(
+        value: 'edit',
+        icon: Icons.edit,
+        label: l10n.ledgersEdit,
+      ),
+      // 预算管理入口 — 每个账本独立预算。
       PiggyMenuItem.action(
         value: 'budget',
         icon: Icons.pie_chart_outline_rounded,

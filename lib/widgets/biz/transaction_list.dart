@@ -149,10 +149,9 @@ class TransactionListState extends ConsumerState<TransactionList> {
   List<int> _cachedAttachmentIds = [];
   int _lastAttachmentRefreshVersion = 0;
 
-  // D 方案后:不再需要 _cachedAccountNames / _cachedToAccountNames /
-  // _lastSharedResourceRefreshVersion — 账户对象由 watchTransactionsWith*
-  // 的 LEFT JOIN 直接挂在 tx 记录,Drift 自然响应主表变化 + SharedLedger*
-  // 镜像变化。
+  // D 方案后:不再需要 _cachedAccountNames / _cachedToAccountNames —— 账户对象
+  // 由 watchTransactionsWith* 的 LEFT JOIN 直接挂在 tx 记录,Drift 自然响应
+  // 主表变化。
 
   // 标记是否应使用预加载数据（当 Stream 数据与预加载数据不同时切换）
   bool _usePreloadedData = true;
@@ -334,8 +333,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
         if (mounted && _usePreloadedData) {
           logger.info('TransactionList', '用户交互，切换到Stream模式');
           // 用 setState 改 _usePreloadedData,否则后续 build 还在跑
-          // preloaded 路径,共享账本 WS 推送下来的新账户名永远不会显示
-          // (preloaded.accountName 是 Splash 阶段的快照)。
+          // preloaded 路径(其 accountName 是 Splash 阶段的快照)。
           setState(() {
             _usePreloadedData = false;
           });
@@ -345,21 +343,6 @@ class TransactionListState extends ConsumerState<TransactionList> {
         }
       });
     }
-  }
-
-  /// 共享账本 WS 推送强制切到 Stream 模式 — 没有导航动画顾虑,立即切。
-  /// 用于 sharedResourceRefreshProvider tick 触发的场景:Owner 改 tx 引用的
-  /// account/category/tag,Editor 这边需要立即丢掉 preloaded(里面挂的是
-  /// Splash 阶段的旧 accountName)走 provider 拉新值。
-  void forceStreamModeImmediate() {
-    if (!mounted) return;
-    if (!_usePreloadedData) return;
-    logger.info('TransactionList', 'WS 推送强制切 Stream 模式 (immediate)');
-    setState(() {
-      _usePreloadedData = false;
-    });
-    _loadTags();
-    _loadAttachmentCounts();
   }
 
   /// 跳转到指定周期标签月(按账本起始日的周期范围匹配,而非 yyyy-MM 前缀)
@@ -537,9 +520,8 @@ class TransactionListState extends ConsumerState<TransactionList> {
       Future.microtask(() => _loadAttachmentCounts());
     }
 
-    // D 方案后:不再 watch sharedResourceRefreshProvider 触发 _loadAccountNames
-    // —— account / toAccount 由 Drift JOIN + SharedLedger* table-watch 自动
-    // 推送,UI 直接读 it.account?.name。
+    // D 方案后:account / toAccount 由 Drift JOIN 自动推送,UI 直接读
+    // it.account?.name。
 
     // 数据引用缓存:同一 transactions 列表引用 + 相同长度 + 相同首尾 id 时
     // 复用上次 _flatItems 结果(父级 rebuild 时传入同一引用),避免 3000 条
@@ -775,9 +757,8 @@ class TransactionListState extends ConsumerState<TransactionList> {
         sensitiveNoteIds.contains(it.t.id), it.t.note);
 
     // D 方案:account / toAccount 已经由 watchTransactionsWith* 的 LEFT JOIN
-    // (+ SharedLedger* hydration) 直接挂在 tx 记录上,跟 category 同款。UI 只读
-    // it.account?.name,Drift 自动响应主表 accounts 行变化 + 镜像表
-    // sharedLedgerAccounts 变化,无需任何命令式 cache / setState / provider fallback。
+    // 直接挂在 tx 记录上,跟 category 同款。UI 只读 it.account?.name,Drift 自动
+    // 响应主表 accounts 行变化,无需任何命令式 cache / setState / provider fallback。
     final accountFeatureEnabled =
         ref.watch(accountFeatureEnabledProvider).value ?? true;
     String? accountName;

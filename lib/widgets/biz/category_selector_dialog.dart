@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart';
-import '../../data/repositories/local/local_repository.dart';
 import '../../providers.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/category_utils.dart';
-import '../../utils/shared_ledger_picker_filter.dart';
 import '../category_icon.dart';
 import '../ui/dialog.dart';
 import '../ui/piggy_input.dart';
@@ -135,20 +133,11 @@ class _CategorySelectorDialogState
 
     // 如果只显示一级分类，不加载子分类
     if (!widget.onlyTopLevel) {
-      // 为每个一级分类获取子分类(主表路径,共享账本场景下面 filter 会替换)
+      // 为每个一级分类获取子分类
       for (final category in [...incomeCategories, ...expenseCategories]) {
         final subs = await repo.getSubCategories(category.id);
         allCategories.addAll(subs);
       }
-    }
-
-    // §7 共享账本 picker 过滤:Editor + 共享账本 → 走 SharedLedger* 表(下游
-    // _buildCategoryGroups 仍按 widget.type 二次过滤,所以这里 topLevelOnly=
-    // false 返完整集合,父子关系靠 parent_sync_id 派生 synthetic parent_id)。
-    if (repo is LocalRepository) {
-      final ctx = await repo.db.loadLedgerPickerContext(widget.ledgerId);
-      allCategories = await repo.db
-          .filterCategoriesForLedger(allCategories, ctx, topLevelOnly: false);
     }
 
     // 如果有过滤器，计算每个分类的可选状态
@@ -302,9 +291,6 @@ class _CategorySelectorDialogState
 
   @override
   Widget build(BuildContext context) {
-    // [共享账本已下线] §7 共享账本:WS shared_resource_change 推送后 tick bump
-    // 触发 rebuild 重查 SharedLedgerCategories(该 tick 现已无生产者)。
-    ref.watch(sharedResourceRefreshProvider);
     final l10n = AppLocalizations.of(context);
 
     // 外壳走项目弹窗语言（[AppDialogShell]）：居中标题 + 项目卡片 + 底部分栏

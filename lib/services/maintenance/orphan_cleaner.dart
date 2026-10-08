@@ -5,12 +5,11 @@
 /// 不阻断其余。
 ///
 /// 删除策略:
-/// - **A1/A2/A3/A4/A7/A8/A10**:直接删 DB 行(它们本身就是孤儿,无下游引用)
+/// - **A1/A2/A3/A4/A7/A8**:直接删 DB 行(它们本身就是孤儿,无下游引用)
 /// - **A5(tx 失主 account)**:**不删** tx,只把 `account_id`/`to_account_id`
 ///   置 null(交易本体有用户数据,保留)
 /// - **A6(tx 失主 category)**:**不删** tx,只把 `category_id` 置 null
-/// - **A9(共享二级分类失父)**:删 SharedLedgerCategories 行(复合主键)
-/// - **B1/B2/B3**:删磁盘文件
+/// - **B1/B2**:删磁盘文件
 /// - **C1**:删 local_changes 行
 library;
 
@@ -42,7 +41,6 @@ class OrphanCleaner {
       switch (r.type) {
         case OrphanType.fileOrphanAttachment:
         case OrphanType.fileOrphanCustomIcon:
-        case OrphanType.fileOrphanSharedIcon:
           fileRecords.add(r);
         case OrphanType.localChangeMissingEntity:
           syncRecords.add(r);
@@ -122,13 +120,8 @@ class OrphanCleaner {
         await _clearTxCategory(r);
       case OrphanType.categoryMissingParent:
         await _deleteCategory(r);
-      case OrphanType.sharedCategoryMissingParent:
-        await _deleteSharedCategory(r);
-      case OrphanType.txTagOverrideMissingTx:
-        await _deleteTxTagOverride(r);
       case OrphanType.fileOrphanAttachment:
       case OrphanType.fileOrphanCustomIcon:
-      case OrphanType.fileOrphanSharedIcon:
       case OrphanType.localChangeMissingEntity:
         throw StateError('_cleanDb 收到非 DB 类型: ${r.type}');
     }
@@ -184,34 +177,6 @@ class OrphanCleaner {
     final id = r.localId;
     if (id == null) throw StateError('category record 缺 localId');
     await (db.delete(db.categories)..where((t) => t.id.equals(id))).go();
-  }
-
-  /// [共享账本已下线] A9:SharedLedgerCategories 复合主键
-  /// (ledger_sync_id, sync_id)。清理历史残留行的通道,保留。
-  Future<void> _deleteSharedCategory(OrphanRecord r) async {
-    final syncId = r.syncId;
-    final ledgerSyncId = r.extra?['ledgerSyncId'] as String?;
-    if (syncId == null || ledgerSyncId == null) {
-      throw StateError('shared category record 缺 syncId/ledgerSyncId');
-    }
-    await (db.delete(db.sharedLedgerCategories)
-          ..where((t) =>
-              t.ledgerSyncId.equals(ledgerSyncId) & t.syncId.equals(syncId)))
-        .go();
-  }
-
-  /// A10:TransactionTagOverrides 复合主键 (transaction_sync_id, tag_sync_id)。
-  Future<void> _deleteTxTagOverride(OrphanRecord r) async {
-    final txSyncId = r.syncId;
-    final tagSyncId = r.extra?['tagSyncId'] as String?;
-    if (txSyncId == null || tagSyncId == null) {
-      throw StateError('tx_tag_override record 缺 txSyncId/tagSyncId');
-    }
-    await (db.delete(db.transactionTagOverrides)
-          ..where((t) =>
-              t.transactionSyncId.equals(txSyncId) &
-              t.tagSyncId.equals(tagSyncId)))
-        .go();
   }
 
   // ─────────────────────────── Sync ───────────────────────────

@@ -34,11 +34,6 @@ class TransactionUpdateBySyncIdData {
   final bool excludeFromStats;
   /// 账单标记：不计入预算。同上。
   final bool excludeFromBudget;
-  /// 共享账本 override：null 表示保持本地原值（Value.absent），
-  /// 非 null（含空串"清空"语义）表示写入。与 currencyCode 同模式。
-  final String? categorySyncIdOverride;
-  final String? accountSyncIdOverride;
-  final String? toAccountSyncIdOverride;
   /// 附件清单（云→本 modified 合并，附件差异贯通修复）。
   ///
   /// - null：不改动本地 transaction_attachments 行；
@@ -49,8 +44,8 @@ class TransactionUpdateBySyncIdData {
   /// v45 原始金额（用户手填的票面/来源金额）。
   ///
   /// null 表示**云端快照未携带该键**（旧版客户端导出），语义为「不改动本地
-  /// 原值」；非 null 才写入。与 currencyCode / override 同模式 —— 避免旧快照
-  /// 因缺键触发全量 modified 并把本地已填值抹成 null。
+  /// 原值」；非 null 才写入。与 currencyCode 同模式 —— 避免旧快照因缺键
+  /// 触发全量 modified 并把本地已填值抹成 null。
   final double? originalAmount;
 
   /// v46 自定义字段值 `{ fieldSyncId: value }`。
@@ -84,9 +79,6 @@ class TransactionUpdateBySyncIdData {
     this.nativeAmount,
     this.excludeFromStats = false,
     this.excludeFromBudget = false,
-    this.categorySyncIdOverride,
-    this.accountSyncIdOverride,
-    this.toAccountSyncIdOverride,
     this.attachments,
     this.originalAmount,
     this.customValues,
@@ -161,8 +153,8 @@ abstract class TransactionRepository {
 
   /// M2-a 首页窗口化：只取窗口内的交易（keyset 游标 + LIMIT）。
   ///
-  /// 与 [watchTransactionsWithCategoryAll] **同口径**（同样三连 LEFT JOIN +
-  /// SharedLedger hydration），差别只有两点：
+  /// 与 [watchTransactionsWithCategoryAll] **同口径**（同样三连 LEFT JOIN），
+  /// 差别只有两点：
   /// 1. 排序加 `id DESC` 做 tiebreaker —— 同一时刻多笔时顺序稳定，游标可比较；
   /// 2. 只返回 [limit] 行，不再整本账本进内存。
   ///
@@ -214,12 +206,10 @@ abstract class TransactionRepository {
 
   /// 聚合指定账本的历史备注。
   ///
-  /// [categoryId] 和 [categorySyncId] 都为空时查询账本全部分类；共享账本中
-  /// Owner 分类没有本地 ID 时，调用方传入 [categorySyncId] 精确匹配 override。
+  /// [categoryId] 为空时查询账本全部分类。
   Future<List<NoteHistoryEntry>> getNoteHistory({
     required int ledgerId,
     int? categoryId,
-    String? categorySyncId,
     required NoteHistorySort sort,
     int limit = 20,
   });
@@ -227,13 +217,6 @@ abstract class TransactionRepository {
   /// 取该账本 + 该类型下**最近一笔带分类交易**的分类 —— 快捷记账模式的记忆源。
   ///
   /// 返回 `null` 表示扫描窗口内没有可用记忆，调用方应退回分类网格（**不要**预填空分类）。
-  ///
-  /// 返回值可能是**负数**：共享账本下 Owner 分类以 `category_id = NULL` +
-  /// `category_sync_id_override` 落库，此处用
-  /// [syntheticIdForSyncId] 在**读取时**派生负数 id。
-  /// ⚠️ 该派生值**绝不可持久化** —— 它基于 Dart `String.hashCode`，
-  /// 跨 VM 版本/平台无稳定性保证（这正是本特性选择「从 transactions 派生」
-  /// 而非「存 SharedPreferences」的决定性理由）。
   ///
   /// 只扫描最近 [scanLimit] 笔以保证工作量有上界；`type` 与 `category_id`
   /// 都不在 `idx_transactions_ledger_happened` 里，需要回表逐行判定。
@@ -310,10 +293,6 @@ abstract class TransactionRepository {
   });
 
   /// 添加交易
-  ///
-  /// §7 v25 共享账本:Editor 选 Owner 的 SharedLedger* 行时,categoryId /
-  /// accountId / toAccountId 留 null,改填 *SyncIdOverride 字符串。
-  /// Owner / 单人账本场景:走 categoryId int(老路径),override 留 null。
   Future<int> addTransaction({
     required int ledgerId,
     required String type,
@@ -328,9 +307,6 @@ abstract class TransactionRepository {
     /// 实例必须写入，否则 (recurringId, happenedAt) 去重键缺失，无法与
     /// S3 恢复来的同周期实例识别为重复（见 existsRecurringInstance）。
     int? recurringId,
-    String? categorySyncIdOverride,
-    String? accountSyncIdOverride,
-    String? toAccountSyncIdOverride,
     bool excludeFromStats = false,
     bool excludeFromBudget = false,
     // v30 交易级多币种:未传时聚合层兜底(currencyCode=账户币种/本位币;
@@ -391,9 +367,6 @@ abstract class TransactionRepository {
     String? note,
     DateTime? happenedAt,
     dynamic accountId,
-    String? categorySyncIdOverride,
-    String? accountSyncIdOverride,
-    String? toAccountSyncIdOverride,
     bool? excludeFromStats,
     bool? excludeFromBudget,
     // v30 交易级多币种:未传(null)= 不改动既有值;聚合层对 amount/账户变化
@@ -422,7 +395,7 @@ abstract class TransactionRepository {
   Future<bool> softDeleteTransaction(int id);
 
   /// 批量软删除（搜索页批量操作）。语义同 [softDeleteTransaction]：只搬
-  /// 交易本体进回收站，标签/附件/override 原地保留，不写 local_changes。
+  /// 交易本体进回收站，标签/附件原地保留，不写 local_changes。
   /// 单事务 + batch 合并 N 次插入（逐条调用 = N 次事务提交）。
   /// 返回实际入回收站条数（id 不存在自动跳过）。
   Future<int> softDeleteTransactions(List<int> ids);
@@ -464,8 +437,7 @@ abstract class TransactionRepository {
   /// `.docs/home-widget/plan.md` §一.3)。需要分类名/图标/账户名时由调用方
   /// 按交易的 categoryId / accountId 自行查 CategoryRepository.getCategoryById /
   /// AccountRepository.getAccount —— 与 [getRecentTransactionsWithCategory] 的
-  /// 区别:后者额外做了共享账本 override 的 synthetic 分类/账户 hydration,
-  /// 语义更重,小组件场景不需要。
+  /// 区别:后者额外 join 分类/账户表,语义更重,小组件场景不需要。
   Future<List<Transaction>> getRecentTransactions(
     int ledgerId, {
     int limit = 10,
@@ -473,17 +445,11 @@ abstract class TransactionRepository {
 
   /// 更新交易(通过 ID 和字段)。
   /// accountId / toAccountId 接 dynamic:dart `null` = absent(不更新);
-  /// `d.Value<int?>(null)` = 显式清空;`int` = 写值。共享账本 Editor 写
-  /// synthetic 账户时,accountId 写 null,通过 writeAccountSyncIdOverride
-  /// + accountSyncIdOverride 写 Owner 账户的 syncId override。
+  /// `d.Value<int?>(null)` = 显式清空;`int` = 写值。
   Future<void> updateTransactionFields({
     required int id,
     dynamic accountId,
     dynamic toAccountId,
-    String? accountSyncIdOverride,
-    String? toAccountSyncIdOverride,
-    bool writeAccountSyncIdOverride,
-    bool writeToAccountSyncIdOverride,
   });
 
   /// 获取账本的首笔交易（按时间排序）

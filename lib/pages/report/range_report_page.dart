@@ -110,7 +110,6 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
           ledgerId: ledgerId, type: _dim, start: _start, end: _end),
       repo.totalsByCategoryWithHierarchy(
           ledgerId: ledgerId, type: _dim, start: _start, end: _end),
-      repo.getSharedSyntheticCategoriesForLedger(ledgerId),
       repo.totalsByTag(
           ledgerId: ledgerId, type: _dim, start: _start, end: _end),
       repo.countByTypeInRange(
@@ -146,11 +145,10 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
                 double total,
                 int count
               })>,
-          repo,
-          results[5] as Map<int, db.Category>),
-      tags: results[6] as List<
+          repo),
+      tags: results[5] as List<
           ({int id, String name, String? color, double total, int count})>,
-      txCount: results[7] as int,
+      txCount: results[6] as int,
       customFields: customFieldStats,
     );
   }

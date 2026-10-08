@@ -11,7 +11,7 @@ PiggyCount 2026-09-15 同步测试数据注入（S3 + WebDAV 两轮共用）
 
 账本清单(8):
   1 默认账本(近3年) 2 历史回忆账本(1999-2018) 3 日常消费(近3年)
-  4 海外旅行(近2年,msd=25) 5 创业公司(近2年) 6 家庭共用(近3年,msd=10,shared)
+  4 海外旅行(近2年,msd=25) 5 创业公司(近2年) 6 家庭共用(近3年,msd=10)
   7 投资理财(近3年) 8 医疗健康(近2年)
 
 运行: python scripts/inject_16384_sync_test_v2.py
@@ -59,37 +59,37 @@ HIST_END = int(datetime(2019, 1, 1).timestamp())
 
 LEDGERS = [
     {"name": "历史回忆账本", "start": HIST_START, "end": HIST_END, "msd": 1,
-     "shared": 0, "accs": [
+     "accs": [
         ("cash", "CNY", 0), ("bank_card", "CNY", 0), ("alipay", "CNY", 0),
         ("wechat", "CNY", 0), ("cash", "CNY", 0), ("bank_card", "CNY", 0)]},
     {"name": "日常消费账本", "start": recent_years(3)[0], "end": NOW, "msd": 1,
-     "shared": 0, "accs": [
+     "accs": [
         ("cash", "CNY", 0), ("bank_card", "CNY", 0), ("credit_card", "CNY", 0),
         ("alipay", "CNY", 0), ("wechat", "CNY", 0), ("cash", "USD", 0),
         ("bank_card", "CNY", 0), ("other", "CNY", 0), ("social_fund", "CNY", 0),
         ("cash", "CNY", 1)]},
     {"name": "海外旅行账本", "start": recent_years(2)[0], "end": NOW, "msd": 25,
-     "shared": 0, "accs": [
+     "accs": [
         ("cash", "USD", 0), ("cash", "EUR", 0), ("cash", "JPY", 0),
         ("wechat", "HKD", 0), ("alipay", "USD", 0), ("bank_card", "SGD", 0),
         ("credit_card", "EUR", 0), ("cash", "THB", 0), ("other", "CNY", 0)]},
     {"name": "创业公司账本", "start": recent_years(2)[0], "end": NOW, "msd": 1,
-     "shared": 0, "accs": [
+     "accs": [
         ("bank_card", "CNY", 0), ("credit_card", "CNY", 0), ("loan", "CNY", 0),
         ("alipay", "CNY", 0), ("wechat", "CNY", 0), ("investment", "CNY", 0),
         ("cash", "CNY", 0), ("bank_card", "USD", 0)]},
     {"name": "家庭共用账本", "start": recent_years(3)[0], "end": NOW, "msd": 10,
-     "shared": 1, "accs": [
+     "accs": [
         ("cash", "CNY", 0), ("bank_card", "CNY", 0), ("alipay", "CNY", 0),
         ("wechat", "CNY", 0), ("credit_card", "CNY", 0), ("social_fund", "CNY", 0),
         ("other", "CNY", 0), ("cash", "USD", 0)]},
     {"name": "投资理财账本", "start": recent_years(3)[0], "end": NOW, "msd": 1,
-     "shared": 0, "accs": [
+     "accs": [
         ("investment", "CNY", 0), ("investment", "USD", 0), ("bank_card", "CNY", 0),
         ("alipay", "CNY", 0), ("wechat", "CNY", 0), ("cash", "CNY", 0),
         ("other", "CNY", 0)]},
     {"name": "医疗健康账本", "start": recent_years(2)[0], "end": NOW, "msd": 1,
-     "shared": 0, "accs": [
+     "accs": [
         ("cash", "CNY", 0), ("bank_card", "CNY", 0), ("alipay", "CNY", 0),
         ("wechat", "CNY", 0), ("social_fund", "CNY", 0), ("other", "CNY", 0)]},
 ]
@@ -230,9 +230,8 @@ def main():
     if cur.execute("SELECT COUNT(*) FROM ledgers").fetchone()[0] == 0:
         print("=== 复刻应用 seed(空库) ===")
         cur.execute(
-            "INSERT INTO ledgers (name, currency, type, created_at, sync_id, my_role, "
-            "member_count, is_shared, owner_user_id, month_start_day) "
-            "VALUES ('默认账本','CNY','personal',?,?,'owner',1,0,NULL,1)",
+            "INSERT INTO ledgers (name, currency, type, created_at, sync_id, month_start_day) "
+            "VALUES ('默认账本','CNY','personal',?,?,1)",
             (NOW, seed_sync_id("ledger:default")))
         assert cur.lastrowid == 1, f"默认账本应拿 id=1, 实际 {cur.lastrowid}"
         changes.append(("ledger", 1, seed_sync_id("ledger:default"), 1, "upsert"))
@@ -262,28 +261,21 @@ def main():
     else:
         def_sync = def_row[1]
     all_ledgers.append((1, "默认账本", "默认", {
-        "start": recent_years(3)[0], "end": NOW, "msd": 1, "shared": 0, "accs": [
+        "start": recent_years(3)[0], "end": NOW, "msd": 1, "accs": [
             ("alipay", "CNY", 0), ("wechat", "CNY", 0), ("cash", "USD", 0),
-            ("other", "CNY", 0)]}, None))
+            ("other", "CNY", 0)]}, OWNER))
 
     for cfg in LEDGERS:
         sid = str(uuid.uuid4())
         cur.execute(
-            "INSERT INTO ledgers (name, currency, type, created_at, sync_id, my_role, "
-            "member_count, is_shared, owner_user_id, month_start_day) VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (cfg["name"], "CNY", "personal", NOW, sid, "owner",
-             2 if cfg["shared"] else 1, cfg["shared"], OWNER if cfg["shared"] else None,
-             cfg["msd"]))
+            "INSERT INTO ledgers (name, currency, type, created_at, sync_id, month_start_day) "
+            "VALUES (?,?,?,?,?,?)",
+            (cfg["name"], "CNY", "personal", NOW, sid, cfg["msd"]))
         lid = cur.lastrowid
         changes.append(("ledger", lid, sid, lid, "upsert"))
-        if cfg["shared"]:
-            cur.execute(
-                "INSERT OR IGNORE INTO ledger_members (ledger_sync_id, user_id, email, display_name, "
-                "role, joined_at, updated_at) VALUES (?,?,?,?,?,?,?)",
-                (sid, OWNER, None, "设备16384主人", "owner", NOW, NOW))
         tag = cfg["name"][:2]
-        all_ledgers.append((lid, cfg["name"], tag, cfg, OWNER if cfg["shared"] else None))
-        print(f"  [+{lid}] {cfg['name']} msd={cfg['msd']} shared={cfg['shared']} "
+        all_ledgers.append((lid, cfg["name"], tag, cfg, OWNER))
+        print(f"  [+{lid}] {cfg['name']} msd={cfg['msd']} "
               f"区间={datetime.fromtimestamp(cfg['start']):%Y-%m-%d}~{datetime.fromtimestamp(cfg['end']):%Y-%m-%d}")
 
     # ---------- 2) 层级分类 ----------

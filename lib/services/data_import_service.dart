@@ -261,12 +261,6 @@ class ImportTransaction {
   final bool excludeFromStats;
   /// 账单标记：不计入预算。同上，JSON 同步必须传输。
   final bool excludeFromBudget;
-  /// 共享账本 override：Editor 视角选 Owner 的 category/account/tag，
-  /// 本地主表无对应 int id，直接存 Owner 的 syncId。JSON 同步必须传输，
-  /// 否则 modified 后 override 丢失、回退到 categoryId int（可能为 null）。
-  final String? categorySyncIdOverride;
-  final String? accountSyncIdOverride;
-  final String? toAccountSyncIdOverride;
   /// v8 G2：周期规则锚点。导入后用于重建 transactions.recurringId。
   final String? recurringSyncId;
   /// v45 原始金额（用户手填票面/来源金额）。null = 未填写（或旧快照缺键），
@@ -300,9 +294,6 @@ class ImportTransaction {
     this.categoryId,
     this.attachments,
     this.syncId,
-    this.categorySyncIdOverride,
-    this.accountSyncIdOverride,
-    this.toAccountSyncIdOverride,
     this.recurringSyncId,
     this.originalAmount,
     this.customValues,
@@ -1586,19 +1577,9 @@ class DataImportService {
     }
 
     for (final tx in transactions) {
-      // 共享账本 override 与本地 int id 互斥（§7 决策，与 SyncEngine 一致）：
-      // override 非空时 categoryId/accountId/toAccountId 一律留 null，
-      // 避免本地主表同名分类/账户被误解析导致「override + int 双写」。
-      final hasCatOverride = (tx.categorySyncIdOverride?.isNotEmpty ?? false);
-      final hasAccOverride = (tx.accountSyncIdOverride?.isNotEmpty ?? false);
-      final hasToOverride =
-          (tx.toAccountSyncIdOverride?.isNotEmpty ?? false);
-
       // 解析分类ID
       int? categoryId;
-      if (hasCatOverride) {
-        categoryId = null;
-      } else if (tx.categoryId != null) {
+      if (tx.categoryId != null) {
         categoryId = tx.categoryId;
       } else if (tx.categoryName != null && tx.categoryKind != null) {
         final key = '${tx.categoryKind}|${tx.categoryName}';
@@ -1616,11 +1597,11 @@ class DataImportService {
         }
       }
 
-      // 解析账户ID（override 非空时留 null，见上方分类注释）
+      // 解析账户ID
       int? accountId;
       int? toAccountId;
       if (tx.type == 'transfer') {
-        if (!hasAccOverride && tx.fromAccountName != null) {
+        if (tx.fromAccountName != null) {
           accountId = accountNameToId[tx.fromAccountName];
           if (accountId == null) {
             // B2:失败也回调进度,避免 UI 进度条卡死/失真
@@ -1630,7 +1611,7 @@ class DataImportService {
             continue;
           }
         }
-        if (!hasToOverride && tx.toAccountName != null) {
+        if (tx.toAccountName != null) {
           toAccountId = accountNameToId[tx.toAccountName];
           if (toAccountId == null) {
             // B2:失败也回调进度,避免 UI 进度条卡死/失真
@@ -1641,7 +1622,7 @@ class DataImportService {
           }
         }
       } else {
-        if (!hasAccOverride && tx.accountName != null) {
+        if (tx.accountName != null) {
           accountId = accountNameToId[tx.accountName];
         }
       }
@@ -1782,11 +1763,6 @@ class DataImportService {
         // 账单标记：JSON 同步必须传输，否则"不计入统计/预算"跨设备丢失
         excludeFromStats: d.Value(tx.excludeFromStats),
         excludeFromBudget: d.Value(tx.excludeFromBudget),
-        // 共享账本 override：added 恢复路径必须写入，否则 JSON 全量导入后
-        // Editor 视角记的 tx override 丢失、回退到 categoryId int（null）。
-        categorySyncIdOverride: d.Value(tx.categorySyncIdOverride),
-        accountSyncIdOverride: d.Value(tx.accountSyncIdOverride),
-        toAccountSyncIdOverride: d.Value(tx.toAccountSyncIdOverride),
         recurringId: d.Value(resolvedRecurringId),
       );
 

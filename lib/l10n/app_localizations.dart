@@ -14923,12 +14923,6 @@ abstract class AppLocalizations {
   /// **'Create failed: {error}'**
   String ledgersCreateFailed(String error);
 
-  /// No description provided for @budgetOnlyOwnerCanEdit.
-  ///
-  /// In en, this message translates to:
-  /// **'Only the ledger owner can edit budgets'**
-  String get budgetOnlyOwnerCanEdit;
-
   /// No description provided for @transferSelectFromAccount.
   ///
   /// In en, this message translates to:
@@ -15198,12 +15192,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} section appended; save to confirm'**
   String aiPromptVarSectionInserted(String name);
-
-  /// No description provided for @tagSelectOwnerManaged.
-  ///
-  /// In en, this message translates to:
-  /// **'Shared ledger tags are managed by the owner'**
-  String get tagSelectOwnerManaged;
 
   /// No description provided for @syncHealthTitle.
   ///

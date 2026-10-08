@@ -7948,9 +7948,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get budgetOnlyOwnerCanEdit => '只有账本所有者能编辑预算';
-
-  @override
   String get transferSelectFromAccount => '请选择转出账户';
 
   @override
@@ -8102,9 +8099,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String aiPromptVarSectionInserted(String name) {
     return '已追加 $name 段落，确认后保存';
   }
-
-  @override
-  String get tagSelectOwnerManaged => '共享账本标签由所有者管理';
 
   @override
   String get syncHealthTitle => '同步健康';
@@ -16360,9 +16354,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get budgetOnlyOwnerCanEdit => '只有帳本所有者能編輯預算';
-
-  @override
   String get transferSelectFromAccount => '請選擇轉出帳戶';
 
   @override
@@ -16514,9 +16505,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String aiPromptVarSectionInserted(String name) {
     return '已追加 $name 段落，確認後儲存';
   }
-
-  @override
-  String get tagSelectOwnerManaged => '共享帳本標籤由所有者管理';
 
   @override
   String get syncHealthTitle => '同步健康';

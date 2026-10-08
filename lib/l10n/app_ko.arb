@@ -2400,7 +2400,6 @@
       }
     }
   },
-  "budgetOnlyOwnerCanEdit": "장부 소유자만 예산을 편집할 수 있습니다",
   "transferSelectFromAccount": "송금 계좌를 선택하세요",
   "transferSelectToAccount": "입금 계좌를 선택하세요",
   "accountHiddenSectionSummary": "숨김 {count} · 합계 {total}",
@@ -2696,7 +2695,6 @@
       }
     }
   },
-  "tagSelectOwnerManaged": "공유 원장의 태그는 소유자가 관리합니다",
   "syncHealthTitle": "동기화 상태",
   "syncHealthEmpty": "최근 30일 동기화 기록 없음",
   "syncHealthRate": "최근 30일 성공률: {rate}",

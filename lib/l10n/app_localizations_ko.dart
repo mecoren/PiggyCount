@@ -8041,9 +8041,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get budgetOnlyOwnerCanEdit => '장부 소유자만 예산을 편집할 수 있습니다';
-
-  @override
   String get transferSelectFromAccount => '송금 계좌를 선택하세요';
 
   @override
@@ -8195,9 +8192,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String aiPromptVarSectionInserted(String name) {
     return '$name 단락이 추가되었습니다. 확인 후 저장하세요';
   }
-
-  @override
-  String get tagSelectOwnerManaged => '공유 원장의 태그는 소유자가 관리합니다';
 
   @override
   String get syncHealthTitle => '동기화 상태';

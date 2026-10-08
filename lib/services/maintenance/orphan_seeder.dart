@@ -34,9 +34,7 @@ class OrphanSeeder {
       lines.add('A6: ${await _seedTxMissingCategory()} 个');
       lines.add('A7: ${await _seedCategoryMissingParent()} 个');
       lines.add('A8: ${await _seedBudgetMissingCategory()} 个');
-      lines.add('A10: ${await _seedTxTagOverrideMissingTx()} 个');
       lines.add('B1: ${await _seedFileOrphanAttachment()} 个');
-      lines.add('B3: ${await _seedFileOrphanSharedIcon()} 个');
       lines.add('C1: ${await _seedLocalChangeMissing()} 个');
     } catch (e, st) {
       logger.error('OrphanSeeder', '种孤儿数据失败', e, st);
@@ -182,19 +180,6 @@ class OrphanSeeder {
     return 1;
   }
 
-  /// [共享账本已下线] 自测用:造一条失主的共享 tag override 记录(A10)。
-  Future<int> _seedTxTagOverrideMissingTx() async {
-    final ghostTxSyncId = 'seed-ghost-tx-${_rand.nextInt(99999)}';
-    await db.into(db.transactionTagOverrides).insert(
-          TransactionTagOverridesCompanion.insert(
-            transactionSyncId: ghostTxSyncId,
-            tagSyncId: 'seed-tag-syncid-${_rand.nextInt(99999)}',
-            createdAt: DateTime.now(),
-          ),
-        );
-    return 1;
-  }
-
   // ────────────── B 类 — 在磁盘塞文件 ──────────────
 
   Future<int> _seedFileOrphanAttachment() async {
@@ -203,18 +188,6 @@ class OrphanSeeder {
     await dir.create(recursive: true);
     final f = File(p.join(dir.path, 'seed_orphan_${_rand.nextInt(99999)}.jpg'));
     await f.writeAsBytes(List.filled(2048, 0));
-    return 1;
-  }
-
-  Future<int> _seedFileOrphanSharedIcon() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final dir = Directory(p.join(appDir.path, 'custom_icons'));
-    await dir.create(recursive: true);
-    // sha256 风格的假 hash
-    final fakeSha =
-        List.generate(64, (_) => 'abcdef0123456789'[_rand.nextInt(16)]).join();
-    final f = File(p.join(dir.path, 'shared_$fakeSha.png'));
-    await f.writeAsBytes(List.filled(1024, 0));
     return 1;
   }
 

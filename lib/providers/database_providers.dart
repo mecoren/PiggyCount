@@ -6,7 +6,6 @@ import '../data/db.dart';
 import '../data/repositories/local/local_repository.dart';
 import '../data/repositories/base_repository.dart';
 import '../services/system/logger_service.dart';
-import '../utils/shared_ledger_picker_filter.dart';
 import 'sync_providers.dart';
 
 // 数据库Provider
@@ -196,49 +195,6 @@ final allAccountsStreamProvider = StreamProvider<List<Account>>((ref) {
   logger.info('AllAccountsStream', '使用的 Repository 类型: ${repo.runtimeType}');
   final stream = repo.watchAllAccounts();
   return stream;
-});
-
-// §7 v25:tx 反查账户 — 综合考虑 accountId int + accountSyncIdOverride。
-// Editor 在共享账本下记的 tx,accountId 是 null,override 是 Owner's syncId,
-// 走 SharedLedgerAccounts 表反查 → 转 synthetic Account 返回。
-final accountForTxProvider =
-    FutureProvider.family<Account?, ({int? accountId, String? syncIdOverride})>(
-        (ref, key) async {
-  ref.watch(syncGenerationProvider);
-  // [共享账本已下线] §7 共享账本:WS shared_resource_change 推送时也强制重算,
-  // 跟 picker / 洞察等其它 widget 监听同一个 tick 一致(该 tick 现已无生产者)。
-  ref.watch(sharedResourceRefreshProvider);
-  final repo = ref.watch(repositoryProvider);
-  if (key.accountId != null && key.accountId! >= 0) {
-    return await repo.getAccount(key.accountId!);
-  }
-  final ov = key.syncIdOverride;
-  if (ov == null || ov.isEmpty) return null;
-  final shared = await repo.getSharedAccountBySyncId(ov);
-  if (shared == null) return null;
-  return Account(
-    // 用 syntheticIdForSyncId 而不是 -1 — 跟 picker / 详情页路径统一,
-    // 避免不同 syncId 全部撞到同一个 id。
-    id: syntheticIdForSyncId(shared.syncId),
-    ledgerId: 0,
-    name: shared.name,
-    type: shared.accountType,
-    currency: shared.currency,
-    initialBalance: shared.initialBalance ?? 0.0,
-    createdAt: null,
-    updatedAt: null,
-    sortOrder: 0,
-    creditLimit: shared.creditLimit,
-    billingDay: shared.billingDay,
-    paymentDueDay: shared.paymentDueDay,
-    bankName: shared.bankName,
-    cardLastFour: shared.cardLastFour,
-    note: shared.note,
-    syncId: shared.syncId,
-    // SharedLedgerAccounts 镜像表没有 hidden 概念(隐藏是 Owner 侧个人状态,
-    // 不随共享账本镜像同步),synthetic 账户固定按「未隐藏」处理。
-    hidden: false,
-  );
 });
 
 // 获取单个账户信息

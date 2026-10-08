@@ -3850,7 +3850,6 @@
       }
     }
   },
-  "budgetOnlyOwnerCanEdit": "Only the ledger owner can edit budgets",
   "transferSelectFromAccount": "Select a from account",
   "transferSelectToAccount": "Select a to account",
   "commonNoMessages": "No messages yet",
@@ -3959,7 +3958,6 @@
       }
     }
   },
-  "tagSelectOwnerManaged": "Shared ledger tags are managed by the owner",
   "syncHealthTitle": "Sync Health",
   "syncHealthEmpty": "No sync records in the last 30 days",
   "syncHealthRate": "Success rate (last 30 days): {rate}",

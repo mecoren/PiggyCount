@@ -251,8 +251,8 @@ def main():
     print(f'档位 {args.tier}: {tx_target} 笔 / {att_target} 附件 → {args.db}')
 
     ledger_id = pick_ledger(cur, args.ledger_id)
-    owner = cur.execute("SELECT owner_user_id FROM ledgers WHERE id=?",
-                        (ledger_id,)).fetchone()[0]
+    # 记录人:本地固定标识（共享账本已下线,ledgers.owner_user_id 已随 v51 DROP）
+    owner = 'dev-local-owner'
     t0 = time.time()
     seed_tx(cur, con, ledger_id, owner, tx_target, args.seed)
     if att_target:

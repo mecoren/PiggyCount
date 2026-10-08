@@ -69,7 +69,7 @@ abstract class BaseRepository
   /// 该账本交易涉及的全部外币币种集合(重算前并入汇率拉取 extraQuotes)。
   Future<Set<String>> getLedgerForeignCurrencies(int ledgerId);
 
-  /// 按 picker 账户 id 解析币种:正数=主表账户;负数=共享账本 synthetic id。
+  /// 按 picker 账户 id 解析币种(查主表账户)。
   Future<String?> getAccountCurrencyByAnyId(int accountId);
 
   // -------------------------------------------------------------------

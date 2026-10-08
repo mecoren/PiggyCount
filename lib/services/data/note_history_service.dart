@@ -11,7 +11,6 @@ class NoteHistoryService {
   /// [scope] 查询范围
   /// [sort] 排序规则
   /// [categoryId] 当前本地分类ID
-  /// [categorySyncId] 当前共享账本分类的同步ID
   /// [limit] 限制返回数量
   static Future<List<NoteHistoryEntry>> getHistoryNotes({
     required BaseRepository repository,
@@ -19,16 +18,14 @@ class NoteHistoryService {
     required NoteHistoryScope scope,
     required NoteHistorySort sort,
     int? categoryId,
-    String? categorySyncId,
     int limit = 20,
   }) async {
     // 当前分类模式没有有效分类时退回全部分类，避免转账等场景得到空结果。
-    final shouldFilterByCategory = scope == NoteHistoryScope.currentCategory &&
-        (categoryId != null || (categorySyncId?.isNotEmpty ?? false));
+    final shouldFilterByCategory =
+        scope == NoteHistoryScope.currentCategory && categoryId != null;
     return repository.getNoteHistory(
       ledgerId: ledgerId,
       categoryId: shouldFilterByCategory ? categoryId : null,
-      categorySyncId: shouldFilterByCategory ? categorySyncId : null,
       sort: sort,
       limit: limit,
     );

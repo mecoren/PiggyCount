@@ -3,7 +3,6 @@ import 'package:drift/drift.dart' as d;
 import '../../db.dart';
 import '../../models/transaction_original_amount.dart';
 import '../../../utils/month_range.dart';
-import '../../../utils/shared_ledger_picker_filter.dart';
 import '../statistics_repository.dart';
 
 /// 本地统计Repository实现
@@ -31,29 +30,15 @@ class LocalStatisticsRepository implements StatisticsRepository {
           db.categories.id.equalsExp(db.transactions.categoryId)),
     ]);
     final rows = await q.get();
-    final shared = await _loadSharedCategoriesForLedger(ledgerId);
     final map = <int?, double>{};
     final names = <int?, String>{};
     final icons = <int?, String?>{};
     for (final r in rows) {
       final t = r.readTable(db.transactions);
       final c = r.readTableOrNull(db.categories);
-      int? id = c?.id;
-      String name = c?.name ?? '未分类';
-      String? icon = c?.icon;
-      // [共享账本已下线] §7 共享账本:Editor 写的 tx categoryId 为空,但
-      // categorySyncIdOverride 指向 Owner 的分类 syncId — 查
-      // SharedLedgerCategories 兜底(仅存量 override 数据命中)。
-      if (c == null && t.categorySyncIdOverride != null) {
-        final s = shared[t.categorySyncIdOverride!];
-        if (s != null) {
-          id = syntheticIdForSyncId(s.syncId);
-          name = s.name;
-          icon = s.icon;
-        }
-      }
-      names[id] = name;
-      icons[id] = icon;
+      final id = c?.id;
+      names[id] = c?.name ?? '未分类';
+      icons[id] = c?.icon;
       map.update(id, (v) => v + (t.nativeAmount ?? t.amount),
           ifAbsent: () => t.nativeAmount ?? t.amount);
     }
@@ -62,50 +47,6 @@ class LocalStatisticsRepository implements StatisticsRepository {
         .toList()
       ..sort((a, b) => b.total.compareTo(a.total));
     return list;
-  }
-
-  /// [共享账本已下线] 加载当前账本的 SharedLedger 分类索引(by syncId)。
-  /// 单人账本返回空 map;共享账本(仅存量数据)返回 Owner user-global 的镜像。
-  Future<Map<String, SharedLedgerCategory>> _loadSharedCategoriesForLedger(
-      int ledgerId) async {
-    final ledger = await (db.select(db.ledgers)
-          ..where((l) => l.id.equals(ledgerId)))
-        .getSingleOrNull();
-    final syncId = ledger?.syncId;
-    if (syncId == null || syncId.isEmpty) return const {};
-    final rows = await (db.select(db.sharedLedgerCategories)
-          ..where((t) => t.ledgerSyncId.equals(syncId)))
-        .get();
-    return {for (final r in rows) r.syncId: r};
-  }
-
-  @override
-  Future<Map<int, Category>> getSharedSyntheticCategoriesForLedger(
-      int ledgerId) async {
-    final shared = await _loadSharedCategoriesForLedger(ledgerId);
-    if (shared.isEmpty) return const {};
-    return {
-      for (final s in shared.values)
-        syntheticIdForSyncId(s.syncId): Category(
-          id: syntheticIdForSyncId(s.syncId),
-          name: s.name,
-          kind: s.kind,
-          icon: s.icon,
-          sortOrder: s.sortOrder,
-          // §7 二级分类 hierarchy:转 synthetic 父 id,让 analytics 的
-          // L2→L1 rollup 找到 SharedLedger* 父分类(主表查不到这些 negative id)。
-          parentId: (s.parentSyncId != null && s.parentSyncId!.isNotEmpty)
-              ? syntheticIdForSyncId(s.parentSyncId!)
-              : null,
-          level: s.level,
-          iconType: s.iconType,
-          customIconPath: s.iconType == 'custom' && s.iconCloudSha256 != null
-              ? 'custom_icons/shared_${s.iconCloudSha256}.png'
-              : null,
-          communityIconId: null,
-          syncId: s.syncId,
-        )
-    };
   }
 
   @override
@@ -128,7 +69,6 @@ class LocalStatisticsRepository implements StatisticsRepository {
     ]);
 
     final rows = await q.get();
-    final shared = await _loadSharedCategoriesForLedger(ledgerId);
     final map = <int?, double>{};
     final countMap = <int?, int>{};
     final categoryInfo = <int?, ({String name, String? icon, int? parentId, int level})>{};
@@ -136,7 +76,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     for (final r in rows) {
       final t = r.readTable(db.transactions);
       final c = r.readTableOrNull(db.categories);
-      int? id = c?.id;
+      final id = c?.id;
 
       if (c != null) {
         categoryInfo[id] = (
@@ -144,26 +84,6 @@ class LocalStatisticsRepository implements StatisticsRepository {
           icon: c.icon,
           parentId: c.parentId,
           level: c.level,
-        );
-      } else if (t.categorySyncIdOverride != null &&
-          shared[t.categorySyncIdOverride!] != null) {
-        // §7 共享账本:Editor 写的 tx 用 categorySyncIdOverride 指向 Owner
-        // 的分类,主表 join 不到,查 SharedLedger* 兜底。用 synthetic 负 id
-        // 做聚合 key,跟 picker filter 保持一致。
-        // §7 二级分类 hierarchy:Phase 2 加了 parent_sync_id 后,L2 SharedLedger*
-        // 行有父分类 syncId — 转 synthetic 负 id 写入 parentId,让 analytics
-        // 的 L2→L1 rollup 正确累加,而不是把 L2 当 orphan 丢掉。
-        final s = shared[t.categorySyncIdOverride!]!;
-        id = syntheticIdForSyncId(s.syncId);
-        final pSyncId = s.parentSyncId;
-        final parentSyntheticId = (pSyncId != null && pSyncId.isNotEmpty)
-            ? syntheticIdForSyncId(pSyncId)
-            : null;
-        categoryInfo[id] = (
-          name: s.name,
-          icon: s.icon,
-          parentId: parentSyntheticId,
-          level: s.level,
         );
       } else {
         categoryInfo[id] = (
@@ -322,11 +242,8 @@ class LocalStatisticsRepository implements StatisticsRepository {
   /// 标签维度：一笔交易可挂多个标签，各标签分别计入（与标签详情页同源，
   /// 所以各行之和通常 **大于** 该区间总额，这是标签不互斥的口径而非 bug）。
   ///
-  /// 两条 SQL 在 Dart 侧按 tag id 合并：
-  /// 1. 主表路 `transaction_tags → tags`（本机拥有的标签）；
-  /// 2. 共享账本 Editor 路 `transaction_tag_overrides → shared_ledger_tags`
-  ///    （标签行不在主表，按 syncId 转 synthetic 负 id，同 `LocalTagRepository`）。
-  /// 外键未启用、`native_amount` 可空 → 与既有统计一样 `COALESCE(native_amount, amount)`。
+  /// 取数走 `transaction_tags → tags` 主表路；外键未启用、`native_amount`
+  /// 可空 → 与既有统计一样 `COALESCE(native_amount, amount)`。
   @override
   Future<List<({int id, String name, String? color, double total, int count})>>
       totalsByTag({
@@ -366,40 +283,6 @@ class LocalStatisticsRepository implements StatisticsRepository {
         )
     };
 
-    final overrides = await db.customSelect(
-      'SELECT o.tag_sync_id AS sync_id, st.name AS name, st.color AS color, '
-      'COUNT(*) AS cnt, SUM(COALESCE(t.native_amount, t.amount)) AS total '
-      'FROM transaction_tag_overrides o '
-      'INNER JOIN transactions t ON t.sync_id = o.transaction_sync_id '
-      'INNER JOIN shared_ledger_tags st ON st.sync_id = o.tag_sync_id '
-      'WHERE t.ledger_id = ?1 AND t.type = ?2 AND t.exclude_from_stats = 0 '
-      'AND t.happened_at >= ?3 AND t.happened_at < ?4 '
-      'GROUP BY o.tag_sync_id',
-      variables: [
-        d.Variable<int>(ledgerId),
-        d.Variable<String>(type),
-        d.Variable<DateTime>(start),
-        d.Variable<DateTime>(end),
-      ],
-      readsFrom: {
-        db.transactionTagOverrides,
-        db.transactions,
-        db.sharedLedgerTags
-      },
-    ).get();
-    for (final r in overrides) {
-      final id = syntheticIdForSyncId(r.read<String>('sync_id'));
-      final inc = dval(r.data['total']);
-      final cnt = ival(r.data['cnt']);
-      final prev = map[id];
-      map[id] = (
-        id: id,
-        name: r.read<String>('name'),
-        color: r.readNullable<String>('color'),
-        total: (prev?.total ?? 0) + inc,
-        count: (prev?.count ?? 0) + cnt,
-      );
-    }
     return map.values.toList()..sort((a, b) => b.total.compareTo(a.total));
   }
 
@@ -721,9 +604,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     final diff = _diffExpr(metric, basis);
     // 未填写的原始金额在保存/迁移时已兜底为记账金额（差异 0），
     // HAVING 直接滤掉零偏差分类 —— 无需再判 NULL。
-    // ponytail: 共享账本 Editor 行(category_id 空)会落到 null 桶、名称走
-    // UI 的「未分类」；要精确显示 Owner 分类名时再按 existing
-    // totalsByCategory 的做法接 categorySyncIdOverride 兜底。
+    // category_id 为空的行落到 null 桶、名称走 UI 的「未分类」。
     final rows = await db.customSelect(
       'SELECT t.category_id AS cid, c.name AS cname, c.icon AS cicon, '
       'COALESCE(SUM(CASE WHEN ABS($diff) > 0.005 THEN 1 ELSE 0 END), 0) AS deviated, '

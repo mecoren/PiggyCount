@@ -5,7 +5,6 @@ import '../../db.dart';
 import '../../models/transaction_original_amount.dart';
 import '../../../cloud/sync/change_tracker.dart';
 import '../../../services/currency/rate_math.dart';
-import '../../../utils/shared_ledger_picker_filter.dart';
 import '../../../services/system/logger_service.dart';
 import '../../../models/note_history.dart';
 import '../base_repository.dart';
@@ -221,10 +220,10 @@ class LocalRepository extends BaseRepository {
     //
     // M1/M2 审计修复：清理逻辑不再挂在 tracker 分支 —— 此前非 Cloud 后端
     // （S3/WebDAV/iCloud/Supabase，tracker==null）提前 return，budgets /
-    // transaction_tags / transaction_attachments / transaction_tag_overrides
-    // 全部残留孤儿行；且 recurring_transactions 在任何模式都漏删。现在
-    // 数据清理对全部后端一致执行，仅「水位/拉取错误清理 + change 登记」
-    // 是 Cloud 专属（快照链路没有这些表的数据）。
+    // transaction_tags / transaction_attachments 全部残留孤儿行；且
+    // recurring_transactions 在任何模式都漏删。现在数据清理对全部后端一致
+    // 执行，仅「水位/拉取错误清理 + change 登记」是 Cloud 专属（快照链路
+    // 没有这些表的数据）。
     await db.transaction(() async {
       // v44 回收站：账本都不存在了，它的回收站条目必须一起走。归档条目
       // 不在下面的 txs 收集范围内（行已移出 transactions），不 purge 就会
@@ -269,14 +268,6 @@ class LocalRepository extends BaseRepository {
         await (db.delete(db.transactionAttachments)
               ..where((ta) => ta.transactionId.isIn(txIds)))
             .go();
-        // [共享账本已下线] 共享标签 override 按 tx.syncId 清理（该表主键是文本
-        // syncId，不能按 int id 删）。仍负责清存量 override 行，保留。
-        final txSyncIds = txs.map((t) => t.syncId).whereType<String>().toList();
-        if (txSyncIds.isNotEmpty) {
-          await (db.delete(db.transactionTagOverrides)
-                ..where((o) => o.transactionSyncId.isIn(txSyncIds)))
-              .go();
-        }
       }
       // M2：删除账本自身的周期规则模板（两种模式都漏 → 孤儿规则残留，
       // 且有被生成器复活成悬空 ledgerId 交易的风险）。
@@ -541,9 +532,6 @@ class LocalRepository extends BaseRepository {
     String? note,
     String? syncId,
     int? recurringId,
-    String? categorySyncIdOverride,
-    String? accountSyncIdOverride,
-    String? toAccountSyncIdOverride,
     bool excludeFromStats = false,
     bool excludeFromBudget = false,
     String? currencyCode,
@@ -573,9 +561,6 @@ class LocalRepository extends BaseRepository {
         note: note,
         syncId: syncId,
         recurringId: recurringId,
-        categorySyncIdOverride: categorySyncIdOverride,
-        accountSyncIdOverride: accountSyncIdOverride,
-        toAccountSyncIdOverride: toAccountSyncIdOverride,
         excludeFromStats: excludeFromStats,
         excludeFromBudget: excludeFromBudget,
         currencyCode: cc,
@@ -650,9 +635,6 @@ class LocalRepository extends BaseRepository {
     String? note,
     DateTime? happenedAt,
     dynamic accountId,
-    String? categorySyncIdOverride,
-    String? accountSyncIdOverride,
-    String? toAccountSyncIdOverride,
     bool? excludeFromStats,
     bool? excludeFromBudget,
     String? currencyCode,
@@ -703,9 +685,6 @@ class LocalRepository extends BaseRepository {
             note: note,
             happenedAt: happenedAt,
             accountId: accountId,
-            categorySyncIdOverride: categorySyncIdOverride,
-            accountSyncIdOverride: accountSyncIdOverride,
-            toAccountSyncIdOverride: toAccountSyncIdOverride,
             excludeFromStats: excludeFromStats,
             excludeFromBudget: excludeFromBudget,
             currencyCode: effCurrency,
@@ -731,9 +710,6 @@ class LocalRepository extends BaseRepository {
       note: note,
       happenedAt: happenedAt,
       accountId: accountId,
-      categorySyncIdOverride: categorySyncIdOverride,
-      accountSyncIdOverride: accountSyncIdOverride,
-      toAccountSyncIdOverride: toAccountSyncIdOverride,
       excludeFromStats: excludeFromStats,
       excludeFromBudget: excludeFromBudget,
       currencyCode: effCurrency,
@@ -1155,14 +1131,12 @@ class LocalRepository extends BaseRepository {
   Future<List<NoteHistoryEntry>> getNoteHistory({
     required int ledgerId,
     int? categoryId,
-    String? categorySyncId,
     required NoteHistorySort sort,
     int limit = 20,
   }) =>
       _transactionRepo.getNoteHistory(
         ledgerId: ledgerId,
         categoryId: categoryId,
-        categorySyncId: categorySyncId,
         sort: sort,
         limit: limit,
       );
@@ -1236,10 +1210,6 @@ class LocalRepository extends BaseRepository {
     required int id,
     dynamic accountId,
     dynamic toAccountId,
-    String? accountSyncIdOverride,
-    String? toAccountSyncIdOverride,
-    bool writeAccountSyncIdOverride = false,
-    bool writeToAccountSyncIdOverride = false,
   }) {
     // TBL-M9：写表 + 记 change 同事务
     return db.transaction(() async {
@@ -1247,10 +1217,6 @@ class LocalRepository extends BaseRepository {
         id: id,
         accountId: accountId,
         toAccountId: toAccountId,
-        accountSyncIdOverride: accountSyncIdOverride,
-        toAccountSyncIdOverride: toAccountSyncIdOverride,
-        writeAccountSyncIdOverride: writeAccountSyncIdOverride,
-        writeToAccountSyncIdOverride: writeToAccountSyncIdOverride,
       );
       // 历史 bug:这里之前没记 ChangeTracker,transfer 编辑模式改 toAccountId
       // 永远不 sync。补一刀 update change,跟 updateTransaction 对齐。
@@ -1348,25 +1314,17 @@ class LocalRepository extends BaseRepository {
     };
   }
 
-  /// [共享账本已下线] v30:按 picker 给的账户 id 解析币种 —— 正数查主表;
-  /// 负数是共享账本 Owner 资源的 synthetic id(§7),查 SharedLedgerAccounts
-  /// 镜像(仅存量 synthetic id 命中)。
-  /// (审查发现:金额弹窗对 synthetic 账户解析不到币种,外币被静默按本位币。)
+  /// v30:按 picker 给的账户 id 解析币种(查主表账户)。
+  /// (审查发现:金额弹窗对未知账户解析不到币种,外币被静默按本位币。)
   @override
   Future<String?> getAccountCurrencyByAnyId(int accountId) async {
-    if (accountId >= 0) {
-      final acc = await getAccount(accountId);
-      return (acc?.currency.isNotEmpty ?? false)
-          ? acc!.currency.toUpperCase()
-          : null;
-    }
-    final acc = await db.findAccountBySyntheticId(accountId);
+    final acc = await getAccount(accountId);
     return (acc?.currency.isNotEmpty ?? false)
         ? acc!.currency.toUpperCase()
         : null;
   }
 
-  /// 共享账本:本地 tx 写完后回填 createdByUserId / lastEditedByUserId。
+  /// 本地 tx 写完后回填 createdByUserId / lastEditedByUserId。
   /// 详见 [LocalTransactionRepository.markTxAuthor]。
   Future<void> markTxAuthor({
     required int txId,
@@ -2053,10 +2011,6 @@ class LocalRepository extends BaseRepository {
   Future<List<Category>> getAllCategories() => _categoryRepo.getAllCategories();
 
   @override
-  Future<List<Category>> getAllCategoriesIncludingShared() =>
-      _categoryRepo.getAllCategoriesIncludingShared();
-
-  @override
   Future<void> batchInsertCategories(
       List<CategoriesCompanion> categories) async {
     if (changeTracker == null || categories.isEmpty) {
@@ -2724,10 +2678,6 @@ class LocalRepository extends BaseRepository {
     });
   }
 
-  @override
-  Future<SharedLedgerAccount?> getSharedAccountBySyncId(String syncId) =>
-      _accountRepo.getSharedAccountBySyncId(syncId);
-
   // ============================================
   // StatisticsRepository 接口实现 - 委托给 LocalStatisticsRepository
   // ============================================
@@ -2860,11 +2810,6 @@ class LocalRepository extends BaseRepository {
         ledgerId: ledgerId,
         year: year,
       );
-
-  @override
-  Future<Map<int, Category>> getSharedSyntheticCategoriesForLedger(
-          int ledgerId) =>
-      _statisticsRepo.getSharedSyntheticCategoriesForLedger(ledgerId);
 
   // v45 原始金额偏差（口径见 StatisticsRepository 声明）。
 

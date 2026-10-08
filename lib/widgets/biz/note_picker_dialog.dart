@@ -9,18 +9,16 @@ import '../ui/dialog.dart';
 import '../ui/piggy_spinner.dart';
 
 /// 备注选择弹窗
-/// 支持本地与共享账本分类标识，用于筛选历史备注。
+/// 按分类筛选历史备注。
 class NotePickerDialog extends ConsumerStatefulWidget {
   final int ledgerId;
   final int? categoryId; // 可选：本地分类ID
-  final String? categorySyncId; // 可选：共享账本分类同步ID
   final ValueChanged<String> onNotePicked;
 
   const NotePickerDialog({
     super.key,
     required this.ledgerId,
     this.categoryId,
-    this.categorySyncId,
     required this.onNotePicked,
   });
 
@@ -47,7 +45,6 @@ class _NotePickerDialogState extends ConsumerState<NotePickerDialog> {
         scope: ref.read(noteHistoryScopeProvider),
         sort: ref.read(noteHistorySortProvider),
         categoryId: widget.categoryId,
-        categorySyncId: widget.categorySyncId,
         limit: ref.read(noteHistoryLimitProvider),
       );
       if (!mounted) return;

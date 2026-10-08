@@ -3489,7 +3489,6 @@
       }
     }
   },
-  "budgetOnlyOwnerCanEdit": "只有账本所有者能编辑预算",
   "transferSelectFromAccount": "请选择转出账户",
   "transferSelectToAccount": "请选择转入账户",
   "commonNoMessages": "暂无消息",
@@ -3598,7 +3597,6 @@
       }
     }
   },
-  "tagSelectOwnerManaged": "共享账本标签由所有者管理",
   "syncHealthTitle": "同步健康",
   "syncHealthEmpty": "近 30 天暂无同步记录",
   "syncHealthRate": "近 30 天成功率：{rate}",

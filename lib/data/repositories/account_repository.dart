@@ -203,14 +203,6 @@ abstract class AccountRepository {
   /// 更新估值账户的当前估值
   Future<void> updateAccountValuation(int accountId, double newValue);
 
-  // ============================================
-  // 共享账本(§7 / v25)— 跨设备共享的 SharedLedgerAccounts 表
-  // ============================================
-
-  /// 按 syncId 查 SharedLedgerAccounts 行;Editor 视角下 tx 的
-  /// accountSyncIdOverride 走这条反查 → 上层再映射成 synthetic Account。
-  Future<SharedLedgerAccount?> getSharedAccountBySyncId(String syncId);
-
   /// 账户使用中的币种集合(去重、大写)。多币种态判定与汇率页列表用。
   Future<Set<String>> getUsedCurrencies();
 }

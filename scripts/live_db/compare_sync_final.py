@@ -36,14 +36,13 @@
   local  契约外字段 —— 单列 `[OK*]` 统计差异行数，**不计入 issues、不影响退出码**。
 
 【契约外字段的判定依据（代码级）】
-  * `ledgers.is_shared / member_count / owner_user_id`、表 `ledger_members`：
-    `lib/cloud/**` 零引用；`lib/data/db.dart` 注明 ledger_members 是
-    「server 端 LedgerMember 表的本地副本」，不参与文件式（S3/WebDAV）云同步。
+  * `ledgers` 的共享账本四列与三张 `shared_ledger_*` 镜像表、`transaction_tag_overrides`：
+    **已于 v51 DROP**（2026-10-08），v51 及以后的库中不存在，SPEC 不再列出；
+    对旧 schema 库运行本脚本时会走「库中无此表/列」的跳过分支。
   * `transactions.created_by_user_id / last_edited_by_user_id`：`lib/cloud/**`
-    零引用；且全库**既无写入方调用也无读取方**（`markTxAuthor` 仅有两处定义：
-    `local_transaction_repository` 本体与 `local_repository` 转发，`lib/pages`、
-    `lib/widgets`、`lib/services` 全目录零调用；也无任何 UI/统计读取），属共享账本
-    场景的完全休眠预留字段（由 `crosscheck_contract` 的第 2 条持续守护）。
+    零引用；本地专有列（不进快照），历史上由共享账本的「谁记的」UI 写入
+    （`markTxAuthor`，现已无调用方），恢复路径只做同库搬运
+    （`data_import_service` 的本地专有列回填）。
   * 各表 `created_at / updated_at`：由 v40 的 `trg_*_touch_updated_at`
     触发器按**本机写入时刻**维护（本机写时钟），天然跨设备不同。
   * `transaction_attachments.cloud_sha256 / cloud_file_id`：文件式后端不落该列。
@@ -161,10 +160,6 @@ COL_KEYS = {
     "native_amount": ("nativeAmount",),
     "original_amount": ("originalAmount",),
     "custom_values_json": ("customValues",),
-    "category_sync_id_override": ("categorySyncIdOverride",),
-    "account_sync_id_override": ("accountSyncIdOverride",),
-    "to_account_sync_id_override": ("toAccountSyncIdOverride",),
-    "tag_sync_ids_override": ("tagSyncIdsOverride",),
     "recurring_id": ("recurringSyncId",),
     # 以下为契约外列，保留映射以便校验「实现是否偷偷开始搬运」
     "created_by_user_id": ("createdByUserId",),
@@ -316,12 +311,8 @@ SPEC = [
     Spec("ledgers", "ledgers",
          keys=[("sync_id", "sync_id", None)],
          fields=[("name", "name", None), ("currency", "currency", None),
-                 ("type", "type", None), ("month_start_day", "month_start_day", None),
-                 ("my_role", "my_role", None)],
-         local_fields=[("is_shared", "is_shared", None),
-                       ("member_count", "member_count", None),
-                       ("owner_user_id", "owner_user_id", None),
-                       ("created_at", "created_at", None),
+                 ("type", "type", None), ("month_start_day", "month_start_day", None)],
+         local_fields=[("created_at", "created_at", None),
                        ("updated_at", "updated_at", None)],
          line_tpl="ledgers 同步字段({fields}) 一致（{n}个账本）"),
 

@@ -8266,9 +8266,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get budgetOnlyOwnerCanEdit => 'Only the ledger owner can edit budgets';
-
-  @override
   String get transferSelectFromAccount => 'Select a from account';
 
   @override
@@ -8428,10 +8425,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String aiPromptVarSectionInserted(String name) {
     return '$name section appended; save to confirm';
   }
-
-  @override
-  String get tagSelectOwnerManaged =>
-      'Shared ledger tags are managed by the owner';
 
   @override
   String get syncHealthTitle => 'Sync Health';

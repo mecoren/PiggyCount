@@ -246,26 +246,6 @@ class LocalAccountRepository implements AccountRepository {
     await (db.delete(db.accounts)..where((a) => a.id.equals(id))).go();
   }
 
-  /// [共享账本已下线] 「以成员身份加入的共享账本」ledger id 集合 ——
-  /// **个人资产统计一律排除这些账本的交易**。云端协作下线后无新增成员账本,
-  /// 仅存量 `is_shared=1 && my_role!='owner'` 行会命中;保留以免口径漂移。加入他人共享账本时,Owner 的历史流水会同步到本机并
-  /// 挂在本地账户行上,若计入会把别人账本的收支算进自己的净资产,且与
-  /// Web/服务端口径(成员侧不计共享账本)永久不一致。
-  /// 注意:**自己 Own 的共享账本不排除** —— 那是自己的账本分享给别人,
-  /// 服务端也记在 Owner 名下。SQL 版条件见 _kExcludeJoinedSharedLedgerSql。
-  Future<Set<int>> _sharedLedgerIds() async {
-    final rows = await (db.selectOnly(db.ledgers)
-          ..addColumns([db.ledgers.id])
-          ..where(db.ledgers.isShared.equals(true) &
-              db.ledgers.myRole.equals('owner').not()))
-        .get();
-    return rows.map((r) => r.read(db.ledgers.id)!).toSet();
-  }
-
-  /// customSelect 用的排除条件(语义同 [_sharedLedgerIds])
-  static const String _kExcludeJoinedSharedLedgerSql =
-      "ledger_id NOT IN (SELECT id FROM ledgers WHERE is_shared = 1 AND my_role != 'owner')";
-
   @override
   Future<double> getAccountBalance(int accountId) async {
     // 获取账户初始资金
@@ -281,10 +261,9 @@ class LocalAccountRepository implements AccountRepository {
     }
 
     // SQL 聚合版(此前全量拉行进内存逐条累加,大账户万行级内存与延迟)。
-    // 口径与旧实现/getAllAccountStats 逐字一致:排除成员共享账本,不排除
-    // excludeFromStats;balance = initial + income − expense − 转出 transfer
-    // + adjustment + 转入 transfer。
-    final exclude = _kExcludeJoinedSharedLedgerSql;
+    // 口径与旧实现/getAllAccountStats 逐字一致:不排除 excludeFromStats;
+    // balance = initial + income − expense − 转出 transfer + adjustment +
+    // 转入 transfer。
     final rows = await db.customSelect(
       'SELECT '
       "COALESCE(SUM(CASE type WHEN 'income' THEN amount ELSE 0 END), 0) AS main_income, "
@@ -292,16 +271,16 @@ class LocalAccountRepository implements AccountRepository {
       "COALESCE(SUM(CASE type WHEN 'transfer' THEN amount ELSE 0 END), 0) AS main_transfer_out, "
       "COALESCE(SUM(CASE type WHEN 'adjustment' THEN amount ELSE 0 END), 0) AS main_adjustment "
       'FROM transactions '
-      'WHERE account_id = ?1 AND $exclude',
+      'WHERE account_id = ?1',
       variables: [d.Variable.withInt(accountId)],
-      readsFrom: {db.transactions, db.ledgers},
+      readsFrom: {db.transactions},
     ).getSingle();
     final transferIn = await db.customSelect(
       'SELECT COALESCE(SUM(amount), 0) AS transfer_in '
       'FROM transactions '
-      "WHERE type = 'transfer' AND to_account_id = ?1 AND $exclude",
+      "WHERE type = 'transfer' AND to_account_id = ?1",
       variables: [d.Variable.withInt(accountId)],
-      readsFrom: {db.transactions, db.ledgers},
+      readsFrom: {db.transactions},
     ).getSingle();
 
     double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
@@ -324,9 +303,8 @@ class LocalAccountRepository implements AccountRepository {
       return account.initialBalance;
     }
 
-    // SQL 聚合版,口径与旧实现一致:跨全部账本但排除成员共享账本;
+    // SQL 聚合版,口径与旧实现一致:跨全部账本;
     // 主账户侧收支/转出/调整 + 转入侧转账。
-    final exclude = _kExcludeJoinedSharedLedgerSql;
     final row = await db.customSelect(
       'SELECT '
       "COALESCE(SUM(CASE WHEN account_id = ?1 THEN ("
@@ -339,9 +317,9 @@ class LocalAccountRepository implements AccountRepository {
       "COALESCE(SUM(CASE WHEN to_account_id = ?1 AND type = 'transfer' "
       '  THEN amount ELSE 0 END), 0) AS transfer_in '
       'FROM transactions '
-      'WHERE (account_id = ?1 OR to_account_id = ?1) AND $exclude',
+      'WHERE (account_id = ?1 OR to_account_id = ?1)',
       variables: [d.Variable.withInt(accountId)],
-      readsFrom: {db.transactions, db.ledgers},
+      readsFrom: {db.transactions},
     ).getSingle();
 
     double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
@@ -353,7 +331,7 @@ class LocalAccountRepository implements AccountRepository {
   @override
   Future<double> getAccountBalanceInLedger(int accountId, int ledgerId) async {
     // SQL 聚合版,口径与旧实现一致:限定单个账本,主账户侧收支/转出/调整
-    // + 转入侧转账(不排除共享账本 —— 单账本维度按调用方指定的账本算)。
+    // + 转入侧转账(单账本维度按调用方指定的账本算)。
     final row = await db.customSelect(
       'SELECT '
       "COALESCE(SUM(CASE WHEN account_id = ?1 THEN ("
@@ -380,7 +358,6 @@ class LocalAccountRepository implements AccountRepository {
     // SQL 聚合版(此前逐账户串行 getAccountBalance,N 账户 = N×2 条查询
     // 且每条全量拉行)。口径与 getAccountBalance 一致,估值账户由
     // initialBalance 分支给出。
-    final exclude = _kExcludeJoinedSharedLedgerSql;
     final rows = await db.customSelect(
       'SELECT '
       'a.id AS id, a.initial_balance AS initial_balance, '
@@ -397,17 +374,17 @@ class LocalAccountRepository implements AccountRepository {
       "  SUM(CASE type WHEN 'transfer' THEN amount ELSE 0 END) AS main_transfer_out, "
       "  SUM(CASE type WHEN 'adjustment' THEN amount ELSE 0 END) AS main_adjustment "
       '  FROM transactions '
-      '  WHERE account_id IS NOT NULL AND $exclude '
+      '  WHERE account_id IS NOT NULL '
       '  GROUP BY account_id'
       ') b ON b.aid = a.id '
       'LEFT JOIN ('
       '  SELECT to_account_id AS tid, SUM(amount) AS transfer_in '
       "  FROM transactions WHERE type = 'transfer' AND to_account_id IS NOT NULL "
-      '  AND $exclude GROUP BY to_account_id'
+      '  GROUP BY to_account_id'
       ') t ON t.tid = a.id '
       'WHERE a.ledger_id = ?1',
       variables: [d.Variable.withInt(ledgerId)],
-      readsFrom: {db.accounts, db.transactions, db.ledgers},
+      readsFrom: {db.accounts, db.transactions},
     ).get();
 
     double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
@@ -468,16 +445,15 @@ class LocalAccountRepository implements AccountRepository {
 
   @override
   Future<double> getAccountExpense(int accountId) async {
-    // SQL 聚合版,口径与旧实现/getAllAccountStats 一致:排除成员共享账本
-    // 与 excludeFromStats;expense = 主账户 expense + 转出 transfer。
-    final exclude = _kExcludeJoinedSharedLedgerSql;
+    // SQL 聚合版,口径与旧实现/getAllAccountStats 一致:排除 excludeFromStats;
+    // expense = 主账户 expense + 转出 transfer。
     final row = await db.customSelect(
       'SELECT COALESCE(SUM(amount), 0) AS expense '
       'FROM transactions '
       'WHERE account_id = ?1 AND exclude_from_stats = 0 '
-      "AND type IN ('expense', 'transfer') AND $exclude",
+      "AND type IN ('expense', 'transfer')",
       variables: [d.Variable.withInt(accountId)],
-      readsFrom: {db.transactions, db.ledgers},
+      readsFrom: {db.transactions},
     ).getSingle();
     return row.data['expense'] is num
         ? (row.data['expense'] as num).toDouble()
@@ -486,9 +462,8 @@ class LocalAccountRepository implements AccountRepository {
 
   @override
   Future<double> getAccountIncome(int accountId) async {
-    // SQL 聚合版,口径与旧实现/getAllAccountStats 一致:排除成员共享账本
-    // 与 excludeFromStats;income = 主账户 income + 转入 transfer。
-    final exclude = _kExcludeJoinedSharedLedgerSql;
+    // SQL 聚合版,口径与旧实现/getAllAccountStats 一致:排除 excludeFromStats;
+    // income = 主账户 income + 转入 transfer。
     final row = await db.customSelect(
       'SELECT '
       "COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) AS income_main, "
@@ -496,9 +471,9 @@ class LocalAccountRepository implements AccountRepository {
       '  THEN amount ELSE 0 END), 0) AS income_in '
       'FROM transactions '
       'WHERE (account_id = ?1 OR to_account_id = ?1) '
-      'AND exclude_from_stats = 0 AND $exclude',
+      'AND exclude_from_stats = 0',
       variables: [d.Variable.withInt(accountId)],
-      readsFrom: {db.transactions, db.ledgers},
+      readsFrom: {db.transactions},
     ).getSingle();
     double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
     return dval(row.data['income_main']) + dval(row.data['income_in']);
@@ -529,11 +504,10 @@ class LocalAccountRepository implements AccountRepository {
     // 且每条全量加载行到内存再 Dart 累加）。口径与 getAccountBalance /
     // getAccountExpense / getAccountIncome 逐字对齐：
     // - balance：initialBalance + income − expense − 转出 transfer + adjustment
-    //   + 转入 transfer（均排除成员共享账本，不排除 excludeFromStats）；
+    //   + 转入 transfer（不排除 excludeFromStats）；
     // - expense：主账户 expense + 转出 transfer（排除 excludeFromStats）；
     // - income：主账户 income + 转入 transfer（排除 excludeFromStats）。
     // 估值账户无日常交易，直接返回 initialBalance / 0 / 0。
-    final exclude = _kExcludeJoinedSharedLedgerSql;
     final rows = await db.customSelect(
       "SELECT a.id AS id, a.initial_balance AS initial_balance, "
       'COALESCE(b.main_income, 0) AS main_income, '
@@ -552,33 +526,33 @@ class LocalAccountRepository implements AccountRepository {
       "  SUM(CASE type WHEN 'transfer' THEN amount ELSE 0 END) AS main_transfer_out, "
       "  SUM(CASE type WHEN 'adjustment' THEN amount ELSE 0 END) AS main_adjustment "
       '  FROM transactions '
-      '  WHERE account_id IS NOT NULL AND $exclude '
+      '  WHERE account_id IS NOT NULL '
       '  GROUP BY account_id'
       ') b ON b.aid = a.id '
       'LEFT JOIN ('
       '  SELECT to_account_id AS tid, SUM(amount) AS transfer_in '
       "  FROM transactions WHERE type = 'transfer' AND to_account_id IS NOT NULL "
-      '  AND $exclude GROUP BY to_account_id'
+      '  GROUP BY to_account_id'
       ') t ON t.tid = a.id '
       'LEFT JOIN ('
       '  SELECT account_id AS eid, SUM(amount) AS expense '
       '  FROM transactions '
       '  WHERE account_id IS NOT NULL AND exclude_from_stats = 0 '
-      "  AND type IN ('expense', 'transfer') AND $exclude "
+      "  AND type IN ('expense', 'transfer') "
       '  GROUP BY account_id'
       ') e ON e.eid = a.id '
       'LEFT JOIN ('
       '  SELECT account_id AS iid, '
       "  SUM(CASE type WHEN 'income' THEN amount ELSE 0 END) AS income_main "
       "  FROM transactions WHERE account_id IS NOT NULL AND exclude_from_stats = 0 "
-      '  AND $exclude GROUP BY account_id'
+      '  GROUP BY account_id'
       ') im ON im.iid = a.id '
       'LEFT JOIN ('
       '  SELECT to_account_id AS tid2, SUM(amount) AS income '
       "  FROM transactions WHERE type = 'transfer' AND to_account_id IS NOT NULL "
-      '  AND exclude_from_stats = 0 AND $exclude GROUP BY to_account_id'
+      '  AND exclude_from_stats = 0 GROUP BY to_account_id'
       ') i ON i.tid2 = a.id',
-      readsFrom: {db.accounts, db.transactions, db.ledgers},
+      readsFrom: {db.accounts, db.transactions},
     ).get();
 
     double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
@@ -630,9 +604,8 @@ class LocalAccountRepository implements AccountRepository {
 
     // 总收入/支出：SQL 聚合版(此前把**全库**交易拉进 Dart 再按 type 累加)。
     // 口径逐字对齐旧实现：限定 account_id 非空且账户行仍存在（旧实现按
-    // accountIds 集合过滤）、排除成员共享账本、排除 excludeFromStats、
-    // 只算 income/expense 两类（transfer/adjustment 不进收支）。
-    final exclude = _kExcludeJoinedSharedLedgerSql;
+    // accountIds 集合过滤）、排除 excludeFromStats、只算 income/expense 两类
+    // （transfer/adjustment 不进收支）。
     final totals = await db.customSelect(
       'SELECT '
       "COALESCE(SUM(CASE type WHEN 'income' THEN amount ELSE 0 END), 0) AS total_income, "
@@ -640,8 +613,8 @@ class LocalAccountRepository implements AccountRepository {
       'FROM transactions '
       'WHERE account_id IS NOT NULL AND exclude_from_stats = 0 '
       "AND type IN ('income', 'expense') "
-      'AND account_id IN (SELECT id FROM accounts) AND $exclude',
-      readsFrom: {db.transactions, db.ledgers, db.accounts},
+      'AND account_id IN (SELECT id FROM accounts)',
+      readsFrom: {db.transactions, db.accounts},
     ).getSingle();
 
     double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
@@ -790,7 +763,7 @@ class LocalAccountRepository implements AccountRepository {
     final results = await db.customSelect(
       '''
       SELECT * FROM transactions
-      WHERE ($where) AND $_kExcludeJoinedSharedLedgerSql
+      WHERE ($where)
       ORDER BY happened_at DESC
       LIMIT ?2 OFFSET ?3
       ''',
@@ -843,20 +816,18 @@ class LocalAccountRepository implements AccountRepository {
       return result;
     }
 
-    // 获取 endDate **当天结束**之前的所有交易(按日期升序,排除共享账本)。
+    // 获取 endDate **当天结束**之前的所有交易(按日期升序)。
     // endDate 语义是「含当天」:调用方(trendTodayAnchor)传当天 0 点,若用
     // <= endDate 会把当天发生的交易全部截掉 —— 趋势终点永远停在"昨晚为止",
     // 今天记的账不进趋势线。
     final endExclusive = DateTime(endDate.year, endDate.month, endDate.day)
         .add(const Duration(days: 1));
-    final sharedIds = await _sharedLedgerIds();
     final allTxs = await (db.select(db.transactions)
           ..where((t) =>
               t.accountId.equals(accountId) | t.toAccountId.equals(accountId))
           ..where((t) => t.happenedAt.isSmallerThanValue(endExclusive))
           // startDate 之前的行只要一个累计值，不再拉进内存（见下方 SQL 基线）
           ..where((t) => t.happenedAt.isBiggerOrEqualValue(startDate))
-          ..where((t) => t.ledgerId.isNotIn(sharedIds))
           ..orderBy([(t) => d.OrderingTerm(expression: t.happenedAt)]))
         .get();
 
@@ -864,7 +835,6 @@ class LocalAccountRepository implements AccountRepository {
     // 累加，几年老账户上万行)。口径与 getAccountGlobalBalance 逐字一致：主账户侧
     // income + / expense - / transfer - / adjustment +，转入侧 transfer +；
     // 不排除 excludeFromStats（与原实现一致，趋势看的是账户真实余额）。
-    final exclude = _kExcludeJoinedSharedLedgerSql;
     final baseline = await db.customSelect(
       'SELECT '
       "COALESCE(SUM(CASE WHEN account_id = ?1 THEN ("
@@ -877,13 +847,13 @@ class LocalAccountRepository implements AccountRepository {
       "COALESCE(SUM(CASE WHEN to_account_id = ?1 AND type = 'transfer' "
       '  THEN amount ELSE 0 END), 0) AS transfer_in '
       'FROM transactions '
-      'WHERE (account_id = ?1 OR to_account_id = ?1) AND $exclude '
+      'WHERE (account_id = ?1 OR to_account_id = ?1) '
       'AND happened_at < ?2',
       variables: [
         d.Variable.withInt(accountId),
         d.Variable<DateTime>(startDate),
       ],
-      readsFrom: {db.transactions, db.ledgers},
+      readsFrom: {db.transactions},
     ).getSingle();
 
     double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
@@ -938,7 +908,6 @@ class LocalAccountRepository implements AccountRepository {
       FROM transactions t
       LEFT JOIN categories c ON t.category_id = c.id
       WHERE t.account_id = ?1 AND t.type = ?2
-        AND t.$_kExcludeJoinedSharedLedgerSql
       GROUP BY c.id
       ORDER BY total DESC
       ''',
@@ -1158,13 +1127,6 @@ class LocalAccountRepository implements AccountRepository {
         updatedAt: d.Value(DateTime.now()),
       ),
     );
-  }
-
-  @override
-  Future<SharedLedgerAccount?> getSharedAccountBySyncId(String syncId) {
-    return (db.select(db.sharedLedgerAccounts)
-          ..where((t) => t.syncId.equals(syncId)))
-        .getSingleOrNull();
   }
 
   @override
