@@ -25,12 +25,11 @@ audience: 一年经验的开发者
 
 PiggyCount 的数据模型是整个应用的基石,涉及:
 
-- 21 张 Drift 表(业务实体 + 同步表 + 共享账本镜像表)
+- Drift 表(业务实体 + 关联表 + 同步表 + AI 表 + 缓存表;数量与清单以 `lib/data/db.dart` 为准)
 - 31 个 schemaVersion(从 v2 到 v31,30 段迁移块)
 - 复杂的表间关系(外键、唯一约束、索引)
 - 跨设备同步标识 syncId
 - 多币种支持(currencyCode + nativeAmount)
-- 共享账本镜像表(SharedLedgerCategories / SharedLedgerAccounts / SharedLedgerTags)
 
 新加入的贡献者面对 `lib/data/db.dart` 1300+ 行的 schema 定义,常常遇到以下困惑:
 
@@ -38,7 +37,6 @@ PiggyCount 的数据模型是整个应用的基石,涉及:
 - 不理解 syncId 与本地 id 的区别
 - 不清楚多币种字段如何折算
 - 不知道修改表结构时如何写迁移
-- 不理解共享账本镜像表与主表的关系
 
 本文档系统梳理 PiggyCount 的全部数据模型,让一年经验开发者能快速定位"字段在哪里、表关系是什么、迁移怎么写"。
 
@@ -69,9 +67,8 @@ flowchart TD
     Root[PiggyCount 数据模型 - 21 张表]
 
     Root --> Biz[业务实体表 - 8 张]
-    Root --> Rel[关联表 - 2 张]
+    Root --> Rel[关联表 - 1 张]
     Root --> Sync[同步表 - 4 张]
-    Root --> Shared[共享账本镜像表 - 4 张]
     Root --> AI[AI 表 - 2 张]
     Root --> Cache[缓存表 - 1 张]
 
@@ -85,17 +82,11 @@ flowchart TD
     Biz --> B8[TransactionAttachments 附件]
 
     Rel --> R1[TransactionTags 交易-标签]
-    Rel --> R2[TransactionTagOverrides 共享账本标签 override]
 
     Sync --> S1[LocalChanges 本地变更]
     Sync --> S2[SyncState 同步状态]
     Sync --> S3[SyncPullErrors 拉取错误]
     Sync --> S4[ExchangeRateOverrides 汇率覆盖]
-
-    Shared --> SH1[SharedLedgerCategories 共享分类镜像]
-    Shared --> SH2[SharedLedgerAccounts 共享账户镜像]
-    Shared --> SH3[SharedLedgerTags 共享标签镜像]
-    Shared --> SH4[LedgerMembers 账本成员]
 
     AI --> A1[Conversations 对话]
     AI --> A2[Messages 消息]
@@ -103,7 +94,7 @@ flowchart TD
     Cache --> C1[ExchangeRates 汇率缓存]
 ```
 
-上图展示了 PiggyCount 21 张表的五大分类。业务实体表是记账应用的核心;关联表实现多对多关系;同步表支撑 PiggyCount Cloud 同步;共享账本镜像表支持多人协同;AI 表存储对话历史;缓存表存汇率(可整表重建)。后续章节按类别详细说明每张表。
+上图展示了 PiggyCount 各表的分类。业务实体表是记账应用的核心;关联表实现多对多关系;同步表支撑云快照同步;AI 表存储对话历史;缓存表存汇率(可整表重建)。**共享账本镜像表(`SharedLedger*`)与 `LedgerMembers` 已随该功能整体下线,在 v50 / v51 迁移 DROP(2026-10-08),不再属于 schema** —— 表清单与数量一律以 `lib/data/db.dart` 为准。后续章节按类别详细说明每张表。
 
 ### 2.2 syncId 与本地 id 的区别
 
@@ -140,10 +131,6 @@ PiggyCount 的每张业务表都有两种 id:
 | `syncId` | String | 否 | UUID | 跨设备同步标识 | v15 / v20 |
 | `type` | String | 否 | `'personal'` | `'personal'` / `'shared'` | v9 |
 | `monthStartDay` | int | 否 | `1` | 自定义每月起始日(1-28) | v27 |
-| `isShared` | bool | 否 | `false` | 是否共享账本 | v24 |
-| `myRole` | String? | 是 | null | `'owner'` / `'editor'` | v24 |
-| `memberCount` | int | 否 | `0` | 成员数量 | v24 |
-| `ownerUserId` | String? | 是 | null | Owner 的 userId | v24 |
 
 **索引**:无显式索引,`syncId` 通过查询使用。
 
@@ -188,11 +175,8 @@ PiggyCount 的每张业务表都有两种 id:
 | `excludeFromStats` | bool | 否 | `false` | 不计入统计 | v25 |
 | `excludeFromBudget` | bool | 否 | `false` | 不计入预算 | v25 |
 | `syncId` | String | 否 | UUID | 跨设备同步标识 | v15 |
-| `createdByUserId` | String? | 是 | null | 创建者 userId(共享账本) | v24 |
-| `lastEditedByUserId` | String? | 是 | null | 最后编辑者 userId | v24 |
-| `categorySyncIdOverride` | String? | 是 | null | 共享账本 Editor 选 Owner 分类 | v25 |
-| `accountSyncIdOverride` | String? | 是 | null | 共享账本 Editor 选 Owner 账户 | v25 |
-| `toAccountSyncIdOverride` | String? | 是 | null | 共享账本 Editor 选 Owner 转入账户 | v25 |
+| `createdByUserId` | String? | 是 | null | 创建者 userId(本地专有列,不进快照) | v24 |
+| `lastEditedByUserId` | String? | 是 | null | 最后编辑者 userId(本地专有列,不进快照) | v24 |
 | `currencyCode` | String? | 是 | null | 交易币种(多币种) | v30 |
 | `nativeAmount` | double? | 是 | null | 折算到账本基础币种的金额 | v30 |
 
@@ -286,14 +270,12 @@ PiggyCount 的每张业务表都有两种 id:
 **主键**:复合主键 `(transactionId, tagId)`。
 **索引**:v10 创建索引。
 
-#### 3.2.2 TransactionTagOverrides(共享账本标签 override,v27)
+#### 3.2.2 TransactionTagOverrides——已移除(2026-10-08)
 
-| 字段 | 类型 | 可空 | 说明 |
-|---|---|---|---|
-| `transactionSyncId` | String | 否 | 交易 syncId |
-| `tagSyncId` | String | 否 | 标签 syncId |
-
-**用途**:共享账本 Editor 选择 Owner 的 tag 时,通过 syncId 关联,不写入本地 TransactionTags 主表。
+> 该表随共享账本整体下线在 **v51** 迁移 DROP。标签关联现只走 `TransactionTags`
+> 主表(快照契约键 `tagSyncIds` 即来自它);同批 DROP 的还有 `transactions` 上的
+> `category_sync_id_override / account_sync_id_override /
+> to_account_sync_id_override / tag_sync_ids_override` 四个 override 列。
 
 ### 3.3 同步表
 
@@ -353,67 +335,14 @@ PiggyCount 的每张业务表都有两种 id:
 
 **唯一索引**:`idx_rate_override_pair` on `(baseCurrency, quoteCurrency)`(v28)。按币对收敛,不按 syncId。
 
-### 3.4 共享账本镜像表
+### 3.4 共享账本镜像表——已移除(2026-10-08)
 
-#### 3.4.1 SharedLedgerCategories(共享分类镜像,v23 + v25)
-
-| 字段 | 类型 | 可空 | 说明 |
-|---|---|---|---|
-| `ledgerSyncId` | String | 否 | 账本 syncId |
-| `syncId` | String | 否 | 分类 syncId |
-| `name` | String | 否 | 分类名称 |
-| `kind` | String | 否 | expense / income |
-| `icon` | String | 否 | Material Icon name |
-| `iconType` | String | 否 | material / custom / community |
-| `iconCloudFileId` | String? | 是 | 云端图标文件 id |
-| `iconCloudSha256` | String? | 是 | 云端图标 sha256 |
-| `color` | int? | 是 | 颜色 |
-| `sortOrder` | int | 否 | 排序 |
-| `level` | int | 否 | 层级 |
-| `parentName` | String? | 是 | 父分类名称 |
-| `parentSyncId` | String? | 是 | 父分类 syncId |
-| `updatedAt` | DateTime | 否 | 更新时间 |
-
-#### 3.4.2 SharedLedgerAccounts(共享账户镜像,v23)
-
-| 字段 | 类型 | 可空 | 说明 |
-|---|---|---|---|
-| `ledgerSyncId` | String | 否 | 账本 syncId |
-| `syncId` | String | 否 | 账户 syncId |
-| `name` | String | 否 | 账户名称 |
-| `accountType` | String | 否 | 账户类型 |
-| `currency` | String | 否 | 币种 |
-| `note` | String? | 是 | 备注 |
-| `initialBalance` | double | 否 | 初始余额 |
-| `creditLimit` | double? | 是 | 信用卡额度 |
-| `billingDay` | int? | 是 | 账单日 |
-| `paymentDueDay` | int? | 是 | 还款日 |
-| `bankName` | String? | 是 | 银行名称 |
-| `cardLastFour` | String? | 是 | 卡号后四位 |
-| `updatedAt` | DateTime | 否 | 更新时间 |
-
-#### 3.4.3 SharedLedgerTags(共享标签镜像,v23)
-
-| 字段 | 类型 | 可空 | 说明 |
-|---|---|---|---|
-| `ledgerSyncId` | String | 否 | 账本 syncId |
-| `syncId` | String | 否 | 标签 syncId |
-| `name` | String | 否 | 标签名称 |
-| `color` | int? | 是 | 颜色 |
-| `updatedAt` | DateTime | 否 | 更新时间 |
-
-#### 3.4.4 LedgerMembers(账本成员,v24)
-
-| 字段 | 类型 | 可空 | 说明 |
-|---|---|---|---|
-| `ledgerSyncId` | String | 否 | 账本 syncId |
-| `userId` | String | 否 | 用户 id |
-| `email` | String? | 是 | 邮箱 |
-| `displayName` | String? | 是 | 显示名 |
-| `avatarUrl` | String? | 是 | 头像 URL |
-| `role` | String | 否 | owner / editor |
-| `joinedAt` | DateTime | 否 | 加入时间 |
-| `updatedAt` | DateTime | 否 | 更新时间 |
+> 本节原列的 4 张表(`SharedLedgerCategories` / `SharedLedgerAccounts` /
+> `SharedLedgerTags` / `LedgerMembers`)已随共享账本整体下线删除:
+> `LedgerMembers` 在 **v50** 迁移 DROP,其余三张在 **v51** 迁移 DROP。
+> 同批 DROP 的还有 `transaction_tag_overrides` 表、`ledgers` 的
+> `is_shared / my_role / member_count / owner_user_id` 四列、`transactions` 的
+> 四个 override 列。当前 schema 以 `lib/data/db.dart` 为准。
 
 ### 3.5 AI 表
 
@@ -487,8 +416,6 @@ erDiagram
         String syncId
         String type
         int monthStartDay
-        bool isShared
-        String myRole
     }
     Accounts {
         int id PK
@@ -665,18 +592,10 @@ flowchart TD
 - **最终取舍**:不同步,各设备独立管理周期记账规则。
 - **依据**:`lib/data/db.dart` L156 `RecurringTransactions` 表无 syncId 字段。
 
-### 决策 6:共享账本用镜像表而非主表
+### 决策 6:共享账本用镜像表而非主表(已作废,2026-10-08)
 
-- **决策内容**:共享账本通过 3 张镜像表(SharedLedgerCategories / SharedLedgerAccounts / SharedLedgerTags)实现 Editor 对 Owner 资源的引用,v25 起不再 mirror 到主表。
-- **原因**:
-  - **避免数据冗余**:Editor 不需要完整复制 Owner 的分类/账户/标签到主表
-  - **避免同步冲突**:如果 mirror 到主表,Owner 修改后 Editor 主表数据会过时
-  - **权限清晰**:Owner 拥有主表,Editor 只引用
-- **备选方案**:
-  - v25 之前的 mirror 到主表:数据冗余,Owner 修改后需同步更新 Editor 主表
-  - 完全不 mirror,Editor 直接用 syncId 查询:查询性能差
-- **最终取舍**:镜像表 + `*SyncIdOverride` 字段,Editor UI 走 SharedLedger* 渲染。
-- **依据**:`lib/data/db.dart` SharedLedger* 表、`lib/cloud/sync/sync_engine_apply.dart` `_applyTransactionChange:128+`。
+> 该决策随共享账本整体下线作废:三张镜像表与 `*SyncIdOverride` 列已在
+> **v51** 迁移 DROP(`lib/data/db.dart`)。标题保留仅为决策编号连续。
 
 ---
 
@@ -700,7 +619,6 @@ flowchart TD
 | `ledgerId` (LocalChanges) | 0 = user-global,>0 = ledger-scoped |
 | `excludeFromStats` / `excludeFromBudget` | 字段级合并,缺键保留本地 |
 | `currencyCode` / `nativeAmount` | v30 多币种,缺键时快照保护 |
-| `*SyncIdOverride` | 共享账本 Editor 选 Owner 资源,本地 int id 留 null |
 
 ### 6.3 索引约束
 

@@ -455,8 +455,6 @@ class MyPage extends ConsumerWidget {
 class Transactions extends Table with AutoIncrementMixin {
   IntColumn get ledgerId => integer().references(Ledgers, #id)();
   TextColumn get syncId => text().nullable()();
-  TextColumn get categorySyncIdOverride => text().nullable()();
-  TextColumn get accountSyncId => text().nullable()();
   RealColumn get amount => real()();
   RealColumn get nativeAmount => real().nullable()();
   TextColumn get note => text().nullable()();
@@ -1052,7 +1050,7 @@ git commit -m "feat: 添加意大利语翻译"
 ## 19. 信息缺口
 
 - **[待补充]** 项目当前未配置 `dart_code_metrics` 等额外静态分析工具，若未来引入需更新本文档第 6.1 节
-- **[待补充]** `integration_test/` 目录下集成测试用例较少，关键流程（首次同步、共享账本加入）的集成测试规范待补充
+- **[待补充]** `integration_test/` 目录下集成测试用例较少，关键流程（首次同步、快照格式升级重传）的集成测试规范待补充
 - **[待确认]** `.vscode/launch.json` 与 `.vscode/settings.json` 的推荐配置未在本文档展开，新开发者可参考但非强制
 - **[待补充]** 各 `services/<module>/` 内部的服务设计模式（如 `ExchangeRateService` 的缓存策略）未在本文档详述，建议未来按模块补充专门文档
 

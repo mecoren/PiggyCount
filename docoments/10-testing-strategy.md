@@ -266,12 +266,11 @@ flowchart TD
     D --> G[fullPush 测试]
     D --> H[fullPull 测试]
     D --> I[冲突解决测试]
-    D --> J[共享账本测试]
     D --> K[多币种测试]
     D --> L[错误恢复测试]
 ```
 
-上图展示了 SyncEngine e2e 测试的结构。使用 `FakePiggyCountCloudProvider`(extends 真类,覆盖 ~20 个方法)模拟 server,内存数据库隔离副作用,SyncEngine 实例测试完整 push/pull/fullPush/fullPull 流程。44 个用例覆盖冲突解决、共享账本、多币种、错误恢复等场景。
+上图展示了 SyncEngine e2e 测试的结构。使用 `FakePiggyCountCloudProvider`(extends 真类,覆盖 ~20 个方法)模拟 server,内存数据库隔离副作用,SyncEngine 实例测试完整 push/pull/fullPush/fullPull 流程。用例覆盖冲突解决、多币种、错误恢复等场景。
 
 #### 3.5.2 迁移测试
 

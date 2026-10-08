@@ -227,8 +227,6 @@ classDiagram
 | 桌面小组件 | Home Widget | — | **Home Widget** | iOS / Android 桌面快速记账小组件 | `lib/widget/widget_manager.dart` |
 | 应用链接 | App Link | Deep Link | **App Link** | `piggycount://` URL Scheme 触发记账 | `lib/services/platform/app_link_service.dart` |
 | 快捷操作 | Quick Action | — | **Quick Action** | 桌面长按图标的快捷方式 | `lib/services/platform/quick_actions_service.dart` |
-| 共享账本 | Shared Ledger | — | **Shared Ledger** | 多人协同的账本,有 Owner / Editor 双角色 | `db.dart` L32 `isShared`、`myRole` |
-| 邀请码 | Invite Code | — | **Invite Code** | 共享账本的加入凭证 | `lib/pages/cloud/invite_page.dart` |
 | 净资产 | Net Worth | — | **Net Worth** | 所有账户余额之和(按币种分组) | `lib/utils/net_worth_trend_utils.dart` |
 | 多币种 | Multi-currency | — | **Multi-currency** | 账本支持多币种交易,v30 引入 | `db.dart` L148 `currencyCode`、L153 `nativeAmount` |
 
@@ -365,9 +363,8 @@ syncId 是跨设备同步的核心标识。设备 A 创建交易时生成 UUID �
 | 编号 | 缺口描述 | 影响章节 | 建议补充方式 |
 |---|---|---|---|
 | 1 | 部分内部术语(如 `LookupCache`、`AppCursorStore`、`SyncErrorStore`)未在本表展开,仅在设计文档中详细说明 | §3.2 | 在 [06 数据同步](./06-data-sync-and-offline.md) 与 [08 接口与数据访问](./08-api-and-data-access.md) 中补充 |
-| 2 | 共享账本相关术语(Owner / Editor / SharedLedger* 镜像表)的完整定义未在本表展开 | §3.5 | 在 [05 核心模块详解](./05-core-modules.md) 共享账本章节补充 |
-| 3 | AI 执行策略的 6 种类型(local_first / cloud_first / local_only / cloud_only / cost_optimized / custom_priority)未展开说明 | §3.4 | 在 [05 核心模块详解](./05-core-modules.md) AI 模块章节补充 |
-| 4 | 用户面向术语(如"智能记账"、"快速记账")与技术术语的映射关系未完全建立 | §3.4 | 对照 `lib/l10n/app_zh.arb` 补充 |
+| 2 | AI 执行策略的 6 种类型(local_first / cloud_first / local_only / cloud_only / cost_optimized / custom_priority)未展开说明 | §3.4 | 在 [05 核心模块详解](./05-core-modules.md) AI 模块章节补充 |
+| 3 | 用户面向术语(如"智能记账"、"快速记账")与技术术语的映射关系未完全建立 | §3.4 | 对照 `lib/l10n/app_zh.arb` 补充 |
 
 ---
 

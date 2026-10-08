@@ -276,8 +276,7 @@ flowchart TD
 WS 断连时:
 
 - WS server 不持久化离线事件(`websocket_manager.broadcast_to_user` 找不到 socket 就丢弃)
-- 重连时 `_refreshAllSharedResourcesAfterReconnect` 对所有 Editor 角色账本并发拉 `/shared-resources` 兜底
-- 重连成功后触发 `_scheduleAutoSync(reason: 'ws_connected')` flush 离线 local_changes
+- 重连成功后由 `connected` 事件触发 `syncLedgersFromServer` + `sync` 重新对齐,并触发 `_scheduleAutoSync(reason: 'ws_connected')` flush 离线 local_changes(原共享账本的 `_refreshAllSharedResourcesAfterReconnect` 兜底已随功能下线删除)
 
 依据:`lib/providers/sync_providers.dart`、`lib/cloud/sync/sync_engine_realtime.dart`。
 

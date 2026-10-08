@@ -76,7 +76,6 @@ flowchart LR
     C --> C3[语音记账]
     C --> C4[截图自动记账]
     D --> D1[5 种同步方案]
-    D --> D2[共享账本]
     D --> D3[实时协同]
     E --> E1[账户余额]
     E --> E2[净资产趋势]
@@ -96,7 +95,7 @@ PiggyCount 提供五种云同步方案,所有方案数据完全由用户掌控:
 
 | 方案 | 适用场景 | 特点 | 实现位置 |
 |---|---|---|---|
-| **PiggyCount Cloud** | 多端实时协同 + 自托管 + 多人共账 | Docker 一键、秒同步、自带 Web 端、多用户、共享账本 | `packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart` |
+| **PiggyCount Cloud** | 多端实时协同 + 自托管 | Docker 一键、秒同步、自带 Web 端、多用户 | `packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart` |
 | **iCloud** | iOS 单平台用户 | 零配置、原生集成 | `packages/flutter_cloud_sync_icloud/` |
 | **Supabase** | 无 NAS 的跨平台用户 | 免费额度充足、配置简单 | `packages/flutter_cloud_sync_supabase/` |
 | **WebDAV** | NAS 用户 | 数据本地化、群晖/绿联云/Nextcloud | `packages/flutter_cloud_sync_webdav/` |
@@ -317,14 +316,14 @@ flowchart LR
 ### 决策 3:五种同步方案并存
 
 - **决策内容**:同时支持 PiggyCount Cloud / iCloud / Supabase / WebDAV / S3 五种同步方案。
-- **原因**:不同用户有不同的基础设施偏好(iOS 用户偏好 iCloud、NAS 用户偏好 WebDAV、极客偏好 S3、需要共享账本的偏好 PiggyCount Cloud),让数据主权真正落到用户手中。
+- **原因**:不同用户有不同的基础设施偏好(iOS 用户偏好 iCloud、NAS 用户偏好 WebDAV、极客偏好 S3、自托管偏好的选 PiggyCount Cloud),让数据主权真正落到用户手中。
 - **备选方案**:
   1. 只支持 PiggyCount Cloud(自建服务)
   2. 只支持 Supabase(第三方 BaaS)
   3. 五种并存(当前选择)
 - **优缺点**:
   - 单一方案:开发维护成本低,但用户失去选择权,且 PiggyCount Cloud 需用户自部署。
-  - 五种并存:用户选择权最大,但开发维护成本高,五种 provider 能力不均(只有 PiggyCount Cloud 支持实时协同与共享账本)。
+  - 五种并存:用户选择权最大,但开发维护成本高,五种 provider 能力不均(只有 PiggyCount Cloud 支持实时协同)。
 - **最终取舍**:五种并存,PiggyCount Cloud 作为主推方案提供最完整能力,其他四种作为轻量备份方案。
 - **依据**:`README.md` L141-153、`packages/flutter_cloud_sync*` 子包结构。
 

@@ -13,6 +13,13 @@
 > 下线之前,属时间点快照,其中关于 PiggyCount Cloud、SyncEngine、路径 B、
 > ChangeTracker 注入、共享账本的章节均为**历史记录**,不再反映当前实现。
 > 现状请以源码与 `docs/cloud-setup.md` 为准。
+>
+> 📌 **补充(2026-10-08)**：共享账本的**残留结构**也已清空 —— `ledger_members`
+> (v50)、`shared_ledger_{categories,accounts,tags}` / `transaction_tag_overrides`
+> 三张镜像表与 `ledgers`、`transactions` 上的全部共享专属列(v51)均已迁移 DROP;
+> 相关代码(picker synthetic 机制、override 读写、邀请 / 成员页面、
+> `CustomIconService` 的 sha256 图标缓存)同步删除。本目录中标注「已移除」的小节
+> 即这轮清理的结果;其余未标注的共享账本描述仍属**历史记录**,以源码为准。
 
 ---
 
@@ -105,7 +112,7 @@
 
 #### [07. 数据模型](file:///d:/DevTools/project/PiggyCount/docoments/07-data-model.md)
 
-**内容**：Drift 表完整 ER 图、字段说明、索引设计、schemaVersion（当前 38，见 lib/data/db.dart）的迁移策略、`*SyncIdOverride` 字段设计、local_changes / entity_change_watermarks / sync_pull_errors 表的作用。（注：sync_state 表已于 v37 DROP，游标由 SyncEngine 内存 + 水位表承载。）
+**内容**：Drift 表完整 ER 图、字段说明、索引设计、schemaVersion（当前 51，见 lib/data/db.dart）的迁移策略、local_changes / entity_change_watermarks / sync_pull_errors 表的作用。（注：sync_state 表已于 v37 DROP；共享账本镜像表与 `*SyncIdOverride` 列已于 v50 / v51 DROP。）
 
 **适合读者**：修改数据库结构前必读；排查数据问题参考。
 

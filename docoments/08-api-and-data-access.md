@@ -218,7 +218,7 @@ abstract class TransactionRepository {
   Stream<List<Transaction>> watchTransactionsForCategoryInRange({...});
 
   // CRUD
-  Future<int> addTransaction({...});  // 支持 categorySyncIdOverride 共享账本、currencyCode/nativeAmount 多币种
+  Future<int> addTransaction({...});  // 支持 currencyCode/nativeAmount 多币种
   Future<void> updateTransaction({...});
   Future<void> deleteTransaction(int id);
   Future<Transaction?> getTransactionById(int id);
@@ -240,7 +240,7 @@ abstract class TransactionRepository {
   Future<DateTime?> getEarliestTransactionDate(int ledgerId);
 
   // 字段更新
-  Future<void> updateTransactionFields({...});  // 共享账本 synthetic 账户
+  Future<void> updateTransactionFields({...});
   Future<void> updateTransactionLedger({...});
   Future<void> updateTransactionBySyncId({...});
 
@@ -412,7 +412,6 @@ Content-Type: application/json
 |---|---|---|
 | `readLedgers` | `GET /read/ledgers` | 拉账本列表 |
 | `readLedgerStats` | `GET /read/ledgers/{id}/stats` | 账本统计 |
-| `fetchSharedResources` | `GET /read/ledgers/{id}/shared-resources` | 共享账本资源 |
 
 #### 3.3.3 附件 API
 
@@ -437,17 +436,10 @@ Content-Type: application/json
 | `uploadMyAvatar` | `POST /profile/me/avatar` | 上传头像 |
 | `downloadMyAvatar` | `GET /profile/avatar/{userId}?version={v}` | 下载头像 |
 
-#### 3.3.5 共享账本 API
+#### 3.3.5 共享账本 API——已移除(2026-10-08)
 
-| 方法 | 路径 | 用途 |
-|---|---|---|
-| `createInvite` | `POST /shared-ledgers/{id}/invites` | 创建邀请码 |
-| `previewInvite` | `GET /invites/{code}/preview` | 预览邀请 |
-| `acceptInvite` | `POST /invites/{code}/accept` | 接受邀请 |
-| `listMembers` | `GET /shared-ledgers/{id}/members` | 成员列表 |
-| `updateMemberRole` | `PATCH /shared-ledgers/{id}/members/{userId}` | 更新成员角色 |
-| `removeMember` | `DELETE /shared-ledgers/{id}/members/{userId}` | 移除成员 |
-| `fetchMemberStats` | `GET /shared-ledgers/{id}/member-stats` | 成员统计 |
+> 邀请码 / 成员管理 / 成员统计等接口随共享账本与 PiggyCount Cloud 协同整体下线,
+> 服务端与客户端实现均已删除(详见 `AGENTS.md`)。
 
 #### 3.3.6 其他 API
 
@@ -502,8 +494,6 @@ WS URL:`{ws|wss}://{baseUrl}/{apiPrefix}/ws?token={accessToken}`
 | `sync_change` | 任何 entity push | `{ledgerId, serverCursor}` |
 | `backup_restore` | server 备份恢复 | `{ledgerId, serverCursor}` |
 | `profile_change` | A 设备改 profile | `{field}` |
-| `member_change` | 共享账本成员变更 | `{ledgerId, action, member}` |
-| `shared_resource_change` | Owner 改 category/account/tag fan-out | `{ledgerId, resourceType, resourceSyncId}` |
 
 **心跳**:20s 定时发送 `ping`,server 回 `pong`。
 **重连**:3s 后先 refresh token 再重连。

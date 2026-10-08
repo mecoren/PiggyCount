@@ -27,7 +27,6 @@ PiggyCount 包含 12+ 个核心业务模块,新加入的贡献者面对 `lib/pag
 
 - 不知道"创建一笔交易"涉及哪些模块协作
 - 不清楚 AI 记账的 4 种输入方式(对话/OCR/语音/截图)如何统一收敛
-- 不理解共享账本的 Owner / Editor 双角色如何实现
 - 不知道同步模块在什么时候激活、什么时候不激活
 - 不清楚桌面小组件如何与主 App 通信
 
@@ -73,7 +72,6 @@ flowchart TD
 
     Enhance --> E1[AI 模块]
     Enhance --> E2[同步模块]
-    Enhance --> E3[共享账本模块]
     Enhance --> E4[导入导出模块]
 
     Platform --> P1[桌面小组件]
@@ -104,9 +102,6 @@ flowchart LR
     AI[AI 模块] --> TX
     IMPORT[导入模块] --> TX
     EXPORT[导出模块] --> TX
-
-    SHARED[共享账本] --> SYNC
-    SHARED --> TX
 
     WIDGET[桌面小组件] --> TX
     LOCK[应用锁] --> MAIN[主界面]
@@ -254,7 +249,6 @@ flowchart TD
 #### 3.4.3 关键设计
 
 - **多对多关联**:通过 `TransactionTags` 关联表(transactionId + tagId)
-- **共享账本 override**(v27):`TransactionTagOverrides` 表,Editor 角色 选 Owner tag 时通过 syncId 关联
 - **user-global 同步**:标签是 user-global 实体,`local_changes.ledger_id=0`,所有账本共享
 
 依据:`lib/data/db.dart` L210 `Tags` 表、`lib/data/repositories/local/local_tag_repository.dart`。
@@ -304,7 +298,6 @@ flowchart TD
 - `totalsByCategory` / `totalsByCategoryWithHierarchy`(二级展开)
 - `totalsByDay` / `totalsByMonth`(按账本起始日 12 桶)/ `totalsByYearSeries`
 - `totalsInRange` / `monthlyTotals` / `yearlyTotals`(均返 `(income, expense)`)
-- `getSharedSyntheticCategoriesForLedger`(共享账本 synthetic 分类映射)
 
 #### 3.6.4 排除标志
 
@@ -381,42 +374,18 @@ AI 对话页面支持撤销记账(通过 `Messages.transactionId` 关联已创�
 | `lib/cloud/transactions_sync_manager.dart` | 非 PiggyCount Cloud 的快照同步 manager |
 | `lib/cloud/transactions_json.dart` | fullPull 的 JSON 导入导出 |
 
-### 3.9 共享账本模块(Shared Ledger)
+### 3.9 共享账本模块(Shared Ledger)——已移除(2026-10-08)
 
-#### 3.9.1 职责
-
-共享账本模块支持多人协同记账,有 Owner / Editor 双角色。
-
-#### 3.9.2 关键文件
-
-| 文件 | 职责 |
-|---|---|
-| `lib/pages/cloud/invite_page.dart` | Owner 创建邀请码 |
-| `lib/pages/cloud/join_shared_ledger_page.dart` | Editor 加入共享账本 |
-| `lib/pages/cloud/member_list_page.dart` | 成员管理 |
-| `lib/pages/cloud/member_stats_page.dart` | 成员记账统计 |
-| `lib/providers/shared_ledger_providers.dart` | 共享账本 provider |
-
-#### 3.9.3 角色与权限
-
-| 角色 | 权限 |
-|---|---|
-| Owner | 创建账本、邀请成员、修改账本元数据、管理分类/账户/标签(主表) |
-| Editor | 加入账本、记账、查看、使用 Owner 的分类/账户/标签(通过 SharedLedger* 镜像表) |
-
-#### 3.9.4 镜像表设计
-
-共享账本通过 3 张镜像表实现 Editor 对 Owner 资源的引用:
-
-| 表 | 用途 |
-|---|---|
-| `SharedLedgerCategories` | Owner 分类的镜像,Editor 选择时记录 `categorySyncIdOverride` |
-| `SharedLedgerAccounts` | Owner 账户的镜像 |
-| `SharedLedgerTags` | Owner 标签的镜像,Editor 选择时记录 `tagSyncIdsOverride` |
-
-v25 之前 Editor 选择 Owner 资源会 mirror 到主表,v25 改为只写 `*SyncIdOverride` 字段,本地 int id 留 null,Editor UI 走 SharedLedger* 镜像表渲染。
-
-依据:`lib/data/db.dart` L32 `Ledgers.isShared` / `myRole`、`lib/pages/cloud/`、`lib/cloud/sync/sync_engine_apply.dart` `_applyTransactionChange`。
+> **本节内容已作废。** 多人协作账本随云端协同整体下线而移除,且项目尚无老用户、
+> 无需存量兼容 —— 残留结构在 **v50/v51 迁移**整批 DROP:
+> `shared_ledger_{categories,accounts,tags}` 三张镜像表、`transaction_tag_overrides`
+> 表、`ledgers` 的 4 个共享列(`is_shared / my_role / member_count / owner_user_id`)、
+> `transactions` 的 4 个 override 列。相关代码(picker synthetic 替换机制、
+> override 写入/回显、Editor 权限门控、`lib/pages/cloud/` 下的邀请 / 成员页面与
+> `lib/providers/shared_ledger_providers.dart`)已删除。
+>
+> 小节编号保留仅为与本手册其余交叉引用对齐;权威说明见仓库根 `AGENTS.md`
+> 「共享账本已彻底移除」条目。
 
 ### 3.10 导入导出模块(Import / Export)
 
@@ -547,38 +516,11 @@ sequenceDiagram
 
 依据:`lib/ai/core/ai_extraction_engine.dart`、`lib/services/billing/bill_creation_service.dart`、`lib/pages/ai/ai_chat_page.dart`。
 
-### 4.2 共享账本加入流程
+### 4.2 共享账本加入流程——已移除(2026-10-08)
 
-```mermaid
-sequenceDiagram
-    participant Owner as Owner 设备
-    participant Server as PiggyCount Cloud
-    participant Editor as Editor 设备
-
-    Owner->>Owner: 创建账本 type=shared
-    Owner->>Server: fullPush 账本 + 实体
-    Owner->>Server: createInvite(role=editor, expiresInHours=24)
-    Server-->>Owner: invite_code=ABC123
-    Owner->>Editor: 分享邀请码
-
-    Editor->>Server: previewInvite(code=ABC123)
-    Server-->>Editor: 账本信息预览
-    Editor->>Server: acceptInvite(code=ABC123)
-    Server->>Server: 添加 Editor 到 LedgerMembers
-    Server-->>Editor: 接受成功
-
-    Server->>Owner: WS member_change 事件
-    Owner->>Owner: syncLedgersFromServer 更新成员列表
-
-    Server->>Editor: WS connected 事件
-    Editor->>Editor: syncLedgersFromServer 拉账本列表
-    Editor->>Editor: replayAllChanges 拉所有变更
-    Editor->>Editor: fetchAndStoreSharedResources 拉 Owner 资源镜像
-```
-
-上图展示了共享账本的加入流程。Owner 创建账本并生成邀请码,Editor 通过邀请码加入。加入后,server 通过 WS 推送 `member_change` 事件通知 Owner,推送 `connected` 事件触发 Editor 拉取账本数据。Editor 通过 `fetchAndStoreSharedResources` 拉 Owner 的分类/账户/标签镜像到 SharedLedger* 表,后续记账时通过 `*SyncIdOverride` 引用 Owner 资源。
-
-依据:`lib/pages/cloud/invite_page.dart`、`lib/pages/cloud/join_shared_ledger_page.dart`、`lib/cloud/sync/sync_engine_realtime.dart` `_handleMemberChange`。
+> 邀请码加入、`member_change` / `shared_resource_change` WS 事件、
+> `fetchAndStoreSharedResources` 拉取 Owner 资源镜像等流程随共享账本整体下线,
+> 服务端接口与本地表 / 代码均已删除(详见 §3.9 与 `AGENTS.md`)。
 
 ### 4.3 多币种折算流程
 
@@ -617,18 +559,11 @@ flowchart TD
 - **最终取舍**:统一入口,通过 BillInfo 作为中间数据模型解耦输入与写入。
 - **依据**:`lib/services/billing/bill_creation_service.dart`、`lib/data/repositories/local/local_transaction_repository.dart`。
 
-### 决策 2:共享账本用镜像表而非主表
+### 决策 2:共享账本用镜像表而非主表(已作废,2026-10-08)
 
-- **决策内容**:Editor 选择 Owner 资源(分类/账户/标签)时,只写 `*SyncIdOverride` 字段,本地 int id 留 null,Editor UI 走 SharedLedger* 镜像表渲染。
-- **原因**:
-  - **避免数据冗余**:Editor 不需要完整复制 Owner 的分类/账户/标签到主表
-  - **避免同步冲突**:如果 mirror 到主表,Owner 修改后 Editor 主表数据会过时
-  - **权限清晰**:Owner 拥有主表,Editor 只引用
-- **备选方案**:
-  - v25 之前的 mirror 到主表:数据冗余,Owner 修改后需同步更新 Editor 主表
-  - 完全不 mirror,Editor 直接用 syncId 查询:查询性能差,需每次跨设备查
-- **最终取舍**:v25 改为镜像表 + override 字段,Editor UI 走 SharedLedger* 渲染。
-- **依据**:`lib/cloud/sync/sync_engine_apply.dart` `_applyTransactionChange:128+`、`lib/data/db.dart` SharedLedger* 表。
+> 该决策随共享账本下线作废:镜像表与 `*SyncIdOverride` 列已在 **v51** 迁移
+> DROP(`lib/data/db.dart`),原依据的 `sync_engine_apply.dart` 属早已下线的
+> 增量引擎。标题保留仅为决策编号连续。
 
 ### 决策 3:AI 执行策略可配置
 
@@ -672,7 +607,6 @@ flowchart TD
 | 记账模块是核心枢纽 | 几乎所有其他模块都直接或间接与它交互 |
 | 同步模块是横切关注点 | 所有写操作都通过 ChangeTracker 触发同步,无需 UI 显式调用 |
 | AI 模块默认关闭 | 需用户主动配置 AI provider(智谱 GLM / OpenAI) |
-| 共享账本仅 PiggyCount Cloud 支持 | 其他 4 种同步后端不支持共享账本 |
 | 截图自动记账仅 Android 且 Google Play 版本砍掉 | 受系统限制 + 权限裁剪 |
 
 ### 6.2 模块边界
@@ -681,7 +615,6 @@ flowchart TD
 |---|---|---|
 | 记账模块 | 直接调用 CloudProvider | 通过 Repository 抽象访问数据 |
 | AI 模块 | 直接写数据库 | 通过 BillCreationService + Repository |
-| 共享账本 | 修改 Owner 主表 | 通过 SharedLedger* 镜像表 + override 字段 |
 | 同步模块 | 调用 UI 刷新 | 通过 SyncEvent 通知 Provider 层 |
 | 统计模块 | 修改交易数据 | 只读查询 + 自动过滤 excludeFromStats |
 
@@ -690,7 +623,6 @@ flowchart TD
 - BillCreationService 有 37 个测试用例(最多)
 - 各 Local 子 Repository 测试不均,部分通过 wrapper 测试间接覆盖
 - AI 模块测试集中在 `test/ai/`(7 个文件)
-- 共享账本测试通过 `test/cloud/sync/sync_engine_e2e_test.dart`(44 个用例)覆盖
 
 详见 [10 测试策略](./10-testing-strategy.md)。
 
@@ -702,10 +634,9 @@ flowchart TD
 |---|---|---|---|
 | 1 | `lib/services/` 各 Service 之间的完整调用关系图未绘制 | §3 | 可选,通过 grep 统计 import 关系 |
 | 2 | AI 执行策略的 6 种类型在代码中的具体实现差异未展开 | §3.7.3 | 阅读 `packages/flutter_ai_kit/lib/src/strategies/` 各文件 |
-| 3 | 共享账本的成员统计 `fetchMemberStats` 实现细节未展开 | §3.9 | 阅读 `piggycount_cloud_provider.dart` `fetchMemberStats` |
-| 4 | 桌面小组件的 iOS WidgetExtension 与 Android AppWidgetProvider 实现细节未展开 | §3.11 | 阅读 `ios/PiggyCountWidget/` 与 `android/app/src/main/kotlin/.../PiggyCountWidgetProvider.kt` |
-| 5 | 信用卡账单日 / 还款日提醒的具体触发逻辑未展开 | §3.12.2 | 阅读 `lib/providers/credit_card_reminder_providers.dart` |
-| 6 | 导入模块的支付宝 / 微信 / 通用 CSV 解析规则未展开 | §3.10 | 阅读 `lib/services/import/bill_parser.dart` |
+| 3 | 桌面小组件的 iOS WidgetExtension 与 Android AppWidgetProvider 实现细节未展开 | §3.11 | 阅读 `ios/PiggyCountWidget/` 与 `android/app/src/main/kotlin/.../PiggyCountWidgetProvider.kt` |
+| 4 | 信用卡账单日 / 还款日提醒的具体触发逻辑未展开 | §3.12.2 | 阅读 `lib/providers/credit_card_reminder_providers.dart` |
+| 5 | 导入模块的支付宝 / 微信 / 通用 CSV 解析规则未展开 | §3.10 | 阅读 `lib/services/import/bill_parser.dart` |
 
 ---
 

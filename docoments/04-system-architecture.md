@@ -23,7 +23,7 @@ audience: 一年经验的开发者
 
 ### 1.1 为什么需要系统架构文档
 
-PiggyCount 是一个功能复杂的 Flutter 应用,涉及记账业务、AI 多模态、五端同步、共享账本、桌面小组件等多个领域。如果没有清晰的架构文档,新加入的贡献者容易遇到以下困惑:
+PiggyCount 是一个功能复杂的 Flutter 应用,涉及记账业务、AI 多模态、五端同步、桌面小组件等多个领域。如果没有清晰的架构文档,新加入的贡献者容易遇到以下困惑:
 
 - 不知道一个新功能应该放在哪一层
 - 不清楚 UI 层能不能直接访问数据库
@@ -161,7 +161,7 @@ classDiagram
     CloudProvider <|.. S3Provider
 ```
 
-只有 PiggyCountCloudProvider 实现了完整的增量同步 + Realtime + 共享账本能力,其他 4 个 provider 只实现文件级 snapshot 备份能力。SyncEngine 只在 PiggyCount Cloud 模式下激活,其他模式走 `TransactionsSyncManager` 快照路径。
+只有 PiggyCountCloudProvider 实现了完整的增量同步 + Realtime 能力,其他 4 个 provider 只实现文件级 snapshot 备份能力。SyncEngine 只在 PiggyCount Cloud 模式下激活,其他模式走 `TransactionsSyncManager` 快照路径。
 
 依据:`packages/flutter_cloud_sync/lib/src/core/cloud_provider.dart`、`lib/cloud/sync/sync_engine.dart` L72、`lib/cloud/transactions_sync_manager.dart`。
 
@@ -184,7 +184,7 @@ UI 层位于 `lib/pages/` 与 `lib/widgets/`,只与 Provider 层交互。
 | `lib/pages/tag/` | 标签管理 |
 | `lib/pages/budget/` | 预算管理 |
 | `lib/pages/calendar/` | 日历视图 |
-| `lib/pages/cloud/` | 云同步、共享账本 |
+| `lib/pages/cloud/` | 云同步 |
 | `lib/pages/ai/` | AI 对话 |
 | `lib/pages/data/` | 导入导出 |
 | `lib/pages/settings/` | 设置(含日志中心) |
@@ -319,9 +319,9 @@ classDiagram
 
 `BeeDatabase` 是 Drift 数据库主类,位于 `lib/data/db.dart`:
 
-- `schemaVersion = 31`(L445)
-- 21 张表(Ledgers / Accounts / Transactions / Categories / Tags / TransactionTags / Budgets / RecurringTransactions / Conversations / Messages / TransactionAttachments / ExchangeRates / ExchangeRateOverrides / LocalChanges / SyncState / SyncPullErrors / LedgerMembers / SharedLedgerCategories / SharedLedgerAccounts / SharedLedgerTags / TransactionTagOverrides)
-- `MigrationStrategy` 包含 30 段 onUpgrade 迁移块(v2 → v31)
+- `schemaVersion`:见 `lib/data/db.dart`(当前 **51**;本节其余数字写就较早,一律以源码为准)
+- 表清单(节选,完整见 `lib/data/db.dart` 的 `@DriftDatabase`):`Ledgers / Accounts / Transactions / Categories / Tags / TransactionTags / Budgets / RecurringTransactions / Conversations / Messages / TransactionAttachments / ExchangeRates / ExchangeRateOverrides / LocalChanges / SyncPullErrors` —— 共享账本相关的 `LedgerMembers` / `SharedLedger*` / `TransactionTagOverrides` 已在 **v50 / v51** 迁移 DROP
+- `MigrationStrategy` 的 `onUpgrade` 迁移块(**必须幂等、可重入**)
 - `BeeDatabase.forTesting(QueryExecutor executor)` 构造函数供单元测试注入内存库
 
 #### 3.5.2 SharedPreferences

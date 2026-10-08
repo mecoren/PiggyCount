@@ -31,7 +31,6 @@ audience: 一年经验的开发者
 - LWW 冲突解决 + 字段级合并
 - WebSocket Realtime 实时同步
 - 离线优先 + 变更追踪
-- 共享账本多设备协同
 - 附件同步 + 自定义图标同步
 
 新加入的贡献者面对 `sync_engine.dart` 1480 行主类 + 8 个 part 文件,常常无从下手。本文档系统梳理同步模块的架构、流程、设计决策,让一年经验开发者能快速理解和参与同步模块开发。
@@ -107,7 +106,7 @@ flowchart TD
     ABS -.-> IMPL
 ```
 
-上图展示了同步引擎的四层架构。L1 Provider 抽象层定义跨 provider 的统一契约(纯抽象接口);L2 Manager 通用层提供业务无关的同步编排;L3 SyncEngine 业务层是 PiggyCount 自有的核心同步逻辑,实现 `SyncService` 接口;L4 Riverpod/UI 触发层是同步的入口与 UI 反馈。5 种 provider 实现同一 `CloudProvider` 抽象,但只有 PiggyCountCloudProvider 实现了完整的增量同步 + Realtime + 共享账本能力。
+上图展示了同步引擎的四层架构。L1 Provider 抽象层定义跨 provider 的统一契约(纯抽象接口);L2 Manager 通用层提供业务无关的同步编排;L3 SyncEngine 业务层是 PiggyCount 自有的核心同步逻辑,实现 `SyncService` 接口;L4 Riverpod/UI 触发层是同步的入口与 UI 反馈。5 种 provider 实现同一 `CloudProvider` 抽象,但只有 PiggyCountCloudProvider 实现了完整的增量同步 + Realtime 能力。
 
 依据:`lib/cloud/sync/sync_engine.dart` L72、`packages/flutter_cloud_sync/lib/src/core/cloud_provider.dart`。
 
@@ -119,17 +118,14 @@ flowchart TD
 | 同步模型 | **变更日志**(sync_changes 表)+ JSON snapshot fallback | 文件级(snapshot) | Postgres 行级 CDC + Realtime | 文件级(snapshot) | 文件级(snapshot) |
 | 认证 | JWT + refresh token + 2FA TOTP | iCloud 账户 | Supabase Auth(PKCE) | Basic Auth | Access Key + Secret Key 签名 |
 | Realtime | **自实现 WebSocket 客户端** | 无 | Supabase SDK 内置 Postgres CDC | 无 | 无 |
-| 共享账本 | **支持** | 不支持 | 理论支持(PiggyCount 未启用) | 不支持 | 不支持 |
 | 2FA | **支持**(TOTP + recovery_code) | N/A | 需 Supabase Auth 配置 | N/A | N/A |
 | 在 PiggyCount 中是否实际启用 | **主用**(SyncEngine 直接消费) | 历史支持 | 历史支持(已被 PiggyCount Cloud 取代) | 历史支持 | 历史支持 |
 
 **PiggyCount Cloud 独有的关键能力**(其他 provider 都没有):
 
 - `pushChanges` / `pullChanges` 增量变更日志协议
-- `readLedgers` / `readLedgerStats` / `fetchSharedResources` 业务专用 read API
+- `readLedgers` / `readLedgerStats` 业务专用 read API
 - `writeCreateLedger` / `writeLedgerMeta` / `writeCreateTransaction` / `writeUpdateTransaction` 业务专用 write API
-- `createInvite` / `previewInvite` / `acceptInvite` / `listMembers` / `updateMemberRole` / `removeMember` 共享账本管理
-- `fetchMemberStats` 成员统计
 - `listDevices` / `revokeDevice` 设备管理
 - `fetchExchangeRates` server 汇率代理
 - WebSocket Realtime(6 种事件类型)
@@ -151,12 +147,10 @@ flowchart TD
     C --> F[ChangeTracker 注入]
     C --> G[增量 push/pull]
     C --> H[WS Realtime]
-    C --> I[共享账本]
 
     D --> J[无 ChangeTracker]
     D --> K[全量 JSON snapshot 上传/下载]
     D --> L[无 Realtime]
-    D --> M[无共享账本]
 ```
 
 上图展示了同步的激活条件。`syncServiceProvider` 根据 `activeCloudConfigProvider` 判断后端类型:仅 PiggyCount Cloud 激活完整的 SyncEngine + ChangeTracker;其他 4 种后端走快照同步,不注入 ChangeTracker;无后端时使用 `LocalOnlySyncService`(no-op 实现)。
@@ -325,7 +319,7 @@ flowchart TD
 
 | entityType | 序列化内容 |
 |---|---|
-| `transaction` | 查 tx + category + account + toAccount + tags(含 `transactionTagOverrides` for 共享账本)+ attachments,若有 `*SyncIdOverride` 字段 → override 优先 + 反查 SharedLedger* |
+| `transaction` | 查 tx + category + account + toAccount + tags + attachments |
 | `category` | 若 iconType=='custom' 且本地有文件 → 先调 `provider.uploadCategoryIcon(bytes, fileName)` 上传拿 `fileId/sha256`,再序列化 |
 | `budget` | 带 `ledgerSyncId` + `categorySyncId` |
 | `ledger` | 返回 `EntitySerializer.serializeLedger(ledger)` |
@@ -377,7 +371,7 @@ flowchart TD
 
 | entityType | handler | 备注 |
 |---|---|---|
-| `transaction` | `_applyTransactionChange` | 跨设备 ledgerId / categoryId / accountId 都按 syncId 解析 + SharedLedger* override 路径;v30 多币种快照保护 |
+| `transaction` | `_applyTransactionChange` | 跨设备 ledgerId / categoryId / accountId 都按 syncId 解析;v30 多币种快照保护 |
 | `account` | `_applyAccountChange` | syncId miss → 按 name 匹配 NULL syncId seed 行收编 |
 | `category` | `_applyCategoryChange` | 自定义图标走 `pendingCustomIconJobs` queue,事务 commit 后 `drainCustomIconQueue` 并发下载 |
 | `tag` | `_applyTagChange` | 同 account,seed 收编 |
@@ -474,8 +468,7 @@ sequenceDiagram
 | `excludeFromStats` / `excludeFromBudget` / `hidden` / `currencyCode` / `nativeAmount` 等可选字段 | **字段级合并 / 缺键保留**:`payload.containsKey(key)` 决定是否覆盖,缺键 → `Value.absent()` 保留本地 | `_applyTransactionChange`、`_applyAccountChange` |
 | v30 多币种 nativeAmount | **快照保护**:缺键时查本地旧行,amount 未变 → 保留本地折算;amount 变了 → 退化 `nativeAmount=amount`(1:1,L11 横幅可捞回) | `_applyTransactionChange:221` |
 | `exchange_rate_override` | **按币对收敛**(不是按 syncId):双端离线各建同币对会产生两个 syncId,按 (baseCurrency, quoteCurrency) upsert + 吸收来包 syncId/updatedAt,实现自动合并;依赖 pull 的 change_id 递增顺序实现 LWW | `_applyExchangeRateOverrideChange` |
-| `transaction_tag` | **tagSyncIds + overrides 双轨**:本地主表 tag + 共享账本 SharedLedgerTags(Editor 选 Owner tag) | `_syncTransactionTags` |
-| 共享账本 Editor 的 category/account | **v25 不 mirror 主表**:仅写 `*SyncIdOverride` 字段(本地 int id 留 null),Editor UI 走 SharedLedger* 镜像表渲染 | `_applyTransactionChange:128+` |
+| `transaction_tag` | 按 `tagSyncIds` 关联本地主表 tag | `_syncTransactionTags` |
 | ledger 元数据(name/currency) | payload 缺 name 时 skip;payload 有 name+currency 时主动 insert 新行,绕过旧 bug | `_applyLedgerChange` |
 | ledger 行 syncId 重复(历史 bug) | `get()` 取第一行 + 清 dup 行(级联删 tx/local_changes) | `_applyLedgerChange`、`syncLedgersFromServer` |
 
@@ -498,12 +491,10 @@ sequenceDiagram
 
 | event.type | 触发 | 处理 |
 |---|---|---|
-| `connected` | WS 首连 / 重连 | `_scheduleAutoSync(reason: 'ws_connected')` → `syncLedgersFromServer` + `_refreshAllSharedResourcesAfterReconnect` + `sync(ledgerId)` |
+| `connected` | WS 首连 / 重连 | `_scheduleAutoSync(reason: 'ws_connected')` → `syncLedgersFromServer` + `sync(ledgerId)` |
 | `sync_change` | 任何 entity push 到 server | `_schedulePull(event.ledgerId)`(1s 防抖) |
 | `backup_restore` | server 备份恢复 | 同 sync_change,触发 pull |
 | `profile_change` | A 设备改主题色 / 收支配色 / 外观 / 头像 | `syncMyProfile()` 拉 `/profile/me` 写回本地 SharedPreferences + emit `ProfileFieldApplied` |
-| `member_change` | 共享账本成员变更 | 自己被踢 → `_purgeLocalLedgerByExternalId` 清本地;自己 joined → `syncLedgersFromServer` + `replayAllChanges`;其他 → `syncLedgersFromServer` |
-| `shared_resource_change` | Owner 改 category/account/tag fan-out | 直写 SharedLedger* 镜像表 + `_downloadOneCustomIconIfNeeded` 异步下载图标;**v25 不 mirror 主表**;emit `SharedResourceChanged` 精确信号 |
 
 #### 3.9.3 防抖调度
 
@@ -519,7 +510,7 @@ sequenceDiagram
 
 #### 3.10.1 离线累积
 
-- **WS 离线累积**:WS server 不持久化离线事件(`websocket_manager.broadcast_to_user` 找不到 socket 就丢弃)。重连时 `_refreshAllSharedResourcesAfterReconnect` 对所有 Editor 角色账本并发拉 `/shared-resources` 兜底
+- **WS 离线累积**:WS server 不持久化离线事件(`websocket_manager.broadcast_to_user` 找不到 socket 就丢弃)。重连后由 `connected` 事件触发 `syncLedgersFromServer` + `sync(ledgerId)` 重新对齐(原共享账本的 `_refreshAllSharedResourcesAfterReconnect` 兜底已随功能下线删除)
 - **connectivity 恢复**:`triggerAutoSync(reason: 'connectivity_restored')` → `_scheduleAutoSync` → `syncLedgersFromServer` + `sync(ledgerId)`
 - **`markPushed` 失败重试**:push 成功后才 markPushed,失败 change 留在 local_changes 下次重试
 
@@ -549,10 +540,7 @@ flowchart TD
     A[sync ledgerId] --> B[uploadAttachments 上传附件]
     B --> C{ledgerRow 是否为 null}
     C -->|是 本地已删| D[只 push delete change return]
-    C -->|否| E{共享账本 Editor 角色}
-    E -->|是| F[永不 fullPush 避免覆盖 Owner]
-    E -->|否| G[provider.storage.list 拉远端 ledger 列表]
-    F --> G
+    C -->|否| G[provider.storage.list 拉远端 ledger 列表]
     G --> H{本账本 syncId 是否存在远端}
     H -->|不存在| I[_ensureLedgerSyncId 生成 UUID 写回]
     I --> J{localTxCount > 0}
@@ -575,11 +563,10 @@ flowchart TD
 上图展示了 `sync(ledgerId)` 的完整流程。关键决策点:
 
 1. **本地已删**:只推 delete change,不拉取
-2. **共享账本 Editor**:永不 fullPush(避免覆盖 Owner 状态),只 push + pull
-3. **远端不存在 syncId**:首次同步,走 fullPush 建立远端数据
-4. **远端存在 syncId**:日常同步,只 push 增量
-5. **附件双向同步**:先上传本地新附件,再下载远端新附件
-6. **profile 兜底**:每次 sync 都拉一次 `/profile/me`,保证用户配置同步
+2. **远端不存在 syncId**:首次同步,走 fullPush 建立远端数据
+3. **远端存在 syncId**:日常同步,只 push 增量
+4. **附件双向同步**:先上传本地新附件,再下载远端新附件
+5. **profile 兜底**:每次 sync 都拉一次 `/profile/me`,保证用户配置同步
 
 依据:`lib/cloud/sync/sync_engine.dart` `sync()` L371。
 
@@ -594,55 +581,29 @@ flowchart LR
 
     C --> D[PullCompleted]
     C --> E[PushCompleted]
-    C --> F[SharedResourceChanged]
     C --> G[AvatarChanged]
     C --> H[ProfileFieldApplied]
 
     D --> I[syncStatusRefreshProvider bump]
     E --> I
-    F --> J[sharedLedgerProviders bump]
     G --> K[avatarProvider bump]
     H --> L[profileProviders bump]
 
     I --> M[FutureProvider 重算]
-    J --> M
     K --> M
     L --> M
     M --> N[UI 自动刷新]
 ```
 
-上图展示了 SyncEvent 事件总线的设计。`sync: true` 关键:同步调 listener,多次 emit 在同一 microtask 内 batch 成一帧 rebuild,避免高频事件导致 UI 卡顿。事件类型是 sealed class(`PullCompleted` / `PushCompleted` / `SharedResourceChanged` / `AvatarChanged` / `ProfileFieldApplied`),UI 通过模式匹配处理。
+上图展示了 SyncEvent 事件总线的设计。`sync: true` 关键:同步调 listener,多次 emit 在同一 microtask 内 batch 成一帧 rebuild,避免高频事件导致 UI 卡顿。事件类型是 sealed class(`PullCompleted` / `PushCompleted` / `AvatarChanged` / `ProfileFieldApplied`),UI 通过模式匹配处理。
 
 依据:`lib/cloud/sync/sync_events.dart`、`lib/providers/sync_providers.dart` `syncEventStreamProvider`。
 
-### 4.3 共享账本多设备协同
+### 4.3 共享账本多设备协同——已移除(2026-10-08)
 
-```mermaid
-sequenceDiagram
-    participant Owner as Owner 设备
-    participant Server as PiggyCount Cloud
-    participant Editor as Editor 设备
-
-    Note over Owner: 修改分类"餐饮"图标
-    Owner->>Owner: repository.updateCategory
-    Owner->>Owner: ChangeTracker.recordUserGlobalChange
-    Owner->>Server: pushChanges(category:upsert)
-
-    Server->>Server: 广播 shared_resource_change 事件
-    Server->>Editor: WS shared_resource_change
-
-    Editor->>Editor: _handleSharedResourceChange
-    Editor->>Editor: 直写 SharedLedgerCategories 镜像表
-    Editor->>Editor: _downloadOneCustomIconIfNeeded 异步下载图标
-    Editor->>Editor: emit SharedResourceChanged
-
-    Editor->>Editor: sharedLedgerProviders bump
-    Editor->>Editor: UI 刷新显示新图标
-```
-
-上图展示了共享账本的多设备协同流程。Owner 修改分类后,push 到 server,server 通过 WS `shared_resource_change` 事件 fan-out 到所有 Editor 设备。Editor 直写 SharedLedgerCategories 镜像表(v25 不 mirror 主表),异步下载自定义图标,emit `SharedResourceChanged` 事件触发 UI 刷新。这种设计让 Editor 实时感知 Owner 的资源变更,无需轮询。
-
-依据:`lib/cloud/sync/sync_engine_realtime.dart` `_handleSharedResourceChange`、`lib/cloud/sync/sync_engine_apply.dart`。
+> Owner 改分类 / 账户 / 标签后经 WS `shared_resource_change` fan-out、Editor 直写
+> `SharedLedger*` 镜像表等流程随共享账本整体下线删除(镜像表与相关接口已在
+> v50/v51 迁移与代码清理中移除,详见 `AGENTS.md`)。
 
 ---
 
@@ -709,7 +670,7 @@ sequenceDiagram
 - **原因**:
   - **实时性**:WS 推送延迟 < 1s,轮询延迟 = 轮询间隔
   - **省电省流量**:WS 长连接,轮询频繁唤醒
-  - **服务端推送**:多设备协同场景,server 主动推送 `sync_change` / `member_change` 等事件
+  - **服务端推送**:多设备协同场景,server 主动推送 `sync_change` 等事件
 - **备选方案**:
   - HTTP 长轮询:实现简单但延迟高
   - SSE(Server-Sent Events):单向推送,无法双向通信
@@ -722,7 +683,7 @@ sequenceDiagram
 
 ### 决策 6:五种 provider 但能力分层
 
-- **决策内容**:支持 5 种同步后端,但只有 PiggyCount Cloud 提供完整能力(增量同步 + Realtime + 共享账本 + 2FA),其他 4 种只提供文件级 snapshot 备份。
+- **决策内容**:支持 5 种同步后端,但只有 PiggyCount Cloud 提供完整能力(增量同步 + Realtime + 2FA),其他 4 种只提供文件级 snapshot 备份。
 - **原因**:
   - **实现成本**:5 种都实现完整能力成本过高
   - **后端限制**:iCloud / WebDAV / S3 不支持 WebSocket,无法 Realtime
@@ -743,9 +704,8 @@ sequenceDiagram
 |---|---|
 | SyncEngine 只在 PiggyCount Cloud 模式激活 | 其他后端走 TransactionsSyncManager 快照同步 |
 | ChangeTracker 只在 PiggyCount Cloud 模式注入 | 其他后端不读 local_changes 表 |
-| 共享账本仅 PiggyCount Cloud 支持 | 其他后端不支持 |
 | 截图自动记账仅 Android 且 Google Play 版本砍掉 | 受系统限制 + 权限裁剪 |
-| WS server 不持久化离线事件 | 重连时需 `_refreshAllSharedResourcesAfterReconnect` 兜底 |
+| WS server 不持久化离线事件 | 重连由 `connected` 事件触发 `syncLedgersFromServer` + `sync` 重新对齐 |
 
 ### 6.2 同步模块边界
 
