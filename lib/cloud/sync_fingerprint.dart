@@ -16,8 +16,6 @@ import '../services/system/logger_service.dart';
 /// - 转账交易（type == 'transfer'）忽略 categoryName/categoryKind，
 ///   避免跨设备分类缺失导致指纹漂移
 /// - tagSyncIds（v7）排序后拼接，确保顺序无关
-/// - 共享账本 override 字段（v7）纳入指纹：否则两端仅 override 不同时
-///   指纹相同 → getStatus 判定 inSync → 永不触发拉取 → override 不同步
 /// - 顶层 accounts 数组（account_metadata_sync_fix G4）参与指纹：纯账户
 ///   变更（新增/修改账户、无交易变化）也要能被状态检测感知，否则误判
 ///   inSync，用户收不到「云端有更新」提示。账户按 syncId（无则 name）
@@ -138,9 +136,6 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
           'note': it['note'] as String? ?? '',
           'tags': sortedTags,
           'tagSyncIds': sortedTagSyncIds,
-          'categorySyncIdOverride': it['categorySyncIdOverride'] as String? ?? '',
-          'accountSyncIdOverride': it['accountSyncIdOverride'] as String? ?? '',
-          'toAccountSyncIdOverride': it['toAccountSyncIdOverride'] as String? ?? '',
           'accountName': accountName,
           'fromAccountName': fromAccountName,
           'toAccountName': toAccountName,
@@ -171,7 +166,7 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
     final c6 = (a['note'] as String).compareTo(b['note'] as String);
     if (c6 != 0) return c6;
     // 审计修复（指纹全序化）：以上 6 键打平、但其余参与哈希的字段
-    // （accountName/tags/tagSyncIds/attachments/override 等）不同的两笔
+    // （accountName/tags/tagSyncIds/attachments 等）不同的两笔
     // 交易，旧实现的相对顺序随输入顺序漂移 —— 导出端输入按本地自增 id
     // 排序（transactions_json），跨设备 id 序列独立必然不同，同一逻辑
     // 数据两端会算出不同指纹 → 永久 outOfSync/different 循环。

@@ -6,6 +6,27 @@ import '../services/data_import_service.dart';
 import '../services/system/logger_service.dart';
 import 'sync_fingerprint.dart';
 
+/// 云快照**数据格式版本**（payload 顶层 `version` 键）。写入端写本值，
+/// 读取端按各自版本号决定字段语义。
+///
+/// 版本历史：
+/// - v6：交易携带 syncId；
+/// - v8：预算 / 周期规则 / 手动汇率覆盖 + 全量分类/标签 + 交易↔周期规则锚点；
+/// - v9：账本身份锚点 `ledgerSyncId`；
+/// - v10：共享账本残留移除（2026-10-08）—— 快照不再携带
+///   `categorySyncIdOverride / accountSyncIdOverride /
+///   toAccountSyncIdOverride / tagSyncIdsOverride` 四个键，`sync_fingerprint`
+///   白名单同步收窄。**指纹算法值因此与 v9 不再可比**：同一份内容在 v9 与
+///   v10 下算出不同指纹。
+///
+/// 消费方契约：凡是读到「云端快照 version < 本常量」的路径，都**不得**把
+/// 「指纹不相等」当作「内容不同」的证据（那是算法口径差异，不是数据差异）。
+/// App 层的处理是**一次性全量重传**把云端改写成当前格式，之后两端口径一致、
+/// 正常收敛 —— 判定见
+/// `TransactionsSyncManager.shouldRepublishSnapshotForFormatUpgrade`，
+/// 执行见 `StartupSyncChecker` 的状态检查循环。
+const int kSnapshotFormatVersion = 10;
+
 /// 账本交易数据的 JSON 导入导出工具
 ///
 /// 用于云同步时序列化和反序列化交易数据
@@ -35,7 +56,7 @@ String _sanitizeString(String? input) {
 /// [ledgerId] - 账本ID
 ///
 /// 返回 [ExportedLedgerJson]：jsonStr 内包含以下字段——
-/// - version: 数据格式版本（当前为9）
+/// - version: 数据格式版本（当前 [kSnapshotFormatVersion] = 10）
 /// - exportedAt: 导出时间戳
 /// - ledgerId: 账本ID
 /// - ledgerName: 账本名称
@@ -45,7 +66,7 @@ String _sanitizeString(String? input) {
 /// - categories: 分类列表（name, kind, level, icon, parentName）
 /// - tags: 标签列表（name, color, syncId, sortOrder）
 /// - items: 交易明细（type, amount, categoryName, categoryKind, happenedAt,
-///   note, tags, tagSyncIds, override 字段）
+///   note, tags, tagSyncIds）
 ///
 /// 伴随字段（P2-2①）fingerprint/count/balance/ledgerName/currency/
 /// monthStartDay 在编码前旁路收集 —— 上传链路不再对同一 JSON 二次解析。
@@ -252,15 +273,6 @@ Future<ExportedLedgerJson> exportTransactionsJson(
       // 两者由"键是否存在"自然区分，既不需要 payload 版本判断，也保留了
       // 旧快照的安全性。
       'customValues': customValues,
-      // 共享账本 override：Editor 选 Owner 的 category/account，本地主表
-      // 无 int id，直接存 syncId。modified 同步后必须保留，否则 override
-      // 丢失回退到 categoryId（可能 null）。
-      if (t.categorySyncIdOverride != null)
-        'categorySyncIdOverride': t.categorySyncIdOverride,
-      if (t.accountSyncIdOverride != null)
-        'accountSyncIdOverride': t.accountSyncIdOverride,
-      if (t.toAccountSyncIdOverride != null)
-        'toAccountSyncIdOverride': t.toAccountSyncIdOverride,
       // v8 G2：周期规则锚点。recurringId 是本地 int，跨设备必须用 syncId；
       // 规则本身在顶层 recurring 数组里，恢复端靠此字段重建关联。
       if (t.recurringId != null &&
@@ -530,7 +542,11 @@ Future<ExportedLedgerJson> exportTransactionsJson(
     // 身份字段进指纹会让「回填前后的同一份数据」产生不同指纹，
     // 造成一轮永久 different。历史版本：v8 预算/周期/汇率覆盖 +
     // 全量分类/标签 + recurringSyncId。
-    'version': 9,
+    //
+    // v10: 共享账本残留移除 → 指纹口径变更（详见 [kSnapshotFormatVersion]）。
+    // 本键本身不进指纹（见上方身份字段同理），旧端读到更高版本号不会崩：
+    // 解析是按已知键取值，未知键一律忽略。
+    'version': kSnapshotFormatVersion,
     'exportedAt': DateTime.now().toUtc().toIso8601String(),
     'ledgerId': ledgerId,
     'ledgerName': ledger.name,
@@ -1044,10 +1060,6 @@ ImportData parseJsonToImportData(String jsonStr) {
             ? CustomFieldValueCodec.normalize(
                 (m['customValues'] as Map).cast<String, dynamic>())
             : null,
-        // 共享账本 override
-        categorySyncIdOverride: _readString(m, 'categorySyncIdOverride'),
-        accountSyncIdOverride: _readString(m, 'accountSyncIdOverride'),
-        toAccountSyncIdOverride: _readString(m, 'toAccountSyncIdOverride'),
         // v8 G2：周期规则锚点
         recurringSyncId: _readString(m, 'recurringSyncId'),
       ));

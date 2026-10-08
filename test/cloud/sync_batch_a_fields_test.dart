@@ -4,8 +4,6 @@
 //      已存在两条路径下都不丢失。
 //   #6 标签 syncId：importTags 返回 bySyncId 映射；importTransactions 按
 //      tagSyncIds 解析（跨设备 rename 后不错挂）。
-//   #7 override 字段：TransactionUpdateBySyncIdData 带 override 时，
-//      updateTransactionsBatchBySyncId 必须写入。
 //   全链路：exportTransactionsJson → parseJsonToImportData 往返，version 8
 //      带所有新字段。
 import 'dart:convert';
@@ -18,8 +16,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:piggycount/cloud/transactions_json.dart';
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
-import 'package:piggycount/data/repositories/transaction_repository.dart'
-    show TransactionUpdateBySyncIdData;
 import 'package:piggycount/services/data_import_service.dart';
 
 void main() {
@@ -327,94 +323,6 @@ void main() {
     });
   });
 
-  group('#7 override 字段', () {
-    setUp(() async {
-      await db.customStatement(
-          "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
-      // 插入一条带 syncId 的交易用于 modified 更新
-      // (happened_at 用 unix 秒:drift 默认 int 模式存日期,字符串读不回)
-      await db.customStatement(
-          "INSERT INTO transactions (id, ledger_id, type, amount, happened_at, sync_id) "
-          "VALUES (1, 1, 'expense', 100.0, "
-          "CAST(strftime('%s','2026-08-01') AS INTEGER), 'tx-sync-001')");
-    });
-
-    test('updateTransactionsBatchBySyncId 必须写入 override 字段', () async {
-      final syncIdToTxId = await repo.updateTransactionsBatchBySyncId([
-        TransactionUpdateBySyncIdData(
-          syncId: 'tx-sync-001',
-          type: 'expense',
-          amount: 200,
-          happenedAt: DateTime(2026, 8, 1),
-          categorySyncIdOverride: 'cat-owner-sync-001',
-          accountSyncIdOverride: 'acc-owner-sync-001',
-          toAccountSyncIdOverride: null, // null → absent，保持本地
-        ),
-      ]);
-
-      expect(syncIdToTxId['tx-sync-001'], 1);
-
-      final txs = await allTx();
-      expect(txs.first.amount, 200);
-      expect(txs.first.categorySyncIdOverride, 'cat-owner-sync-001',
-          reason: 'override 必须写入');
-      expect(txs.first.accountSyncIdOverride, 'acc-owner-sync-001');
-    });
-
-    test('override 为 null 时保持本地原值（absent 语义）', () async {
-      // 先设置本地 override 值
-      await db.customStatement(
-          "UPDATE transactions SET category_sync_id_override = 'local-override' "
-          "WHERE sync_id = 'tx-sync-001'");
-
-      await repo.updateTransactionsBatchBySyncId([
-        TransactionUpdateBySyncIdData(
-          syncId: 'tx-sync-001',
-          type: 'expense',
-          amount: 300,
-          happenedAt: DateTime(2026, 8, 1),
-          // categorySyncIdOverride 不传（null）→ 应保持本地 'local-override'
-        ),
-      ]);
-
-      final txs = await allTx();
-      expect(txs.first.amount, 300);
-      expect(txs.first.categorySyncIdOverride, 'local-override',
-          reason: 'null override 必须 absent，不清空本地值');
-    });
-
-    test('importTransactions added 路径必须写入 override 字段', () async {
-      // JSON 全量恢复（added）场景：创建交易时 override 必须随 companion 写入
-      await service.importTransactions(
-        repo,
-        1,
-        [
-          ImportTransaction(
-            type: 'expense',
-            amount: 150,
-            happenedAt: DateTime(2026, 8, 1),
-            syncId: 'tx-sync-002',
-            categorySyncIdOverride: 'cat-owner-sync-002',
-            accountSyncIdOverride: 'acc-owner-sync-002',
-            toAccountSyncIdOverride: 'to-owner-sync-002',
-          ),
-        ],
-        accountNameToId: {},
-        categoryCache: {},
-        tagNameToId: {},
-      );
-
-      final txs = await allTx();
-      // 原有 tx-sync-001 + 新增 tx-sync-002
-      expect(txs.length, 2);
-      final added = txs.firstWhere((t) => t.syncId == 'tx-sync-002');
-      expect(added.categorySyncIdOverride, 'cat-owner-sync-002',
-          reason: 'added 路径 override 必须写入，否则全量恢复丢失');
-      expect(added.accountSyncIdOverride, 'acc-owner-sync-002');
-      expect(added.toAccountSyncIdOverride, 'to-owner-sync-002');
-    });
-  });
-
   group('JSON 导出→解析往返（version 8）', () {
     setUp(() async {
       await db.customStatement(
@@ -431,24 +339,27 @@ void main() {
       await db.customStatement(
           "INSERT INTO tags (id, name, color, sync_id, sort_order) "
           "VALUES (1, '购物', '#FF0000', 'tag-sync-001', 3)");
-      // 带 override 的交易（happened_at 用 unix 秒,drift int 模式）
+      // 带账单标记的交易（happened_at 用 unix 秒,drift int 模式）
       await db.customStatement(
           "INSERT INTO transactions (id, ledger_id, type, amount, happened_at, "
-          "note, sync_id, exclude_from_stats, exclude_from_budget, "
-          "category_sync_id_override, account_sync_id_override) "
+          "note, sync_id, exclude_from_stats, exclude_from_budget) "
           "VALUES (1, 1, 'expense', 100.0, "
           "CAST(strftime('%s','2026-08-01') AS INTEGER), '备注', "
-          "'tx-sync-001', 1, 0, 'cat-owner-001', 'acc-owner-001')");
+          "'tx-sync-001', 1, 0)");
       // 交易-标签关联
       await db.customStatement(
           "INSERT INTO transaction_tags (transaction_id, tag_id) VALUES (1, 1)");
     });
 
-    test('导出 JSON version 必须为 9', () async {
+    test('导出 JSON version 必须为当前格式版本', () async {
       final json = await exportTransactionsJson(db, 1).then((e) => e.jsonStr);
       final data = jsonDecode(json) as Map<String, dynamic>;
-      expect(data['version'], 9,
-          reason: 'v9：快照版本随 ledgerSyncId 升级（v8 budgets/recurring/汇率覆盖 + 全量分类/标签）');
+      expect(data['version'], kSnapshotFormatVersion,
+          reason: 'v10：共享账本残留移除后指纹口径变更（v9 为 ledgerSyncId 身份锚点；'
+              'v8 budgets/recurring/汇率覆盖 + 全量分类/标签）');
+      expect(data['version'], 10,
+          reason: '格式版本常量变更必须同步消费端的升级重传门控（快照出现 v11 时'
+              '需一并审查 shouldRepublishSnapshotForFormatUpgrade 的语义）');
     });
 
     test('账户扩展字段在导出→解析后完整保留', () async {
@@ -482,7 +393,7 @@ void main() {
       expect(t.sortOrder, 3);
     });
 
-    test('交易 tagSyncIds + override 字段在导出→解析后完整保留', () async {
+    test('交易 tagSyncIds + 账单标记在导出→解析后完整保留', () async {
       final json = await exportTransactionsJson(db, 1).then((e) => e.jsonStr);
       final importData = parseJsonToImportData(json);
 
@@ -491,8 +402,6 @@ void main() {
       expect(tx.syncId, 'tx-sync-001');
       expect(tx.excludeFromStats, isTrue);
       expect(tx.excludeFromBudget, isFalse);
-      expect(tx.categorySyncIdOverride, 'cat-owner-001');
-      expect(tx.accountSyncIdOverride, 'acc-owner-001');
       expect(tx.tagSyncIds, ['tag-sync-001'],
           reason: 'tagSyncIds 必须随 JSON 传输');
     });

@@ -66,9 +66,6 @@ void main() {
         currency: 'CNY',
         type: 'general',
         createdAt: DateTime(2026, 1, 1),
-        myRole: 'owner',
-        memberCount: 1,
-        isShared: false,
         monthStartDay: monthStartDay,
       );
 
@@ -1699,6 +1696,113 @@ void main() {
       expect(deps.lastInfoMessage, isNull, reason: '候选即全部待同步账本时，弹窗不应出现附加提示行');
     });
   });
+
+  group('v10 快照格式升级（一次性全量重传）', () {
+    CloudServiceConfig s3Config() => const CloudServiceConfig(
+          type: CloudBackendType.s3,
+          name: 's3',
+          s3Endpoint: 'https://s3.example.com',
+          s3AccessKey: 'ak',
+          s3SecretKey: 'sk',
+          s3Bucket: 'b',
+        );
+
+    // 背景：v10 移除共享账本残留键改变了内容指纹算法值 —— 云端若仍是旧版本
+    // App 写入的 v9 快照，两端指纹永远不相等，会呈现为 different（方向未知）
+    // 或 cloudNewer。策略：旧格式 + 内容一致 → 一次性全量重传改写云端，
+    // 消除「反复弹差异但永不收敛」。
+    test('旧格式 + 内容一致 → 直接重传，不进候选/差异列表', () async {
+      deps.activeConfig = s3Config();
+      deps.ledgers = [ledger(1, 'L1')];
+      deps.statusByLedger = {1: status(SyncDiff.different)};
+      deps.republishNeededForFormatUpgrade = true;
+
+      await checker.runIfNeeded();
+
+      expect(deps.uploadedLedgerIds, [1],
+          reason: '判定需要重传时必须真的把云端改写为当前格式（force 上传）');
+      expect(deps.lastCandidates, isEmpty,
+          reason: '重传后该账本已收敛，不应再进「云端有更新」候选');
+      expect(deps.lastInfoMessage, isNull,
+          reason: '更不应再弹「另有 N 个账本本次不会同步」—— 正是要消除的反复提示');
+      expect(controller.state, isA<DoneState>());
+    });
+
+    test('cloudNewer 形态的旧格式账本同样被重传收敛', () async {
+      deps.activeConfig = s3Config();
+      deps.ledgers = [ledger(1, 'L1'), ledger(2, 'L2')];
+      deps.statusByLedger = {
+        1: status(SyncDiff.cloudNewer),
+        2: status(SyncDiff.inSync),
+      };
+      deps.republishNeededForFormatUpgrade = true;
+
+      await checker.runIfNeeded();
+
+      expect(deps.uploadedLedgerIds, [1]);
+      expect(deps.lastCandidates, isEmpty);
+      expect(controller.state, isA<DoneState>());
+    });
+
+    test('内容确实不同（判定 false）→ 不重传，候选收集原样', () async {
+      deps.activeConfig = s3Config();
+      deps.ledgers = [ledger(1, 'L1')];
+      deps.statusByLedger = {1: status(SyncDiff.cloudNewer)};
+      deps.republishNeededForFormatUpgrade = false;
+      deps.summaryChoice = SummaryChoice.skip;
+
+      await checker.runIfNeeded();
+
+      expect(deps.republishCheckLedgerIds, [1]);
+      expect(deps.uploadedLedgerIds, isEmpty,
+          reason: '内容有差异 → 绝不借格式升级名义覆盖对端数据');
+      expect(deps.lastCandidates.map((c) => c.ledger.id), [1]);
+    });
+
+    test('inSync 账本不做升级判定（零额外开销）', () async {
+      deps.activeConfig = s3Config();
+      deps.ledgers = [ledger(1, 'L1')];
+      deps.statusByLedger = {1: status(SyncDiff.inSync)};
+
+      await checker.runIfNeeded();
+
+      expect(deps.republishCheckLedgerIds, isEmpty,
+          reason: '升级只针对已判定不一致的账本，健康账本不付判定成本');
+      expect(controller.state, isA<DoneState>());
+    });
+
+    test('判定抛异常 → 降级走既有流程，不阻塞启动检查', () async {
+      deps.activeConfig = s3Config();
+      deps.ledgers = [ledger(1, 'L1'), ledger(2, 'L2')];
+      deps.statusByLedger = {
+        1: status(SyncDiff.cloudNewer),
+        2: status(SyncDiff.cloudNewer),
+      };
+      deps.republishCheckThrowForLedgerIds = {1};
+      deps.summaryChoice = SummaryChoice.skip;
+
+      await checker.runIfNeeded();
+
+      expect(deps.lastCandidates.map((c) => c.ledger.id), containsAll([1, 2]),
+          reason: '判定失败不改写既有候选收集（升级是兜底，不是新失败点）');
+    });
+
+    test('重传失败 → 不误报已收敛，原有差异告知保留', () async {
+      deps.activeConfig = s3Config();
+      deps.ledgers = [ledger(1, 'L1')];
+      deps.statusByLedger = {1: status(SyncDiff.different)};
+      deps.republishNeededForFormatUpgrade = true;
+      deps.uploadThrowForLedgerIds = {1};
+
+      await checker.runIfNeeded();
+
+      expect(deps.uploadedLedgerIds, [1], reason: '确实尝试过重传');
+      expect(controller.state, isA<DismissedState>(),
+          reason: '重传失败 → 该账本仍是方向未知差异：不能走 DoneState「已是最新」，'
+              '差异状态保留给「我的」/云同步页展示');
+      expect(deps.errorLog, contains(predicate((s) => s.toString().contains('L1'))));
+    });
+  });
 }
 
 /// 测试用的假依赖实现
@@ -1782,6 +1886,15 @@ class _FakeDeps implements StartupSyncCheckerDeps {
   int uploadCallCount = 0;
   List<int> uploadedLedgerIds = [];
   int runAfterDownloadCallCount = 0;
+
+  // v10 快照格式升级 mock：默认「无需升级」（判定返回 false，零行为变化）。
+  /// 置 true 时 [shouldRepublishSnapshotForFormatUpgrade] 返回 true
+  /// （模拟「云端为旧格式快照 + 内容与本地一致」）。
+  bool republishNeededForFormatUpgrade = false;
+  /// 判定调用记录（验证只对非 inSync 账本调用）。
+  List<int> republishCheckLedgerIds = [];
+  /// 判定失败注入（模拟云端不可读等异常）。
+  Set<int> republishCheckThrowForLedgerIds = {};
   int showSyncPreviewDialogCallCount = 0;
   int perLedgerDialogCallCount = 0;
   int legacyInfoShownCount = 0;
@@ -1898,6 +2011,15 @@ class _FakeDeps implements StartupSyncCheckerDeps {
     if (uploadThrowForLedgerIds.contains(ledgerId)) {
       throw Exception('uploadLedger boom for ledger $ledgerId');
     }
+  }
+
+  @override
+  Future<bool> shouldRepublishSnapshotForFormatUpgrade(int ledgerId) async {
+    republishCheckLedgerIds.add(ledgerId);
+    if (republishCheckThrowForLedgerIds.contains(ledgerId)) {
+      throw Exception('shouldRepublish boom for ledger $ledgerId');
+    }
+    return republishNeededForFormatUpgrade;
   }
 
   // ============ 审计 H6：回传前新鲜度校验 mock ============

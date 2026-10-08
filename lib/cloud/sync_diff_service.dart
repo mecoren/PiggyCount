@@ -655,8 +655,7 @@ class SyncDiffService {
     // ② **「缺键不改动」**（先 `cloud.x != null &&` 再比）：
     //    用于有历史包袱的字段 —— 旧版客户端导出时**不写该键**，此时缺键必须
     //    理解为"不改动本地值"，否则旧快照会静默抹掉本地已填值。
-    //    适用：currencyCode / nativeAmount / originalAmount / customValues /
-    //    3 个 *_syncId_override。
+    //    适用：currencyCode / nativeAmount / originalAmount / customValues。
     //    ⚠️ **新增字段一律用 ①**。错用 ② 会让「云端真的删掉了该属性」也传不
     //    下来 → 两端指纹不同而 diff 为空 → 永久不收敛（D-2 的机制）。
     //
@@ -813,22 +812,6 @@ class SyncDiffService {
             CustomFieldValueCodec.decode(local.customValuesJson),
             cloud.customValues)) {
       diffs.add('自定义字段值变更');
-    }
-
-    // 比较共享账本 override（仅当 JSON 显式携带时；null==null 不触发，
-    // 避免老 JSON 因缺键触发全量 modified）。不比较则 Editor 只改 override
-    // 时 diff 识别不出 modified，override 永不跨设备同步。
-    if (cloud.categorySyncIdOverride != null &&
-        local.categorySyncIdOverride != cloud.categorySyncIdOverride) {
-      diffs.add('分类override: ${local.categorySyncIdOverride ?? '无'} → ${cloud.categorySyncIdOverride}');
-    }
-    if (cloud.accountSyncIdOverride != null &&
-        local.accountSyncIdOverride != cloud.accountSyncIdOverride) {
-      diffs.add('账户override: ${local.accountSyncIdOverride ?? '无'} → ${cloud.accountSyncIdOverride}');
-    }
-    if (cloud.toAccountSyncIdOverride != null &&
-        local.toAccountSyncIdOverride != cloud.toAccountSyncIdOverride) {
-      diffs.add('转入账户override: ${local.toAccountSyncIdOverride ?? '无'} → ${cloud.toAccountSyncIdOverride}');
     }
 
     // 比较附件清单（附件差异贯通）。规范化口径与 contentFingerprintFromMap
@@ -1132,20 +1115,9 @@ class SyncDiffService {
       for (final change in modifiedChanges) {
         final cloud = change.cloudTransaction!;
         final syncId = cloud.syncId!;
-        // 共享账本 override 与本地 int id 互斥（§7 决策，与 SyncEngine
-        // sync_engine_apply.dart 一致）：override 非空时 int 留 null，
-        // 避免本地主表同名分类/账户被误解析导致「override + int 双写」。
-        final hasCatOverride = (cloud.categorySyncIdOverride?.isNotEmpty ?? false);
-        final hasAccOverride = (cloud.accountSyncIdOverride?.isNotEmpty ?? false);
-        final hasToOverride =
-            (cloud.toAccountSyncIdOverride?.isNotEmpty ?? false);
-        final categoryId =
-            hasCatOverride ? null : _resolveCategoryId(cloud, categoryCache);
-        final accountId =
-            hasAccOverride ? null : _resolveAccountId(cloud, accountNameToId);
-        final toAccountId = hasToOverride
-            ? null
-            : _resolveToAccountId(cloud, accountNameToId);
+        final categoryId = _resolveCategoryId(cloud, categoryCache);
+        final accountId = _resolveAccountId(cloud, accountNameToId);
+        final toAccountId = _resolveToAccountId(cloud, accountNameToId);
         final tagIds =
             _resolveTagIds(cloud, tagNameToId, tagSyncIdToId).toSet().toList();
         final cloudCurrency =
@@ -1187,11 +1159,6 @@ class SyncDiffService {
           // v46 自定义字段值：云端缺键 → null → 本地保持原值；非 null
           // （含空 map = 云端显式清空）才写入。
           customValues: cloud.customValues,
-          // 共享账本 override：modified 合并必须带上，否则 Editor 视角记的
-          // tx 跨设备后 override 丢失、回退到 categoryId int（可能为 null）
-          categorySyncIdOverride: cloud.categorySyncIdOverride,
-          accountSyncIdOverride: cloud.accountSyncIdOverride,
-          toAccountSyncIdOverride: cloud.toAccountSyncIdOverride,
           // v8 G2 周期锚点：云端 recurringSyncId → 本地规则 id 后写入。
           //
           // **检测与应用必须成对**：只加检测不加写入，会让「只改周期锚点」

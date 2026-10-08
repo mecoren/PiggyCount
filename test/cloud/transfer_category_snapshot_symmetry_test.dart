@@ -455,11 +455,11 @@ void main() {
         reason: '富字段往返后两端指纹必须相同');
   });
 
-  test('Tier 6 扩展面闭环：共享账本 override / 附件 / 自定义字段边界值 / 周期转账 / 多币种边界',
+  test('Tier 6 扩展面闭环：附件 / 自定义字段边界值 / 周期转账 / 多币种边界',
       () async {
     // Tier 5 覆盖的是主链路字段；本用例补最容易"一端写、另一端丢"的边角面：
-    // 共享账本 override（int 外键留空 + syncId 锚点）、附件清单、自定义字段的
-    // 0 / 负数 / 日期 / 空值形态、周期规则为转账、多币种归一化边界。
+    // 附件清单、自定义字段的 0 / 负数 / 日期 / 空值形态、周期规则为转账、
+    // 多币种归一化边界。
     final a = PiggyDatabase.forTesting(NativeDatabase.memory());
     final b = PiggyDatabase.forTesting(NativeDatabase.memory());
     addTearDown(() async {
@@ -469,11 +469,6 @@ void main() {
     await seedMeta(a);
     await seedMeta(b);
 
-    // 共享账本：override 字段的适用场景
-    for (final db in [a, b]) {
-      await db.customStatement("UPDATE ledgers SET type = 'shared' WHERE id = 1");
-    }
-
     // 自定义字段三型：amount / date / text
     await a.customStatement(
         "INSERT INTO custom_field_definitions "
@@ -482,27 +477,26 @@ void main() {
         "(2, 1, '购买日期', 'date', 1, 'cf-date'), "
         "(3, 1, '备注', 'text', 2, 'cf-text')");
 
-    // 1) 共享账本 override：三个 override 全给（int 外键留空，走 syncId 锚点）
+    // 1) 支出 + 转账（含多币种快照字段）
     await a.into(a.transactions).insert(TransactionsCompanion.insert(
           ledgerId: 1,
           type: 'expense',
           amount: 10,
+          categoryId: const d.Value(1),
+          accountId: const d.Value(1),
           happenedAt: d.Value(DateTime.utc(2026, 7, 1, 9)),
-          syncId: const d.Value('ov-expense'),
-          categorySyncIdOverride: const d.Value('cat-food'),
-          accountSyncIdOverride: const d.Value('acc-cash'),
+          syncId: const d.Value('ext-expense'),
           currencyCode: const d.Value('CNY'),
           nativeAmount: const d.Value(10),
         ));
-    // 转账 + 转入账户 override
     await a.into(a.transactions).insert(TransactionsCompanion.insert(
           ledgerId: 1,
           type: 'transfer',
           amount: 20,
+          accountId: const d.Value(1),
+          toAccountId: const d.Value(2),
           happenedAt: d.Value(DateTime.utc(2026, 7, 1, 10)),
-          syncId: const d.Value('ov-transfer'),
-          accountSyncIdOverride: const d.Value('acc-cash'),
-          toAccountSyncIdOverride: const d.Value('acc-bank'),
+          syncId: const d.Value('ext-transfer'),
           excludeFromStats: const d.Value(true),
           currencyCode: const d.Value('CNY'),
           nativeAmount: const d.Value(20),
@@ -575,14 +569,7 @@ void main() {
     expect(restored, isNotNull);
     expect(restored!.inserted, 5);
 
-    // override / 附件在"新增"恢复路径必须落库（否则再次导出即丢）
-    final ov = await b
-        .customSelect("SELECT category_sync_id_override AS c, "
-            "account_sync_id_override AS a FROM transactions "
-            "WHERE sync_id = 'ov-expense'")
-        .getSingle();
-    expect(ov.read<String?>('c'), 'cat-food');
-    expect(ov.read<String?>('a'), 'acc-cash');
+    // 附件在"新增"恢复路径必须落库（否则再次导出即丢）
     final att = await b
         .customSelect("SELECT COUNT(*) AS c, MAX(local_sha256) AS s "
             "FROM transaction_attachments")

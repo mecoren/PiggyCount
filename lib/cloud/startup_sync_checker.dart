@@ -175,6 +175,17 @@ abstract class StartupSyncCheckerDeps {
   Future<({String? fingerprint, int? count, DateTime? exportedAt})?>
       refreshCloudFingerprint(int ledgerId);
 
+  /// v10 快照格式升级判据：云端快照仍是**旧格式**（version < 当前格式，
+  /// 指纹算法口径不同）且按当前算法重算的云端内容指纹 == 本地指纹时返回
+  /// true —— 此时调用方应做一次性全量重传（`uploadLedger(force: true)`）
+  /// 把云端改写成当前格式，从而彻底消除「指纹口径不同 → 永久有差异」。
+  ///
+  /// 内容确实不同 / 云端已是新格式 / 云端不可读 → 返回 false，调用方必须
+  /// 保持既有冲突与合并流程（**绝不自动覆盖**对端可能更新的数据）。
+  ///
+  /// 实现见 `TransactionsSyncManager.shouldRepublishSnapshotForFormatUpgrade`。
+  Future<bool> shouldRepublishSnapshotForFormatUpgrade(int ledgerId);
+
   /// 云端账本发现：列出云端 ledger_*.json 中本机没有对应账本行的文件
   ///
   /// 设计见 /prd/remote_ledger_discovery/design.md。返回 meta 列表
@@ -410,6 +421,53 @@ class StartupSyncChecker {
     }
   }
 
+  /// v10 快照格式升级兜底。返回 true 表示该账本已收敛，调用方应视同
+  /// inSync（不进候选/差异列表）。
+  ///
+  /// 触发条件收紧为「已判定不一致」（cloudNewer / localNewer / different）：
+  /// 正常 inSync 的账本零额外开销（判定方法不下载云端，见下）。判据为
+  /// 「云端快照是旧格式 且 按当前算法重算的云端内容指纹 == 本地指纹」——
+  /// 二者同时成立时，指纹差异纯属算法口径（v10 移除共享账本残留键改变了
+  /// 指纹值），此时一次性全量重传把云端改写为当前格式即彻底收敛，用户不必
+  /// 做任何二选一，也不会再看到反复的「有差异」。
+  ///
+  /// 内容确实不同 → 判定返回 false，保持既有冲突/合并流程，**绝不自动覆盖**
+  /// 对端可能更新的数据。判定失败/上传失败同样返回 false（本地数据未变，
+  /// 下次启动重试），不阻塞启动检查的其余流程。
+  Future<bool> _republishIfSnapshotFormatUpgrade(
+      Ledger ledger, SyncStatus status) async {
+    if (status.diff != SyncDiff.cloudNewer &&
+        status.diff != SyncDiff.localNewer &&
+        status.diff != SyncDiff.different) {
+      return false;
+    }
+
+    final bool needed;
+    try {
+      needed = await deps
+          .shouldRepublishSnapshotForFormatUpgrade(ledger.id)
+          .timeout(_statusTimeout);
+    } catch (e) {
+      deps.log('StartupSyncChecker: 账本 ${ledger.name} 快照格式升级判定失败'
+          '（忽略，走既有流程）: $e');
+      return false;
+    }
+    if (!needed) return false;
+
+    deps.log('StartupSyncChecker: 账本 ${ledger.name} 云端为旧格式快照'
+        '（指纹算法口径不同）且内容与本地一致 → 一次性全量重传');
+    try {
+      await deps
+          .uploadLedger(ledgerId: ledger.id, force: true)
+          .timeout(_publishTimeout);
+      return true;
+    } catch (e) {
+      deps.log('StartupSyncChecker: 账本 ${ledger.name} 格式升级重传失败'
+          '（本地数据未变，下次启动重试）: $e');
+      return false;
+    }
+  }
+
   Future<void> _runInternal({bool isRetry = false}) async {
     // 1. 检查云端配置：仅路径 A（s3/webdav/supabase/icloud）+ valid 才执行
     final config = await deps.getActiveConfig();
@@ -461,6 +519,10 @@ class StartupSyncChecker {
     // 指纹与云端不一致但方向未知（SyncDiff.different，源于 direction=unknown）
     // 的账本名：仅记录日志，不弹"云端有更新"，差异状态由"我的"/云同步页展示
     final unknownDiffLedgers = <String>[];
+    // v10 快照格式升级：云端仍是旧格式快照、且内容与本地一致 → 本轮已做
+    // 一次性全量重传（改写云端为当前格式）的账本名。仅记日志；这些账本
+    // 不再进入候选/差异列表（重传后已收敛）。
+    final upgradedLedgers = <String>[];
     // 上述方向未知账本里，**云端账本元信息（名称/月起始日）与本地不同**的那些。
     // 这类差异交易级 diff 为空、只因账本名/月起始日进指纹而"有差异"：用户看到
     // 状态卡写着有差异、点进下载同步却一条变更都列不出来，只能自己猜。启动检查
@@ -569,6 +631,11 @@ class StartupSyncChecker {
           if (_isAuthErrorText(status.message)) sawAuthError = true;
           deps.log('StartupSyncChecker: 账本 ${ledger.name}（id=${ledger.id}）'
               'getStatus 返回 error: ${status.message}');
+        } else if (await _republishIfSnapshotFormatUpgrade(ledger, status)) {
+          // v10 快照格式升级：云端旧格式 + 内容与本地一致 → 已一次性全量
+          // 重传（云端改写为当前格式），该账本本轮已收敛，视同 inSync ——
+          // 不进候选、不进差异提示，也不再反复提示"有差异"。
+          upgradedLedgers.add(ledger.name);
         } else if (status.diff == SyncDiff.cloudNewer) {
           // US-7: 携带 diffType 用于 SummaryView 冲突高亮 + applyAll 二次确认
           candidates.add(LedgerCandidate(
@@ -608,6 +675,12 @@ class StartupSyncChecker {
           }
         }
       }
+    }
+
+    if (upgradedLedgers.isNotEmpty) {
+      deps.log('StartupSyncChecker: ${upgradedLedgers.length} 个账本云端快照为旧格式'
+          '（指纹口径不同）且内容与本地一致，已一次性全量重传为当前格式'
+          '（${upgradedLedgers.join('、')}）');
     }
 
     if (retrySentinelLedgers.isNotEmpty) {
@@ -1502,6 +1575,19 @@ class WidgetRefDeps implements StartupSyncCheckerDeps {
       // 不让探测失败阻塞整个回传流程；失败细节由
       // TransactionsSyncManager.refreshCloudFingerprint 内部日志覆盖
       return null;
+    }
+  }
+
+  @override
+  Future<bool> shouldRepublishSnapshotForFormatUpgrade(int ledgerId) async {
+    try {
+      return await _syncManager
+          .shouldRepublishSnapshotForFormatUpgrade(ledgerId: ledgerId);
+    } catch (e) {
+      // 判定失败（网络/鉴权/解析）：不处理该账本，走既有流程 ——
+      // 判定是「锦上添花的收敛兜底」，不能成为启动检查的新失败点。
+      logger.warning('CloudSync', '快照格式升级判定失败（忽略）: $ledgerId - $e');
+      return false;
     }
   }
 

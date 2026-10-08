@@ -27,6 +27,15 @@ import 'sync_restore_guard.dart';
 import 'sync_service.dart';
 import 'transactions_json.dart';
 
+/// 云端快照自描述探测结果（一次下载 + 一次后台解析的产物）。
+///
+/// - [embeddedFp]：快照内嵌的内容指纹（'contentFingerprint' 键，旧快照可缺）；
+/// - [contentFp]：按**当前算法**对下载内容重算的指纹 —— 白名单式指纹函数
+///   天然忽略未知键，故可与本地指纹直接比较（v10 格式升级窗口下，这正是
+///   区分「算法口径差异」与「数据差异」的依据）；
+/// - [version]：快照格式版本（'version' 键，旧快照可能缺失）。
+typedef _SnapshotProbe = ({String? embeddedFp, String? contentFp, int? version});
+
 /// 账本交易的云同步管理器
 ///
 /// 使用 flutter_cloud_sync 包实现云同步，保留 PiggyCount 特定的业务逻辑
@@ -1288,6 +1297,11 @@ class TransactionsSyncManager implements SyncService {
         'version': '2',
         'uploadedAt': DateTime.now().toUtc().toIso8601String(),
         'ledgerId': ledgerId.toString(),
+        // v10 快照格式升级：metadata 里冗余一份内容格式版本，让「云端是否
+        // 旧格式」的判定只花一次 HEAD（零下载）。缺失即旧端写入（或网关剥
+        // 头）→ 判定回退下载读内嵌 version，见
+        // shouldRepublishSnapshotForFormatUpgrade / kSnapshotFormatVersion。
+        'snapshotVersion': kSnapshotFormatVersion.toString(),
       };
       // P2-2①：摘要信息直接来自导出伴随字段（编码前旁路收集）。
       // balance 口径与 getLedgerStats SQL 聚合一致 —— income 加 /
@@ -2557,6 +2571,75 @@ class TransactionsSyncManager implements SyncService {
     }
   }
 
+  /// v10 快照格式升级判据（只读，不写云端）。
+  ///
+  /// 背景：v10 移除了共享账本残留键，**内容指纹算法随之改变** —— 同一份
+  /// 内容在 v9 与 v10 下算出不同指纹（详见 [kSnapshotFormatVersion]）。若
+  /// 云端仍是旧版本 App 写入的 v9 快照，本机新算法指纹与云端存量指纹永远
+  /// 不相等：状态卡永久显示「有差异」、启动检查每轮把该账本列为方向未知
+  /// 而不处理 —— 反复提示但永不收敛。
+  ///
+  /// 判据（三者全真才返回 true）：
+  /// 1. 云端快照格式版本 < [kSnapshotFormatVersion]（metadata 的
+  ///    `snapshotVersion` 优先，缺失/被网关剥离时用下载内容的内嵌
+  ///    `version` 判定）；
+  /// 2. 按**当前算法**重算云端内容的指纹 == 本地指纹 —— 说明两端内容
+  ///    实际上完全一致，差异纯粹是算法口径（白名单式指纹函数天然忽略
+  ///    旧快照残留的键，故跨版本重算可比）；
+  /// 3. 云端快照可读（下载 + 解析成功）。
+  ///
+  /// 返回 true 时调用方应做**一次性全量重传**（force 上传）把云端改写为
+  /// 当前格式；返回 false 表示内容确实不同、或云端已是新格式、或云端不可
+  /// 读 —— 必须保持既有冲突/合并流程，**绝不自动覆盖**对端可能更新的数据。
+  Future<bool> shouldRepublishSnapshotForFormatUpgrade(
+      {required int ledgerId}) async {
+    await _ensureInitialized();
+    final provider = _provider;
+    if (provider == null) return false;
+
+    try {
+      final path = await pathForLedger(ledgerId);
+      // 快路径（零下载）：metadata 已标注当前格式 —— 升级写入过一次之后
+      // 每轮启动都走这里，不为已收敛的账本付下载成本。
+      final meta = await provider.storage.getMetadata(path: path);
+      if (meta == null) return false; // 云端无备份：与格式升级无关
+      final metaVersion =
+          int.tryParse(_metaValue(meta.metadata, 'snapshotVersion') ?? '');
+      if (metaVersion != null && metaVersion >= kSnapshotFormatVersion) {
+        return false;
+      }
+
+      // 慢路径：metadata 无标注（旧端写入 / 网关剥头）→ 下载读内嵌 version
+      // 与当前算法重算的内容指纹。
+      final remote = await _remoteSnapshotProbe(provider, ledgerId);
+      final cloudVersion = remote.version;
+      if (cloudVersion == null || cloudVersion >= kSnapshotFormatVersion) {
+        // 无法判定格式（非 JSON 对象/截断）或内嵌已是当前格式（metadata
+        // 陈旧）→ 不处理；真正的坏数据由下载路径的完整性硬闸门拦下。
+        return false;
+      }
+
+      final local = await _localFingerprintWithCache(ledgerId);
+      if (remote.contentFp == null || remote.contentFp != local.fingerprint) {
+        logger.info(
+            'CloudSync',
+            '快照格式升级：账本 $ledgerId 云端为 v$cloudVersion 旧格式但内容与本地不同，'
+            '不自动覆盖（交由冲突/合并流程）');
+        return false;
+      }
+
+      logger.info(
+          'CloudSync',
+          '快照格式升级：账本 $ledgerId 云端为 v$cloudVersion 旧格式且内容与本地一致，'
+          '判定需一次性全量重传（改写为 v$kSnapshotFormatVersion）');
+      return true;
+    } catch (e) {
+      // 网络/鉴权/解析异常：本轮不处理（本地数据未变，下次启动重试）。
+      logger.warning('CloudSync', '快照格式升级判定失败（本轮不处理）: $ledgerId - $e');
+      return false;
+    }
+  }
+
   @override
   Future<CloudLedgerMeta?> fetchCloudLedgerMeta({required int ledgerId}) async {
     await _ensureInitialized();
@@ -2682,16 +2765,16 @@ class TransactionsSyncManager implements SyncService {
   ///   v40 触发器 `trg_*_touch_updated_at` 在 UPDATE 时自动盖时间戳；
   /// - `budgets` / `recurring_transactions` / `exchange_rate_overrides`：
   ///   仓储更新路径显式写 `updatedAt = now()`（无触发器但同样可靠）；
-  /// - `transaction_tags` / `transaction_attachments` / `transaction_tag_overrides`：
-  ///   只增删不改写，COUNT + MAX(id) 已覆盖（附件的 sortOrder/localSha256
-  ///   回填不影响快照内容清单，属可忽略的伪失效）。
+  /// - `transaction_tags` / `transaction_attachments`：只增删不改写，
+  ///   COUNT + MAX(id) 已覆盖（附件的 sortOrder/localSha256 回填不影响
+  ///   快照内容清单，属可忽略的伪失效）。
   ///
   /// 作用域：账本内表按 `ledger_id` 限定；user-global 表（账户/分类/标签/
   /// 汇率覆盖）取全表 —— 每份快照都携带全量账户/分类/标签，任一改动都必须
   /// 让所有账本的缓存失效（与 `invalidateLocalFingerprintCache()` 全量
   /// 失效的语义一致）。
   ///
-  /// 成本：一条 11 个子查询的聚合（最重的是本账本 5000 行交易的
+  /// 成本：一条 10 个子查询的聚合（最重的是本账本 5000 行交易的
   /// `SUM(updated_at)` 与标签关联 join），远低于一次全量导出
   /// （取数 + 建 map + jsonEncode 1.7MB + sha256）。
   ///
@@ -2728,7 +2811,6 @@ class TransactionsSyncManager implements SyncService {
              FROM tags) AS tg,
           (SELECT COALESCE(MAX(id), -1) || ':' || COUNT(*) || ':' || COALESCE(SUM(updated_at), -1)
              FROM exchange_rate_overrides) AS ex,
-          (SELECT COUNT(*) FROM transaction_tag_overrides) AS ov,
           COALESCE((SELECT COALESCE(updated_at, -1) || ':' || month_start_day || ':' ||
                            name || ':' || currency || ':' || COALESCE(sync_id, '')
                       FROM ledgers WHERE id = ?), '-') AS lg
@@ -2751,12 +2833,11 @@ class TransactionsSyncManager implements SyncService {
           db.categories,
           db.tags,
           db.exchangeRateOverrides,
-          db.transactionTagOverrides,
           db.ledgers,
         },
       ).getSingle();
 
-      const keys = ['tx', 'bg', 'rc', 'tt', 'ta', 'ac', 'ca', 'tg', 'ex', 'ov', 'lg'];
+      const keys = ['tx', 'bg', 'rc', 'tt', 'ta', 'ac', 'ca', 'tg', 'ex', 'lg'];
       final parts = <String>[
         for (final k in keys) row.read<String?>(k) ?? '',
         localChanges,
@@ -2890,22 +2971,35 @@ class TransactionsSyncManager implements SyncService {
       }
 
       // 审计 TSM-P3：元数据指纹缺失（WebDAV sidecar 丢失/写失败、S3 头被
-      // 剥）或与本地不符时，下载内容一次读取**内嵌指纹**做终审。指纹随
-      // 快照自描述（exportTransactionsJson 写入 'contentFingerprint' 键，
-      // 白名单式指纹函数天然忽略它），不依赖外部元数据存活：
+      // 剥）或与本地不符时，下载内容一次读取自描述信息（内嵌指纹 + 格式
+      // 版本）做终审。指纹随快照自描述（exportTransactionsJson 写入
+      // 'contentFingerprint' 键，白名单式指纹函数天然忽略它），不依赖外部
+      // 元数据存活：
       // - 内嵌 == 本地 → 内容一致，直接放行（消除「sidecar 丢失 + 本地
       //   证据不可信 → 恒 unknown 冲突」死循环的最常见分支）；
-      // - 内嵌 != 本地 → 内容确实不同，落入下方方向仲裁；
-      // - 无内嵌键（旧快照）→ 维持原仲裁路径。
+      // - 云端是**旧格式**快照（version < kSnapshotFormatVersion）且按当前
+      //   算法重算的内容指纹 == 本地 → 内容一致，差异纯属指纹算法口径
+      //   （v10 移除共享账本残留键改变了算法值）→ 同样放行：本次上传把云端
+      //   改写成当前格式，即「一次性全量重传」，无需让用户做二选一，
+      //   也不会留下永久「有差异」；
+      // - 其余（内容确实不同 / 无自描述键）→ 维持原时间仲裁路径。
       if (localFp != null) {
-        final embeddedFp = await _embeddedRemoteFingerprint(provider, ledgerId);
-        if (embeddedFp != null) {
-          if (embeddedFp == localFp) {
-            logger.info('CloudSync', '冲突检测：元数据指纹缺失/错位，内嵌指纹一致 → 放行上传');
-            return UploadProbe(cloudETag: meta.eTag);
-          }
-          // 内容确实不同：跳过下面基于「指纹可能只是丢失」的乐观假设，
-          // 直接按内容不同走时间仲裁
+        final remote = await _remoteSnapshotProbe(provider, ledgerId);
+        final embeddedFp = remote.embeddedFp;
+        if (embeddedFp != null && embeddedFp == localFp) {
+          logger.info('CloudSync', '冲突检测：元数据指纹缺失/错位，内嵌指纹一致 → 放行上传');
+          return UploadProbe(cloudETag: meta.eTag);
+        }
+        final remoteVersion = remote.version;
+        if (remoteVersion != null &&
+            remoteVersion < kSnapshotFormatVersion &&
+            remote.contentFp != null &&
+            remote.contentFp == localFp) {
+          logger.info(
+              'CloudSync',
+              '冲突检测：云端为 v$remoteVersion 旧格式快照、内容与本地一致 → 放行上传'
+              '（一次性全量重传，改写为 v$kSnapshotFormatVersion）');
+          return UploadProbe(cloudETag: meta.eTag);
         }
       }
 
@@ -2949,49 +3043,60 @@ class TransactionsSyncManager implements SyncService {
   /// 规范化规则与序列化器侧保持一致，避免双份实现漂移。
   /// P4：快照「jsonDecode + 内嵌指纹读取 + 全量指纹重算」单次后台 isolate
   /// 完成。MB 级快照此前在主 isolate 执行（恢复前校验/状态检查期间 UI
-  /// 冻结数百 ms~秒级），现只传结果回主线程。解析失败/顶层非 map 返回
-  /// (null, null)；指纹重算异常原样上抛（与旧主线程语义一致）。指纹计算
-  /// 必须走 [contentFingerprintCore]（无日志，isolate 安全），不能调
+  /// 冻结数百 ms~秒级），现只传结果回主线程。解析失败/顶层非 map 返回三个
+  /// null；指纹重算异常原样上抛（与旧主线程语义一致）。指纹计算必须走
+  /// [contentFingerprintCore]（无日志，isolate 安全），不能调
   /// [contentFingerprintFromMap]。
-  static Future<(String?, String?)> _fingerprintSnapshotInIsolate(
+  ///
+  /// 返回：
+  /// - `embeddedFp`：快照内嵌的内容指纹（'contentFingerprint' 键）；
+  /// - `contentFp`：按**当前算法**对内容重算的指纹（白名单式指纹函数天然
+  ///   忽略未知键，故旧快照残留的键不会污染结果 —— v10 格式升级窗口下，
+  ///   这正是区分「算法口径差异」与「数据差异」的依据）；
+  /// - `version`：快照格式版本（'version' 键，旧快照可能缺失）。
+  static Future<_SnapshotProbe> _fingerprintSnapshotInIsolate(
       String plainJson) {
-    return Isolate.run<(String?, String?)>(() {
+    return Isolate.run<_SnapshotProbe>(() {
+      const _SnapshotProbe empty = (
+        embeddedFp: null,
+        contentFp: null,
+        version: null,
+      );
       final dynamic decoded;
       try {
         decoded = jsonDecode(plainJson);
       } catch (_) {
-        return (null, null);
+        return empty;
       }
-      if (decoded is! Map<String, dynamic>) return (null, null);
+      if (decoded is! Map<String, dynamic>) return empty;
       final v = decoded['contentFingerprint'];
       return (
-        v is String ? v : null,
-        contentFingerprintCore(decoded).$1,
+        embeddedFp: v is String ? v : null,
+        contentFp: contentFingerprintCore(decoded).$1,
+        version: (decoded['version'] as num?)?.toInt(),
       );
     });
   }
 
-  /// 审计 TSM-P3：读取云端快照**内嵌**的内容指纹（'contentFingerprint' 键）。
+  /// 读取云端快照的自描述信息（一次下载 + 一次后台解析）。
   ///
-  /// 指纹随快照自描述后，这是比外部元数据（x-amz-meta / WebDAV sidecar）
-  /// 更权威的来源 —— 元数据可能丢失、被网关剥离或残留陈旧值，内嵌值永远
-  /// 与内容同生共死。下载经装饰器自动解密；解析失败/旧快照无键返回 null。
-  Future<String?> _embeddedRemoteFingerprint(
+  /// 快照内嵌自描述是比外部元数据（x-amz-meta / WebDAV sidecar）更权威的
+  /// 来源 —— 元数据可能丢失、被网关剥离或残留陈旧值，内嵌值永远与内容
+  /// 同生共死。下载经装饰器自动解密；读不到/解析失败返回三个 null。
+  Future<_SnapshotProbe> _remoteSnapshotProbe(
       fcs.CloudProvider provider, int ledgerId) async {
     try {
       final raw =
           await provider.storage.download(path: await pathForLedger(ledgerId));
-      if (raw == null) return null;
-      // P4：只为读一个键却全量解析 MB 级快照，解析移入后台 isolate
-      final decoded = await Isolate.run(() => jsonDecode(raw));
-      if (decoded is Map<String, dynamic>) {
-        final v = decoded['contentFingerprint'];
-        if (v is String && v.isNotEmpty) return v;
+      if (raw == null) {
+        return (embeddedFp: null, contentFp: null, version: null);
       }
+      // P4：只为读几个键却全量解析 MB 级快照，解析移入后台 isolate
+      return await _fingerprintSnapshotInIsolate(raw);
     } catch (e) {
-      logger.warning('CloudSync', '读取内嵌指纹失败（忽略）: $e');
+      logger.warning('CloudSync', '读取云端快照自描述信息失败（忽略）: $e');
+      return (embeddedFp: null, contentFp: null, version: null);
     }
-    return null;
   }
 
   /// M4 + 审计 P1-5：下载内容的完整性终审（破坏性恢复前的硬闸门）。
@@ -3020,8 +3125,9 @@ class TransactionsSyncManager implements SyncService {
     required Future<String?> Function() redownload,
   }) async {
     // P4：jsonDecode + 全量指纹重算单次后台 isolate 完成（见 helper 注释）
-    final (embeddedFp, contentFp) =
-        await _fingerprintSnapshotInIsolate(plainJson);
+    final probe = await _fingerprintSnapshotInIsolate(plainJson);
+    final embeddedFp = probe.embeddedFp;
+    final contentFp = probe.contentFp;
     if (contentFp == null) {
       throw fcs.CloudStorageException(
           '云端数据完整性校验失败（内容不是合法 JSON 快照）: $path');
@@ -3039,8 +3145,9 @@ class TransactionsSyncManager implements SyncService {
         String? retriedEmbedded;
         String? retriedContent;
         try {
-          (retriedEmbedded, retriedContent) =
-              await _fingerprintSnapshotInIsolate(retried);
+          final retriedProbe = await _fingerprintSnapshotInIsolate(retried);
+          retriedEmbedded = retriedProbe.embeddedFp;
+          retriedContent = retriedProbe.contentFp;
         } catch (_) {
           // 指纹重算异常 → 下方统一硬失败（对齐旧 catch 全兜口径）
         }
@@ -3080,7 +3187,8 @@ class TransactionsSyncManager implements SyncService {
       if (raw == null || raw.isEmpty) return;
       final remoteFp = _normalizeFingerprintMeta(raw);
       // P4：解析+指纹重算移入后台 isolate（旧快照旁路，语义不变）
-      final (_, contentFp) = await _fingerprintSnapshotInIsolate(plainJson);
+      final contentFp =
+          (await _fingerprintSnapshotInIsolate(plainJson)).contentFp;
       if (contentFp == null) {
         logger.warning(
             'CloudSync', '完整性自检：下载内容不是 JSON 对象(path=$path)，请留意数据完整性');

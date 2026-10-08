@@ -46,9 +46,6 @@ LedgerCandidate _candidate(int id, String name) => LedgerCandidate(
         currency: 'CNY',
         type: 'general',
         createdAt: DateTime(2026, 1, 1),
-        myRole: 'owner',
-        memberCount: 1,
-        isShared: false,
         monthStartDay: 1,
       ),
       status: const SyncStatus(

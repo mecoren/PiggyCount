@@ -239,41 +239,6 @@ void main() {
       exempt: '标签身份由 importTags 元数据合并收敛；交易关联经本地 tag_id 自然跟随，'
           '故无需 _compareTx 报 modified',
     ),
-    'categorySyncIdOverride': _Case(
-      itemA: {'categorySyncIdOverride': 'cat-food'},
-      itemB: {'categorySyncIdOverride': 'cat-trip'},
-      local: () async => db.customStatement(
-          "UPDATE transactions SET category_sync_id_override='cat-food', "
-          "category_id=NULL WHERE sync_id='tx-1'"),
-      cloud: () => _with(cloudDefault(),
-          categoryName: null, categoryKind: null, categorySyncIdOverride: 'cat-trip'),
-    ),
-    'accountSyncIdOverride': _Case(
-      itemA: {'accountSyncIdOverride': 'acc-cash'},
-      itemB: {'accountSyncIdOverride': 'acc-bank'},
-      local: () async => db.customStatement(
-          "UPDATE transactions SET account_sync_id_override='acc-cash', "
-          "account_id=NULL WHERE sync_id='tx-1'"),
-      cloud: () => _with(cloudDefault(),
-          accountName: null, accountSyncIdOverride: 'acc-bank'),
-    ),
-    'toAccountSyncIdOverride': _Case(
-      itemA: {'toAccountSyncIdOverride': 'acc-cash'},
-      itemB: {'toAccountSyncIdOverride': 'acc-bank'},
-      local: () async {
-        await db.customStatement(
-            "UPDATE transactions SET type='transfer', category_id=NULL, "
-            "to_account_id=2, to_account_sync_id_override='acc-cash' "
-            "WHERE sync_id='tx-1'");
-      },
-      cloud: () => _with(cloudDefault(),
-          type: 'transfer',
-          categoryName: null,
-          categoryKind: null,
-          tagNames: null,
-          toAccountName: null,
-          toAccountSyncIdOverride: 'acc-bank'),
-    ),
     'accountName': _Case(
       itemA: {'accountName': '现金'},
       itemB: {'accountName': '银行卡'},
@@ -580,9 +545,6 @@ ImportTransaction _with(
   Object? originalAmount = _unset,
   Object? excludeFromStats = _unset,
   Object? excludeFromBudget = _unset,
-  Object? categorySyncIdOverride = _unset,
-  Object? accountSyncIdOverride = _unset,
-  Object? toAccountSyncIdOverride = _unset,
   Object? recurringSyncId = _unset,
   Object? tagNames = _unset,
   Object? tagSyncIds = _unset,
@@ -625,15 +587,6 @@ ImportTransaction _with(
       excludeFromBudget: (excludeFromBudget == _unset
           ? base.excludeFromBudget
           : excludeFromBudget) as bool,
-      categorySyncIdOverride: (categorySyncIdOverride == _unset
-          ? base.categorySyncIdOverride
-          : categorySyncIdOverride) as String?,
-      accountSyncIdOverride: (accountSyncIdOverride == _unset
-          ? base.accountSyncIdOverride
-          : accountSyncIdOverride) as String?,
-      toAccountSyncIdOverride: (toAccountSyncIdOverride == _unset
-          ? base.toAccountSyncIdOverride
-          : toAccountSyncIdOverride) as String?,
       recurringSyncId: (recurringSyncId == _unset
           ? base.recurringSyncId
           : recurringSyncId) as String?,
