@@ -8828,4 +8828,183 @@ class AppLocalizationsEn extends AppLocalizations {
   String recurringDueNotifyBody(String amount, String date) {
     return '$amount will be charged on $date';
   }
+
+  @override
+  String get investmentSettingsTitle => 'Quotes & Investments';
+
+  @override
+  String get investmentSettingsDesc =>
+      'Manage quote sources and investment holdings';
+
+  @override
+  String get investmentQuoteSourceSection => 'Quote source';
+
+  @override
+  String get investmentQuoteSourceManual => 'Manual entry';
+
+  @override
+  String get investmentQuoteSourceManualDesc =>
+      'No network. You enter every holding price yourself.';
+
+  @override
+  String get investmentQuoteSourceHint =>
+      '\"Manual entry\" makes no network requests. Every holding price comes from what you type.';
+
+  @override
+  String get syncEntityKindHolding => 'Holding';
+
+  @override
+  String get holdingPageTitle => 'Holdings';
+
+  @override
+  String get holdingAddTitle => 'New holding';
+
+  @override
+  String get holdingEditTitle => 'Edit holding';
+
+  @override
+  String get holdingSummaryMarketValue => 'Market value';
+
+  @override
+  String get holdingSummaryCost => 'Cost';
+
+  @override
+  String get holdingSummaryProfit => 'Unrealized P/L';
+
+  @override
+  String get holdingSummaryReturnRate => 'Return';
+
+  @override
+  String holdingExcludedRateWarning(int count) {
+    return '$count holdings not counted (missing exchange rate)';
+  }
+
+  @override
+  String get holdingEmptyTitle => 'No holdings yet';
+
+  @override
+  String get holdingEmptySubtitle =>
+      'Add your first holding — this account\'s value will come from the sum of its holdings';
+
+  @override
+  String holdingAccountValueFromHoldings(int count) {
+    return 'Sum of $count holdings';
+  }
+
+  @override
+  String get holdingManageAction => 'Manage holdings';
+
+  @override
+  String get holdingEditPageHint =>
+      'After saving, you can add holdings on the account detail page';
+
+  @override
+  String get holdingShareLabel => 'Weight';
+
+  @override
+  String get holdingFieldName => 'Holding name';
+
+  @override
+  String get holdingFieldNameHint => 'e.g. Kweichow Moutai / Nasdaq 100 ETF';
+
+  @override
+  String get holdingFieldSymbol => 'Symbol';
+
+  @override
+  String get holdingFieldSymbolHint => 'e.g. 600519 / AAPL / BTC (optional)';
+
+  @override
+  String get holdingFieldMarket => 'Market';
+
+  @override
+  String get holdingFieldAssetClass => 'Asset class';
+
+  @override
+  String get holdingFieldCurrency => 'Currency';
+
+  @override
+  String get holdingFieldQuantity => 'Units';
+
+  @override
+  String get holdingFieldUnitCost => 'Unit cost';
+
+  @override
+  String get holdingFieldUnitPrice => 'Current price';
+
+  @override
+  String get holdingFieldAutoQuote => 'Allow automatic quotes';
+
+  @override
+  String get holdingFieldAutoQuoteSubtitle =>
+      'Once a real quote source is configured this holding follows it. Manual entry only for now.';
+
+  @override
+  String get holdingFieldNote => 'Note';
+
+  @override
+  String get holdingPreviewMarketValue => 'Market value';
+
+  @override
+  String get holdingPreviewProfit => 'P/L';
+
+  @override
+  String get holdingDeleteConfirmTitle => 'Delete holding';
+
+  @override
+  String holdingDeleteConfirmBody(String name) {
+    return 'Delete \"$name\"?';
+  }
+
+  @override
+  String get holdingDeleteSuccess => 'Holding deleted';
+
+  @override
+  String get holdingSaveSuccess => 'Holding saved';
+
+  @override
+  String get holdingValidationNameRequired => 'Please enter a holding name';
+
+  @override
+  String get holdingValidationQuantityInvalid =>
+      'Please enter a valid number of units';
+
+  @override
+  String get holdingValidationPriceInvalid =>
+      'Please enter a valid current price';
+
+  @override
+  String get holdingValidationCostInvalid => 'Please enter a valid unit cost';
+
+  @override
+  String get holdingAssetClassStock => 'Stock';
+
+  @override
+  String get holdingAssetClassFund => 'Fund';
+
+  @override
+  String get holdingAssetClassBond => 'Bond';
+
+  @override
+  String get holdingAssetClassCrypto => 'Crypto';
+
+  @override
+  String get holdingAssetClassOther => 'Other';
+
+  @override
+  String get holdingMarketSh => 'Shanghai';
+
+  @override
+  String get holdingMarketSz => 'Shenzhen';
+
+  @override
+  String get holdingMarketHk => 'Hong Kong';
+
+  @override
+  String get holdingMarketUs => 'US';
+
+  @override
+  String get holdingMarketFund => 'Mutual fund';
+
+  @override
+  String get holdingMarketCrypto => 'Crypto';
 }

@@ -16,6 +16,7 @@ import '../cloud/cloud_sync_page.dart';
 import '../settings/data_management_page.dart';
 import '../settings/appearance_settings_page.dart';
 import '../settings/holiday_settings_page.dart';
+import '../settings/investment_settings_page.dart';
 import '../settings/smart_billing_page.dart';
 import '../settings/automation_page.dart';
 import '../settings/about_page.dart';
@@ -341,6 +342,20 @@ class MinePage extends ConsumerWidget {
                         await Navigator.of(context).push(
                           MaterialPageRoute(
                               builder: (_) => const HolidaySettingsPage()),
+                        );
+                      },
+                    ),
+                    // 行情与投资（v52：行情源预留入口 + 投资持仓说明）
+                    SettingsNavItem(
+                      icon: Icons.trending_up_outlined,
+                      title: AppLocalizations.of(context).investmentSettingsTitle,
+                      subtitle:
+                          AppLocalizations.of(context).investmentSettingsDesc,
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const InvestmentSettingsPage()),
                         );
                       },
                     ),

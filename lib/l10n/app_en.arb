@@ -4291,5 +4291,81 @@
         "type": "String"
       }
     }
-  }
+  },
+  "investmentSettingsTitle": "Quotes & Investments",
+  "investmentSettingsDesc": "Manage quote sources and investment holdings",
+  "investmentQuoteSourceSection": "Quote source",
+  "investmentQuoteSourceManual": "Manual entry",
+  "investmentQuoteSourceManualDesc": "No network. You enter every holding price yourself.",
+  "investmentQuoteSourceHint": "\"Manual entry\" makes no network requests. Every holding price comes from what you type.",
+  "syncEntityKindHolding": "Holding",
+  "holdingPageTitle": "Holdings",
+  "holdingAddTitle": "New holding",
+  "holdingEditTitle": "Edit holding",
+  "holdingSummaryMarketValue": "Market value",
+  "holdingSummaryCost": "Cost",
+  "holdingSummaryProfit": "Unrealized P/L",
+  "holdingSummaryReturnRate": "Return",
+  "holdingExcludedRateWarning": "{count} holdings not counted (missing exchange rate)",
+  "@holdingExcludedRateWarning": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "holdingEmptyTitle": "No holdings yet",
+  "holdingEmptySubtitle": "Add your first holding — this account's value will come from the sum of its holdings",
+  "holdingAccountValueFromHoldings": "Sum of {count} holdings",
+  "@holdingAccountValueFromHoldings": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "holdingManageAction": "Manage holdings",
+  "holdingEditPageHint": "After saving, you can add holdings on the account detail page",
+  "holdingShareLabel": "Weight",
+  "holdingFieldName": "Holding name",
+  "holdingFieldNameHint": "e.g. Kweichow Moutai / Nasdaq 100 ETF",
+  "holdingFieldSymbol": "Symbol",
+  "holdingFieldSymbolHint": "e.g. 600519 / AAPL / BTC (optional)",
+  "holdingFieldMarket": "Market",
+  "holdingFieldAssetClass": "Asset class",
+  "holdingFieldCurrency": "Currency",
+  "holdingFieldQuantity": "Units",
+  "holdingFieldUnitCost": "Unit cost",
+  "holdingFieldUnitPrice": "Current price",
+  "holdingFieldAutoQuote": "Allow automatic quotes",
+  "holdingFieldAutoQuoteSubtitle": "Once a real quote source is configured this holding follows it. Manual entry only for now.",
+  "holdingFieldNote": "Note",
+  "holdingPreviewMarketValue": "Market value",
+  "holdingPreviewProfit": "P/L",
+  "holdingDeleteConfirmTitle": "Delete holding",
+  "holdingDeleteConfirmBody": "Delete \"{name}\"?",
+  "@holdingDeleteConfirmBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "holdingDeleteSuccess": "Holding deleted",
+  "holdingSaveSuccess": "Holding saved",
+  "holdingValidationNameRequired": "Please enter a holding name",
+  "holdingValidationQuantityInvalid": "Please enter a valid number of units",
+  "holdingValidationPriceInvalid": "Please enter a valid current price",
+  "holdingValidationCostInvalid": "Please enter a valid unit cost",
+  "holdingAssetClassStock": "Stock",
+  "holdingAssetClassFund": "Fund",
+  "holdingAssetClassBond": "Bond",
+  "holdingAssetClassCrypto": "Crypto",
+  "holdingAssetClassOther": "Other",
+  "holdingMarketSh": "Shanghai",
+  "holdingMarketSz": "Shenzhen",
+  "holdingMarketHk": "Hong Kong",
+  "holdingMarketUs": "US",
+  "holdingMarketFund": "Mutual fund",
+  "holdingMarketCrypto": "Crypto"
 }

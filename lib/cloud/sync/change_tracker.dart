@@ -41,7 +41,14 @@ class ChangeTracker {
 
   /// 已知的 user-global 实体类型。recordUserGlobalChange 用白名单校验防止
   /// 调用方误用(把 transaction 之类传进来也能通过,但被 assert 拦住)。
-  static const Set<String> _userGlobalEntityTypes = {'account', 'category', 'tag', 'exchange_rate_override'};
+  /// v52 起加入 `holding`（投资持仓）：与 account 同款跨账本、ledgerId 恒 0。
+  static const Set<String> _userGlobalEntityTypes = {
+    'account',
+    'category',
+    'tag',
+    'exchange_rate_override',
+    'holding',
+  };
 
   /// M2（audit）：server pull 标记专用 action 值。
   ///

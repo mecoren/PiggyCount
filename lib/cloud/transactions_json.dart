@@ -18,6 +18,14 @@ import 'sync_fingerprint.dart';
 ///   toAccountSyncIdOverride / tagSyncIdsOverride` 四个键，`sync_fingerprint`
 ///   白名单同步收窄。**指纹算法值因此与 v9 不再可比**：同一份内容在 v9 与
 ///   v10 下算出不同指纹。
+/// - v11：投资持仓（2026-10-08）—— 顶层新增 `holdings` 段（user-global，
+///   与 accounts 同款全量携带），`sync_fingerprint` 新增 `holdingCanon`。
+///   同样改变指纹算法值：**本地有持仓、云端仍是 v10 快照**时，按 v11 重算
+///   云端内容指纹必然与本地不等 → 走正常 diff / 合并，**不会被误判为
+///   「仅格式升级」而自动覆盖**（升级门控要求「重算指纹相等」，见下）；
+///   两端都没有持仓时指纹仍相等，升级门控照常一次性收敛。
+///   ⚠️ 持仓的行情缓存三列（quotePrice / quoteFetchedAt / quoteSourceId）
+///   是本地专有列，**故意不进快照、不进指纹**。
 ///
 /// 消费方契约：凡是读到「云端快照 version < 本常量」的路径，都**不得**把
 /// 「指纹不相等」当作「内容不同」的证据（那是算法口径差异，不是数据差异）。
@@ -25,7 +33,7 @@ import 'sync_fingerprint.dart';
 /// 正常收敛 —— 判定见
 /// `TransactionsSyncManager.shouldRepublishSnapshotForFormatUpgrade`，
 /// 执行见 `StartupSyncChecker` 的状态检查循环。
-const int kSnapshotFormatVersion = 10;
+const int kSnapshotFormatVersion = 11;
 
 /// 账本交易数据的 JSON 导入导出工具
 ///
@@ -191,6 +199,41 @@ Future<ExportedLedgerJson> exportTransactionsJson(
             if (a.note != null) 'note': _sanitizeString(a.note),
             'hidden': a.hidden,
             if (a.syncId != null) 'syncId': a.syncId,
+          })
+      .toList();
+
+  // v11 投资持仓：与账户同为 **user-global** 实体，同样**全量**导出（理由同
+  // 上方账户注释：换账本 / 恢复任意快照都要能收敛持仓集合）。
+  //
+  // ⚠️ 只导**可同步字段**。`quote_price` / `quote_fetched_at` / `quote_source_id`
+  // 是本地专有行情缓存列 —— 进快照等于把「本机拉到的行情」当成用户数据同步，
+  // 且会让跨设备指纹在不该变的时候变（守门见
+  // test/cloud/sync_contract_holdings_test.dart）。
+  //
+  // 账户锚点同时带 syncId 与 name：syncId 优先（账户 rename 后仍锚定同一账户），
+  // name 兜底（旧快照 / 探不到 syncId 的遗留账户）—— 与周期规则的
+  // accountName + accountSyncId 同款策略。
+  final holdings = (await db.select(db.holdings).get())
+    ..sort((a, b) => a.id.compareTo(b.id)); // 稳定排序,保证跨设备指纹可比
+  final holdingItems = holdings
+      .map((h) => {
+            'name': _sanitizeString(h.name),
+            if (accountIdToSyncId[h.accountId] != null &&
+                accountIdToSyncId[h.accountId]!.isNotEmpty)
+              'accountSyncId': accountIdToSyncId[h.accountId],
+            if (accountIdToName[h.accountId] != null)
+              'accountName': accountIdToName[h.accountId],
+            if (h.symbol != null) 'symbol': _sanitizeString(h.symbol),
+            if (h.market != null) 'market': h.market,
+            'assetClass': h.assetClass,
+            'currency': h.currency,
+            'quantity': h.quantity,
+            'unitCost': h.unitCost,
+            'unitPrice': h.unitPrice,
+            'autoQuote': h.autoQuote,
+            if (h.note != null) 'note': _sanitizeString(h.note),
+            'sortOrder': h.sortOrder,
+            if (h.syncId != null) 'syncId': h.syncId,
           })
       .toList();
 
@@ -556,6 +599,7 @@ Future<ExportedLedgerJson> exportTransactionsJson(
     'monthStartDay': ledger.monthStartDay,
     'count': items.length,
     'accounts': accountItems,
+    'holdings': holdingItems, // v11：投资持仓（user-global，全量）
     'categories': categoryItems,
     'tags': tagItems, // 新增：标签信息
     'customFields': customFieldItems, // v46：账本自定义字段定义
@@ -766,6 +810,43 @@ ImportData parseJsonToImportData(String jsonStr) {
         note: _readString(m, 'note'),
         hidden: _readBool(m, 'hidden'),
         syncId: _readString(m, 'syncId'),
+      ));
+    }
+  }
+
+  // 解析投资持仓（v11；H1：name 必填，损坏条目跳过并计数）。
+  // 账户锚点（accountSyncId / accountName）可能都缺失（孤儿持仓）——
+  // 解析层不拦，由 importHoldings 在落库前判定「账户在本机找不到就跳过」，
+  // 绝不创建悬空 account_id 的持仓。
+  final holdings = <ImportHolding>[];
+  final jsonHoldings = data['holdings'] as List?;
+  if (jsonHoldings != null) {
+    for (final raw in jsonHoldings) {
+      if (raw is! Map) {
+        _skip(skipped, 'holdings');
+        continue;
+      }
+      final m = raw.cast<String, dynamic>();
+      final name = _readString(m, 'name');
+      if (name == null) {
+        _skip(skipped, 'holdings');
+        continue;
+      }
+      holdings.add(ImportHolding(
+        name: name,
+        syncId: _readString(m, 'syncId'),
+        symbol: _readString(m, 'symbol'),
+        market: _readString(m, 'market'),
+        assetClass: _readString(m, 'assetClass'),
+        currency: _readString(m, 'currency'),
+        quantity: _readDouble(m, 'quantity'),
+        unitCost: _readDouble(m, 'unitCost'),
+        unitPrice: _readDouble(m, 'unitPrice'),
+        autoQuote: _readBool(m, 'autoQuote'),
+        note: _readString(m, 'note'),
+        sortOrder: _readInt(m, 'sortOrder'),
+        accountSyncId: _readString(m, 'accountSyncId'),
+        accountName: _readString(m, 'accountName'),
       ));
     }
   }
@@ -1072,6 +1153,7 @@ ImportData parseJsonToImportData(String jsonStr) {
   // 现在恢复路径以快照为准回写;Cloud 路径同值写入幂等,不冲突。
   return ImportData(
     accounts: accounts,
+    holdings: holdings,
     categories: categories,
     tags: tags,
     customFields: customFields,

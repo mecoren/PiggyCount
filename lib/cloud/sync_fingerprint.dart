@@ -217,6 +217,51 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
     return tiebreakEncode(a).compareTo(tiebreakEncode(b));
   });
 
+  // v11 投资持仓规范化：字段集与 `exportTransactionsJson` 的持仓导出
+  // **一字不差**；缺失键以默认值兜底，保证「旧快照缺键」与「显式空值」
+  // 产生同一指纹。
+  //
+  // ⚠️ **绝不含** quotePrice / quoteFetchedAt / quoteSourceId —— 那是本地专有
+  // 行情缓存列，纳进指纹会让「本机行情刷新」把跨设备指纹改掉，两端永远不收敛。
+  // 守门：test/cloud/sync_contract_holdings_test.dart。
+  final holdings =
+      (payload['holdings'] as List?)?.cast<Map<String, dynamic>>() ??
+          const <Map<String, dynamic>>[];
+  final holdingCanon = holdings
+      .map((h) => {
+            'syncId': h['syncId'] as String? ?? '',
+            'name': h['name'] as String? ?? '',
+            // 账户锚点：两个都进指纹 —— 任一变化都意味着"这条持仓挂到别的账户了"，
+            // 属于内容变化，必须被检测到。
+            'accountSyncId': h['accountSyncId'] as String? ?? '',
+            'accountName': h['accountName'] as String? ?? '',
+            'symbol': h['symbol'] as String? ?? '',
+            'market': h['market'] as String? ?? '',
+            'assetClass': h['assetClass'] as String? ?? '',
+            'currency': h['currency'] as String? ?? '',
+            'quantity': (h['quantity'] as num?)?.toDouble().toString() ?? '0.0',
+            'unitCost': (h['unitCost'] as num?)?.toDouble().toString() ?? '0.0',
+            'unitPrice':
+                (h['unitPrice'] as num?)?.toDouble().toString() ?? '0.0',
+            'autoQuote': h['autoQuote'] as bool? ?? false,
+            'note': h['note'] as String? ?? '',
+            'sortOrder': (h['sortOrder'] as num?)?.toInt().toString() ?? '',
+          })
+      .toList();
+  // 排序键：syncId 优先；缺失时回退「账户锚点|名称」（账户内同名才算同一持仓，
+  // 跨账户同名是两条不同记录）。平局兜底同 items：完整规范化串比较保证全序。
+  holdingCanon.sort((a, b) {
+    String keyOf(Map<String, dynamic> h) {
+      final syncId = h['syncId'] as String;
+      if (syncId.isNotEmpty) return syncId;
+      return '${h['accountSyncId']}|${h['accountName']}|${h['name']}';
+    }
+
+    final c = keyOf(a).compareTo(keyOf(b));
+    if (c != 0) return c;
+    return tiebreakEncode(a).compareTo(tiebreakEncode(b));
+  });
+
   // ---- v8（sync_gap_closure）：全量分类/标签 + 预算/周期/汇率覆盖 ----
   // 理同 accounts G4：这些实体进了快照就必须进指纹，否则「仅这些数据
   // 变化」时两端判 inSync，新增的预算/规则/分类永远不被拉取。
@@ -374,6 +419,7 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
   final bytes = utf8.encode(jsonEncode({
     'items': canon,
     'accounts': accountCanon,
+    'holdings': holdingCanon,
     'categories': categoryCanon,
     'tags': tagCanon,
     'customFields': customFieldCanon,
@@ -398,6 +444,7 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
     {
       'items': canon.length,
       'accounts': accountCanon.length,
+      'holdings': holdingCanon.length,
       'categories': categoryCanon.length,
       'tags': tagCanon.length,
       'customFields': customFieldCanon.length,

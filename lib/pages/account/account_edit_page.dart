@@ -307,6 +307,27 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                     );
                   }).toList(),
                 ),
+                // v52：选中「投资」时说明持仓入口 —— 估值卡片本身只有手填金额，
+                // 不给提示的话用户不会知道投资账户还能录持仓、金额能由持仓汇总。
+                if (isInvestmentType(_selectedType)) ...[
+                  SizedBox(height: 12.0.scaled(context, ref)),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 14,
+                        color: PiggyTokens.textTertiary(context),
+                      ),
+                      SizedBox(width: PiggyDimens.p4.scaled(context, ref)),
+                      Expanded(
+                        child: Text(
+                          l10n.holdingEditPageHint,
+                          style: PiggyTextTokens.caption(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

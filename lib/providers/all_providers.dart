@@ -50,3 +50,9 @@ export 'sensitive_note_providers.dart';
 
 // 首页交易窗口（M2-a：keyset/limit + 日合计下沉 SQL）
 export 'home_tx_window_providers.dart';
+
+// 投资持仓（v52：持仓列表 / 折算汇总 / 行情汇率桥接）
+export 'holding_providers.dart';
+
+// 行情源装配（v52 预留：当前仅「手动录入」，零网络请求）
+export 'quote_providers.dart';

@@ -28,17 +28,28 @@ enum SyncChangeType { added, modified, deleted }
 /// 周期规则 / 手动汇率一律 upsert-only —— 对端删掉的实体在本地永不消失，
 /// merge-then-publish 又把它们写回云端，形成永久 ping-pong
 /// （与 D-1 分类、S11 附件同构的第四个洞）。自定义字段定义已由 D-4 先行补齐
-/// （`mirrorDeleteAbsentCustomFields`，静默镜像删除），本枚举覆盖其余六类。
-enum SyncEntityKind { account, category, tag, budget, recurring, rateOverride }
+/// （`mirrorDeleteAbsentCustomFields`，静默镜像删除），本枚举覆盖其余各类；
+/// v11 起追加 `holding`（投资持仓，user-global，与 account 同款四道闸门）。
+enum SyncEntityKind {
+  account,
+  holding,
+  category,
+  tag,
+  budget,
+  recurring,
+  rateOverride,
+}
 
 /// [SyncEntityKind] → `local_changes.entity_type` 的词汇映射。
 ///
 /// **必须与仓储写路径逐字一致**（`LocalRepository.deleteAccount` 记
 /// `'account'`、`LocalExchangeRateRepository.removeOverride` 记
-/// `'exchange_rate_override'` …）—— 闸门 ④ 靠它比对未推送变更，口径错了
-/// 等于闸门失效，本机新建未上传的实体会被误判成"对端已删"。
+/// `'exchange_rate_override'`、v52 的 `deleteHolding` 记 `'holding'` …）——
+/// 闸门 ④ 靠它比对未推送变更，口径错了等于闸门失效，本机新建未上传的实体会
+/// 被误判成"对端已删"。
 const Map<SyncEntityKind, String> _syncEntityChangeType = {
   SyncEntityKind.account: 'account',
+  SyncEntityKind.holding: 'holding',
   SyncEntityKind.category: 'category',
   SyncEntityKind.tag: 'tag',
   SyncEntityKind.budget: 'budget',
@@ -457,9 +468,18 @@ class SyncDiffService {
     }
     // 该段有解析跳过的条目 → 云端清单不完整，不敢据此判定"对端已删"
     bool sectionLost(String key) => (cloud.skippedItems[key] ?? 0) > 0;
+
+    // v11 段门控：**段不存在 ≠ 对端删光了该段实体**。
+    // 各段有各自的引入版本（holdings 是 v11 新增）。若不按引入版本判定，
+    // 读 v8~v10 快照时 holdings 段"整段缺失"会被当成"云端一条都没有"，
+    // 于是本地每一条持仓都变成「对端已删」候选 —— 用户勾一下就把全部持仓
+    // 删了，这是比「删除不传播」严重得多的数据丢失。
+    bool sectionAbsent(String key, int introducedIn) =>
+        version < introducedIn || sectionLost(key);
     final lostSections = <String>[
       for (final k in const [
         'accounts',
+        'holdings',
         'categories',
         'tags',
         'budgets',
@@ -489,6 +509,8 @@ class SyncDiffService {
       switch (kind) {
         case SyncEntityKind.account:
           return cloud.accounts.any((a) => a.syncId == sid);
+        case SyncEntityKind.holding:
+          return cloud.holdings.any((h) => h.syncId == sid);
         case SyncEntityKind.category:
           return cloud.categories.any((c) => c.syncId == sid);
         case SyncEntityKind.tag:
@@ -538,6 +560,26 @@ class SyncDiffService {
           localId: a.id,
           syncId: a.syncId,
           name: a.name,
+        );
+      }
+    }
+
+    // ---- 投资持仓（user-global，v11）----
+    //
+    // 展示名用持仓自身名字（「贵州茅台」「沪深300ETF」）；空串时预览由种类
+    // 标签兜底。持仓无外部引用（它是引用方，不是被引用方），因此删除不会
+    // 留悬空外键 —— 但反过来要注意：账户被删时持仓由仓储级联删除，不会走到
+    // 这里的候选判定。
+    //
+    // ⚠️ 段门控用 [sectionAbsent]（带引入版本 v11）而不是 sectionLost：
+    // v8~v10 快照没有 holdings 段，整段缺失不具删除语义。
+    if (!sectionAbsent('holdings', 11)) {
+      for (final h in await repo.getAllHoldings()) {
+        offer(
+          kind: SyncEntityKind.holding,
+          localId: h.id,
+          syncId: h.syncId,
+          name: h.name,
         );
       }
     }
@@ -913,6 +955,17 @@ class SyncDiffService {
             ));
     final tagMaps = await timed(
         'tags', () => dataImportService.importTags(repo, importData.tags));
+    // v11 投资持仓：与账户同为 user-global 元数据，同样**必须在空变更早退之前**
+    // 合并（理由同上方账户注释：云端只有持仓变化时 computeDiff 可能返回空
+    // preview，早退就会让持仓同步断链）。幂等增量 upsert，多账本循环重复合并无害。
+    // 依赖 accountNameToId → 必须排在 importAccounts 之后。
+    await timed(
+        'holdings',
+        () => dataImportService.importHoldings(
+              repo,
+              importData.holdings,
+              accountNameToId: accountNameToId,
+            ));
     // v46 自定义字段定义：必须先于交易落库。交易值以 fieldSyncId 为键，
     // 定义缺失时这些值在编辑表单里没有渲染位（数据仍在，只是看不见）。
     await timed(
@@ -1345,6 +1398,8 @@ class SyncDiffService {
       switch (t.kind) {
         case SyncEntityKind.account:
           return refs.accountIds.contains(t.localId);
+        case SyncEntityKind.holding:
+          return false; // 持仓无外部引用（它是引用账户的一方）
         case SyncEntityKind.category:
           return refs.categoryIds.contains(t.localId);
         case SyncEntityKind.tag:
@@ -1371,6 +1426,10 @@ class SyncDiffService {
         switch (t.kind) {
           case SyncEntityKind.account:
             await repo.deleteAccount(t.localId);
+            break;
+          case SyncEntityKind.holding:
+            // 经 Repository 删除 → 记 user-global 'delete' 变更（不直接写库）。
+            await repo.deleteHolding(t.localId);
             break;
           case SyncEntityKind.category:
             await repo.deleteCategory(t.localId);

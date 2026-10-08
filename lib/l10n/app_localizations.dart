@@ -15846,6 +15846,336 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{amount} will be charged on {date}'**
   String recurringDueNotifyBody(String amount, String date);
+
+  /// No description provided for @investmentSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quotes & Investments'**
+  String get investmentSettingsTitle;
+
+  /// No description provided for @investmentSettingsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage quote sources and investment holdings'**
+  String get investmentSettingsDesc;
+
+  /// No description provided for @investmentQuoteSourceSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Quote source'**
+  String get investmentQuoteSourceSection;
+
+  /// No description provided for @investmentQuoteSourceManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual entry'**
+  String get investmentQuoteSourceManual;
+
+  /// No description provided for @investmentQuoteSourceManualDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'No network. You enter every holding price yourself.'**
+  String get investmentQuoteSourceManualDesc;
+
+  /// No description provided for @investmentQuoteSourceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'\"Manual entry\" makes no network requests. Every holding price comes from what you type.'**
+  String get investmentQuoteSourceHint;
+
+  /// No description provided for @syncEntityKindHolding.
+  ///
+  /// In en, this message translates to:
+  /// **'Holding'**
+  String get syncEntityKindHolding;
+
+  /// No description provided for @holdingPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Holdings'**
+  String get holdingPageTitle;
+
+  /// No description provided for @holdingAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New holding'**
+  String get holdingAddTitle;
+
+  /// No description provided for @holdingEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit holding'**
+  String get holdingEditTitle;
+
+  /// No description provided for @holdingSummaryMarketValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Market value'**
+  String get holdingSummaryMarketValue;
+
+  /// No description provided for @holdingSummaryCost.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost'**
+  String get holdingSummaryCost;
+
+  /// No description provided for @holdingSummaryProfit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unrealized P/L'**
+  String get holdingSummaryProfit;
+
+  /// No description provided for @holdingSummaryReturnRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Return'**
+  String get holdingSummaryReturnRate;
+
+  /// No description provided for @holdingExcludedRateWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} holdings not counted (missing exchange rate)'**
+  String holdingExcludedRateWarning(int count);
+
+  /// No description provided for @holdingEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No holdings yet'**
+  String get holdingEmptyTitle;
+
+  /// No description provided for @holdingEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your first holding — this account\'s value will come from the sum of its holdings'**
+  String get holdingEmptySubtitle;
+
+  /// No description provided for @holdingAccountValueFromHoldings.
+  ///
+  /// In en, this message translates to:
+  /// **'Sum of {count} holdings'**
+  String holdingAccountValueFromHoldings(int count);
+
+  /// No description provided for @holdingManageAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage holdings'**
+  String get holdingManageAction;
+
+  /// No description provided for @holdingEditPageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'After saving, you can add holdings on the account detail page'**
+  String get holdingEditPageHint;
+
+  /// No description provided for @holdingShareLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Weight'**
+  String get holdingShareLabel;
+
+  /// No description provided for @holdingFieldName.
+  ///
+  /// In en, this message translates to:
+  /// **'Holding name'**
+  String get holdingFieldName;
+
+  /// No description provided for @holdingFieldNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Kweichow Moutai / Nasdaq 100 ETF'**
+  String get holdingFieldNameHint;
+
+  /// No description provided for @holdingFieldSymbol.
+  ///
+  /// In en, this message translates to:
+  /// **'Symbol'**
+  String get holdingFieldSymbol;
+
+  /// No description provided for @holdingFieldSymbolHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 600519 / AAPL / BTC (optional)'**
+  String get holdingFieldSymbolHint;
+
+  /// No description provided for @holdingFieldMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'Market'**
+  String get holdingFieldMarket;
+
+  /// No description provided for @holdingFieldAssetClass.
+  ///
+  /// In en, this message translates to:
+  /// **'Asset class'**
+  String get holdingFieldAssetClass;
+
+  /// No description provided for @holdingFieldCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get holdingFieldCurrency;
+
+  /// No description provided for @holdingFieldQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Units'**
+  String get holdingFieldQuantity;
+
+  /// No description provided for @holdingFieldUnitCost.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit cost'**
+  String get holdingFieldUnitCost;
+
+  /// No description provided for @holdingFieldUnitPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Current price'**
+  String get holdingFieldUnitPrice;
+
+  /// No description provided for @holdingFieldAutoQuote.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow automatic quotes'**
+  String get holdingFieldAutoQuote;
+
+  /// No description provided for @holdingFieldAutoQuoteSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Once a real quote source is configured this holding follows it. Manual entry only for now.'**
+  String get holdingFieldAutoQuoteSubtitle;
+
+  /// No description provided for @holdingFieldNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get holdingFieldNote;
+
+  /// No description provided for @holdingPreviewMarketValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Market value'**
+  String get holdingPreviewMarketValue;
+
+  /// No description provided for @holdingPreviewProfit.
+  ///
+  /// In en, this message translates to:
+  /// **'P/L'**
+  String get holdingPreviewProfit;
+
+  /// No description provided for @holdingDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete holding'**
+  String get holdingDeleteConfirmTitle;
+
+  /// No description provided for @holdingDeleteConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{name}\"?'**
+  String holdingDeleteConfirmBody(String name);
+
+  /// No description provided for @holdingDeleteSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Holding deleted'**
+  String get holdingDeleteSuccess;
+
+  /// No description provided for @holdingSaveSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Holding saved'**
+  String get holdingSaveSuccess;
+
+  /// No description provided for @holdingValidationNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a holding name'**
+  String get holdingValidationNameRequired;
+
+  /// No description provided for @holdingValidationQuantityInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid number of units'**
+  String get holdingValidationQuantityInvalid;
+
+  /// No description provided for @holdingValidationPriceInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid current price'**
+  String get holdingValidationPriceInvalid;
+
+  /// No description provided for @holdingValidationCostInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid unit cost'**
+  String get holdingValidationCostInvalid;
+
+  /// No description provided for @holdingAssetClassStock.
+  ///
+  /// In en, this message translates to:
+  /// **'Stock'**
+  String get holdingAssetClassStock;
+
+  /// No description provided for @holdingAssetClassFund.
+  ///
+  /// In en, this message translates to:
+  /// **'Fund'**
+  String get holdingAssetClassFund;
+
+  /// No description provided for @holdingAssetClassBond.
+  ///
+  /// In en, this message translates to:
+  /// **'Bond'**
+  String get holdingAssetClassBond;
+
+  /// No description provided for @holdingAssetClassCrypto.
+  ///
+  /// In en, this message translates to:
+  /// **'Crypto'**
+  String get holdingAssetClassCrypto;
+
+  /// No description provided for @holdingAssetClassOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get holdingAssetClassOther;
+
+  /// No description provided for @holdingMarketSh.
+  ///
+  /// In en, this message translates to:
+  /// **'Shanghai'**
+  String get holdingMarketSh;
+
+  /// No description provided for @holdingMarketSz.
+  ///
+  /// In en, this message translates to:
+  /// **'Shenzhen'**
+  String get holdingMarketSz;
+
+  /// No description provided for @holdingMarketHk.
+  ///
+  /// In en, this message translates to:
+  /// **'Hong Kong'**
+  String get holdingMarketHk;
+
+  /// No description provided for @holdingMarketUs.
+  ///
+  /// In en, this message translates to:
+  /// **'US'**
+  String get holdingMarketUs;
+
+  /// No description provided for @holdingMarketFund.
+  ///
+  /// In en, this message translates to:
+  /// **'Mutual fund'**
+  String get holdingMarketFund;
+
+  /// No description provided for @holdingMarketCrypto.
+  ///
+  /// In en, this message translates to:
+  /// **'Crypto'**
+  String get holdingMarketCrypto;
 }
 
 class _AppLocalizationsDelegate

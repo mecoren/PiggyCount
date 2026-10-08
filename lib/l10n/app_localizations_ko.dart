@@ -8587,4 +8587,177 @@ class AppLocalizationsKo extends AppLocalizations {
   String recurringDueNotifyBody(String amount, String date) {
     return '$date에 $amount 결제 예정';
   }
+
+  @override
+  String get investmentSettingsTitle => '시세 및 투자';
+
+  @override
+  String get investmentSettingsDesc => '시세 소스와 투자 보유 설정을 관리합니다';
+
+  @override
+  String get investmentQuoteSourceSection => '시세 소스';
+
+  @override
+  String get investmentQuoteSourceManual => '직접 입력';
+
+  @override
+  String get investmentQuoteSourceManualDesc => '네트워크 미사용. 보유 가격을 직접 입력합니다.';
+
+  @override
+  String get investmentQuoteSourceHint =>
+      '\"직접 입력\"은 네트워크 요청을 보내지 않으며, 보유 가격은 모두 직접 입력한 값입니다.';
+
+  @override
+  String get syncEntityKindHolding => '보유 종목';
+
+  @override
+  String get holdingPageTitle => '보유 종목';
+
+  @override
+  String get holdingAddTitle => '보유 종목 추가';
+
+  @override
+  String get holdingEditTitle => '보유 종목 편집';
+
+  @override
+  String get holdingSummaryMarketValue => '총 평가금액';
+
+  @override
+  String get holdingSummaryCost => '총 원가';
+
+  @override
+  String get holdingSummaryProfit => '평가 손익';
+
+  @override
+  String get holdingSummaryReturnRate => '수익률';
+
+  @override
+  String holdingExcludedRateWarning(int count) {
+    return '환율 누락으로 $count개 보유 종목이 제외되었습니다';
+  }
+
+  @override
+  String get holdingEmptyTitle => '보유 종목이 없습니다';
+
+  @override
+  String get holdingEmptySubtitle => '첫 보유 종목을 추가하면 이 계좌의 금액이 보유 종목 합계로 계산됩니다';
+
+  @override
+  String holdingAccountValueFromHoldings(int count) {
+    return '보유 종목 $count개 합계';
+  }
+
+  @override
+  String get holdingManageAction => '보유 종목 관리';
+
+  @override
+  String get holdingEditPageHint => '저장 후 계좌 상세 페이지에서 보유 종목을 추가할 수 있습니다';
+
+  @override
+  String get holdingShareLabel => '비중';
+
+  @override
+  String get holdingFieldName => '종목명';
+
+  @override
+  String get holdingFieldNameHint => '예: 삼성전자 / S&P500 ETF';
+
+  @override
+  String get holdingFieldSymbol => '종목 코드';
+
+  @override
+  String get holdingFieldSymbolHint => '예: 005930 / AAPL / BTC (선택)';
+
+  @override
+  String get holdingFieldMarket => '시장';
+
+  @override
+  String get holdingFieldAssetClass => '자산 유형';
+
+  @override
+  String get holdingFieldCurrency => '통화';
+
+  @override
+  String get holdingFieldQuantity => '보유 수량';
+
+  @override
+  String get holdingFieldUnitCost => '단위 원가';
+
+  @override
+  String get holdingFieldUnitPrice => '현재 가격';
+
+  @override
+  String get holdingFieldAutoQuote => '시세 자동 갱신 허용';
+
+  @override
+  String get holdingFieldAutoQuoteSubtitle =>
+      '실제 시세 소스를 연결하면 이 종목이 시세를 따릅니다. 현재는 직접 입력만 지원합니다.';
+
+  @override
+  String get holdingFieldNote => '메모';
+
+  @override
+  String get holdingPreviewMarketValue => '평가금액';
+
+  @override
+  String get holdingPreviewProfit => '손익';
+
+  @override
+  String get holdingDeleteConfirmTitle => '보유 종목 삭제';
+
+  @override
+  String holdingDeleteConfirmBody(String name) {
+    return '\"$name\"을(를) 삭제할까요?';
+  }
+
+  @override
+  String get holdingDeleteSuccess => '보유 종목이 삭제되었습니다';
+
+  @override
+  String get holdingSaveSuccess => '보유 종목이 저장되었습니다';
+
+  @override
+  String get holdingValidationNameRequired => '종목명을 입력하세요';
+
+  @override
+  String get holdingValidationQuantityInvalid => '올바른 보유 수량을 입력하세요';
+
+  @override
+  String get holdingValidationPriceInvalid => '올바른 현재 가격을 입력하세요';
+
+  @override
+  String get holdingValidationCostInvalid => '올바른 단위 원가를 입력하세요';
+
+  @override
+  String get holdingAssetClassStock => '주식';
+
+  @override
+  String get holdingAssetClassFund => '펀드';
+
+  @override
+  String get holdingAssetClassBond => '채권';
+
+  @override
+  String get holdingAssetClassCrypto => '암호화폐';
+
+  @override
+  String get holdingAssetClassOther => '기타';
+
+  @override
+  String get holdingMarketSh => '상하이거래소';
+
+  @override
+  String get holdingMarketSz => '선전거래소';
+
+  @override
+  String get holdingMarketHk => '홍콩';
+
+  @override
+  String get holdingMarketUs => '미국';
+
+  @override
+  String get holdingMarketFund => '공모펀드';
+
+  @override
+  String get holdingMarketCrypto => '암호화폐';
 }

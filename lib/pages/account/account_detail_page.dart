@@ -15,8 +15,10 @@ import '../../utils/currencies.dart';
 import '../../widgets/category_icon.dart';
 import '../../utils/account_type_utils.dart';
 import '../../widgets/charts/account_category_pie_chart.dart';
+import '../../widgets/investment/holding_card.dart';
 import '../transaction/transaction_editor_page.dart';
 import 'account_edit_page.dart';
+import 'investment_holdings_page.dart';
 
 // ============================================
 // Providers
@@ -256,6 +258,9 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                     // 估值账户：显示估值卡片
                     _buildValuationCard(context, ref, account, statsAsync,
                         currencyCode, primaryColor, l10n),
+                    // v52：投资账户的持仓明细（有持仓才返回内容；无持仓时估值卡
+                    // 底部已有「管理持仓」入口引导录入）
+                    ..._buildHoldingsSection(context, ref, account, l10n),
                   ] else ...[
                     // 信用卡不显示"收入/支出"卡(概念错位),概览卡=欠款/额度/还款即主卡;
                     // 其它可交易账户仍显示 余额/收入/支出
@@ -392,8 +397,17 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     AppLocalizations l10n,
   ) {
     final isLiability = isLiabilityType(account.type);
-    final valueLabel =
-        isLiability ? l10n.valuationCurrentDebt : l10n.valuationCurrentValue;
+    // v52：投资账户一旦有持仓，账户金额就由持仓市值汇总（`getAccountBalance`
+    // 内的同一套 helper 算出来的，见 db.dart 的 Holdings 注释）——此时手工估值
+    // 入口必须隐藏、金额改为只读展示。两个口径并存是最容易让用户怀疑「算错了」
+    // 的形态，也会让人不知道手填的值到底算不算数。
+    final summary =
+        ref.watch(accountHoldingsSummaryProvider(account.id)).value;
+    final fromHoldings = summary != null && summary.total > 0;
+    final canManageHoldings = isInvestmentType(account.type);
+    final valueLabel = fromHoldings
+        ? l10n.holdingSummaryMarketValue
+        : (isLiability ? l10n.valuationCurrentDebt : l10n.valuationCurrentValue);
     final updateLabel =
         isLiability ? l10n.valuationUpdateDebt : l10n.valuationUpdateValue;
 
@@ -448,8 +462,15 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                 error: (_, __) => const Text('-'),
               ),
               SizedBox(height: 8.0.scaled(context, ref)),
-              // 上次更新时间
-              if (account.updatedAt != null)
+              // 有持仓时「上次更新时间」会误导（金额来自持仓汇总，不是手填估值），
+              // 改写口径说明；无持仓才显示手工估值时间。
+              if (fromHoldings)
+                Text(
+                  l10n.holdingAccountValueFromHoldings(summary.total),
+                  style: PiggyTextTokens.label(context)
+                      .copyWith(color: PiggyTokens.textTertiary(context)),
+                )
+              else if (account.updatedAt != null)
                 Text(
                   l10n.valuationLastUpdated(
                     '${account.updatedAt!.year}-${account.updatedAt!.month.toString().padLeft(2, '0')}-${account.updatedAt!.day.toString().padLeft(2, '0')}',
@@ -472,21 +493,30 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                 ),
               ],
               SizedBox(height: 16.0.scaled(context, ref)),
-              // 更新估值按钮
+              // 有持仓 → 只给「管理持仓」（金额只读，来自持仓汇总）；
+              // 无持仓 → 保留手工估值入口。
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () => _showUpdateValuationDialog(
-                    context,
-                    ref,
-                    account,
-                    isLiability,
-                    currencyCode,
-                    l10n,
+                  onPressed: fromHoldings
+                      ? () => _openHoldingsPage(context, ref, account)
+                      : () => _showUpdateValuationDialog(
+                            context,
+                            ref,
+                            account,
+                            isLiability,
+                            currencyCode,
+                            l10n,
+                          ),
+                  icon: Icon(
+                    fromHoldings
+                        ? Icons.trending_up_outlined
+                        : Icons.edit_outlined,
+                    size: 16,
+                    color: Colors.white,
                   ),
-                  icon:
-                      Icon(Icons.edit_outlined, size: 16, color: Colors.white),
-                  label: Text(updateLabel),
+                  label:
+                      Text(fromHoldings ? l10n.holdingManageAction : updateLabel),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
@@ -500,11 +530,115 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   ),
                 ),
               ),
+              // 投资账户（尚无持仓）也要有持仓入口 —— 否则「账户支持录持仓」
+              // 这件事完全没有发现路径：估值卡片本身只有手填金额。
+              if (canManageHoldings && !fromHoldings) ...[
+                SizedBox(height: 4.0.scaled(context, ref)),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () => _openHoldingsPage(context, ref, account),
+                    icon: const Icon(Icons.trending_up_outlined, size: 16),
+                    label: Text(l10n.holdingManageAction),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  /// 打开持仓列表页；返回后若持仓有变化，刷新账户统计（账户金额随持仓变）。
+  Future<void> _openHoldingsPage(
+    BuildContext context,
+    WidgetRef ref,
+    db.Account account,
+  ) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => InvestmentHoldingsPage(accountId: account.id),
+      ),
+    );
+    if (changed == true && mounted && context.mounted) {
+      ref.invalidate(accountStatsProvider(account.id));
+    }
+  }
+
+  /// 投资账户的持仓明细（v52）。非投资账户或没有持仓时返回空列表。
+  ///
+  /// 这里只做展示与跳转，**不自行折算**：金额口径一律来自
+  /// `accountHoldingsSummaryProvider` / `HoldingCard`（生效价单点 + 汇率链单点）。
+  List<Widget> _buildHoldingsSection(
+    BuildContext context,
+    WidgetRef ref,
+    db.Account account,
+    AppLocalizations l10n,
+  ) {
+    if (!isInvestmentType(account.type)) return const [];
+    final holdings =
+        ref.watch(holdingsByAccountProvider(account.id)).value ??
+            const <db.Holding>[];
+    if (holdings.isEmpty) return const [];
+    final summary =
+        ref.watch(accountHoldingsSummaryProvider(account.id)).value;
+
+    // 详情页只铺前几条，避免把整个账户页拉成持仓列表；其余交给持仓页。
+    const maxInline = 5;
+    final visible = holdings.take(maxInline).toList();
+
+    return [
+      SizedBox(height: 8.0.scaled(context, ref)),
+      SectionCard(
+        margin: EdgeInsets.symmetric(horizontal: 12.0.scaled(context, ref)),
+        child: Column(
+          children: [
+            for (var i = 0; i < visible.length; i++) ...[
+              if (i > 0)
+                Divider(height: 1, color: PiggyTokens.divider(context)),
+              HoldingCard(
+                holding: visible[i],
+                onTap: () => _openHoldingsPage(context, ref, account),
+              ),
+            ],
+            if (holdings.length > maxInline) ...[
+              Divider(height: 1, color: PiggyTokens.divider(context)),
+              TextButton(
+                onPressed: () => _openHoldingsPage(context, ref, account),
+                child: Text(l10n.holdingManageAction),
+              ),
+            ],
+            if (summary != null && summary.hasExcluded) ...[
+              Divider(height: 1, color: PiggyTokens.divider(context)),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: PiggyDimens.p12.scaled(context, ref),
+                  vertical: PiggyDimens.p8.scaled(context, ref),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: 14,
+                      color: PiggyTokens.warning(context),
+                    ),
+                    SizedBox(width: PiggyDimens.p4.scaled(context, ref)),
+                    Expanded(
+                      child: Text(
+                        l10n.holdingExcludedRateWarning(summary.excluded),
+                        style: PiggyTextTokens.caption(context)
+                            .copyWith(color: PiggyTokens.warning(context)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ];
   }
 
   /// 更新估值弹窗
@@ -516,67 +650,33 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     String currencyCode,
     AppLocalizations l10n,
   ) async {
-    final controller = TextEditingController(
-      text: account.initialBalance.abs().toStringAsFixed(2),
-    );
-
     final result = await showDialog<double>(
       context: context,
-      builder: (ctx) {
-        final primaryColor = ref.watch(primaryColorProvider);
-        return AppDialogShell(
-          wide: true,
-          title: Text(isLiability
-              ? l10n.valuationUpdateDebt
-              : l10n.valuationUpdateValue),
-          content: TextField(
-            controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            autofocus: true,
-            decoration: piggyOutlinedDecoration(
-              context,
-              prefix: '${getCurrencySymbol(currencyCode)} ',
-              hint: isLiability
-                  ? l10n.valuationDebtHint
-                  : l10n.valuationAccountHint,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(l10n.commonCancel),
-            ),
-            TextButton(
-              onPressed: () {
-                final value = double.tryParse(controller.text.trim());
-                if (value != null) {
-                  Navigator.pop(ctx, value);
-                }
-              },
-              style: TextButton.styleFrom(foregroundColor: primaryColor),
-              child: Text(l10n.commonOk),
-            ),
-          ],
-        );
-      },
+      builder: (ctx) => _ValuationInputDialog(
+        title: isLiability
+            ? l10n.valuationUpdateDebt
+            : l10n.valuationUpdateValue,
+        initialText: account.initialBalance.abs().toStringAsFixed(2),
+        currencyCode: currencyCode,
+        hint: isLiability ? l10n.valuationDebtHint : l10n.valuationAccountHint,
+        primaryColor: ref.read(primaryColorProvider),
+      ),
     );
 
-    controller.dispose();
+    if (result == null) return;
 
-    if (result != null) {
-      final repo = ref.read(repositoryProvider);
-      // 贷款存储为负数
-      final storedValue = isLiability ? -result.abs() : result;
-      await repo.updateAccountValuation(account.id, storedValue);
+    final repo = ref.read(repositoryProvider);
+    // 贷款存储为负数
+    final storedValue = isLiability ? -result.abs() : result;
+    await repo.updateAccountValuation(account.id, storedValue);
 
-      // context 为方法参数,与 State.mounted 一并校验,保证 ref 与 context 均可用
-      if (mounted && context.mounted) {
-        // 刷新数据
-        ref.invalidate(accountStatsProvider(account.id));
-        showToast(context, l10n.commonSave);
-        // 返回上一页刷新数据
-        Navigator.pop(context, true);
-      }
+    // context 为方法参数,与 State.mounted 一并校验,保证 ref 与 context 均可用
+    if (mounted && context.mounted) {
+      // 刷新数据
+      ref.invalidate(accountStatsProvider(account.id));
+      showToast(context, l10n.commonSave);
+      // 返回上一页刷新数据
+      Navigator.pop(context, true);
     }
   }
 
@@ -1605,5 +1705,79 @@ class _TransactionTile extends ConsumerWidget {
     }
 
     return '${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+/// 估值输入弹窗（自持 [TextEditingController]）。
+///
+/// **为什么不能把 controller 建在调用方方法里**：`showDialog` 的 future 在
+/// `Navigator.pop` 那一刻就完成（**早于退场动画结束**），紧接着键盘收起会改变
+/// `MediaQuery.viewInsets`、`autofocus` 的输入框还会因失焦重建一次 —— 此时
+/// `EditableText` 会再读一次 controller，若已在 await 之后 `dispose()`，debug 下
+/// 直接抛 "A TextEditingController was used after being disposed"（红屏，
+/// 2026-10-08 真机截图实测）。交给 State 持有、由框架在元素卸载后释放，时序天然
+/// 正确（项目里 `profile_card.dart` 的 `_EditDisplayNameDialogState` 等 30+ 处同款）。
+class _ValuationInputDialog extends StatefulWidget {
+  const _ValuationInputDialog({
+    required this.title,
+    required this.initialText,
+    required this.currencyCode,
+    required this.hint,
+    required this.primaryColor,
+  });
+
+  final String title;
+  final String initialText;
+  final String currencyCode;
+  final String hint;
+  final Color primaryColor;
+
+  @override
+  State<_ValuationInputDialog> createState() => _ValuationInputDialogState();
+}
+
+class _ValuationInputDialogState extends State<_ValuationInputDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initialText);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AppDialogShell(
+      wide: true,
+      title: Text(widget.title),
+      content: TextField(
+        controller: _controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        autofocus: true,
+        decoration: piggyOutlinedDecoration(
+          context,
+          prefix: '${getCurrencySymbol(widget.currencyCode)} ',
+          hint: widget.hint,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.commonCancel),
+        ),
+        TextButton(
+          onPressed: () {
+            final value = double.tryParse(_controller.text.trim());
+            if (value != null) {
+              Navigator.pop(context, value);
+            }
+          },
+          style: TextButton.styleFrom(foregroundColor: widget.primaryColor),
+          child: Text(l10n.commonOk),
+        ),
+      ],
+    );
   }
 }

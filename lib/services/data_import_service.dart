@@ -300,9 +300,55 @@ class ImportTransaction {
   });
 }
 
+/// 导入投资持仓数据（v52：快照恢复 / 合并）。
+///
+/// ⚠️ 这里**只有可同步字段**。行情缓存三列（`quote_price` /
+/// `quote_fetched_at` / `quote_source_id`）是本地专有列，**刻意不出现在本模型里**
+/// —— 它们不进快照、不进指纹、合并时不得覆盖本地缓存。
+class ImportHolding {
+  final String? syncId;
+  final String name;
+  final String? symbol;
+  /// 行情市场标识（SH / SZ / HK / US / FUND / CRYPTO），行情预留字段
+  final String? market;
+  final String? assetClass;
+  final String? currency;
+  final double? quantity;
+  final double? unitCost;
+  final double? unitPrice;
+  /// 是否允许行情自动刷新（可同步，默认 false）
+  final bool? autoQuote;
+  final String? note;
+  final int? sortOrder;
+
+  /// 所属投资账户引用：**syncId 优先锚点**（跨设备 rename 后仍锚定同一账户）。
+  final String? accountSyncId;
+  /// 账户 name 兜底锚点（旧快照无 syncId 时用）。
+  final String? accountName;
+
+  const ImportHolding({
+    required this.name,
+    this.syncId,
+    this.symbol,
+    this.market,
+    this.assetClass,
+    this.currency,
+    this.quantity,
+    this.unitCost,
+    this.unitPrice,
+    this.autoQuote,
+    this.note,
+    this.sortOrder,
+    this.accountSyncId,
+    this.accountName,
+  });
+}
+
 /// 统一的导入数据格式
 class ImportData {
   final List<ImportAccount> accounts;
+  /// v52：投资持仓（user-global，随每个账本快照携带全量）
+  final List<ImportHolding> holdings;
   final List<ImportCategory> categories;
   final List<ImportTag> tags;
   /// v46：账本自定义字段定义（快照恢复）
@@ -335,6 +381,7 @@ class ImportData {
 
   const ImportData({
     this.accounts = const [],
+    this.holdings = const [],
     this.categories = const [],
     this.tags = const [],
     this.customFields = const [],
@@ -424,6 +471,15 @@ class DataImportService {
       repo,
       data.accounts,
       defaultCurrency: data.currency ?? defaultCurrency,
+    );
+
+    // 2.1 v52 导入投资持仓。必须在「账户之后、任何用到净资产的逻辑之前」——
+    //     持仓按账户 syncId/name 锚定，账户没落库就无处可挂。持仓是 user-global
+    //     实体，快照已由所有账本携带全量，恢复任意一本即可收敛。
+    await importHoldings(
+      repo,
+      data.holdings,
+      accountNameToId: accountNameToId,
     );
 
     // 3. 导入分类
@@ -644,6 +700,149 @@ class DataImportService {
     }
 
     return accountNameToId;
+  }
+
+  /// 导入投资持仓（v52）。public — sync_diff_service 的合并路径复用。
+  ///
+  /// 匹配锚点：① syncId（跨设备 rename 后仍锚定同一持仓）；② `accountId|name`
+  /// 业务键兜底（旧快照无 syncId 时用）。
+  ///
+  /// 账户锚点：先按 `accountSyncId` 查本地账户，未命中再按 `accountName`；
+  /// **两者都未命中时跳过该条**——绝不创建悬空 `account_id` 的持仓（那会让
+  /// 一个不存在的账户凭空多出金额，且对端每次同步都要重新处理）。
+  ///
+  /// ⚠️ 行情缓存三列（quote_price / quote_fetched_at / quote_source_id）是
+  /// 本地专有列，本方法**一概不写**；导入/合并都不得覆盖本机已拉到的行情。
+  Future<void> importHoldings(
+    BaseRepository repo,
+    List<ImportHolding> holdings, {
+    required Map<String, int> accountNameToId,
+  }) async {
+    if (holdings.isEmpty) return;
+
+    logger.info('HoldingImport', '开始导入投资持仓: ${holdings.length} 条');
+    final sw = Stopwatch()..start();
+    int created = 0;
+    int updated = 0;
+    int skipped = 0;
+
+    try {
+      // 账户索引（syncId 优先锚点 + id→币种兜底）。账户数量级几十条，一次全量读足够。
+      final accountSyncIdToId = <String, int>{};
+      final accountCurrencyById = <int, String>{};
+      for (final a in await repo.getAllAccounts()) {
+        accountCurrencyById[a.id] = a.currency;
+        final sid = a.syncId;
+        if (sid != null && sid.isNotEmpty) accountSyncIdToId[sid] = a.id;
+      }
+
+      final existing = await repo.getAllHoldings();
+      final existingBySyncId = <String, Holding>{};
+      final existingByBizKey = <String, Holding>{};
+      for (final h in existing) {
+        final sid = h.syncId;
+        if (sid != null && sid.isNotEmpty) existingBySyncId[sid] = h;
+        existingByBizKey['${h.accountId}|${h.name}'] = h;
+      }
+
+      for (final h in holdings) {
+        // ① 定位所属账户
+        int? accountId;
+        final accountSyncId = h.accountSyncId;
+        if (accountSyncId != null && accountSyncId.isNotEmpty) {
+          accountId = accountSyncIdToId[accountSyncId];
+        }
+        final accountName = h.accountName;
+        if (accountId == null && accountName != null) {
+          accountId = accountNameToId[accountName];
+        }
+        if (accountId == null) {
+          skipped++;
+          logger.debug('HoldingImport',
+              '持仓「${h.name}」的账户在本机未命中'
+              '(syncId=$accountSyncId / name=$accountName) → 跳过');
+          continue;
+        }
+
+        // ② 匹配本地已有持仓
+        Holding? matched;
+        final syncId = h.syncId;
+        if (syncId != null && syncId.isNotEmpty) {
+          matched = existingBySyncId[syncId];
+        }
+        matched ??= existingByBizKey['$accountId|${h.name}'];
+
+        if (matched == null) {
+          await repo.createHolding(
+            accountId: accountId,
+            name: h.name,
+            // 账户币种兜底：持仓币种缺失时跟随账户，不落成硬编码 'CNY'。
+            currency: h.currency ?? accountCurrencyById[accountId] ?? 'CNY',
+            symbol: h.symbol,
+            market: h.market,
+            assetClass: h.assetClass ?? 'other',
+            quantity: h.quantity ?? 0.0,
+            unitCost: h.unitCost ?? 0.0,
+            unitPrice: h.unitPrice ?? 0.0,
+            autoQuote: h.autoQuote ?? false,
+            note: h.note,
+            sortOrder: h.sortOrder,
+            syncId: syncId,
+          );
+          created++;
+        } else {
+          // 与 importAccounts 同款：只在「云端值非 null 且确实与本地不同」时才写。
+          // **绝不把「缺键」当清空信号** —— 那是 v45/v46/v47 反复踩过的假冲突
+          // 来源；而且持仓是 user-global，每个账本快照都带同一份，无脑整表重写
+          // 会让 N 个账本各写一遍（importAccounts 注释实测这是合并耗时大头）。
+          bool differs<T>(T? incoming, T? local) =>
+              incoming != null && incoming != local;
+          final localSyncId = matched.syncId;
+          final needBackfillSyncId =
+              (localSyncId == null || localSyncId.isEmpty) &&
+                  syncId != null &&
+                  syncId.isNotEmpty;
+          final needRename = h.name.isNotEmpty && h.name != matched.name;
+          final hasUpdates = needRename ||
+              needBackfillSyncId ||
+              differs(h.symbol, matched.symbol) ||
+              differs(h.market, matched.market) ||
+              differs(h.assetClass, matched.assetClass) ||
+              differs(h.currency, matched.currency) ||
+              differs(h.quantity, matched.quantity) ||
+              differs(h.unitCost, matched.unitCost) ||
+              differs(h.unitPrice, matched.unitPrice) ||
+              differs(h.autoQuote, matched.autoQuote) ||
+              differs(h.note, matched.note) ||
+              differs(h.sortOrder, matched.sortOrder);
+          if (hasUpdates) {
+            await repo.updateHolding(
+              matched.id,
+              name: needRename ? h.name : null,
+              symbol: h.symbol,
+              market: h.market,
+              assetClass: h.assetClass,
+              currency: h.currency,
+              quantity: h.quantity,
+              unitCost: h.unitCost,
+              unitPrice: h.unitPrice,
+              autoQuote: h.autoQuote,
+              note: h.note,
+              sortOrder: h.sortOrder,
+              // 身份对齐：本地缺 syncId 时回填云端身份（同 importCategories）
+              syncId: needBackfillSyncId ? syncId : null,
+            );
+            updated++;
+          }
+        }
+      }
+
+      logger.info('HoldingImport',
+          '投资持仓导入完成: 新增=$created 更新=$updated 跳过=$skipped '
+          '耗时=${sw.elapsedMilliseconds}ms');
+    } catch (e, st) {
+      logger.error('HoldingImport', '投资持仓导入失败', e, st);
+    }
   }
 
   /// 导入分类(先一级后二级)。public — sync_diff_service 复用。

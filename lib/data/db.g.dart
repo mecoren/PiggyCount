@@ -1214,6 +1214,949 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   }
 }
 
+class $HoldingsTable extends Holdings with TableInfo<$HoldingsTable, Holding> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $HoldingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _ledgerIdMeta =
+      const VerificationMeta('ledgerId');
+  @override
+  late final GeneratedColumn<int> ledgerId = GeneratedColumn<int>(
+      'ledger_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _accountIdMeta =
+      const VerificationMeta('accountId');
+  @override
+  late final GeneratedColumn<int> accountId = GeneratedColumn<int>(
+      'account_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _symbolMeta = const VerificationMeta('symbol');
+  @override
+  late final GeneratedColumn<String> symbol = GeneratedColumn<String>(
+      'symbol', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _marketMeta = const VerificationMeta('market');
+  @override
+  late final GeneratedColumn<String> market = GeneratedColumn<String>(
+      'market', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _assetClassMeta =
+      const VerificationMeta('assetClass');
+  @override
+  late final GeneratedColumn<String> assetClass = GeneratedColumn<String>(
+      'asset_class', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('other'));
+  static const VerificationMeta _currencyMeta =
+      const VerificationMeta('currency');
+  @override
+  late final GeneratedColumn<String> currency = GeneratedColumn<String>(
+      'currency', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('CNY'));
+  static const VerificationMeta _quantityMeta =
+      const VerificationMeta('quantity');
+  @override
+  late final GeneratedColumn<double> quantity = GeneratedColumn<double>(
+      'quantity', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.0));
+  static const VerificationMeta _unitCostMeta =
+      const VerificationMeta('unitCost');
+  @override
+  late final GeneratedColumn<double> unitCost = GeneratedColumn<double>(
+      'unit_cost', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.0));
+  static const VerificationMeta _unitPriceMeta =
+      const VerificationMeta('unitPrice');
+  @override
+  late final GeneratedColumn<double> unitPrice = GeneratedColumn<double>(
+      'unit_price', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.0));
+  static const VerificationMeta _autoQuoteMeta =
+      const VerificationMeta('autoQuote');
+  @override
+  late final GeneratedColumn<bool> autoQuote = GeneratedColumn<bool>(
+      'auto_quote', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("auto_quote" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+      'note', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _sortOrderMeta =
+      const VerificationMeta('sortOrder');
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+      'sort_order', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _syncIdMeta = const VerificationMeta('syncId');
+  @override
+  late final GeneratedColumn<String> syncId = GeneratedColumn<String>(
+      'sync_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _quotePriceMeta =
+      const VerificationMeta('quotePrice');
+  @override
+  late final GeneratedColumn<double> quotePrice = GeneratedColumn<double>(
+      'quote_price', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _quoteFetchedAtMeta =
+      const VerificationMeta('quoteFetchedAt');
+  @override
+  late final GeneratedColumn<DateTime> quoteFetchedAt =
+      GeneratedColumn<DateTime>('quote_fetched_at', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _quoteSourceIdMeta =
+      const VerificationMeta('quoteSourceId');
+  @override
+  late final GeneratedColumn<String> quoteSourceId = GeneratedColumn<String>(
+      'quote_source_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        ledgerId,
+        accountId,
+        name,
+        symbol,
+        market,
+        assetClass,
+        currency,
+        quantity,
+        unitCost,
+        unitPrice,
+        autoQuote,
+        note,
+        sortOrder,
+        syncId,
+        createdAt,
+        updatedAt,
+        quotePrice,
+        quoteFetchedAt,
+        quoteSourceId
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'holdings';
+  @override
+  VerificationContext validateIntegrity(Insertable<Holding> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('ledger_id')) {
+      context.handle(_ledgerIdMeta,
+          ledgerId.isAcceptableOrUnknown(data['ledger_id']!, _ledgerIdMeta));
+    }
+    if (data.containsKey('account_id')) {
+      context.handle(_accountIdMeta,
+          accountId.isAcceptableOrUnknown(data['account_id']!, _accountIdMeta));
+    } else if (isInserting) {
+      context.missing(_accountIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('symbol')) {
+      context.handle(_symbolMeta,
+          symbol.isAcceptableOrUnknown(data['symbol']!, _symbolMeta));
+    }
+    if (data.containsKey('market')) {
+      context.handle(_marketMeta,
+          market.isAcceptableOrUnknown(data['market']!, _marketMeta));
+    }
+    if (data.containsKey('asset_class')) {
+      context.handle(
+          _assetClassMeta,
+          assetClass.isAcceptableOrUnknown(
+              data['asset_class']!, _assetClassMeta));
+    }
+    if (data.containsKey('currency')) {
+      context.handle(_currencyMeta,
+          currency.isAcceptableOrUnknown(data['currency']!, _currencyMeta));
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(_quantityMeta,
+          quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta));
+    }
+    if (data.containsKey('unit_cost')) {
+      context.handle(_unitCostMeta,
+          unitCost.isAcceptableOrUnknown(data['unit_cost']!, _unitCostMeta));
+    }
+    if (data.containsKey('unit_price')) {
+      context.handle(_unitPriceMeta,
+          unitPrice.isAcceptableOrUnknown(data['unit_price']!, _unitPriceMeta));
+    }
+    if (data.containsKey('auto_quote')) {
+      context.handle(_autoQuoteMeta,
+          autoQuote.isAcceptableOrUnknown(data['auto_quote']!, _autoQuoteMeta));
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+          _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(_sortOrderMeta,
+          sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta));
+    }
+    if (data.containsKey('sync_id')) {
+      context.handle(_syncIdMeta,
+          syncId.isAcceptableOrUnknown(data['sync_id']!, _syncIdMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    if (data.containsKey('quote_price')) {
+      context.handle(
+          _quotePriceMeta,
+          quotePrice.isAcceptableOrUnknown(
+              data['quote_price']!, _quotePriceMeta));
+    }
+    if (data.containsKey('quote_fetched_at')) {
+      context.handle(
+          _quoteFetchedAtMeta,
+          quoteFetchedAt.isAcceptableOrUnknown(
+              data['quote_fetched_at']!, _quoteFetchedAtMeta));
+    }
+    if (data.containsKey('quote_source_id')) {
+      context.handle(
+          _quoteSourceIdMeta,
+          quoteSourceId.isAcceptableOrUnknown(
+              data['quote_source_id']!, _quoteSourceIdMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Holding map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Holding(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      ledgerId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}ledger_id'])!,
+      accountId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}account_id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      symbol: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}symbol']),
+      market: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}market']),
+      assetClass: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}asset_class'])!,
+      currency: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}currency'])!,
+      quantity: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}quantity'])!,
+      unitCost: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}unit_cost'])!,
+      unitPrice: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}unit_price'])!,
+      autoQuote: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}auto_quote'])!,
+      note: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}note']),
+      sortOrder: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}sort_order'])!,
+      syncId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_id']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at']),
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
+      quotePrice: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}quote_price']),
+      quoteFetchedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}quote_fetched_at']),
+      quoteSourceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}quote_source_id']),
+    );
+  }
+
+  @override
+  $HoldingsTable createAlias(String alias) {
+    return $HoldingsTable(attachedDatabase, alias);
+  }
+}
+
+class Holding extends DataClass implements Insertable<Holding> {
+  final int id;
+
+  /// 与 accounts 同型的 legacy 列（恒 0）：保留只为两表结构对称与未来按账本
+  /// 切分的余地，当前**所有查询都按 [accountId] 走**，不要拿它当业务维度。
+  final int ledgerId;
+
+  /// 所属投资账户（`accounts.id`）。账户是 user-global，本表随之为 user-global。
+  final int accountId;
+
+  /// 持仓名称（如「贵州茅台」「纳斯达克100ETF」）
+  final String name;
+
+  /// 行情代码（如 `600519` / `AAPL` / `BTC`）。手填版可为空 = 只当备注用。
+  final String? symbol;
+
+  /// 行情市场标识：`SH` / `SZ` / `HK` / `US` / `FUND` / `CRYPTO`。
+  /// 手填版不做校验（用户自填），但**一旦接行情源它就是路由键** —— 行情源按
+  /// 它决定「这个代码归哪家行情商、用哪条代码规范化规则」。
+  final String? market;
+
+  /// 资产类别：`stock` / `fund` / `bond` / `crypto` / `other`（UI 分组与图标）。
+  final String assetClass;
+
+  /// 持仓计价币种。**可不同于账户币种**（如人民币账户持有美股）：
+  /// 进账户金额前先按汇率折算到账户币种，缺汇率的持仓整条剔除（见 holding_metrics）。
+  final String currency;
+
+  /// 持有份额
+  final double quantity;
+
+  /// 单位成本（手填，可同步）
+  final double unitCost;
+
+  /// 手填当前单位净值（**用户数据、可同步**）。行情可用时展示层走「生效价」
+  /// 覆盖它，但本列不清空 —— 行情失效 / 未配置时自动回退，保证可逆。
+  final double unitPrice;
+
+  /// 该笔是否参与行情自动刷新（默认 false = 始终用手填净值；可同步）。
+  final bool autoQuote;
+  final String? note;
+
+  /// 账户内持仓排序，数字越小越靠前
+  final int sortOrder;
+
+  /// 跨设备同步唯一标识 (UUID)
+  final String? syncId;
+  final DateTime? createdAt;
+
+  /// 本地审计时间。**不进快照 / 不进指纹**（与 accounts 同款），因此行情缓存
+  /// 写入被 updated_at 触碰触发器顺带刷新也无副作用。
+  final DateTime? updatedAt;
+
+  /// 行情源返回的最新单位价（NULL = 从未拉到过行情）
+  final double? quotePrice;
+
+  /// 行情拉到时刻（用于「生效价」的 TTL 判定与 UI 展示「更新于 …」）
+  final DateTime? quoteFetchedAt;
+
+  /// 提供该行情的行情源标识（如 `manual` / 将来的 `eastmoney`）；换源后旧缓存
+  /// 是否仍可用由此列与当前选中源比对决定。
+  final String? quoteSourceId;
+  const Holding(
+      {required this.id,
+      required this.ledgerId,
+      required this.accountId,
+      required this.name,
+      this.symbol,
+      this.market,
+      required this.assetClass,
+      required this.currency,
+      required this.quantity,
+      required this.unitCost,
+      required this.unitPrice,
+      required this.autoQuote,
+      this.note,
+      required this.sortOrder,
+      this.syncId,
+      this.createdAt,
+      this.updatedAt,
+      this.quotePrice,
+      this.quoteFetchedAt,
+      this.quoteSourceId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['ledger_id'] = Variable<int>(ledgerId);
+    map['account_id'] = Variable<int>(accountId);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || symbol != null) {
+      map['symbol'] = Variable<String>(symbol);
+    }
+    if (!nullToAbsent || market != null) {
+      map['market'] = Variable<String>(market);
+    }
+    map['asset_class'] = Variable<String>(assetClass);
+    map['currency'] = Variable<String>(currency);
+    map['quantity'] = Variable<double>(quantity);
+    map['unit_cost'] = Variable<double>(unitCost);
+    map['unit_price'] = Variable<double>(unitPrice);
+    map['auto_quote'] = Variable<bool>(autoQuote);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    map['sort_order'] = Variable<int>(sortOrder);
+    if (!nullToAbsent || syncId != null) {
+      map['sync_id'] = Variable<String>(syncId);
+    }
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<DateTime>(createdAt);
+    }
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    if (!nullToAbsent || quotePrice != null) {
+      map['quote_price'] = Variable<double>(quotePrice);
+    }
+    if (!nullToAbsent || quoteFetchedAt != null) {
+      map['quote_fetched_at'] = Variable<DateTime>(quoteFetchedAt);
+    }
+    if (!nullToAbsent || quoteSourceId != null) {
+      map['quote_source_id'] = Variable<String>(quoteSourceId);
+    }
+    return map;
+  }
+
+  HoldingsCompanion toCompanion(bool nullToAbsent) {
+    return HoldingsCompanion(
+      id: Value(id),
+      ledgerId: Value(ledgerId),
+      accountId: Value(accountId),
+      name: Value(name),
+      symbol:
+          symbol == null && nullToAbsent ? const Value.absent() : Value(symbol),
+      market:
+          market == null && nullToAbsent ? const Value.absent() : Value(market),
+      assetClass: Value(assetClass),
+      currency: Value(currency),
+      quantity: Value(quantity),
+      unitCost: Value(unitCost),
+      unitPrice: Value(unitPrice),
+      autoQuote: Value(autoQuote),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      sortOrder: Value(sortOrder),
+      syncId:
+          syncId == null && nullToAbsent ? const Value.absent() : Value(syncId),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+      quotePrice: quotePrice == null && nullToAbsent
+          ? const Value.absent()
+          : Value(quotePrice),
+      quoteFetchedAt: quoteFetchedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(quoteFetchedAt),
+      quoteSourceId: quoteSourceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(quoteSourceId),
+    );
+  }
+
+  factory Holding.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Holding(
+      id: serializer.fromJson<int>(json['id']),
+      ledgerId: serializer.fromJson<int>(json['ledgerId']),
+      accountId: serializer.fromJson<int>(json['accountId']),
+      name: serializer.fromJson<String>(json['name']),
+      symbol: serializer.fromJson<String?>(json['symbol']),
+      market: serializer.fromJson<String?>(json['market']),
+      assetClass: serializer.fromJson<String>(json['assetClass']),
+      currency: serializer.fromJson<String>(json['currency']),
+      quantity: serializer.fromJson<double>(json['quantity']),
+      unitCost: serializer.fromJson<double>(json['unitCost']),
+      unitPrice: serializer.fromJson<double>(json['unitPrice']),
+      autoQuote: serializer.fromJson<bool>(json['autoQuote']),
+      note: serializer.fromJson<String?>(json['note']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      syncId: serializer.fromJson<String?>(json['syncId']),
+      createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+      quotePrice: serializer.fromJson<double?>(json['quotePrice']),
+      quoteFetchedAt: serializer.fromJson<DateTime?>(json['quoteFetchedAt']),
+      quoteSourceId: serializer.fromJson<String?>(json['quoteSourceId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'ledgerId': serializer.toJson<int>(ledgerId),
+      'accountId': serializer.toJson<int>(accountId),
+      'name': serializer.toJson<String>(name),
+      'symbol': serializer.toJson<String?>(symbol),
+      'market': serializer.toJson<String?>(market),
+      'assetClass': serializer.toJson<String>(assetClass),
+      'currency': serializer.toJson<String>(currency),
+      'quantity': serializer.toJson<double>(quantity),
+      'unitCost': serializer.toJson<double>(unitCost),
+      'unitPrice': serializer.toJson<double>(unitPrice),
+      'autoQuote': serializer.toJson<bool>(autoQuote),
+      'note': serializer.toJson<String?>(note),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'syncId': serializer.toJson<String?>(syncId),
+      'createdAt': serializer.toJson<DateTime?>(createdAt),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+      'quotePrice': serializer.toJson<double?>(quotePrice),
+      'quoteFetchedAt': serializer.toJson<DateTime?>(quoteFetchedAt),
+      'quoteSourceId': serializer.toJson<String?>(quoteSourceId),
+    };
+  }
+
+  Holding copyWith(
+          {int? id,
+          int? ledgerId,
+          int? accountId,
+          String? name,
+          Value<String?> symbol = const Value.absent(),
+          Value<String?> market = const Value.absent(),
+          String? assetClass,
+          String? currency,
+          double? quantity,
+          double? unitCost,
+          double? unitPrice,
+          bool? autoQuote,
+          Value<String?> note = const Value.absent(),
+          int? sortOrder,
+          Value<String?> syncId = const Value.absent(),
+          Value<DateTime?> createdAt = const Value.absent(),
+          Value<DateTime?> updatedAt = const Value.absent(),
+          Value<double?> quotePrice = const Value.absent(),
+          Value<DateTime?> quoteFetchedAt = const Value.absent(),
+          Value<String?> quoteSourceId = const Value.absent()}) =>
+      Holding(
+        id: id ?? this.id,
+        ledgerId: ledgerId ?? this.ledgerId,
+        accountId: accountId ?? this.accountId,
+        name: name ?? this.name,
+        symbol: symbol.present ? symbol.value : this.symbol,
+        market: market.present ? market.value : this.market,
+        assetClass: assetClass ?? this.assetClass,
+        currency: currency ?? this.currency,
+        quantity: quantity ?? this.quantity,
+        unitCost: unitCost ?? this.unitCost,
+        unitPrice: unitPrice ?? this.unitPrice,
+        autoQuote: autoQuote ?? this.autoQuote,
+        note: note.present ? note.value : this.note,
+        sortOrder: sortOrder ?? this.sortOrder,
+        syncId: syncId.present ? syncId.value : this.syncId,
+        createdAt: createdAt.present ? createdAt.value : this.createdAt,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+        quotePrice: quotePrice.present ? quotePrice.value : this.quotePrice,
+        quoteFetchedAt:
+            quoteFetchedAt.present ? quoteFetchedAt.value : this.quoteFetchedAt,
+        quoteSourceId:
+            quoteSourceId.present ? quoteSourceId.value : this.quoteSourceId,
+      );
+  Holding copyWithCompanion(HoldingsCompanion data) {
+    return Holding(
+      id: data.id.present ? data.id.value : this.id,
+      ledgerId: data.ledgerId.present ? data.ledgerId.value : this.ledgerId,
+      accountId: data.accountId.present ? data.accountId.value : this.accountId,
+      name: data.name.present ? data.name.value : this.name,
+      symbol: data.symbol.present ? data.symbol.value : this.symbol,
+      market: data.market.present ? data.market.value : this.market,
+      assetClass:
+          data.assetClass.present ? data.assetClass.value : this.assetClass,
+      currency: data.currency.present ? data.currency.value : this.currency,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      unitCost: data.unitCost.present ? data.unitCost.value : this.unitCost,
+      unitPrice: data.unitPrice.present ? data.unitPrice.value : this.unitPrice,
+      autoQuote: data.autoQuote.present ? data.autoQuote.value : this.autoQuote,
+      note: data.note.present ? data.note.value : this.note,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      syncId: data.syncId.present ? data.syncId.value : this.syncId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      quotePrice:
+          data.quotePrice.present ? data.quotePrice.value : this.quotePrice,
+      quoteFetchedAt: data.quoteFetchedAt.present
+          ? data.quoteFetchedAt.value
+          : this.quoteFetchedAt,
+      quoteSourceId: data.quoteSourceId.present
+          ? data.quoteSourceId.value
+          : this.quoteSourceId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Holding(')
+          ..write('id: $id, ')
+          ..write('ledgerId: $ledgerId, ')
+          ..write('accountId: $accountId, ')
+          ..write('name: $name, ')
+          ..write('symbol: $symbol, ')
+          ..write('market: $market, ')
+          ..write('assetClass: $assetClass, ')
+          ..write('currency: $currency, ')
+          ..write('quantity: $quantity, ')
+          ..write('unitCost: $unitCost, ')
+          ..write('unitPrice: $unitPrice, ')
+          ..write('autoQuote: $autoQuote, ')
+          ..write('note: $note, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('syncId: $syncId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('quotePrice: $quotePrice, ')
+          ..write('quoteFetchedAt: $quoteFetchedAt, ')
+          ..write('quoteSourceId: $quoteSourceId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      ledgerId,
+      accountId,
+      name,
+      symbol,
+      market,
+      assetClass,
+      currency,
+      quantity,
+      unitCost,
+      unitPrice,
+      autoQuote,
+      note,
+      sortOrder,
+      syncId,
+      createdAt,
+      updatedAt,
+      quotePrice,
+      quoteFetchedAt,
+      quoteSourceId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Holding &&
+          other.id == this.id &&
+          other.ledgerId == this.ledgerId &&
+          other.accountId == this.accountId &&
+          other.name == this.name &&
+          other.symbol == this.symbol &&
+          other.market == this.market &&
+          other.assetClass == this.assetClass &&
+          other.currency == this.currency &&
+          other.quantity == this.quantity &&
+          other.unitCost == this.unitCost &&
+          other.unitPrice == this.unitPrice &&
+          other.autoQuote == this.autoQuote &&
+          other.note == this.note &&
+          other.sortOrder == this.sortOrder &&
+          other.syncId == this.syncId &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.quotePrice == this.quotePrice &&
+          other.quoteFetchedAt == this.quoteFetchedAt &&
+          other.quoteSourceId == this.quoteSourceId);
+}
+
+class HoldingsCompanion extends UpdateCompanion<Holding> {
+  final Value<int> id;
+  final Value<int> ledgerId;
+  final Value<int> accountId;
+  final Value<String> name;
+  final Value<String?> symbol;
+  final Value<String?> market;
+  final Value<String> assetClass;
+  final Value<String> currency;
+  final Value<double> quantity;
+  final Value<double> unitCost;
+  final Value<double> unitPrice;
+  final Value<bool> autoQuote;
+  final Value<String?> note;
+  final Value<int> sortOrder;
+  final Value<String?> syncId;
+  final Value<DateTime?> createdAt;
+  final Value<DateTime?> updatedAt;
+  final Value<double?> quotePrice;
+  final Value<DateTime?> quoteFetchedAt;
+  final Value<String?> quoteSourceId;
+  const HoldingsCompanion({
+    this.id = const Value.absent(),
+    this.ledgerId = const Value.absent(),
+    this.accountId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.symbol = const Value.absent(),
+    this.market = const Value.absent(),
+    this.assetClass = const Value.absent(),
+    this.currency = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.unitCost = const Value.absent(),
+    this.unitPrice = const Value.absent(),
+    this.autoQuote = const Value.absent(),
+    this.note = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.syncId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.quotePrice = const Value.absent(),
+    this.quoteFetchedAt = const Value.absent(),
+    this.quoteSourceId = const Value.absent(),
+  });
+  HoldingsCompanion.insert({
+    this.id = const Value.absent(),
+    this.ledgerId = const Value.absent(),
+    required int accountId,
+    required String name,
+    this.symbol = const Value.absent(),
+    this.market = const Value.absent(),
+    this.assetClass = const Value.absent(),
+    this.currency = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.unitCost = const Value.absent(),
+    this.unitPrice = const Value.absent(),
+    this.autoQuote = const Value.absent(),
+    this.note = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.syncId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.quotePrice = const Value.absent(),
+    this.quoteFetchedAt = const Value.absent(),
+    this.quoteSourceId = const Value.absent(),
+  })  : accountId = Value(accountId),
+        name = Value(name);
+  static Insertable<Holding> custom({
+    Expression<int>? id,
+    Expression<int>? ledgerId,
+    Expression<int>? accountId,
+    Expression<String>? name,
+    Expression<String>? symbol,
+    Expression<String>? market,
+    Expression<String>? assetClass,
+    Expression<String>? currency,
+    Expression<double>? quantity,
+    Expression<double>? unitCost,
+    Expression<double>? unitPrice,
+    Expression<bool>? autoQuote,
+    Expression<String>? note,
+    Expression<int>? sortOrder,
+    Expression<String>? syncId,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<double>? quotePrice,
+    Expression<DateTime>? quoteFetchedAt,
+    Expression<String>? quoteSourceId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (ledgerId != null) 'ledger_id': ledgerId,
+      if (accountId != null) 'account_id': accountId,
+      if (name != null) 'name': name,
+      if (symbol != null) 'symbol': symbol,
+      if (market != null) 'market': market,
+      if (assetClass != null) 'asset_class': assetClass,
+      if (currency != null) 'currency': currency,
+      if (quantity != null) 'quantity': quantity,
+      if (unitCost != null) 'unit_cost': unitCost,
+      if (unitPrice != null) 'unit_price': unitPrice,
+      if (autoQuote != null) 'auto_quote': autoQuote,
+      if (note != null) 'note': note,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (syncId != null) 'sync_id': syncId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (quotePrice != null) 'quote_price': quotePrice,
+      if (quoteFetchedAt != null) 'quote_fetched_at': quoteFetchedAt,
+      if (quoteSourceId != null) 'quote_source_id': quoteSourceId,
+    });
+  }
+
+  HoldingsCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? ledgerId,
+      Value<int>? accountId,
+      Value<String>? name,
+      Value<String?>? symbol,
+      Value<String?>? market,
+      Value<String>? assetClass,
+      Value<String>? currency,
+      Value<double>? quantity,
+      Value<double>? unitCost,
+      Value<double>? unitPrice,
+      Value<bool>? autoQuote,
+      Value<String?>? note,
+      Value<int>? sortOrder,
+      Value<String?>? syncId,
+      Value<DateTime?>? createdAt,
+      Value<DateTime?>? updatedAt,
+      Value<double?>? quotePrice,
+      Value<DateTime?>? quoteFetchedAt,
+      Value<String?>? quoteSourceId}) {
+    return HoldingsCompanion(
+      id: id ?? this.id,
+      ledgerId: ledgerId ?? this.ledgerId,
+      accountId: accountId ?? this.accountId,
+      name: name ?? this.name,
+      symbol: symbol ?? this.symbol,
+      market: market ?? this.market,
+      assetClass: assetClass ?? this.assetClass,
+      currency: currency ?? this.currency,
+      quantity: quantity ?? this.quantity,
+      unitCost: unitCost ?? this.unitCost,
+      unitPrice: unitPrice ?? this.unitPrice,
+      autoQuote: autoQuote ?? this.autoQuote,
+      note: note ?? this.note,
+      sortOrder: sortOrder ?? this.sortOrder,
+      syncId: syncId ?? this.syncId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      quotePrice: quotePrice ?? this.quotePrice,
+      quoteFetchedAt: quoteFetchedAt ?? this.quoteFetchedAt,
+      quoteSourceId: quoteSourceId ?? this.quoteSourceId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (ledgerId.present) {
+      map['ledger_id'] = Variable<int>(ledgerId.value);
+    }
+    if (accountId.present) {
+      map['account_id'] = Variable<int>(accountId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (symbol.present) {
+      map['symbol'] = Variable<String>(symbol.value);
+    }
+    if (market.present) {
+      map['market'] = Variable<String>(market.value);
+    }
+    if (assetClass.present) {
+      map['asset_class'] = Variable<String>(assetClass.value);
+    }
+    if (currency.present) {
+      map['currency'] = Variable<String>(currency.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<double>(quantity.value);
+    }
+    if (unitCost.present) {
+      map['unit_cost'] = Variable<double>(unitCost.value);
+    }
+    if (unitPrice.present) {
+      map['unit_price'] = Variable<double>(unitPrice.value);
+    }
+    if (autoQuote.present) {
+      map['auto_quote'] = Variable<bool>(autoQuote.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (syncId.present) {
+      map['sync_id'] = Variable<String>(syncId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (quotePrice.present) {
+      map['quote_price'] = Variable<double>(quotePrice.value);
+    }
+    if (quoteFetchedAt.present) {
+      map['quote_fetched_at'] = Variable<DateTime>(quoteFetchedAt.value);
+    }
+    if (quoteSourceId.present) {
+      map['quote_source_id'] = Variable<String>(quoteSourceId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HoldingsCompanion(')
+          ..write('id: $id, ')
+          ..write('ledgerId: $ledgerId, ')
+          ..write('accountId: $accountId, ')
+          ..write('name: $name, ')
+          ..write('symbol: $symbol, ')
+          ..write('market: $market, ')
+          ..write('assetClass: $assetClass, ')
+          ..write('currency: $currency, ')
+          ..write('quantity: $quantity, ')
+          ..write('unitCost: $unitCost, ')
+          ..write('unitPrice: $unitPrice, ')
+          ..write('autoQuote: $autoQuote, ')
+          ..write('note: $note, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('syncId: $syncId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('quotePrice: $quotePrice, ')
+          ..write('quoteFetchedAt: $quoteFetchedAt, ')
+          ..write('quoteSourceId: $quoteSourceId')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CategoriesTable extends Categories
     with TableInfo<$CategoriesTable, Category> {
   @override
@@ -10506,6 +11449,7 @@ abstract class _$PiggyDatabase extends GeneratedDatabase {
   $PiggyDatabaseManager get managers => $PiggyDatabaseManager(this);
   late final $LedgersTable ledgers = $LedgersTable(this);
   late final $AccountsTable accounts = $AccountsTable(this);
+  late final $HoldingsTable holdings = $HoldingsTable(this);
   late final $CategoriesTable categories = $CategoriesTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $RecurringTransactionsTable recurringTransactions =
@@ -10542,6 +11486,7 @@ abstract class _$PiggyDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
         ledgers,
         accounts,
+        holdings,
         categories,
         transactions,
         recurringTransactions,
@@ -11120,6 +12065,397 @@ typedef $$AccountsTableProcessedTableManager = ProcessedTableManager<
     $$AccountsTableUpdateCompanionBuilder,
     (Account, BaseReferences<_$PiggyDatabase, $AccountsTable, Account>),
     Account,
+    PrefetchHooks Function()>;
+typedef $$HoldingsTableCreateCompanionBuilder = HoldingsCompanion Function({
+  Value<int> id,
+  Value<int> ledgerId,
+  required int accountId,
+  required String name,
+  Value<String?> symbol,
+  Value<String?> market,
+  Value<String> assetClass,
+  Value<String> currency,
+  Value<double> quantity,
+  Value<double> unitCost,
+  Value<double> unitPrice,
+  Value<bool> autoQuote,
+  Value<String?> note,
+  Value<int> sortOrder,
+  Value<String?> syncId,
+  Value<DateTime?> createdAt,
+  Value<DateTime?> updatedAt,
+  Value<double?> quotePrice,
+  Value<DateTime?> quoteFetchedAt,
+  Value<String?> quoteSourceId,
+});
+typedef $$HoldingsTableUpdateCompanionBuilder = HoldingsCompanion Function({
+  Value<int> id,
+  Value<int> ledgerId,
+  Value<int> accountId,
+  Value<String> name,
+  Value<String?> symbol,
+  Value<String?> market,
+  Value<String> assetClass,
+  Value<String> currency,
+  Value<double> quantity,
+  Value<double> unitCost,
+  Value<double> unitPrice,
+  Value<bool> autoQuote,
+  Value<String?> note,
+  Value<int> sortOrder,
+  Value<String?> syncId,
+  Value<DateTime?> createdAt,
+  Value<DateTime?> updatedAt,
+  Value<double?> quotePrice,
+  Value<DateTime?> quoteFetchedAt,
+  Value<String?> quoteSourceId,
+});
+
+class $$HoldingsTableFilterComposer
+    extends Composer<_$PiggyDatabase, $HoldingsTable> {
+  $$HoldingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get ledgerId => $composableBuilder(
+      column: $table.ledgerId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get accountId => $composableBuilder(
+      column: $table.accountId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get symbol => $composableBuilder(
+      column: $table.symbol, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get market => $composableBuilder(
+      column: $table.market, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get assetClass => $composableBuilder(
+      column: $table.assetClass, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get currency => $composableBuilder(
+      column: $table.currency, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get quantity => $composableBuilder(
+      column: $table.quantity, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get unitCost => $composableBuilder(
+      column: $table.unitCost, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get unitPrice => $composableBuilder(
+      column: $table.unitPrice, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get autoQuote => $composableBuilder(
+      column: $table.autoQuote, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get syncId => $composableBuilder(
+      column: $table.syncId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get quotePrice => $composableBuilder(
+      column: $table.quotePrice, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get quoteFetchedAt => $composableBuilder(
+      column: $table.quoteFetchedAt,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get quoteSourceId => $composableBuilder(
+      column: $table.quoteSourceId, builder: (column) => ColumnFilters(column));
+}
+
+class $$HoldingsTableOrderingComposer
+    extends Composer<_$PiggyDatabase, $HoldingsTable> {
+  $$HoldingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get ledgerId => $composableBuilder(
+      column: $table.ledgerId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get accountId => $composableBuilder(
+      column: $table.accountId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get symbol => $composableBuilder(
+      column: $table.symbol, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get market => $composableBuilder(
+      column: $table.market, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get assetClass => $composableBuilder(
+      column: $table.assetClass, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get currency => $composableBuilder(
+      column: $table.currency, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get quantity => $composableBuilder(
+      column: $table.quantity, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get unitCost => $composableBuilder(
+      column: $table.unitCost, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get unitPrice => $composableBuilder(
+      column: $table.unitPrice, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get autoQuote => $composableBuilder(
+      column: $table.autoQuote, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get syncId => $composableBuilder(
+      column: $table.syncId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get quotePrice => $composableBuilder(
+      column: $table.quotePrice, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get quoteFetchedAt => $composableBuilder(
+      column: $table.quoteFetchedAt,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get quoteSourceId => $composableBuilder(
+      column: $table.quoteSourceId,
+      builder: (column) => ColumnOrderings(column));
+}
+
+class $$HoldingsTableAnnotationComposer
+    extends Composer<_$PiggyDatabase, $HoldingsTable> {
+  $$HoldingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get ledgerId =>
+      $composableBuilder(column: $table.ledgerId, builder: (column) => column);
+
+  GeneratedColumn<int> get accountId =>
+      $composableBuilder(column: $table.accountId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get symbol =>
+      $composableBuilder(column: $table.symbol, builder: (column) => column);
+
+  GeneratedColumn<String> get market =>
+      $composableBuilder(column: $table.market, builder: (column) => column);
+
+  GeneratedColumn<String> get assetClass => $composableBuilder(
+      column: $table.assetClass, builder: (column) => column);
+
+  GeneratedColumn<String> get currency =>
+      $composableBuilder(column: $table.currency, builder: (column) => column);
+
+  GeneratedColumn<double> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<double> get unitCost =>
+      $composableBuilder(column: $table.unitCost, builder: (column) => column);
+
+  GeneratedColumn<double> get unitPrice =>
+      $composableBuilder(column: $table.unitPrice, builder: (column) => column);
+
+  GeneratedColumn<bool> get autoQuote =>
+      $composableBuilder(column: $table.autoQuote, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<String> get syncId =>
+      $composableBuilder(column: $table.syncId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<double> get quotePrice => $composableBuilder(
+      column: $table.quotePrice, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get quoteFetchedAt => $composableBuilder(
+      column: $table.quoteFetchedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get quoteSourceId => $composableBuilder(
+      column: $table.quoteSourceId, builder: (column) => column);
+}
+
+class $$HoldingsTableTableManager extends RootTableManager<
+    _$PiggyDatabase,
+    $HoldingsTable,
+    Holding,
+    $$HoldingsTableFilterComposer,
+    $$HoldingsTableOrderingComposer,
+    $$HoldingsTableAnnotationComposer,
+    $$HoldingsTableCreateCompanionBuilder,
+    $$HoldingsTableUpdateCompanionBuilder,
+    (Holding, BaseReferences<_$PiggyDatabase, $HoldingsTable, Holding>),
+    Holding,
+    PrefetchHooks Function()> {
+  $$HoldingsTableTableManager(_$PiggyDatabase db, $HoldingsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$HoldingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$HoldingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$HoldingsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> ledgerId = const Value.absent(),
+            Value<int> accountId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String?> symbol = const Value.absent(),
+            Value<String?> market = const Value.absent(),
+            Value<String> assetClass = const Value.absent(),
+            Value<String> currency = const Value.absent(),
+            Value<double> quantity = const Value.absent(),
+            Value<double> unitCost = const Value.absent(),
+            Value<double> unitPrice = const Value.absent(),
+            Value<bool> autoQuote = const Value.absent(),
+            Value<String?> note = const Value.absent(),
+            Value<int> sortOrder = const Value.absent(),
+            Value<String?> syncId = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<double?> quotePrice = const Value.absent(),
+            Value<DateTime?> quoteFetchedAt = const Value.absent(),
+            Value<String?> quoteSourceId = const Value.absent(),
+          }) =>
+              HoldingsCompanion(
+            id: id,
+            ledgerId: ledgerId,
+            accountId: accountId,
+            name: name,
+            symbol: symbol,
+            market: market,
+            assetClass: assetClass,
+            currency: currency,
+            quantity: quantity,
+            unitCost: unitCost,
+            unitPrice: unitPrice,
+            autoQuote: autoQuote,
+            note: note,
+            sortOrder: sortOrder,
+            syncId: syncId,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            quotePrice: quotePrice,
+            quoteFetchedAt: quoteFetchedAt,
+            quoteSourceId: quoteSourceId,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> ledgerId = const Value.absent(),
+            required int accountId,
+            required String name,
+            Value<String?> symbol = const Value.absent(),
+            Value<String?> market = const Value.absent(),
+            Value<String> assetClass = const Value.absent(),
+            Value<String> currency = const Value.absent(),
+            Value<double> quantity = const Value.absent(),
+            Value<double> unitCost = const Value.absent(),
+            Value<double> unitPrice = const Value.absent(),
+            Value<bool> autoQuote = const Value.absent(),
+            Value<String?> note = const Value.absent(),
+            Value<int> sortOrder = const Value.absent(),
+            Value<String?> syncId = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+            Value<double?> quotePrice = const Value.absent(),
+            Value<DateTime?> quoteFetchedAt = const Value.absent(),
+            Value<String?> quoteSourceId = const Value.absent(),
+          }) =>
+              HoldingsCompanion.insert(
+            id: id,
+            ledgerId: ledgerId,
+            accountId: accountId,
+            name: name,
+            symbol: symbol,
+            market: market,
+            assetClass: assetClass,
+            currency: currency,
+            quantity: quantity,
+            unitCost: unitCost,
+            unitPrice: unitPrice,
+            autoQuote: autoQuote,
+            note: note,
+            sortOrder: sortOrder,
+            syncId: syncId,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            quotePrice: quotePrice,
+            quoteFetchedAt: quoteFetchedAt,
+            quoteSourceId: quoteSourceId,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable<$HoldingsTable, Holding>(table),
+                    BaseReferences<_$PiggyDatabase, $HoldingsTable, Holding>(
+                        db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$HoldingsTableProcessedTableManager = ProcessedTableManager<
+    _$PiggyDatabase,
+    $HoldingsTable,
+    Holding,
+    $$HoldingsTableFilterComposer,
+    $$HoldingsTableOrderingComposer,
+    $$HoldingsTableAnnotationComposer,
+    $$HoldingsTableCreateCompanionBuilder,
+    $$HoldingsTableUpdateCompanionBuilder,
+    (Holding, BaseReferences<_$PiggyDatabase, $HoldingsTable, Holding>),
+    Holding,
     PrefetchHooks Function()>;
 typedef $$CategoriesTableCreateCompanionBuilder = CategoriesCompanion Function({
   Value<int> id,
@@ -15755,6 +17091,8 @@ class $PiggyDatabaseManager {
       $$LedgersTableTableManager(_db, _db.ledgers);
   $$AccountsTableTableManager get accounts =>
       $$AccountsTableTableManager(_db, _db.accounts);
+  $$HoldingsTableTableManager get holdings =>
+      $$HoldingsTableTableManager(_db, _db.holdings);
   $$CategoriesTableTableManager get categories =>
       $$CategoriesTableTableManager(_db, _db.categories);
   $$TransactionsTableTableManager get transactions =>

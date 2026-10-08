@@ -124,6 +124,11 @@ dependencies:
     path: packages/flutter_cloud_sync_icloud
   flutter_cloud_sync_s3:
     path: packages/flutter_cloud_sync_s3
+  # v52：行情（投资持仓）核心接口包。当前只有 ManualQuoteProvider（手填净值），
+  # 后期接 A股/美股/加密 行情源时新增 flutter_market_data_<vendor> 子包即可，
+  # 无需改 schema / 快照格式 / 同步契约（持仓表已预留行情字段与本地缓存列）。
+  flutter_market_data:
+    path: packages/flutter_market_data
   quick_actions: ^1.1.0
   table_calendar: ^3.1.0
   local_auth: ^3.0.2

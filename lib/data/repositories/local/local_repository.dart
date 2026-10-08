@@ -7,6 +7,8 @@ import '../../../cloud/sync/change_tracker.dart';
 import '../../../services/currency/rate_math.dart';
 import '../../../services/system/logger_service.dart';
 import '../../../models/note_history.dart';
+import '../../../utils/holding_metrics.dart';
+import '../account_repository.dart' show HoldingsRateResolver;
 import '../base_repository.dart';
 import '../budget_repository.dart';
 import '../transaction_repository.dart'
@@ -27,6 +29,7 @@ import 'local_custom_field_repository.dart';
 import 'local_budget_repository.dart';
 import 'local_attachment_repository.dart';
 import 'local_exchange_rate_repository.dart';
+import 'local_holding_repository.dart';
 import 'local_holiday_repository.dart';
 
 /// LocalRepository 本地数据库实现
@@ -58,6 +61,8 @@ class LocalRepository extends BaseRepository {
   late final LocalAttachmentRepository _attachmentRepo;
   late final LocalExchangeRateRepository _exchangeRateRepo;
   late final LocalHolidayRepository _holidayRepo;
+  // v52 投资持仓（user-global，与 _accountRepo 同款：裸实现 + 本类包事务记变更）
+  late final LocalHoldingRepository _holdingRepo;
 
   LocalRepository(this.db, {this.changeTracker}) {
     _ledgerRepo = LocalLedgerRepository(db);
@@ -78,6 +83,7 @@ class LocalRepository extends BaseRepository {
         LocalExchangeRateRepository(db, trackerGetter: () => changeTracker);
     // v49 节假日本地缓存：可重建缓存表，不挂 ChangeTracker（见接口注释）。
     _holidayRepo = LocalHolidayRepository(db);
+    _holdingRepo = LocalHoldingRepository(db);
   }
 
   // ============================================
@@ -2450,6 +2456,24 @@ class LocalRepository extends BaseRepository {
             ..where((r) => r.toAccountId.equals(id)))
           .write(const RecurringTransactionsCompanion(
               toAccountId: d.Value<int?>(null)));
+      // v52：级联删除该账户的持仓。持仓通过 account_id 关联账户，账户删掉后
+      // 这些行会成为**活的悬空引用** —— 既不出现在任何投资账户页，又仍被快照
+      // 全量导出、仍被 hasHoldings 判成「有持仓」，把一个已删账户的金额算回
+      // 净资产。逐条登记 delete 变更，让对端按实体删除语义收敛。
+      final orphanHoldings = await _holdingRepo.getHoldingsByAccount(id);
+      await _holdingRepo.deleteHoldingsByAccount(id);
+      if (changeTracker != null) {
+        for (final holding in orphanHoldings) {
+          final syncId = holding.syncId;
+          if (syncId == null || syncId.isEmpty) continue;
+          await changeTracker!.recordUserGlobalChange(
+            entityType: 'holding',
+            entityId: holding.id,
+            entitySyncId: syncId,
+            action: 'delete',
+          );
+        }
+      }
       await _accountRepo.deleteAccount(id);
     });
   }
@@ -2677,6 +2701,186 @@ class LocalRepository extends BaseRepository {
       await _recordUserGlobalUpdateChange('account', accountId);
     });
   }
+
+  @override
+  Future<HoldingsValueSummary> getHoldingsSummaryForAccount(int accountId) =>
+      _accountRepo.getHoldingsSummaryForAccount(accountId);
+
+  /// v52：把「有效汇率解析器」桥接进账户子仓，持仓多币种折算需要它。
+  ///
+  /// Repository 层不依赖 Riverpod，所以由装配层（`lib/providers/holding_providers.dart`
+  /// 的 `holdingsRateBridgeProvider`）注入闭包。**不注入也安全**：解析器为 null 时
+  /// 只有「持仓币种 == 账户币种」的持仓计入，其余整条剔除（缺汇率不裸加）。
+  void setHoldingsRateResolver(HoldingsRateResolver? resolver) {
+    _accountRepo.holdingsRateResolver = resolver;
+  }
+
+  // ============================================
+  // HoldingRepository 接口实现（v52）- 委托给 LocalHoldingRepository
+  //
+  // 两条例外于普通 CRUD 的纪律：
+  // 1. 写路径一律「写表 + 记 change 同事务」（TBL-M9），且持仓是 **user-global**
+  //    实体 → 走 recordUserGlobalChange（自动挂 ledgerId=0），由任一账本的同步
+  //    链带出去；
+  // 2. **行情缓存写路径是唯一例外**：quote_price / quote_fetched_at /
+  //    quote_source_id 是本地专有列，写它**不记 local_changes、不触发上传**。
+  //    行情刷新必须对同步完全不可见（否则每次刷新都制造推送噪声，并让跨设备
+  //    指纹不一致）。
+  // ============================================
+
+  @override
+  Stream<List<Holding>> watchHoldingsByAccount(int accountId) =>
+      _holdingRepo.watchHoldingsByAccount(accountId);
+
+  @override
+  Future<List<Holding>> getHoldingsByAccount(int accountId) =>
+      _holdingRepo.getHoldingsByAccount(accountId);
+
+  @override
+  Future<List<Holding>> getAllHoldings() => _holdingRepo.getAllHoldings();
+
+  @override
+  Future<Holding?> getHolding(int id) => _holdingRepo.getHolding(id);
+
+  @override
+  Future<bool> hasHoldings(int accountId) => _holdingRepo.hasHoldings(accountId);
+
+  @override
+  Future<Set<int>> getAccountIdsWithHoldings() =>
+      _holdingRepo.getAccountIdsWithHoldings();
+
+  @override
+  Future<int> createHolding({
+    required int accountId,
+    required String name,
+    required String currency,
+    String? symbol,
+    String? market,
+    String assetClass = 'other',
+    double quantity = 0.0,
+    double unitCost = 0.0,
+    double unitPrice = 0.0,
+    bool autoQuote = false,
+    String? note,
+    int? sortOrder,
+    String? syncId,
+  }) {
+    return db.transaction(() async {
+      final id = await _holdingRepo.createHolding(
+        accountId: accountId,
+        name: name,
+        currency: currency,
+        symbol: symbol,
+        market: market,
+        assetClass: assetClass,
+        quantity: quantity,
+        unitCost: unitCost,
+        unitPrice: unitPrice,
+        autoQuote: autoQuote,
+        note: note,
+        sortOrder: sortOrder,
+        syncId: syncId,
+      );
+      await _recordUserGlobalUpdateChange('holding', id, action: 'create');
+      return id;
+    });
+  }
+
+  @override
+  Future<void> updateHolding(
+    int id, {
+    String? name,
+    String? symbol,
+    String? market,
+    String? assetClass,
+    String? currency,
+    double? quantity,
+    double? unitCost,
+    double? unitPrice,
+    bool? autoQuote,
+    String? note,
+    int? sortOrder,
+    bool clearOptionalFields = false,
+    String? syncId,
+  }) {
+    return db.transaction(() async {
+      await _holdingRepo.updateHolding(
+        id,
+        name: name,
+        symbol: symbol,
+        market: market,
+        assetClass: assetClass,
+        currency: currency,
+        quantity: quantity,
+        unitCost: unitCost,
+        unitPrice: unitPrice,
+        autoQuote: autoQuote,
+        note: note,
+        sortOrder: sortOrder,
+        clearOptionalFields: clearOptionalFields,
+        syncId: syncId,
+      );
+      await _recordUserGlobalUpdateChange('holding', id);
+    });
+  }
+
+  @override
+  Future<void> deleteHolding(int id) {
+    // 预读 syncId 必须在删除前（删完读不到），与 deleteAccount 同款。
+    return db.transaction(() async {
+      if (changeTracker != null) {
+        final holding = await _holdingRepo.getHolding(id);
+        final syncId = holding?.syncId;
+        if (syncId != null && syncId.isNotEmpty) {
+          await changeTracker!.recordUserGlobalChange(
+            entityType: 'holding',
+            entityId: id,
+            entitySyncId: syncId,
+            action: 'delete',
+          );
+        }
+      }
+      await _holdingRepo.deleteHolding(id);
+    });
+  }
+
+  @override
+  Future<int> deleteHoldingsByAccount(int accountId) {
+    // 供删除账户级联使用；调用方（deleteAccount）已自行登记 delete 变更，
+    // 这里只做删除，避免同一路径两处记账。
+    return _holdingRepo.deleteHoldingsByAccount(accountId);
+  }
+
+  @override
+  Future<void> updateHoldingSortOrders(
+      List<({int id, int sortOrder})> updates) {
+    // 同 updateAccountSortOrders：排序参与快照指纹，漏记不传播。
+    return db.transaction(() async {
+      await _holdingRepo.updateHoldingSortOrders(updates);
+      for (final u in updates) {
+        await _recordUserGlobalUpdateChange('holding', u.id);
+      }
+    });
+  }
+
+  @override
+  Future<void> writeQuoteCache(
+    int id, {
+    double? price,
+    DateTime? fetchedAt,
+    String? sourceId,
+  }) =>
+      // 刻意**不**包 transaction、**不**记 change：本地专有列，行情刷新对同步不可见。
+      _holdingRepo.writeQuoteCache(
+        id,
+        price: price,
+        fetchedAt: fetchedAt,
+        sourceId: sourceId,
+      );
+
+  @override
+  Future<int> clearQuoteCache({String? sourceId}) =>
+      _holdingRepo.clearQuoteCache(sourceId: sourceId);
 
   // ============================================
   // StatisticsRepository 接口实现 - 委托给 LocalStatisticsRepository
@@ -3764,12 +3968,16 @@ class LocalRepository extends BaseRepository {
     );
   }
 
-  /// 审计 C2：给 user-global 实体（category/tag/account，ledgerId=0）登记
-  /// update change。供排序/估值等「非正文但参与指纹」的字段编辑复用 ——
+  /// 审计 C2：给 user-global 实体（category/tag/account/holding，ledgerId=0）
+  /// 登记变更。供排序/估值等「非正文但参与指纹」的字段编辑以及新建路径复用 ——
   /// 此前这类写路径全部裸委托，另一端永远收不到变化。
+  ///
+  /// [action] 默认 'update'（归一化后落库为 'upsert'，见
+  /// `ChangeTracker.normalizeAction`）；新建路径显式传 'create' 只为调用点可读性，
+  /// 落库值与之相同。
   /// syncId 缺失（同步纪元前的遗留行）时静默跳过，与既有 delete 路径口径一致。
   Future<void> _recordUserGlobalUpdateChange(
-      String entityType, int entityId) async {
+      String entityType, int entityId, {String action = 'update'}) async {
     if (changeTracker == null) return;
     dynamic row;
     if (entityType == 'category') {
@@ -3782,6 +3990,9 @@ class LocalRepository extends BaseRepository {
     } else if (entityType == 'account') {
       row = await (db.select(db.accounts)..where((a) => a.id.equals(entityId)))
           .getSingleOrNull();
+    } else if (entityType == 'holding') {
+      row = await (db.select(db.holdings)..where((h) => h.id.equals(entityId)))
+          .getSingleOrNull();
     } else {
       return;
     }
@@ -3791,7 +4002,7 @@ class LocalRepository extends BaseRepository {
       entityType: entityType,
       entityId: entityId,
       entitySyncId: syncId,
-      action: 'update',
+      action: action,
     );
   }
 

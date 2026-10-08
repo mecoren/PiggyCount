@@ -67,6 +67,96 @@ class Accounts extends Table {
   BoolColumn get hidden => boolean().withDefault(const Constant(false))();
 }
 
+/// v52：投资持仓（手动估值版，2026-10-08）。
+///
+/// 定位：`investment` 只是「估值型账户」，账户金额由手填 `initialBalance` 给出；
+/// 本表让投资账户的金额改由 **Σ(份额 × 生效净值)** 供给（有持仓时接管、无持仓
+/// 时回退 `initialBalance`，绝不双计）。见 `lib/utils/holding_metrics.dart`
+/// 的 `effectiveUnitPrice` 与 `lib/data/repositories/local/local_account_repository.dart`
+/// 的「有效账户金额」helper。
+///
+/// 作用域：与 [Accounts] 同为 **user-global** 实体 —— `ledgerId` 是与 accounts
+/// 同型的 legacy 列（恒 0），业务关联走 [accountId]。快照中与账户同款**全量导出**
+/// 到每个账本快照（理由见 `lib/cloud/transactions_json.dart` 的账户导出注释），
+/// 恢复任意快照即可收敛持仓集合，也避免「换账本看不到投资账户持仓」的口径割裂。
+///
+/// ⚠️ 行情预留（避免后期再接行情时升 schema + 升快照格式版本）：
+/// - **可同步**：[market]（SH/SZ/HK/US/FUND/CRYPTO，行情源匹配与代码规范化）、
+///   [autoQuote]（该笔是否允许自动刷新，默认 false）。
+/// - **本地专有**：[quotePrice] / [quoteFetchedAt] / [quoteSourceId] —— 行情缓存，
+///   **不进快照、不进 `holdingCanon` 指纹、不写 `local_changes`**，只由行情刷新
+///   写入（与 `transactions.created_by_user_id` / `last_edited_by_user_id`
+///   的「本地专有列不进快照」同定位）。手滑把它们纳入指纹会让跨设备指纹
+///   永久不一致、同步永不收敛 —— 守门见
+///   `test/cloud/sync_contract_holdings_test.dart`。
+class Holdings extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// 与 accounts 同型的 legacy 列（恒 0）：保留只为两表结构对称与未来按账本
+  /// 切分的余地，当前**所有查询都按 [accountId] 走**，不要拿它当业务维度。
+  IntColumn get ledgerId => integer().withDefault(const Constant(0))();
+
+  /// 所属投资账户（`accounts.id`）。账户是 user-global，本表随之为 user-global。
+  IntColumn get accountId => integer()();
+
+  /// 持仓名称（如「贵州茅台」「纳斯达克100ETF」）
+  TextColumn get name => text()();
+
+  /// 行情代码（如 `600519` / `AAPL` / `BTC`）。手填版可为空 = 只当备注用。
+  TextColumn get symbol => text().nullable()();
+
+  /// 行情市场标识：`SH` / `SZ` / `HK` / `US` / `FUND` / `CRYPTO`。
+  /// 手填版不做校验（用户自填），但**一旦接行情源它就是路由键** —— 行情源按
+  /// 它决定「这个代码归哪家行情商、用哪条代码规范化规则」。
+  TextColumn get market => text().nullable()();
+
+  /// 资产类别：`stock` / `fund` / `bond` / `crypto` / `other`（UI 分组与图标）。
+  TextColumn get assetClass => text().withDefault(const Constant('other'))();
+
+  /// 持仓计价币种。**可不同于账户币种**（如人民币账户持有美股）：
+  /// 进账户金额前先按汇率折算到账户币种，缺汇率的持仓整条剔除（见 holding_metrics）。
+  TextColumn get currency => text().withDefault(const Constant('CNY'))();
+
+  /// 持有份额
+  RealColumn get quantity => real().withDefault(const Constant(0.0))();
+
+  /// 单位成本（手填，可同步）
+  RealColumn get unitCost => real().withDefault(const Constant(0.0))();
+
+  /// 手填当前单位净值（**用户数据、可同步**）。行情可用时展示层走「生效价」
+  /// 覆盖它，但本列不清空 —— 行情失效 / 未配置时自动回退，保证可逆。
+  RealColumn get unitPrice => real().withDefault(const Constant(0.0))();
+
+  /// 该笔是否参与行情自动刷新（默认 false = 始终用手填净值；可同步）。
+  BoolColumn get autoQuote => boolean().withDefault(const Constant(false))();
+
+  TextColumn get note => text().nullable()();
+
+  /// 账户内持仓排序，数字越小越靠前
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+
+  /// 跨设备同步唯一标识 (UUID)
+  TextColumn get syncId => text().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().nullable()();
+
+  /// 本地审计时间。**不进快照 / 不进指纹**（与 accounts 同款），因此行情缓存
+  /// 写入被 updated_at 触碰触发器顺带刷新也无副作用。
+  DateTimeColumn get updatedAt => dateTime().nullable()();
+
+  // ── 以下三列为本地专有行情缓存（不进快照 / 不进指纹 / 不写 local_changes）──
+
+  /// 行情源返回的最新单位价（NULL = 从未拉到过行情）
+  RealColumn get quotePrice => real().nullable()();
+
+  /// 行情拉到时刻（用于「生效价」的 TTL 判定与 UI 展示「更新于 …」）
+  DateTimeColumn get quoteFetchedAt => dateTime().nullable()();
+
+  /// 提供该行情的行情源标识（如 `manual` / 将来的 `eastmoney`）；换源后旧缓存
+  /// 是否仍可用由此列与当前选中源比对决定。
+  TextColumn get quoteSourceId => text().nullable()();
+}
+
 /// 自动汇率本地缓存。日期键 append-only;可随时整表重建 → **不进同步**(README D2)。
 /// 方向:1 quote = rate base(rate 为 decimal 字符串)。
 class ExchangeRates extends Table {
@@ -547,6 +637,8 @@ class Budgets extends Table {
 @DriftDatabase(tables: [
   Ledgers,
   Accounts,
+  // v52：投资持仓（user-global，与 Accounts 同款全量随快照导出）
+  Holdings,
   Categories,
   Transactions,
   RecurringTransactions,
@@ -579,7 +671,7 @@ class PiggyDatabase extends _$PiggyDatabase {
 
   @override
   int get schemaVersion =>
-      51; // v51: 共享账本残留整体移除 — DROP shared_ledger_{categories,accounts,tags} / transaction_tag_overrides 四张死表(镜像表无写入方恒空) + ledgers(my_role/member_count/is_shared/owner_user_id) 与 transactions(category/account/to_account_sync_id_override + tag_sync_ids_override 死列) 八个共享专属列;同步契约三件套(指纹/快照/diff)与守门测试同批收窄; v50: 删除 ledger_members 死表(全库零读写;共享账本协作下线且项目无老用户,无需存量兼容); v49: 日历节假日本地缓存 — holiday_entries(date 主键,整年替换) + holiday_update_meta(单行 1:上次成功/尝试时间、连续失败数、自动更新开关);两张表都是「随时可整表重建」的本地缓存,不进同步白名单/指纹/diff/备份,也不挂 updated_at 触发器(与 exchange_rates 同定位) v48: 索引修复型迁移 — 补建 v10/v11/v12 只写进 onUpgrade 分支、onCreate 遗漏的 transaction_tags ×2 / budgets ×3 / transaction_attachments ×1 索引(2026-09-26 双端实测:新装库 EXPLAIN 报 SCAN transaction_tags,合并路径 tag 批量读固定 ~0.5s); v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+      52; // v52: 投资持仓(手动估值版) — holdings 表:投资账户金额改由 Σ(份额×生效净值) 接管,无持仓时回退 initial_balance(绝不双计);同批一次性预留行情接入字段(market/auto_quote 可同步,quote_price/quote_fetched_at/quote_source_id 为**本地专有缓存列**,不进快照/指纹/local_changes),后期接 A股/美股/加密行情源无需再升 schema 与快照格式版本； v51: 共享账本残留整体移除 — DROP shared_ledger_{categories,accounts,tags} / transaction_tag_overrides 四张死表(镜像表无写入方恒空) + ledgers(my_role/member_count/is_shared/owner_user_id) 与 transactions(category/account/to_account_sync_id_override + tag_sync_ids_override 死列) 八个共享专属列;同步契约三件套(指纹/快照/diff)与守门测试同批收窄; v50: 删除 ledger_members 死表(全库零读写;共享账本协作下线且项目无老用户,无需存量兼容); v49: 日历节假日本地缓存 — holiday_entries(date 主键,整年替换) + holiday_update_meta(单行 1:上次成功/尝试时间、连续失败数、自动更新开关);两张表都是「随时可整表重建」的本地缓存,不进同步白名单/指纹/diff/备份,也不挂 updated_at 触发器(与 exchange_rates 同定位) v48: 索引修复型迁移 — 补建 v10/v11/v12 只写进 onUpgrade 分支、onCreate 遗漏的 transaction_tags ×2 / budgets ×3 / transaction_attachments ×1 索引(2026-09-26 双端实测:新装库 EXPLAIN 报 SCAN transaction_tags,合并路径 tag 批量读固定 ~0.5s); v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   /// WAL 检查点后允许残留的字节数（见 [migration] 的 beforeOpen）。
   /// 公开给回归测试取期望值，别处不要依赖。
@@ -1601,6 +1693,37 @@ class PiggyDatabase extends _$PiggyDatabase {
             await _dropColumnIfPresent('transactions', 'tag_sync_ids_override');
             logger.info('DBMigration', 'v51 迁移完成');
           }
+          if (from < 52) {
+            // v52: 投资持仓（手动估值版，2026-10-08）。
+            // holdings 与 accounts 同为 user-global 实体（ledger_id 恒 0 的 legacy
+            // 列，业务关联走 account_id），快照里与账户同款**全量导出** —— 每个
+            // 账本快照都携带同一份持仓列表，恢复任意快照即可收敛持仓集合。
+            //
+            // 纯新增、零回填：新表无历史行，存量库升级后持仓集合为空，投资账户
+            // 口径仍逐字走 initial_balance（与 v51 一致），删光持仓即回退，可逆。
+            //
+            // 同批一次性预留「实时行情」接入字段，避免后期再接时升 schema + 升
+            // 快照格式版本 + 重走一轮契约测试：
+            // - 可同步：market（行情市场标识）、auto_quote（该笔是否允许自动刷新）
+            // - **本地专有**：quote_price / quote_fetched_at / quote_source_id
+            //   —— 行情缓存，不进快照 / 不进 holdingCanon 指纹 / 不写
+            //   local_changes，只由行情刷新写入（手滑纳入指纹会让跨设备指纹
+            //   永久不一致、同步永不收敛）。
+            logger.info('DBMigration', '开始迁移到 v52: 投资持仓表(含行情预留列)');
+            await _createTableIfMissing(migrator, 'holdings', holdings);
+            // (account_id) 服务「按账户取持仓」这一唯一高频查询，并让删除账户时的
+            // 级联删除避免全表扫描。
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_holdings_account '
+                'ON holdings(account_id);');
+            // 与 v38 各实体 sync_id 唯一索引同构:防同一持仓被重复锚定。
+            await customStatement(
+                'CREATE UNIQUE INDEX IF NOT EXISTS uq_holdings_sync_id '
+                'ON holdings(sync_id);');
+            // 新表纳入 updated_at 触碰触发器(幂等,顺带补齐其它表)。
+            await _createUpdatedAtTouchTriggers();
+            logger.info('DBMigration', 'v52 迁移完成');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
@@ -1693,6 +1816,15 @@ class PiggyDatabase extends _$PiggyDatabase {
           await customStatement(
               'CREATE INDEX IF NOT EXISTS idx_holiday_entries_year '
               'ON holiday_entries(year);');
+          // v52: 投资持仓索引（与 onUpgrade v52 同构 —— 新装库走 onCreate 而非
+          // migration，漏建即永久缺失；表本体由上方 m.createAll 创建）。
+          // v48 教训：onUpgrade 与 onCreate 的索引集合必须逐一对齐。
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_holdings_account '
+              'ON holdings(account_id);');
+          await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS uq_holdings_sync_id '
+              'ON holdings(sync_id);');
         },
       );
 
@@ -1764,6 +1896,9 @@ class PiggyDatabase extends _$PiggyDatabase {
     'accounts',
     'ledgers',
     'custom_field_definitions',
+    // v52：持仓（与 accounts 同款）。注意 holdings.updated_at 是**本地审计列**，
+    // 不进快照 / 不进指纹，所以行情缓存写入被触发器顺带刷新也无副作用。
+    'holdings',
   };
 
   /// 审计 T1（v40）：创建 updated_at 触碰触发器（幂等）。

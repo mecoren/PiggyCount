@@ -1,0 +1,22 @@
+name: flutter_market_data
+description: A pluggable market quote framework for PiggyCount with swappable quote providers
+version: 0.1.0
+publish_to: none
+homepage: https://github.com/mecoren/PiggyCount
+repository: https://github.com/mecoren/PiggyCount/tree/main/packages/flutter_market_data
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  # This package is a pure Dart package

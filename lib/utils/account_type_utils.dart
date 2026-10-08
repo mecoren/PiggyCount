@@ -40,6 +40,91 @@ bool isValuationOnlyType(String type) => valuationOnlyTypes.contains(type);
 /// 是否为可交易账户类型（参与日常记账）
 bool isTradableType(String type) => !isValuationOnlyType(type);
 
+/// 是否为投资账户（v52 起支持录入持仓，账户金额可由持仓市值接管）。
+bool isInvestmentType(String type) => type == 'investment';
+
+/// 投资持仓的**资产类别**取值（v52）。
+///
+/// 只放取值与顺序，**文案一律走 l10n**（`holdingAssetClass*` 系列 key），
+/// 不要在这里硬编码中文 —— 该文件本身也不带 l10n 依赖。
+/// 顺序即 UI 分组与选择器的展示顺序。
+const holdingAssetClassOrder = <String>[
+  'stock',
+  'fund',
+  'bond',
+  'crypto',
+  'other',
+];
+
+/// 投资持仓的**行情市场标识**取值（v52 行情预留）。
+///
+/// 手填版不校验（用户可自填任意值，比如将来的新市场）；一旦接入行情源，
+/// 它就是路由键：行情源按它决定「这个代码归哪家行情商、走哪条代码规范化规则」。
+const holdingMarketOrder = <String>[
+  'SH',
+  'SZ',
+  'HK',
+  'US',
+  'FUND',
+  'CRYPTO',
+];
+
+/// 持仓资产类别 → l10n 标签（与 [holdingAssetClassOrder] 一一对应；
+/// 未知值回落「其他」，避免把原始枚举名漏给用户）。
+String getHoldingAssetClassLabel(String assetClass, AppLocalizations l10n) {
+  switch (assetClass) {
+    case 'stock':
+      return l10n.holdingAssetClassStock;
+    case 'fund':
+      return l10n.holdingAssetClassFund;
+    case 'bond':
+      return l10n.holdingAssetClassBond;
+    case 'crypto':
+      return l10n.holdingAssetClassCrypto;
+    default:
+      return l10n.holdingAssetClassOther;
+  }
+}
+
+/// 持仓市场标识 → l10n 标签。
+///
+/// 未知值**原样返回**（不回落）：市场是用户可自填的开放字段，将来接新市场时
+/// 不该把它显示成「其他」或空串。
+String getHoldingMarketLabel(String? market, AppLocalizations l10n) {
+  switch ((market ?? '').toUpperCase()) {
+    case 'SH':
+      return l10n.holdingMarketSh;
+    case 'SZ':
+      return l10n.holdingMarketSz;
+    case 'HK':
+      return l10n.holdingMarketHk;
+    case 'US':
+      return l10n.holdingMarketUs;
+    case 'FUND':
+      return l10n.holdingMarketFund;
+    case 'CRYPTO':
+      return l10n.holdingMarketCrypto;
+    default:
+      return market ?? '';
+  }
+}
+
+/// 持仓资产类别 → 列表徽标图标
+IconData getHoldingAssetClassIcon(String assetClass) {
+  switch (assetClass) {
+    case 'stock':
+      return Icons.show_chart_rounded;
+    case 'fund':
+      return Icons.pie_chart_outline_rounded;
+    case 'bond':
+      return Icons.receipt_long_outlined;
+    case 'crypto':
+      return Icons.currency_bitcoin_rounded;
+    default:
+      return Icons.savings_outlined;
+  }
+}
+
 /// 账户类型常量（完整排序）
 const accountTypeOrder = [
   'cash', 'bank_card', 'credit_card', 'alipay', 'wechat', 'other',

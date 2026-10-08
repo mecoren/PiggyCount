@@ -11,6 +11,7 @@ import 'custom_field_repository.dart';
 import 'budget_repository.dart';
 import 'attachment_repository.dart';
 import 'exchange_rate_repository.dart';
+import 'holding_repository.dart';
 import 'holiday_repository.dart';
 
 /// 基础 Repository 抽象类
@@ -35,6 +36,8 @@ abstract class BaseRepository
         BudgetRepository,
         AttachmentRepository,
         ExchangeRateRepository,
+        // v52：投资持仓（user-global，与 AccountRepository 同层）
+        HoldingRepository,
         HolidayRepository {
   /// 变更追踪器（云同步）。默认 null；LocalRepository 以公开字段覆写。
   /// M3：云→本地合并路径（applySyncChanges）经此拿 tracker 包裹

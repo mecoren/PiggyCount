@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../db.dart';
 import '../../../services/system/logger_service.dart';
 import '../../../utils/account_type_utils.dart';
+import '../../../utils/holding_metrics.dart';
 import '../account_repository.dart';
 import '../exceptions.dart';
 
@@ -13,7 +14,88 @@ class LocalAccountRepository implements AccountRepository {
   static const _uuid = Uuid();
   final PiggyDatabase db;
 
-  LocalAccountRepository(this.db);
+  /// 持仓多币种折算所需的汇率解析器（币种大写 → 「1 单位该币种 = ? 单位基准」）。
+  ///
+  /// 由装配层注入（见 `lib/providers/holding_providers.dart`）；null 或返回空 map
+  /// 时，只有「持仓币种 == 账户币种」的持仓计入，其余整条剔除 —— 与既有
+  /// 「缺汇率整条剔除、绝不按 1.0 裸加」口径一致（D5 红线）。
+  HoldingsRateResolver? holdingsRateResolver;
+
+  LocalAccountRepository(this.db, {this.holdingsRateResolver});
+
+  // =====================================================================
+  // v52 投资持仓 → 账户金额的口径单点化
+  //
+  // 规则（唯一口径，四类调用点全部走这里）：
+  //   估值型账户 + **有持仓** → 账户金额 = Σ(份额 × 生效净值) 折算到账户币种；
+  //   估值型账户 + **无持仓** → initialBalance（与 v52 之前逐字一致）。
+  // 因此「删光持仓即自动回退手填估值」，可逆、不双计。
+  //
+  // 覆盖的调用点（**穷举**，v52 评审时逐个核过；新增口径时必须回到这里登记）：
+  //   - getAccountBalance / getAccountGlobalBalance / getAccountDailyBalances
+  //   - getAllAccountBalances / getAllAccountStats（两者都是批量 SQL，各自显式
+  //     套用 _valuationAmount；getAllAccountStats 曾经漏改，会让账户总列表卡
+  //     显示 initialBalance 而详情页显示持仓市值）
+  //   - 上层口径 getNetWorthBreakdown / getNetWorthBreakdownByCurrency /
+  //     getNetWorthDailyBalances / getNetWorthTrendSeries /
+  //     getAssetCompositionByType / getAssetCompositionByTypeAndCurrency
+  //     全部建立在 getAccountBalance / getAccountDailyBalances 之上，自动生效。
+  // ⚠️ 新增净值口径时不要绕过上面的方法自己算，否则持仓会被漏掉。
+  // =====================================================================
+
+  /// 按账户汇总持仓市值（已折算到**各账户自己的币种**）。
+  ///
+  /// [onlyAccountId] 为空时一次读全表 —— 净资产趋势是「账户数 × 天数」的双层
+  /// 循环，逐账户回查会把它放大成 N 倍查询；批量路径请一次取全量后在内存里索引。
+  /// 账户已被删（悬空 account_id）的持仓不计入，避免幽灵金额。
+  Future<Map<int, HoldingsValueSummary>> _holdingsSummaryByAccount(
+      {int? onlyAccountId}) async {
+    final query = db.select(db.holdings);
+    if (onlyAccountId != null) {
+      query.where((h) => h.accountId.equals(onlyAccountId));
+    }
+    final holdings = await query.get();
+    if (holdings.isEmpty) return const {};
+
+    final currencyById = {
+      for (final a in await getAllAccounts()) a.id: a.currency,
+    };
+    final grouped = <int, List<HoldingValueInput>>{};
+    for (final h in holdings) {
+      if (!currencyById.containsKey(h.accountId)) continue;
+      // 生效价判定走 holding_metrics 的唯一定点（与 UI 共用，见其文档注释）
+      grouped.putIfAbsent(h.accountId, () => []).add(holdingValueInputOf(h));
+    }
+    if (grouped.isEmpty) return const {};
+
+    final rates =
+        await holdingsRateResolver?.call() ?? const <String, double>{};
+    return {
+      for (final e in grouped.entries)
+        e.key: summarizeHoldings(
+          holdings: e.value,
+          accountCurrency: currencyById[e.key]!,
+          ratesToBase: rates,
+        ),
+    };
+  }
+
+  /// 估值型账户的**有效金额**：有持仓 → 持仓折算市值合计，否则 → initialBalance。
+  static double _valuationAmount(
+    Account account,
+    Map<int, HoldingsValueSummary> holdingsByAccount,
+  ) {
+    final summary = holdingsByAccount[account.id];
+    if (summary == null || summary.total == 0) return account.initialBalance;
+    return summary.marketValue;
+  }
+
+  /// 单账户版便捷入口（给逐账户调用点用）。
+  Future<double> _effectiveValuation(Account account) async {
+    final summary =
+        await _holdingsSummaryByAccount(onlyAccountId: account.id);
+    return _valuationAmount(account, summary);
+  }
 
   @override
   Stream<List<Account>> watchAccountsForLedger(int ledgerId) {
@@ -255,9 +337,9 @@ class LocalAccountRepository implements AccountRepository {
 
     if (account == null) return 0.0;
 
-    // 估值账户直接返回 initialBalance 作为当前估值
+    // 估值账户：有持仓 → Σ 持仓市值（折算到账户币种）；无持仓 → initialBalance。
     if (isValuationOnlyType(account.type)) {
-      return account.initialBalance;
+      return _effectiveValuation(account);
     }
 
     // SQL 聚合版(此前全量拉行进内存逐条累加,大账户万行级内存与延迟)。
@@ -298,9 +380,9 @@ class LocalAccountRepository implements AccountRepository {
           ..where((a) => a.id.equals(accountId)))
         .getSingle();
 
-    // 估值账户直接返回 initialBalance
+    // 估值账户：有持仓 → Σ 持仓市值；无持仓 → initialBalance（同 getAccountBalance）。
     if (isValuationOnlyType(account.type)) {
-      return account.initialBalance;
+      return _effectiveValuation(account);
     }
 
     // SQL 聚合版,口径与旧实现一致:跨全部账本;
@@ -392,18 +474,26 @@ class LocalAccountRepository implements AccountRepository {
     final accounts = await (db.select(db.accounts)
           ..where((a) => a.ledgerId.equals(ledgerId)))
         .get();
+    final accountById = {for (final a in accounts) a.id: a};
     final valuationIds = accounts
         .where((a) => isValuationOnlyType(a.type))
         .map((a) => a.id)
         .toSet();
+    // 持仓一次全量预取后在内存里索引：本方法已经在做批量聚合，逐账户回查会把
+    // 「批量」退化成 N 次查询（v52 加入持仓后的性能守线）。
+    final holdingsByAccount = valuationIds.isEmpty
+        ? const <int, HoldingsValueSummary>{}
+        : await _holdingsSummaryByAccount();
 
     final Map<int, double> balances = {};
     for (final row in rows) {
       final id = row.read<int>('id');
       final initial = dval(row.data['initial_balance']);
-      // 估值账户与 getAccountBalance 同口径:无日常交易,直接 initialBalance。
+      // 估值账户与 getAccountBalance 同口径:有持仓 → 持仓市值合计,否则 initialBalance。
       if (valuationIds.contains(id)) {
-        balances[id] = initial;
+        final account = accountById[id];
+        balances[id] =
+            account == null ? initial : _valuationAmount(account, holdingsByAccount);
         continue;
       }
       balances[id] = initial +
@@ -507,7 +597,8 @@ class LocalAccountRepository implements AccountRepository {
     //   + 转入 transfer（不排除 excludeFromStats）；
     // - expense：主账户 expense + 转出 transfer（排除 excludeFromStats）；
     // - income：主账户 income + 转入 transfer（排除 excludeFromStats）。
-    // 估值账户无日常交易，直接返回 initialBalance / 0 / 0。
+    // 估值账户无日常交易：金额走**持仓口径**（有持仓 → 持仓市值合计，否则
+    // initialBalance），费用/收入恒 0。
     final rows = await db.customSelect(
       "SELECT a.id AS id, a.initial_balance AS initial_balance, "
       'COALESCE(b.main_income, 0) AS main_income, '
@@ -557,13 +648,24 @@ class LocalAccountRepository implements AccountRepository {
 
     double dval(dynamic v) => v is num ? v.toDouble() : 0.0;
 
+    // v52：估值账户的金额必须与 getAccountBalance / 净资产卡同口径（持仓市值
+    // 接管），否则账户总列表卡与账户详情页会显示同一账户的两个不同金额。
+    // 批量预取一次持仓，循环内零查询。
+    final accountById = {for (final a in accounts) a.id: a};
+    final holdingsByAccount = valuationIds.isEmpty
+        ? const <int, HoldingsValueSummary>{}
+        : await _holdingsSummaryByAccount();
+
     final Map<int, ({double balance, double expense, double income})> stats =
         {};
     for (final row in rows) {
       final id = row.read<int>('id');
       if (valuationIds.contains(id)) {
+        final account = accountById[id];
         stats[id] = (
-          balance: dval(row.data['initial_balance']),
+          balance: account == null
+              ? dval(row.data['initial_balance'])
+              : _valuationAmount(account, holdingsByAccount),
           expense: 0.0,
           income: 0.0,
         );
@@ -803,14 +905,19 @@ class LocalAccountRepository implements AccountRepository {
     final account = await getAccount(accountId);
     if (account == null) return [];
 
-    // 估值账户：每天返回固定估值
+    // 估值账户：每天返回固定的「有效估值」（有持仓 → 持仓市值合计，否则 initialBalance）。
+    //
+    // 口径说明（刻意的，不是缺陷）：手动估值没有历史快照，持仓市值只能按**当前值
+    // 平铺**到整段区间 —— 这与 v52 之前估值账户「历史 = initialBalance 平铺」的
+    // 语义完全一致。引入净值历史快照前，趋势图上估值账户就是一条水平线。
     if (isValuationOnlyType(account.type)) {
+      final value = await _effectiveValuation(account);
       final result = <({DateTime date, double balance})>[];
       var currentDate =
           DateTime(startDate.year, startDate.month, startDate.day);
       final end = DateTime(endDate.year, endDate.month, endDate.day);
       while (!currentDate.isAfter(end)) {
-        result.add((date: currentDate, balance: account.initialBalance));
+        result.add((date: currentDate, balance: value));
         currentDate = currentDate.add(const Duration(days: 1));
       }
       return result;
@@ -1118,6 +1225,12 @@ class LocalAccountRepository implements AccountRepository {
             ))
         .toList();
   }
+
+  @override
+  Future<HoldingsValueSummary> getHoldingsSummaryForAccount(
+          int accountId) async =>
+      (await _holdingsSummaryByAccount(onlyAccountId: accountId))[accountId] ??
+      HoldingsValueSummary.empty;
 
   @override
   Future<void> updateAccountValuation(int accountId, double newValue) async {

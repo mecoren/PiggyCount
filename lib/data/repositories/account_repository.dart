@@ -1,4 +1,17 @@
 import '../db.dart';
+import '../../utils/holding_metrics.dart';
+
+/// 持仓多币种折算所需的汇率解析器（v52）。
+///
+/// 返回「币种大写 → 1 单位该币种 = ? 单位基准」的表；基准取哪一币种都行 ——
+/// 跨币种折算走两地汇率之比（见 `lib/utils/holding_metrics.dart` 的 `crossRate`），
+/// 与基准无关。返回空 map 时，只有「持仓币种 == 账户币种」的持仓计入，
+/// 其余整条剔除（绝不按 1.0 裸加）。
+///
+/// 装配点在 `lib/providers/holding_providers.dart`（把 `effectiveRatesProvider`
+/// 桥接进 Repository 层）。Repository 不依赖 Provider，所以用「注入闭包」而不是
+/// 直接读。
+typedef HoldingsRateResolver = Future<Map<String, double>> Function();
 
 /// 账户Repository接口
 /// 定义账户相关的所有数据操作
@@ -202,6 +215,14 @@ abstract class AccountRepository {
 
   /// 更新估值账户的当前估值
   Future<void> updateAccountValuation(int accountId, double newValue);
+
+  /// v52：某账户的**持仓折算汇总**（市值 / 成本 / 收益率 / 缺汇率剔除笔数），
+  /// 已折算到该账户自己的币种。
+  ///
+  /// 与 [getAccountBalance] 里的持仓分支共用同一套 helper，因此「账户页显示的
+  /// 总额」与「持仓列表页的合计」永不会两个口径。无持仓时返回
+  /// [HoldingsValueSummary.empty]（`total == 0`），UI 据此回退到手工估值展示。
+  Future<HoldingsValueSummary> getHoldingsSummaryForAccount(int accountId);
 
   /// 账户使用中的币种集合(去重、大写)。多币种态判定与汇率页列表用。
   Future<Set<String>> getUsedCurrencies();

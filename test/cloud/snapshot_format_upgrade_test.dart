@@ -257,11 +257,45 @@ void main() {
   });
 
   group('导出格式版本', () {
-    test('快照 version 常量与写入一致（v10）', () async {
+    test('快照 version 常量与写入一致（v11）', () async {
       final payload = await localPayload();
       expect(payload['version'], kSnapshotFormatVersion);
-      expect(kSnapshotFormatVersion, 10,
-          reason: '格式版本变更必须同步审查消费端的升级门控语义');
+      expect(kSnapshotFormatVersion, 11,
+          reason: '格式版本变更必须同步审查消费端的升级门控语义；'
+              'v11 = 新增 holdings 段（指纹白名单同步加 holdingCanon）');
+    });
+
+    test('v11：本地有持仓时，云端 v10 快照（无持仓段）不会被误判为「仅格式升级」', () async {
+      // 先在「本地没有持仓」的状态下导出 payload，去掉 holdings 键 —— 这就
+      // 是一份真实的 v10 云端快照（v10 的导出端根本没有这一节）。
+      final v10Payload = await localPayload();
+      v10Payload.remove('holdings');
+      v10Payload['version'] = 10;
+      v10Payload['contentFingerprint'] = 'legacy-algorithm-fingerprint';
+
+      // 再让本地长出一条持仓
+      await db.into(db.accounts).insert(AccountsCompanion.insert(
+            ledgerId: 0,
+            name: '投资账户',
+            type: const d.Value('investment'),
+          ));
+      await db.customStatement(
+          "INSERT INTO holdings (account_id, name, currency, quantity, "
+          "unit_cost, unit_price, auto_quote, sort_order, sync_id) "
+          "VALUES (1, '贵州茅台', 'CNY', 100, 1500, 1680, 0, 0, 'h-sync-001')");
+
+      final storage = _UpgradeStorage(
+        metadata: const {'fingerprint': 'legacy-algorithm-fingerprint'},
+        snapshot: jsonEncode(v10Payload),
+      );
+      final manager = buildManager(storage);
+
+      expect(
+        await manager.shouldRepublishSnapshotForFormatUpgrade(ledgerId: 1),
+        isFalse,
+        reason: '按 v11 重算云端指纹（无持仓）≠ 本地指纹（有持仓）→ 内容确实不同，'
+            '必须交回既有的冲突 / 合并流程，绝不借「格式升级」名义自动覆盖对端数据',
+      );
     });
 
     test('v9 旧快照仍可完整解析（向后兼容）', () async {

@@ -247,6 +247,8 @@ class _SyncPreviewDialogState extends ConsumerState<_SyncPreviewDialog> {
     switch (kind) {
       case SyncEntityKind.account:
         return l10n.syncEntityKindAccount;
+      case SyncEntityKind.holding:
+        return l10n.syncEntityKindHolding;
       case SyncEntityKind.category:
         return l10n.syncEntityKindCategory;
       case SyncEntityKind.tag:

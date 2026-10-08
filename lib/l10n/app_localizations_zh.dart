@@ -8487,6 +8487,177 @@ class AppLocalizationsZh extends AppLocalizations {
   String recurringDueNotifyBody(String amount, String date) {
     return '$date 预计扣款 $amount';
   }
+
+  @override
+  String get investmentSettingsTitle => '行情与投资';
+
+  @override
+  String get investmentSettingsDesc => '管理行情源与投资持仓相关设置';
+
+  @override
+  String get investmentQuoteSourceSection => '行情源';
+
+  @override
+  String get investmentQuoteSourceManual => '手动录入';
+
+  @override
+  String get investmentQuoteSourceManualDesc => '不联网；持仓净值由你手动填写';
+
+  @override
+  String get investmentQuoteSourceHint => '「手动录入」不会发起任何网络请求，持仓净值完全由你填写。';
+
+  @override
+  String get syncEntityKindHolding => '持仓';
+
+  @override
+  String get holdingPageTitle => '持仓';
+
+  @override
+  String get holdingAddTitle => '新增持仓';
+
+  @override
+  String get holdingEditTitle => '编辑持仓';
+
+  @override
+  String get holdingSummaryMarketValue => '总市值';
+
+  @override
+  String get holdingSummaryCost => '总成本';
+
+  @override
+  String get holdingSummaryProfit => '浮动盈亏';
+
+  @override
+  String get holdingSummaryReturnRate => '收益率';
+
+  @override
+  String holdingExcludedRateWarning(int count) {
+    return '$count 项持仓因缺汇率未计入';
+  }
+
+  @override
+  String get holdingEmptyTitle => '还没有持仓';
+
+  @override
+  String get holdingEmptySubtitle => '录入第一条持仓，该账户金额将由持仓市值汇总';
+
+  @override
+  String holdingAccountValueFromHoldings(int count) {
+    return '由 $count 项持仓汇总';
+  }
+
+  @override
+  String get holdingManageAction => '管理持仓';
+
+  @override
+  String get holdingEditPageHint => '保存后可到账户详情页录入持仓';
+
+  @override
+  String get holdingShareLabel => '占比';
+
+  @override
+  String get holdingFieldName => '持仓名称';
+
+  @override
+  String get holdingFieldNameHint => '如：贵州茅台 / 沪深300ETF';
+
+  @override
+  String get holdingFieldSymbol => '代码';
+
+  @override
+  String get holdingFieldSymbolHint => '如：600519 / AAPL / BTC（选填）';
+
+  @override
+  String get holdingFieldMarket => '市场';
+
+  @override
+  String get holdingFieldAssetClass => '资产类别';
+
+  @override
+  String get holdingFieldCurrency => '币种';
+
+  @override
+  String get holdingFieldQuantity => '持有份额';
+
+  @override
+  String get holdingFieldUnitCost => '单位成本';
+
+  @override
+  String get holdingFieldUnitPrice => '当前净值';
+
+  @override
+  String get holdingFieldAutoQuote => '允许自动刷新行情';
+
+  @override
+  String get holdingFieldAutoQuoteSubtitle => '接入真实行情源后该持仓会跟随行情更新；当前为手动录入，无影响';
+
+  @override
+  String get holdingFieldNote => '备注';
+
+  @override
+  String get holdingPreviewMarketValue => '市值';
+
+  @override
+  String get holdingPreviewProfit => '盈亏';
+
+  @override
+  String get holdingDeleteConfirmTitle => '删除持仓';
+
+  @override
+  String holdingDeleteConfirmBody(String name) {
+    return '确定删除「$name」吗？';
+  }
+
+  @override
+  String get holdingDeleteSuccess => '持仓已删除';
+
+  @override
+  String get holdingSaveSuccess => '持仓已保存';
+
+  @override
+  String get holdingValidationNameRequired => '请填写持仓名称';
+
+  @override
+  String get holdingValidationQuantityInvalid => '请填写有效的持有份额';
+
+  @override
+  String get holdingValidationPriceInvalid => '请填写有效的净值';
+
+  @override
+  String get holdingValidationCostInvalid => '请填写有效的单位成本';
+
+  @override
+  String get holdingAssetClassStock => '股票';
+
+  @override
+  String get holdingAssetClassFund => '基金';
+
+  @override
+  String get holdingAssetClassBond => '债券';
+
+  @override
+  String get holdingAssetClassCrypto => '数字货币';
+
+  @override
+  String get holdingAssetClassOther => '其他';
+
+  @override
+  String get holdingMarketSh => '上交所';
+
+  @override
+  String get holdingMarketSz => '深交所';
+
+  @override
+  String get holdingMarketHk => '港股';
+
+  @override
+  String get holdingMarketUs => '美股';
+
+  @override
+  String get holdingMarketFund => '场外基金';
+
+  @override
+  String get holdingMarketCrypto => '数字货币';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -16973,4 +17144,175 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String recurringDueNotifyBody(String amount, String date) {
     return '$date 預計扣款 $amount';
   }
+
+  @override
+  String get investmentSettingsTitle => '行情與投資';
+
+  @override
+  String get investmentSettingsDesc => '管理行情來源與投資持倉相關設定';
+
+  @override
+  String get investmentQuoteSourceSection => '行情來源';
+
+  @override
+  String get investmentQuoteSourceManual => '手動輸入';
+
+  @override
+  String get investmentQuoteSourceManualDesc => '不連網；持倉淨值由你手動填寫';
+
+  @override
+  String get investmentQuoteSourceHint => '「手動輸入」不會發起任何網路請求，持倉淨值完全由你填寫。';
+
+  @override
+  String get syncEntityKindHolding => '持倉';
+
+  @override
+  String get holdingPageTitle => '持倉';
+
+  @override
+  String get holdingAddTitle => '新增持倉';
+
+  @override
+  String get holdingEditTitle => '編輯持倉';
+
+  @override
+  String get holdingSummaryMarketValue => '總市值';
+
+  @override
+  String get holdingSummaryCost => '總成本';
+
+  @override
+  String get holdingSummaryProfit => '浮動盈虧';
+
+  @override
+  String get holdingSummaryReturnRate => '報酬率';
+
+  @override
+  String holdingExcludedRateWarning(int count) {
+    return '$count 筆持倉因缺匯率未計入';
+  }
+
+  @override
+  String get holdingEmptyTitle => '還沒有持倉';
+
+  @override
+  String get holdingEmptySubtitle => '新增第一筆持倉，該帳戶金額將由持倉市值彙總';
+
+  @override
+  String holdingAccountValueFromHoldings(int count) {
+    return '由 $count 筆持倉彙總';
+  }
+
+  @override
+  String get holdingManageAction => '管理持倉';
+
+  @override
+  String get holdingEditPageHint => '儲存後可到帳戶詳情頁新增持倉';
+
+  @override
+  String get holdingShareLabel => '佔比';
+
+  @override
+  String get holdingFieldName => '持倉名稱';
+
+  @override
+  String get holdingFieldNameHint => '如：台積電 / 元大台灣50';
+
+  @override
+  String get holdingFieldSymbol => '代碼';
+
+  @override
+  String get holdingFieldSymbolHint => '如：2330 / AAPL / BTC（選填）';
+
+  @override
+  String get holdingFieldMarket => '市場';
+
+  @override
+  String get holdingFieldAssetClass => '資產類別';
+
+  @override
+  String get holdingFieldCurrency => '幣別';
+
+  @override
+  String get holdingFieldQuantity => '持有股數';
+
+  @override
+  String get holdingFieldUnitCost => '單位成本';
+
+  @override
+  String get holdingFieldUnitPrice => '目前淨值';
+
+  @override
+  String get holdingFieldAutoQuote => '允許自動更新行情';
+
+  @override
+  String get holdingFieldAutoQuoteSubtitle => '接上真實行情來源後此持倉會跟隨行情更新；目前為手動輸入，無影響';
+
+  @override
+  String get holdingFieldNote => '備註';
+
+  @override
+  String get holdingPreviewMarketValue => '市值';
+
+  @override
+  String get holdingPreviewProfit => '盈虧';
+
+  @override
+  String get holdingDeleteConfirmTitle => '刪除持倉';
+
+  @override
+  String holdingDeleteConfirmBody(String name) {
+    return '確定刪除「$name」嗎？';
+  }
+
+  @override
+  String get holdingDeleteSuccess => '持倉已刪除';
+
+  @override
+  String get holdingSaveSuccess => '持倉已儲存';
+
+  @override
+  String get holdingValidationNameRequired => '請填寫持倉名稱';
+
+  @override
+  String get holdingValidationQuantityInvalid => '請填寫有效的持有股數';
+
+  @override
+  String get holdingValidationPriceInvalid => '請填寫有效的淨值';
+
+  @override
+  String get holdingValidationCostInvalid => '請填寫有效的單位成本';
+
+  @override
+  String get holdingAssetClassStock => '股票';
+
+  @override
+  String get holdingAssetClassFund => '基金';
+
+  @override
+  String get holdingAssetClassBond => '債券';
+
+  @override
+  String get holdingAssetClassCrypto => '加密貨幣';
+
+  @override
+  String get holdingAssetClassOther => '其他';
+
+  @override
+  String get holdingMarketSh => '上海證券交易所';
+
+  @override
+  String get holdingMarketSz => '深圳證券交易所';
+
+  @override
+  String get holdingMarketHk => '香港股市';
+
+  @override
+  String get holdingMarketUs => '美股';
+
+  @override
+  String get holdingMarketFund => '場外基金';
+
+  @override
+  String get holdingMarketCrypto => '加密貨幣';
 }

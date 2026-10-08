@@ -26,6 +26,7 @@ import 'cloud/startup_sync_checker.dart';
 import 'cloud/startup_sync_overlay.dart';
 import 'cloud/backup/backup_scheduler.dart';
 import 'services/calendar/holiday_scheduler.dart';
+import 'services/investment/quote_refresh_scheduler.dart';
 import 'cloud/backup/cloud_backup_providers.dart';
 import 'cloud/backup/cloud_backup_service.dart' show CloudBackupService;
 import 'cloud/sync_restore_guard.dart';
@@ -120,6 +121,21 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       // 30 天窗口外行删除近零成本，失败静默（服务内部已吞错）。
       unawaited(
           ref.read(sp.syncMetricsServiceProvider).cleanupExpired());
+      // v52：把「有效汇率」桥接进 Repository 层，供投资持仓的多币种折算使用。
+      // 必须显式实例化 —— 该 Provider 自身没有别的消费者，不 read 就永远不会
+      // 注入解析器，跨币种持仓会被静默剔除（同下方 P2-7 的教训：
+      // provider 定义了但全库无消费者 = 死代码）。
+      ref.read(holdingsRateBridgeProvider);
+      // v52：持仓表变更 → bump statsRefreshProvider。持仓的任何写（含行情缓存）
+      // 都会改变账户金额，缺这条订阅会出现「持仓页新、净资产卡旧」。
+      ref.read(holdingsTableWatchProvider);
+      // v52 行情自动刷新：当前唯一行情源是手动录入（capability.isAutomatic
+      // == false），enabled 恒 false → 不建 Timer、不发请求。后期接真实源
+      // 后这里会自动生效（supportsAutomaticQuotes 变 true）。
+      _quoteScheduler = QuoteRefreshScheduler(
+        enabled: ref.read(quoteServiceProvider).supportsAutomaticQuotes,
+        onCheck: _runScheduledQuoteRefresh,
+      )..start();
       // 每日定时备份：1 分钟粒度检查，触发条件在闭包内判定
       _backupScheduler = BackupScheduler(onCheck: _runScheduledBackupCheck)
         ..start();
@@ -155,6 +171,13 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
 
   /// 日历节假日每日更新调度器（App 运行期间每分钟检查一次）
   HolidayScheduler? _holidayScheduler;
+
+  /// v52 行情自动刷新调度器。
+  ///
+  /// **当前恒为「未启动」**：唯一行情源是「手动录入」，其
+  /// `QuoteCapability.isAutomatic == false` → `enabled: false` → start() 里
+  /// 直接返回、连 Timer 都不建。后期接入真实行情源后此处无需改动。
+  QuoteRefreshScheduler? _quoteScheduler;
 
   /// 启动时云端数据拉取检查（仅路径 A：S3/WebDAV/Supabase/iCloud）
   ///
@@ -204,6 +227,46 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   /// && 云服务就绪 → 后台非阻塞执行。
   /// 去重 key 用 backup_auto_last_date（仅定时成功写入）：手动备份不占用
   /// 当日自动名额，失败不占用（P2-4 弱网日自动补试直至成功或跨日）。
+  /// v52 行情自动刷新的每轮编排（由 [QuoteRefreshScheduler] 注入调用）。
+  ///
+  /// 三层闸门（缺一不可）：
+  /// 1. 行情源必须自带自动拉取能力（手动源直接 return，零请求）；
+  /// 2. 距上次成功拉取必须超过源的 `minRefreshInterval`（[QuoteRefreshScheduler.shouldTriggerNow]）；
+  /// 3. 恢复临界区内不跑（与备份同款让位：半恢复态刷行情只会把旧值写进缓存）。
+  ///
+  /// 失败**不弹任何 UI**：后台路径失败是常态，错误类别已由 `QuoteService`
+  /// 记录并从返回值透出；界面上的新鲜度由 `quote_fetched_at` 展示决定。
+  Future<void> _runScheduledQuoteRefresh() async {
+    final service = ref.read(quoteServiceProvider);
+    if (!service.supportsAutomaticQuotes) return;
+    if (SyncRestoreGuard.isBusy) return;
+
+    // 上次成功拉取时刻 = 全部持仓里最新的 quote_fetched_at。
+    // 行情缓存三列是本地专有列、量级几十条，这里全量读一次即可。
+    final repo = ref.read(repositoryProvider);
+    DateTime? lastFetchAt;
+    for (final holding in await repo.getAllHoldings()) {
+      final at = holding.quoteFetchedAt;
+      if (at == null) continue;
+      if (lastFetchAt == null || at.isAfter(lastFetchAt)) lastFetchAt = at;
+    }
+    if (!QuoteRefreshScheduler.shouldTriggerNow(
+      enabled: true,
+      lastFetchAt: lastFetchAt,
+      minInterval: service.capability.minRefreshInterval,
+      now: DateTime.now(),
+    )) {
+      return;
+    }
+
+    final result = await service.refreshQuotes();
+    if (result.updated > 0) {
+      // 持仓表 watch 会自行 bump statsRefresh（见 holding_providers），
+      // 这里不重复触发；仅记录一行便于排查「为什么净值没变」。
+      logger.info('QuoteService', '定时行情刷新：$result');
+    }
+  }
+
   /// backup_auto_last_attempt_ms 记录每次尝试时刻：失败退避 30 分钟 +
   /// 时钟回拨防护（SEC-08，回拨期不重复触发）。
   /// 云服务未就绪（LocalOnly 等待期等）不写任何 key，下一分钟重查。
@@ -654,6 +717,8 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
     _backupScheduler = null;
     _holidayScheduler?.dispose();
     _holidayScheduler = null;
+    _quoteScheduler?.dispose();
+    _quoteScheduler = null;
     _removeOverlay();
     _startupSyncController?.detach();
     _startupSyncController = null;
