@@ -197,4 +197,4 @@
 
 `lib/widgets/encryption/password_setup_dialog.dart` 是**手抄了一遍外壳**（`KeyboardBottomInsetPadding` + `SafeArea` + `p16` 留距 + `Material(surfaceElevated/radiusXl/antiAlias)` + 整卡 `SingleChildScrollView` + 自带标题与 `PiggySheetActions`），因此同样有「长内容按钮滚走 / 拖不动」的问题，还多一份 chrome 漂移风险。已改为直接返回 `PiggyFormSheet`（字段区外什么都不留），入口 `_showSheet` 也换成 `showPiggyFormSheet`，净减约 40 行。
 
-> 备注：`AGENTS.md` 第 259 条对表单抽屉结构的描述（标题 → p16 → 字段 → p20 → 按钮行）**未同步**这两点（抓取条、按钮行固定）—— 该文件当时正被另一并发会话修改，本批没动，待其落地后补一句即可。
+> 备注：`AGENTS.md` 里「表单抽屉一律用悬浮卡片外壳」那条已同步本次改动：基准实现指针改指 `lib/widgets/ui/form_sheet.dart`（唯一外壳），结构描述补上「抓取条 + 标题与按钮行常驻不滚动、只有字段区滚动 + 下拉关闭（抓取条/标题/按钮行靠自身手势，字段区 `_DragToDismiss`，显式 ClampingScrollPhysics）」，并钉上 `test/widgets/form_sheet_shell_test.dart` 为门禁。原描述把基准实现写成加密「设置密码」抽屉与云同步 `_CloudConfigSheet`，那两份现在都只是 `PiggyFormSheet` 的调用方。
