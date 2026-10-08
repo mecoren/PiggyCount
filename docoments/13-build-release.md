@@ -348,7 +348,7 @@ PRODUCT_BUNDLE_IDENTIFIER=com.wait.piggycount
 4. 签名物料就位情况（仅告警，缺 keystore / 证书不拦截）；
 5. 单点计算发布意图 `publish`（push tag 恒 `true`；手动触发看 `dry_run`），下游 Play / TestFlight / Release 统一引用。
 
-注：tag 与 `pubspec.yaml#version` 刻意解耦，不校验两者相等——发版版本只由 tag 经 `--build-name` / `--build-number` 注入。
+注：CI **不校验** tag 与 `pubspec.yaml#version` 相等（历史 `manual-<short_sha>` 等非语义 tag 会误报），发版版本只由 tag 经 `--build-name` / `--build-number` 注入。发版人须在打 tag 前**手工**把 `pubspec.yaml#version` 更新为同一版本，并与更新日志同批提交推送（见 `AGENTS.md`「发版流程」）。
 
 #### 5.1.2 Job 2：android
 
@@ -532,7 +532,7 @@ flutter build apk --release --flavor prod \
 
 - tag `v0.1.0` + run_number `42` → versionName `0.1.0`、versionCode `42`
 - 同时 `--dart-define=CI_VERSION` 供应用内「关于」页与 OTA 检查读取
-- **不再写回 pubspec.yaml**：历史上的 `sed -i "s/^version: .*/…"` 已移除——Android 用 GNU sed、iOS 用 BSD `sed -i ""`，两者口径不一致且会污染工作区
+- **CI 不写回 pubspec.yaml**：历史上的 `sed -i "s/^version: .*/…"` 已移除——Android 用 GNU sed、iOS 用 BSD `sed -i ""`，两者口径不一致且会污染工作区；**发版人须在打 tag 前手工把 `pubspec.yaml#version` 更新为本次发布版本**（与更新日志一起提交推送，见 `AGENTS.md`「发版流程」）
 
 ### 8.3 构建号
 

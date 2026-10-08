@@ -2,8 +2,10 @@ name: Release
 
 # 触发契约（与 analyze.yml 的 wait 分支 CI 配套）：
 #   1. push tag `v*`     —— 正式发版：推送即构建并发布 Release。
-#                           发版版本以 tag 为准（--build-name / --build-number 注入），
-#                           与 pubspec.yaml#version 刻意解耦（后者只代表开发主线版本）。
+#                           发版版本以 tag 为准（--build-name / --build-number 注入）；
+#                           CI 不写回 pubspec.yaml#version、也不校验两者相等——
+#                           发版人须在打 tag 前手工把 pubspec 更新为同一版本（连同应用内更新日志）
+#                           并提交推送到 wait，再打 tag。
 #                           audit job 校验 tag 提交在 origin/wait 上、且版本单调递增。
 #   2. workflow_dispatch —— 预演：dry_run 默认 true，只构建并上传 Actions Artifacts，
 #                           不建 Release、不上传 Google Play / TestFlight；且只能从 wait 分支发起。
@@ -96,8 +98,8 @@ jobs:
           fi
 
       # 版本单调性：不允许发出低于历史 v* tag 的版本，防止误发低版本。
-      # 不校验 tag 与 pubspec.yaml#version 相等——两者刻意解耦（pubspec 只代表
-      # 开发主线版本，发版版本由 tag 经 --build-name / --build-number 注入）。
+      # 不校验 tag 与 pubspec.yaml#version 相等（历史 manual-<sha> 等非语义 tag 会误报）：
+      # 发版版本由 tag 经 --build-name / --build-number 注入，pubspec 由发版人在打 tag 前手工对齐。
       - name: 版本单调性校验
         shell: bash
         run: |
@@ -202,9 +204,11 @@ jobs:
       - name: Install Android build-tools and platforms
         run: |
           # platforms;android-37.0 —— compileSdk 37 所需的平台包。Android 已引入
-          # minor API level：SDK 仓库里**没有** `platforms;android-37`（AGP 8.12.x
-          # 找它就会报 "Failed to find target with hash string 'android-37'"），
-          # 准确包 ID 是 `platforms;android-37.0`（照 Google 官方 repository2-3.xml 核对）。
+          # minor API level：SDK 仓库里**没有** `platforms;android-37`，准确包 ID 是
+          # `platforms;android-37.0`（照 Google 官方 repository2-3.xml 核对）。
+          # 注意要跟 `android/app/build.gradle` 的 `compileSdkMinor = 0` 成对出现：
+          # 少了它，AGP（含 9.1.0）会把目标 hash 拼成 `android-37` 并报
+          # "Failed to find target with hash string 'android-37'"。
           # 原先没装它，靠 AGP 构建期自动下载兜底（首次会慢 1–2 分钟）。
           # build-tools 用 37.0.0：原先装的是 35.0.0（compileSdk 36 时代的），
           # compileSdk 抬到 37 后应对齐（Google 仓库里 37.0.0 已正式发布）。
@@ -243,8 +247,8 @@ jobs:
             echo "No Android signing secrets provided; will use fallback CI keystore in Gradle."
           fi
 
-      # 版本不写回 pubspec.yaml（原 sed 会污染工作区、且 GNU/BSD sed 口径不一致）：
-      # 统一用 --build-name / --build-number 注入本次构建。
+      # CI 不写回 pubspec.yaml（原 sed 会污染工作区、且 GNU/BSD sed 口径不一致）：
+      # 统一用 --build-name / --build-number 注入本次构建；pubspec 由发版人在打 tag 前手工对齐。
       - name: Build APK (release)
         run: |
           VERSION='${{ steps.meta.outputs.tag_name }}'
@@ -538,8 +542,9 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      # 版本不写回 pubspec.yaml（原 sed -i "" 是 BSD sed 口径，与 Android job 的
-      # GNU sed 不一致）：统一用 --build-name / --build-number 注入本次构建。
+      # CI 不写回 pubspec.yaml（原 sed -i "" 是 BSD sed 口径，与 Android job 的
+      # GNU sed 不一致）：统一用 --build-name / --build-number 注入本次构建；
+      # pubspec 由发版人在打 tag 前手工对齐。
       - name: Setup iOS signing (optional)
         env:
           IOS_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12 }}

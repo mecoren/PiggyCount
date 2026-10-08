@@ -27,8 +27,10 @@ plugins {
     // 构建期 apply Flutter Gradle Plugin 失败（Flutter 3.47.6 新建工程模板即 9.1.0）。
     // AGP 9 默认只读新 DSL，这里靠 gradle.properties 里 Flutter migrator 自动加的
     // `android.newDsl=false` 继续读旧 DSL，app/build.gradle 因此无需迁移。
-    // 历史：8.13.2 是为 compileSdk 37 的 `platforms/android-37.0` 命名而升的
-    // （AGP 8.12.x 只找 `android-37`，报 Failed to find target with hash string）。
+    // 历史：8.13.2 曾为 compileSdk 37 的 `platforms/android-37.0` 命名而升
+    // （AGP 8.12.x 只会找 `android-37`，报 Failed to find target with hash string）。
+    // **光升 AGP 不够**：AGP 9.1.0 在不声明 minor 时同样只找 `android-37`
+    // （2026-10-08 实测），真正的开关是 `app/build.gradle` 的 `compileSdkMinor = 0`。
     id "com.android.application" version "9.1.0" apply false
     // 2.4.0（2026-10-06 批次B）：与 AGP 9.1.0 配套（Flutter 3.47.6 模板即 2.4.0）；
     // 实测 2.2.20 仍被判 Incompatible AGP/KGP versions。Kotlin 2.2.0 在 Flutter 3.44

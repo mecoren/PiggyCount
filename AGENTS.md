@@ -9,7 +9,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 - **中文工作**：对话、commit message、文档、代码注释全部中文。commit 格式 `type(scope): 中文描述`，多批工作常在末尾附日期，如 `fix(sync): 同步一致性 D-1~D-4 修复 + 契约穷举守门测试（2026-09-27）`。
 - **文件引用只写仓库内相对路径（2026-10-08）**：文档 / PRD / 注释 / PR 正文里引用文件，Markdown 链接写 `[db.dart](../lib/data/db.dart#L120)`（相对当前文件所在目录，可带 `#Lxx-Lyy` 片段），正文提及写 `lib/data/db.dart`。**三类路径一律禁止**：① `file:///` 绝对路径（含 `d:\Develop\...`、`C:/Develop/...` 这类盘符 + 机器目录，换机必失效）；② 任何本机绝对路径；③ 指向**外部兄弟项目**的路径（如 `C:\Develop\project\orbit`、`...\wait-home\mobile\...`，以及指向仓库外的相对链接 `../../../../wait-home/...`）—— 外部项目只能写成「外部项目 `orbit` / `wait-home` 的 `<该仓库内相对路径>`」。引用**已删除**的文件时不要留链接（点击落空），改写成代码文本 `` `sync_engine.dart:1122` ``。历史遗留：`docoments/`、`prd/` 里曾有 424 个 `file:///` 链接 + 143 处裸机器路径，2026-10-08 已全量改为相对引用，新增文档照此办理。`docoments/INDEX.md` 的「代码引用规范」是本条的细则来源。
 - **Flutter 版本单一来源**：只改 `pubspec.yaml` 的 `environment.flutter`（当前 `3.47.6`），CI 用 `flutter-version-file: pubspec.yaml` 读取。**禁止**在 `.github/workflows/*.yml` 里另写版本号——历史上 `release.yml` 停留 3.27.3 而 `pubspec.lock` 已要求 >=3.44.0，漂移会让下一次打 tag 发版直接失败。
-- **应用版本单一来源**：真值在 `pubspec.yaml#version`（当前 `0.1.0`），描述**开发主线当前版本**。发版时 `release.yml` 不修改 `pubspec.yaml`，而是把 tag 名经 `--build-name` / `--build-number` 注入构建（`--build-number` 取 `github.run_number`）。因此**发版产物名只跟 tag 走**，与 `pubspec.yaml` 的当前值无关——不要再手工两处维护，也不要用 `sed` 改 `pubspec.yaml`。
+- **应用版本单一来源（2026-10-08 修订发版口径）**：真值在 `pubspec.yaml#version`（当前 `0.1.0`）。**发版前必须先把它改成本次要发布的版本（= 即将打的 tag 去掉 `v` 前缀），并与更新日志一起提交推送**，让 `pubspec` 与已发布版本对齐（发版人的手工步骤，见「发版流程」）。`release.yml` 自身**不修改** `pubspec.yaml`，而是把 tag 名经 `--build-name` / `--build-number` 注入构建（`--build-number` 取 `github.run_number`）；**产物名仍只跟 tag 走**。**禁止**在 CI 里用 `sed` 改 `pubspec.yaml`。
 - **分层不可破**：UI 只碰 Provider；Provider 注入 Service / Repository；Service 只调 Repository；Repository 是数据库唯一入口。跨层调用一律 review 拒绝。
 - **写操作必须经 Repository**：任何改库操作都要走 Repository，由其内部经 `ChangeTracker`（`lib/cloud/sync/change_tracker.dart`）写入 `local_changes`。**绕过 Repository 直接写 DB 是严重 bug**——本地变更不会进 `local_changes`，云端同步静默丢数据。
 - **`ChangeTracker` 作用域契约**：调用方只用两个强类型入口——user-global 实体（account / category / tag / exchange_rate_override）走 `recordUserGlobalChange`（自动挂 `ledgerId = 0`），ledger-scoped 实体（transaction / budget / ledger / ledger_snapshot）走 `recordLedgerChange`（必须传 `> 0` 的具体账本 id）。**不要调私有的 `recordChange`**。作用域记错会让变更卡在本地永不推送。云→本地合并路径（apply / restore）必须用 `withRecordingSuppressed` 包裹，否则云端数据会回流成幻影变更。
@@ -32,7 +32,7 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
 | 维度 | 选型 |
 | --- | --- |
 | 框架 | Flutter 3.47.6（stable，Dart 3.13.5）+ Dart SDK `^3.6.0`，`flutter_lints ^6.0.0` |
-| Android 构建 | compileSdk **37**（Android 17，`permission_handler_android 14.x` 硬要求）+ AGP **9.1.0** + Gradle **9.3.1** + NDK **28.2.13676358** + Java 17 / Kotlin **2.4.0**（见 `android/app/build.gradle`、`android/settings.gradle`；compileSdk 37 的平台包在本机装成 `platforms/android-37.0`，AGP 8.12.x 找不到它。Flutter 3.47.6 的兼容矩阵已不含 AGP 8.x，故 AGP 9 / Gradle 9 / Kotlin 2.4 三者必须同批升；AGP 9 起 `resValues` build feature 默认关闭，靠 `android/gradle.properties` 的 `android.defaults.buildfeatures.resvalues=true` 显式打开，否则报 “Build Type debug contains custom resource values, but the feature is disabled”；`android/build.gradle` 已改用 `layout.buildDirectory` —— Gradle 9 移除了 `Project.buildDir`） |
+| Android 构建 | compileSdk **37**（Android 17，`permission_handler_android 14.x` 硬要求）+ AGP **9.1.0** + Gradle **9.3.1** + NDK **28.2.13676358** + Java 17 / Kotlin **2.4.0**（见 `android/app/build.gradle`、`android/settings.gradle`；compileSdk 37 的平台包在 SDK 仓库里只有 `platforms;android-37.0`（**没有** `platforms;android-37`），故 `android/app/build.gradle` 的 `compileSdk = 37` 必须配 `compileSdkMinor = 0`，否则 AGP（含 9.1.0）会把目标 hash 拼成 `android-37`，报 Failed to find target with hash string。Flutter 3.47.6 的兼容矩阵已不含 AGP 8.x，故 AGP 9 / Gradle 9 / Kotlin 2.4 三者必须同批升；AGP 9 起 `resValues` build feature 默认关闭，靠 `android/gradle.properties` 的 `android.defaults.buildfeatures.resvalues=true` 显式打开，否则报 “Build Type debug contains custom resource values, but the feature is disabled”；`android/build.gradle` 已改用 `layout.buildDirectory` —— Gradle 9 移除了 `Project.buildDir`） |
 | 状态与 DI | Riverpod **3.4.3**（`flutter_riverpod`）——唯一状态管理方案，同时承担 DI（3.x 迁移要点见下方「Riverpod 3 迁移注意」） |
 | 本地数据库 | Drift 2.35 ORM + `sqlite3_flutter_libs` / `sqlite3`（`PiggyDatabase`，schemaVersion 51）；Android 侧整库加密走自带的 `libsqlcipher.so`（见「版本约束注意」） |
 | 路由 | Navigator 1.0（`MaterialPageRoute` + `Navigator.push`），**不用** go_router / auto_route |
@@ -164,7 +164,7 @@ python scripts/gen_ios_icons.py
 - **别跑全仓 `dart format .`**：本机 SDK 的 formatter 与仓库格式化基线不一致，一次会把几百个无关文件重排（2026-10-02 实测 **418 个**，并顺带引入 4 条 `curly_braces_in_flow_control_structures` 新 info）。只格式化自己新增/改动的文件；误跑后按「除本批改动外的文件」逐个 `git checkout --` 回退，别整仓回退（会连自己的改动一起丢）。
 - **本地镜像会改写 `pubspec.lock`**：设了 `PUB_HOSTED_URL`（如 `pub.flutter-io.cn`）时，`flutter pub get` 会把 lock 里 200+ 行 `url` 全量改写成镜像地址，并可能顺带抬几个 patch 版本（实测 254 行 url + 4 处版本漂移）。提交前必须 `git status` 确认没把它带上——CI 的 analyze job 已加守卫拦这道（`pubspec.lock 镜像守卫`）。
 - **CI**（`.github/workflows/analyze.yml`）两个 job：`analyze`（`flutter analyze --fatal-infos`）+ `test`（`flutter test`，承担同步契约结构性回归门禁：`test/cloud/sync_contract_coverage_test.dart`、`sync_diff_category_and_zero_amount_test.dart`、`restore_preserves_local_only_columns_test.dart`）。issue-lint / pullfrog 为辅助检查。
-- **发版**：唯一入口 `.github/workflows/release.yml`，当前开发主线分支 `wait`。完整链路、产物命名与踩坑清单见下方「发版流程」章节。
+- **发版**：唯一入口 `.github/workflows/release.yml`，当前开发主线分支 `wait`。**发版前须先更新全局版本号 + 更新日志并提交推送，再打 tag**（见下方「发版流程」检查清单）。完整链路、产物命名与踩坑清单见下方「发版流程」章节。
 
 ## 发版流程
 
@@ -184,14 +184,26 @@ python scripts/gen_ios_icons.py
 3. 版本单调性：取历史 `v*` tag 中版本最高者，新 tag 版本低于它即拒绝，防止误发低版本；
 4. 单点计算发布意图 `publish`（push tag 恒 `true`；手动触发看 `dry_run`），下游 Play / TestFlight / Release 上传环节统一引用它。
 
-**tag 与 `pubspec.yaml#version` 刻意解耦**：两者不做一致性硬校验（pubspec 只代表开发主线版本），发版版本只由 tag 经 `--build-name` / `--build-number` 注入。
+**版本对齐口径（2026-10-08 修订）**：发版版本仍以 tag 为唯一真值，由 `release.yml` 经 `--build-name` / `--build-number` 注入构建；但**发版人必须在打 tag 前先把 `pubspec.yaml#version` 更新为同一版本**（并同步更新应用内更新日志，见「更新日志维护」），让 `pubspec` 与已发布版本保持一致。CI 侧**仍不做 tag ↔ pubspec 一致性硬校验**（历史 `manual-<short_sha>` 等非语义 tag 会误报），对齐靠流程保证。
 
-### 版本注入（不写回 pubspec.yaml）
+### 版本注入与对齐（CI 不写回 pubspec.yaml）
 
-- **版本真值**：`pubspec.yaml#version`（当前 `0.1.0`）只代表**开发主线当前版本**。
-- **发版版本**：`release.yml` 把 tag 名注入构建，**不改 `pubspec.yaml`**——`--build-name=<tag 去掉 v 前缀>` + `--build-number=github.run_number`，并 `--dart-define=CI_VERSION=<tag>` 供应用内「关于」页与 OTA 检查读取（`lib/pages/settings/about_page.dart`、`lib/services/update/update_checker.dart`，未定义时回退 `PackageInfo`）。
+- **版本真值**：`pubspec.yaml#version`（当前 `0.1.0`）。**发版前由发版人先更新为本次发布版本**，让开发主线版本与已发布版本对齐；开发中它代表主线当前版本。
+- **发版版本**：`release.yml` 把 tag 名注入构建，**CI 不写回 `pubspec.yaml`**——`--build-name=<tag 去掉 v 前缀>` + `--build-number=github.run_number`，并 `--dart-define=CI_VERSION=<tag>` 供应用内「关于」页与 OTA 检查读取（`lib/pages/settings/about_page.dart`、`lib/services/update/update_checker.dart`，未定义时回退 `PackageInfo`）。
 - **禁止**再用 `sed -i "s/^version: .*//"` 改 `pubspec.yaml`：Android job 是 GNU sed、iOS job 是 BSD sed（`-i ""`），口径不一致且会污染工作区。
-- **产物名只跟 tag 走**：打 `v0.1.0` 得到 `piggycount-v0.1.0-*`，与 `pubspec.yaml` 当前值无关。**Release 页停在旧版本 ≠ 代码没更新，只是没打新 tag**——`v0.1.0` 长期在线而 `pubspec` 已前进就是这种情况。
+- **产物名只跟 tag 走**：打 `v0.1.0` 得到 `piggycount-v0.1.0-*`，与 `pubspec.yaml` 当前值无关。**Release 页停在旧版本 ≠ 代码没更新，只是没打新 tag**。
+
+### 更新日志维护
+
+应用内「更新日志」页的数据源是 `lib/pages/settings/changelog_data.dart` 的 `kChangelogVersions`（中文硬编码，最新版本在前；页面标题等界面文案仍走 l10n），入口在「关于」页（`lib/pages/settings/about_page.dart`）。**每次发版都必须在打 tag 前补齐本版本条目**：
+
+1. 从**上一个发版 tag** 到当前 `HEAD` 提取提交记录（`--no-merges` 收敛合并提交，仅作人工归纳素材）：
+   ```bash
+   git --no-pager log --no-merges --pretty=format:"%h %s" v<上一版本>..HEAD
+   ```
+2. 从记录中**人工提炼面向用户的重要信息**（新功能 / 体验改进 / 关键修复），按 `ChangelogSection`（`icon` + `title` + `items`）分组整理，`summary` 写一句话概述。
+3. 在 `kChangelogVersions` **头部插入**新条目：`version` = 本次版本号（与 tag 去 `v` 前缀一致）、`date` = 发版日，保持日期倒序（最新在前）。
+4. 与 `pubspec.yaml#version` 的改动放进**同一次提交**（见检查清单第 4 步）。
 
 ### 产物命名
 
@@ -222,15 +234,18 @@ secret 缺失时对应步骤**跳过而非失败**（`exit 0`），构建产物�
 ### 发版检查清单
 
 1. `wait` 分支上 `dart format .`（无修改）→ `flutter analyze --fatal-infos`（0 issue）→ `flutter test` 全绿。
-2. 如需调整版本真值，只改 `pubspec.yaml#version` 一处。
-3. 打 tag：`git tag vX.Y.Z && git push origin vX.Y.Z`（必须在 `wait` 上，且版本高于历史 `v*` tag）。
-4. 等 `audit` → `android` / `ios` → `release` 全绿；**动过 iOS 签名必须实跑回归**。
-5. Release 页核对资产：4 个 APK（含 `-arm64-v8a`）+ AAB + iOS 四件套齐全。
+2. **更新全局版本号**：把 `pubspec.yaml#version` 改为本次发布版本（= 即将打的 tag 去掉 `v` 前缀）——这是唯一真值，`android/app/build.gradle` 的 `versionName` / `versionCode` 由 `flutter.versionName` 派生，不用另改。
+3. **更新应用内更新日志**：按「更新日志维护」，从上一个发版 tag 到 `HEAD` 的提交记录中提取重要信息，在 `lib/pages/settings/changelog_data.dart` 的 `kChangelogVersions` 头部插入新条目（版本号与日期对齐第 2 步）。
+4. **提交并推送**：把第 2、3 步改动一次性提交（如 `chore(release): 版本号与更新日志更新至 vX.Y.Z`）并 push 到 `wait`，确认工作区干净——**必须在打 tag 前完成，否则 tag 指向的提交里没有这些改动**。
+5. 打 tag：`git tag vX.Y.Z && git push origin vX.Y.Z`（必须在 `wait` 上，且版本高于历史 `v*` tag）。
+6. 等 `audit` → `android` / `ios` → `release` 全绿；**动过 iOS 签名必须实跑回归**。
+7. Release 页核对资产：4 个 APK（含 `-arm64-v8a`）+ AAB + iOS 四件套齐全。
 
 ### 已知坑
 
 - **iOS widget 签名靠 bundle id 精确匹配**：`Configure Xcode project for signing` 用 perl 按 `PRODUCT_BUNDLE_IDENTIFIER` 匹配后插入 `PROVISIONING_PROFILE_SPECIFIER`。工程里的值是 `com.wait.piggycount.PiggyCountWidgetExtension`，脚本一度写成 `com.tntlikely.piggycount...`，**匹配不上 → Widget 扩展签名配置根本没插入**。改 iOS bundle id 时，必须同步改 release.yml 的正则与 `ios/ExportOptions.plist` 的 `provisioningProfiles` 键。
 - **`docoments/13-build-release.md` 的产物表**随本流程一起维护，改命名规则时同步更新，否则又成新的漂移源。
+- **漏写更新日志 CI 不会拦**：`test/pages/settings/changelog_page_test.dart` 只校验数据结构（字段非空 + 日期倒序），**不校验最新条目版本号是否等于发版 tag / `pubspec.yaml#version`**——所以「发版前补更新日志」这一步只靠检查清单第 3 步人工保证。
 - **其余历史文档里的旧版本号不要照抄**：`docoments/01`、`03`、`16`、`17`、`prd/*`、`docs/optimization-plan-*` 仍写着 `Flutter 3.27.3` / `version: 0.0.1` 等旧值（成于 2026-07，属历史留存，**刻意不改**）。版本相关一律以 `pubspec.yaml` + 本文件 + 代码为准；`test/`、`docs/synctest/` 下的测试报告记录的是**当时实测版本**，更不得回改。
 - **发版不可并发取消**：`release.yml` 的 `concurrency.cancel-in-progress: false`（与 `analyze.yml` 刻意相反）——半套资产比排队更糟，**不要手动取消进行中的 release run**。
 - **相关 secrets**：`ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` / `ANDROID_KEY_ALIAS` / `ANDROID_KEY_PASSWORD`、`APPLE_CERTIFICATE_P12` / `APPLE_CERTIFICATE_PASSWORD` / `APPLE_PROVISIONING_PROFILE` / `APPLE_PROVISIONING_PROFILE_WIDGET` / `APPLE_TEAM_ID`、`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`、`APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD`；缺失时对应环节降级为未签名 / 跳过上传，仅告警不失败。

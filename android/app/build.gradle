@@ -17,6 +17,13 @@ android {
     // 37：permission_handler_android 14.x（permission_handler 13.x）硬要求
     // compileSdk = 37，详见 pubspec.yaml 的 permission_handler 注释。
     compileSdk = 37
+    // Android 从 API 36 起引入 minor API level：SDK 仓库里**没有** `platforms;android-37`，
+    // 只有 `platforms;android-37.0`（`release.yml` 里 sdkmanager 装的也是这个包）。
+    // 不显式声明 minor 时，AGP 9.1.0 会把目标 hash 拼成 `android-37` 去找，直接失败：
+    //   Failed to find target with hash string 'android-37' in: <SDK>
+    // 显式写 0（= 平台包 android-37.0 的 minor）后 hash 才是 `android-37.0`，才能命中。
+    // 37.1 / 37.2 暂不跟进（本地与 CI 装的都是 37.0）。
+    compileSdkMinor = 0
     // Keep in sync with plugins' required NDK to avoid build warnings/errors.
     // 跟随 Flutter 3.44.3 的默认 NDK，同时满足 jni 包的 28.2.13676358 要求
     // （原先钉 27.0.12077973，构建期会报插件要求更高 NDK）。
