@@ -21,7 +21,7 @@ class Ledgers extends Table {
   TextColumn get name => text()();
   TextColumn get currency => text().withDefault(const Constant('CNY'))();
   TextColumn get type =>
-      text().withDefault(const Constant('personal'))(); // personal / shared
+      text().withDefault(const Constant('personal'))(); // personal
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   // 跨设备同步唯一标识：跟 accounts/categories/tags 的 syncId 同语义，
   // 历史上对齐 PiggyCount Cloud server 的 ledger.external_id(该服务已
@@ -29,13 +29,6 @@ class Ledgers extends Table {
   // id(A/B 本地 id 必然不一致)。v21 migration 里已为旧数据把 id 回填成
   // syncId 以兼容。
   TextColumn get syncId => text().nullable()();
-  // [共享账本已下线] v24 共享账本字段 — server 端 LedgerMember.role 同步下来。
-  // 云端协作已下线后无写入方;保留以兼容存量行 + 维持 schema(禁止删列)。
-  TextColumn get myRole =>
-      text().withDefault(const Constant('owner'))(); // owner / editor
-  IntColumn get memberCount => integer().withDefault(const Constant(1))();
-  BoolColumn get isShared => boolean().withDefault(const Constant(false))();
-  TextColumn get ownerUserId => text().nullable()(); // 当前 Owner 是谁
   // v27: 自定义每月起始日(1-28),统计/预算/小部件按 [当月N日, 次月N日) 聚合,
   // 1=自然月。随 sync 跨设备(payload key `monthStartDay`,server 列
   // ledgers.month_start_day)。见 .docs/period-start-date/design.md。
@@ -184,37 +177,14 @@ class Transactions extends Table {
   TextColumn get note => text().nullable()();
   IntColumn get recurringId => integer().nullable()(); // 关联到重复交易模板
   TextColumn get syncId => text().nullable()(); // 跨设备同步唯一标识 (UUID)
-  // [共享账本已下线] v24 共享账本"谁记的"显示。CSV 导入导出仍在写这两列,不可删。
+  // v24: 交易记录人(“谁记的”显示)。**本地专有列**——不进云快照,恢复路径按
+  // 同库原值搬运(见 data_import_service 的本地专有列回填与
+  // test/cloud/restore_preserves_local_only_columns_test.dart)。共享账本协作
+  // 下线后已无 UI 写入方(`markTxAuthor` 保留但无人调用),列本身按
+  // 「不删字段」规则保留。
+  // (v24 同批引入的共享账本 *SyncIdOverride 列已随功能下线,由 v51 迁移 DROP。)
   TextColumn get createdByUserId => text().nullable()();
   TextColumn get lastEditedByUserId => text().nullable()();
-  // [共享账本已下线] v25 共享账本 sync_id override(§7 决策)。本地已无新写入方,
-  // 但存量交易与云快照(transactions_json / sync_fingerprint / sync_diff_service)
-  // 仍会携带这些字段,必须保留。
-  // Editor 在共享账本下记 tx 时,选 Owner 的 SharedLedger{Categories,Accounts,Tags}
-  // 行,但本地 Categories/Accounts/Tags 主表没有对应 int id。这些 override
-  // 字段直接存 Owner 的 syncId 字符串,categoryId / accountId 留 null;sync push
-  // 时序列化优先用 override(server LWW key 是 syncId,主表 syncId 也是 string)。
-  // Owner / 单人账本场景:override 字段为 null,走老路径(categoryId int 反查
-  // Categories.syncId)。
-  TextColumn get categorySyncIdOverride => text().nullable()();
-  TextColumn get accountSyncIdOverride => text().nullable()();
-  TextColumn get toAccountSyncIdOverride => text().nullable()();
-
-  /// ⚠️ **预留未实现（死列），不要使用**。
-  ///
-  /// 2026-09-27 全仓核查结论：**零写入方**（`lib/`、`test/`、`packages/` 内除
-  /// Drift 生成代码外无任何赋值），也**零实际读取方** —— 共享账本 UI 的标签
-  /// hydration 读的是 `transaction_tag_overrides` 表（按 `tx.syncId` 查），
-  /// 与本列无关（见 `local_transaction_repository.dart` 的
-  /// `_hydrateSharedOverridesFull`）。文件式云同步（S3/WebDAV）的导出、指纹
-  /// 白名单、导入解析三处也都没有它。
-  ///
-  /// 因此它不会跨设备传播；比对脚本据此把它列为**契约外**字段。
-  /// 若将来要启用它，必须**同时**补齐三处（导出写键 / 指纹白名单加键 /
-  /// 解析读键），否则会重现「指纹说不同、diff 说没变化」的永久不收敛；
-  /// `scripts/live_db/compare_sync_final.py` 的实现派生校验会在补实现的那一刻
-  /// 立刻报 [DRIFT]，提醒同步更新比对契约。
-  TextColumn get tagSyncIdsOverride => text().nullable()();
 
   /// 不计入收支:true 时从收支统计/图表/月年汇总剔除,但仍计入账户余额、净资产、
   /// 账单列表(.docs/transaction-flags/01 §二 D1)。
@@ -483,22 +453,6 @@ class TransactionTags extends Table {
   IntColumn get tagId => integer()(); // 标签ID
 }
 
-// [共享账本已下线] v27: 共享账本 §7 — 交易标签 sync_id override。
-// 无新写入方,但存量 override 行与快照指纹计数
-// (transactions_sync_manager.dart) 仍引用本表,不可删。
-// Editor 在共享账本下记 tx 选 Owner 的 tag,Tag 主表没该行(SharedLedgerTags
-// 才有),传统 transaction_tags.tag_id 没法存 (本地 int id 不存在)。这张
-// override 表按 (transaction_id, tag_sync_id) 存,sync push 时 union 进 tagIds
-// payload;tx 反查 / 编辑回显时 union 主表 transaction_tags + 本表。
-class TransactionTagOverrides extends Table {
-  TextColumn get transactionSyncId => text()(); // tx.syncId(全局唯一)
-  TextColumn get tagSyncId => text()(); // Owner tag syncId
-  DateTimeColumn get createdAt => dateTime()();
-
-  @override
-  Set<Column> get primaryKey => {transactionSyncId, tagSyncId};
-}
-
 // v26: sync pull 时 server 端下发的 change 在本地 apply 抛错的持久化记录。
 // 健康用户这张表是空的;只在出错时写入,供 UI 暴露 + 用户重试/跳过 + 开发者
 // 远程诊断。详见 .docs/full-pull-refactor/04-data-model.md。
@@ -581,74 +535,14 @@ class Budgets extends Table {
 }
 
 // ============================================================================
-// 共享账本(v24)
+// 共享账本(v24) — 已彻底移除
 // ============================================================================
 
-// [共享账本已下线] 此处的 ledger_members(账本成员镜像表)已移除 —— 全库零读写
-// (仅 v24 建表,从未有写入方或读取方)。共享账本协作下线且项目无老用户,
-// 2026-10-07 起由 v50 迁移 DROP。下方三张 shared_ledger_* 镜像表暂留(见文件内标注)。
-
-/// [共享账本已下线] 共享账本里 Owner 的 user-global 分类镜像。
-/// Editor 在共享账本下打开"选分类"弹窗读这表(而非自己的 Categories);
-/// 历史上由 `GET .../shared-resources` 拉取 + WS `shared_resource_change`
-/// 增量更新,现已无写入方。保留供 picker / 统计 / 孤儿扫描的存量兼容分支读取。
-class SharedLedgerCategories extends Table {
-  TextColumn get ledgerSyncId => text()();
-  TextColumn get syncId => text()(); // Owner 的 user-global category sync_id
-  TextColumn get name => text()();
-  TextColumn get kind => text()(); // expense / income
-  TextColumn get icon => text().nullable()();
-  TextColumn get iconType => text().withDefault(const Constant('material'))();
-  TextColumn get iconCloudFileId =>
-      text().nullable()(); // 自定义图标:attachment UUID
-  TextColumn get iconCloudSha256 =>
-      text().nullable()(); // 自定义图标:sha256(本地 cache 去重)
-  TextColumn get color => text().nullable()();
-  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
-  IntColumn get level => integer().withDefault(const Constant(1))();
-  TextColumn get parentName => text().nullable()();
-  // v25 共享账本二级分类:parent 的 syncId,用于 picker 建稳定父子链
-  // (parent_name 兜底/显示,parent_sync_id 主)。
-  TextColumn get parentSyncId => text().nullable()();
-  DateTimeColumn get updatedAt => dateTime()();
-
-  @override
-  Set<Column> get primaryKey => {ledgerSyncId, syncId};
-}
-
-/// [共享账本已下线] 共享账本里 Owner 的 user-global 账户镜像。已无写入方,
-/// 保留供 picker / 交易 override 回显 / 孤儿扫描的存量兼容分支读取。
-class SharedLedgerAccounts extends Table {
-  TextColumn get ledgerSyncId => text()();
-  TextColumn get syncId => text()();
-  TextColumn get name => text()();
-  TextColumn get accountType => text().withDefault(const Constant('cash'))();
-  TextColumn get currency => text().withDefault(const Constant('CNY'))();
-  TextColumn get note => text().nullable()();
-  RealColumn get initialBalance => real().nullable()();
-  RealColumn get creditLimit => real().nullable()();
-  IntColumn get billingDay => integer().nullable()();
-  IntColumn get paymentDueDay => integer().nullable()();
-  TextColumn get bankName => text().nullable()();
-  TextColumn get cardLastFour => text().nullable()();
-  DateTimeColumn get updatedAt => dateTime()();
-
-  @override
-  Set<Column> get primaryKey => {ledgerSyncId, syncId};
-}
-
-/// [共享账本已下线] 共享账本里 Owner 的 user-global 标签镜像。已无写入方,
-/// 保留供 picker / TransactionTagOverrides 回显的存量兼容分支读取。
-class SharedLedgerTags extends Table {
-  TextColumn get ledgerSyncId => text()();
-  TextColumn get syncId => text()();
-  TextColumn get name => text()();
-  TextColumn get color => text().nullable()();
-  DateTimeColumn get updatedAt => dateTime()();
-
-  @override
-  Set<Column> get primaryKey => {ledgerSyncId, syncId};
-}
+// [共享账本已下线] 共享账本协作(PiggyCount Cloud)已整体下线且项目无老用户,
+// 2026-10-08 起残留由迁移整批 DROP:ledger_members(v50)、shared_ledger_
+// {categories,accounts,tags} 三张镜像表、transaction_tag_overrides、ledgers 与
+// transactions 上的全部共享专属列(均 v51)。相关代码(picker synthetic 替换机制、
+// override 写入/回显、Editor 权限门控)已同步删除,勿再新增引用。
 
 @DriftDatabase(tables: [
   Ledgers,
@@ -664,10 +558,6 @@ class SharedLedgerTags extends Table {
   Budgets,
   TransactionAttachments,
   LocalChanges,
-  SharedLedgerCategories,
-  SharedLedgerAccounts,
-  SharedLedgerTags,
-  TransactionTagOverrides,
   SyncPullErrors,
   ExchangeRates,
   ExchangeRateOverrides,
@@ -689,7 +579,7 @@ class PiggyDatabase extends _$PiggyDatabase {
 
   @override
   int get schemaVersion =>
-      50; // v50: 删除 ledger_members 死表(全库零读写;共享账本协作下线且项目无老用户,无需存量兼容); v49: 日历节假日本地缓存 — holiday_entries(date 主键,整年替换) + holiday_update_meta(单行 1:上次成功/尝试时间、连续失败数、自动更新开关);两张表都是「随时可整表重建」的本地缓存,不进同步白名单/指纹/diff/备份,也不挂 updated_at 触发器(与 exchange_rates 同定位) v48: 索引修复型迁移 — 补建 v10/v11/v12 只写进 onUpgrade 分支、onCreate 遗漏的 transaction_tags ×2 / budgets ×3 / transaction_attachments ×1 索引(2026-09-26 双端实测:新装库 EXPLAIN 报 SCAN transaction_tags,合并路径 tag 批量读固定 ~0.5s); v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+      51; // v51: 共享账本残留整体移除 — DROP shared_ledger_{categories,accounts,tags} / transaction_tag_overrides 四张死表(镜像表无写入方恒空) + ledgers(my_role/member_count/is_shared/owner_user_id) 与 transactions(category/account/to_account_sync_id_override + tag_sync_ids_override 死列) 八个共享专属列;同步契约三件套(指纹/快照/diff)与守门测试同批收窄; v50: 删除 ledger_members 死表(全库零读写;共享账本协作下线且项目无老用户,无需存量兼容); v49: 日历节假日本地缓存 — holiday_entries(date 主键,整年替换) + holiday_update_meta(单行 1:上次成功/尝试时间、连续失败数、自动更新开关);两张表都是「随时可整表重建」的本地缓存,不进同步白名单/指纹/diff/备份,也不挂 updated_at 触发器(与 exchange_rates 同定位) v48: 索引修复型迁移 — 补建 v10/v11/v12 只写进 onUpgrade 分支、onCreate 遗漏的 transaction_tags ×2 / budgets ×3 / transaction_attachments ×1 索引(2026-09-26 双端实测:新装库 EXPLAIN 报 SCAN transaction_tags,合并路径 tag 批量读固定 ~0.5s); v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   /// WAL 检查点后允许残留的字节数（见 [migration] 的 beforeOpen）。
   /// 公开给回归测试取期望值，别处不要依赖。
@@ -1285,96 +1175,22 @@ class PiggyDatabase extends _$PiggyDatabase {
             logger.info('DB', '[DB Migration] v23 迁移完成: 回填 $updated 条分类');
           }
           if (from < 24) {
-            // [共享账本已下线] v24: 共享账本完整 schema(合并自 v24/v25/v26/v27
-            // 的迭代,测试阶段一次落地最终态)。表/列一律保留不删,仅作存量兼容。
+            // v24 原为共享账本完整 schema。该功能已整体移除(残留由 v51 统一
+            // DROP 兜底,此处不再重建),本块仅保留仍有效的交易记录人两列。
             //
-            // 重要:所有 ALTER / createTable 都包"存在则跳过"防御 — 用户从
+            // 重要:所有 ALTER 都包"存在则跳过"防御 — 用户从
             // 3.1.3 升级到带 bug 的 3.2.0 时 v25 ALTER 失败,但 v24 的 DDL
             // 已经隐式 commit(SQLite DDL 不可回滚),user_version 仍 23。
             // 装新版本再跑 onUpgrade(from=23) 时 v24 第一句又会 duplicate column
             // 卡死。每条都要幂等。
-            logger.info('DB', '[DB Migration] 开始迁移到 v24: 共享账本完整 schema');
-
-            await _addColumnIfMissing('ledgers', 'my_role',
-                "ALTER TABLE ledgers ADD COLUMN my_role TEXT NOT NULL DEFAULT 'owner';");
-            await _addColumnIfMissing('ledgers', 'member_count',
-                "ALTER TABLE ledgers ADD COLUMN member_count INTEGER NOT NULL DEFAULT 1;");
-            await _addColumnIfMissing('ledgers', 'is_shared',
-                "ALTER TABLE ledgers ADD COLUMN is_shared INTEGER NOT NULL DEFAULT 0;");
-            await _addColumnIfMissing('ledgers', 'owner_user_id',
-                "ALTER TABLE ledgers ADD COLUMN owner_user_id TEXT;");
+            logger.info('DB', '[DB Migration] 开始迁移到 v24: 交易记录人列');
 
             await _addColumnIfMissing('transactions', 'created_by_user_id',
                 "ALTER TABLE transactions ADD COLUMN created_by_user_id TEXT;");
             await _addColumnIfMissing('transactions', 'last_edited_by_user_id',
                 "ALTER TABLE transactions ADD COLUMN last_edited_by_user_id TEXT;");
-            await _addColumnIfMissing(
-                'transactions',
-                'category_sync_id_override',
-                'ALTER TABLE transactions ADD COLUMN category_sync_id_override TEXT;');
-            await _addColumnIfMissing(
-                'transactions',
-                'account_sync_id_override',
-                'ALTER TABLE transactions ADD COLUMN account_sync_id_override TEXT;');
-            await _addColumnIfMissing(
-                'transactions',
-                'to_account_sync_id_override',
-                'ALTER TABLE transactions ADD COLUMN to_account_sync_id_override TEXT;');
-            await _addColumnIfMissing('transactions', 'tag_sync_ids_override',
-                'ALTER TABLE transactions ADD COLUMN tag_sync_ids_override TEXT;');
-
-            // [共享账本已下线] ledger_members 已由 v50 DROP,不再重建。
-            await _createTableIfMissing(
-                migrator, 'shared_ledger_categories', sharedLedgerCategories);
-            await _createTableIfMissing(
-                migrator, 'shared_ledger_accounts', sharedLedgerAccounts);
-            await _createTableIfMissing(
-                migrator, 'shared_ledger_tags', sharedLedgerTags);
-            await _createTableIfMissing(
-                migrator, 'transaction_tag_overrides', transactionTagOverrides);
-
-            // 重置 server_cursor — 强制下次启动全量重拉,确保 sync_engine_apply
-            // 用最新的 override 写入逻辑填回 *SyncIdOverride 字段。
-            // W5:sync_state 建表已从 v19 移除(v37 DROP,不再属于 schema),
-            // from<19 直升上来的库没有这张表 —— 无守卫 UPDATE 会抛
-            // no such table 让迁移回滚、App 永久打不开。表存在才重置。
-            await _resetServerCursorIfSyncStateExists();
 
             logger.info('DB', '[DB Migration] v24 迁移完成');
-          }
-          if (from < 25) {
-            // v25: SharedLedgerCategories 加 parent_sync_id 列。
-            // 注:v24 `createTable(sharedLedgerCategories)` 用**当前 schema**
-            // 建表,已经带 parent_sync_id 列 — 干净 from=23 升级时这里 ALTER
-            // 会 duplicate。用 helper PRAGMA 检查后再 ALTER。
-            logger.info('DBMigration',
-                '开始迁移到 v25: SharedLedgerCategories.parent_sync_id');
-            await _addColumnIfMissing(
-                'shared_ledger_categories',
-                'parent_sync_id',
-                'ALTER TABLE shared_ledger_categories ADD COLUMN parent_sync_id TEXT;');
-            // 数据回填:对每个 level=2 行,在同 ledger_sync_id + kind 内按
-            // parent_name 反查 level=1 行的 syncId 填进 parent_sync_id。
-            // 用 IS NULL/'' 守护让 UPDATE 可幂等重跑。
-            await customStatement('''
-              UPDATE shared_ledger_categories AS child
-              SET parent_sync_id = (
-                SELECT parent.sync_id
-                FROM shared_ledger_categories AS parent
-                WHERE parent.ledger_sync_id = child.ledger_sync_id
-                  AND parent.name = child.parent_name
-                  AND parent.kind = child.kind
-                  AND COALESCE(parent.level, 1) = 1
-                LIMIT 1
-              )
-              WHERE COALESCE(child.level, 1) >= 2
-                AND child.parent_name IS NOT NULL
-                AND (child.parent_sync_id IS NULL OR child.parent_sync_id = '')
-            ''');
-            // reset server_cursor 让后续 pull 重拉 user-global category change。
-            // W5:同 v24,表可能不存在(from<19 升级路径),守卫后执行。
-            await _resetServerCursorIfSyncStateExists();
-            logger.info('DBMigration', 'v25 迁移完成');
           }
           if (from < 26) {
             // v26: 新增 sync_pull_errors 表。健康用户为空,只在 pull apply
@@ -1763,6 +1579,28 @@ class PiggyDatabase extends _$PiggyDatabase {
             await migrator.deleteTable('ledger_members');
             logger.info('DBMigration', 'v50 迁移完成');
           }
+          if (from < 51) {
+            // v51: 共享账本残留整体移除(2026-10-08)。镜像表无写入方恒空、
+            // 项目无老用户,v50 DROP ledger_members 同款决策。
+            // 幂等性:表用 deleteTable(即 DROP TABLE IF EXISTS);列用 PRAGMA
+            // 存在性检查 — from<24 直升 v51 的库这些列从未创建,DROP 必须跳过。
+            // SQLite 3.35+ 支持 ALTER TABLE DROP COLUMN(sqlite3_flutter_libs
+            // 捆绑 3.4x,满足);这些列上无索引/触发器依赖,可安全 DROP。
+            logger.info('DBMigration', '开始迁移到 v51: 移除共享账本残留表与列');
+            await migrator.deleteTable('shared_ledger_categories');
+            await migrator.deleteTable('shared_ledger_accounts');
+            await migrator.deleteTable('shared_ledger_tags');
+            await migrator.deleteTable('transaction_tag_overrides');
+            await _dropColumnIfPresent('ledgers', 'my_role');
+            await _dropColumnIfPresent('ledgers', 'member_count');
+            await _dropColumnIfPresent('ledgers', 'is_shared');
+            await _dropColumnIfPresent('ledgers', 'owner_user_id');
+            await _dropColumnIfPresent('transactions', 'category_sync_id_override');
+            await _dropColumnIfPresent('transactions', 'account_sync_id_override');
+            await _dropColumnIfPresent('transactions', 'to_account_sync_id_override');
+            await _dropColumnIfPresent('transactions', 'tag_sync_ids_override');
+            logger.info('DBMigration', 'v51 迁移完成');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
@@ -1982,20 +1820,18 @@ class PiggyDatabase extends _$PiggyDatabase {
     await m.createTable(table);
   }
 
-  /// Migration helper: sync_state 存在才重置 server_cursor(W5)。
+  /// Migration helper: 列存在才 DROP(v51 共享账本残留清理)。
   ///
-  /// sync_state 建表步骤已从 v19 移除(该表 v37 起 DROP,不再属于 schema),
-  /// from<19 直升上来的老库没有这张表。v24/v25 的重置必须守卫执行,
-  /// 否则 `no such table` 让整个 onUpgrade 回滚、user_version 不前进,
-  /// 每次启动在同一处失败。
-  Future<void> _resetServerCursorIfSyncStateExists() async {
-    final info = await customSelect('PRAGMA table_info(sync_state)').get();
-    if (info.isEmpty) {
-      logger.info(
-          'DBMigration', 'sync_state 表不存在(from<19 升级路径),跳过 server_cursor 重置');
+  /// from<24 直升 v51 的库从未创建过这些列,必须跳过;SQLite 3.35+ 才支持
+  /// ALTER TABLE DROP COLUMN。幂等可重入(与 [_addColumnIfMissing] 对称)。
+  Future<void> _dropColumnIfPresent(String table, String column) async {
+    final cols = await customSelect("PRAGMA table_info($table)").get();
+    final exists = cols.any((r) => r.read<String>('name') == column);
+    if (!exists) {
+      logger.info('DBMigration', '$table.$column 不存在,跳过 DROP');
       return;
     }
-    await customStatement('UPDATE sync_state SET server_cursor = 0');
+    await customStatement('ALTER TABLE $table DROP COLUMN $column');
   }
 
   // Seed minimal data

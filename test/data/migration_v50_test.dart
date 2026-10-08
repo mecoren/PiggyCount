@@ -34,21 +34,6 @@ void main() {
             '不得再创建它');
   });
 
-  test('v50: 共享账本其余表仍健在(迁移误删防护)', () async {
-    // 本轮只删 ledger_members;三张镜像表与 override 表按计划暂留。
-    for (final table in [
-      'shared_ledger_categories',
-      'shared_ledger_accounts',
-      'shared_ledger_tags',
-      'transaction_tag_overrides',
-    ]) {
-      final rows = await db.customSelect(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='$table'",
-      ).get();
-      expect(rows, isNotEmpty, reason: '$table 按计划暂留,不得被误删');
-    }
-  });
-
   test('schemaVersion 已达 50 及以上', () {
     expect(db.schemaVersion, greaterThanOrEqualTo(50),
         reason: 'db.dart schemaVersion 不应低于 50');
