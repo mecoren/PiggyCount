@@ -133,7 +133,7 @@ LazyDatabase _openConnection() {
 
 #### 4.1.3 整页事务 + busy retry
 
-**实现位置**：[sync_engine.dart:1222-1232](../lib/cloud/sync/sync_engine.dart)、[sync_engine.dart:1257-1275](../lib/cloud/sync/sync_engine.dart)
+**实现位置**：`sync_engine.dart:1222-1232`、`sync_engine.dart:1257-1275`
 
 ```dart
 // 整页事务：任何一条失败触发整页回滚
@@ -174,11 +174,11 @@ Future<bool> _applyOneWithBusyRetry(PiggyCountCloudSyncChange ch) async {
 
 | 场景 | 分页/批量大小 | 文件位置 |
 |---|---|---|
-| 同步 pull 单页 | 500 条 | [sync_engine.dart:1121](../lib/cloud/sync/sync_engine.dart) |
-| 同步 push 分批 | 500 条 | [sync_engine_serialization.dart:583-595](../lib/cloud/sync/sync_engine_serialization.dart) |
+| 同步 pull 单页 | 500 条 | `sync_engine.dart:1121` |
+| 同步 push 分批 | 500 条 | `sync_engine_serialization.dart:583-595` |
 | 首屏预加载 | 20 条交易 | [ui_state_providers.dart:236](../lib/providers/ui_state_providers.dart) |
 | 账户详情页 | 50 条/页 | account_detail_page.dart:54 |
-| transaction_tags 批量插入 | `db.batch((b) => ...)` | [sync_engine_apply.dart:960](../lib/cloud/sync/sync_engine_apply.dart) |
+| transaction_tags 批量插入 | `db.batch((b) => ...)` | `sync_engine_apply.dart:960` |
 
 #### 4.1.5 WAL 模式
 
@@ -192,7 +192,7 @@ Future<bool> _applyOneWithBusyRetry(PiggyCountCloudSyncChange ch) async {
 
 #### 4.2.1 LookupCache 消除 N+1
 
-**实现位置**：[sync_engine_pull.dart:231-296](../lib/cloud/sync/sync_engine_pull.dart)
+**实现位置**：`sync_engine_pull.dart:231-296`
 
 ```dart
 class LookupCache {
@@ -215,7 +215,7 @@ class LookupCache {
 
 #### 4.2.2 Lazy prime 优化
 
-**实现位置**：[sync_engine.dart:1115-1128](../lib/cloud/sync/sync_engine.dart)
+**实现位置**：`sync_engine.dart:1115-1128`
 
 ```dart
 // Lazy prime：先 HTTP 一次试探有没有数据。99% 场景(无变更)直接 return，
@@ -235,7 +235,7 @@ await cache.prime(db);
 
 #### 4.2.3 多层单飞锁
 
-**实现位置**：[sync_engine.dart:151-175](../lib/cloud/sync/sync_engine.dart)
+**实现位置**：`sync_engine.dart:151-175`
 
 ```mermaid
 flowchart LR
@@ -257,7 +257,7 @@ flowchart LR
 
 #### 4.2.4 push 分批推送
 
-**实现位置**：[sync_engine_serialization.dart:583-595](../lib/cloud/sync/sync_engine_serialization.dart)
+**实现位置**：`sync_engine_serialization.dart:583-595`
 
 ```dart
 const batchSize = 500;
@@ -493,7 +493,7 @@ class LRUCache {
 
 - `lastMonthlyTotalsProvider`（[statistics_providers.dart:68](../lib/providers/statistics_providers.dart)）：`StateProvider.family` 缓存上次月度收支总额
 - `cachedTransactionsProvider` / `cachedTransactionsWithCategoryProvider`（ui_state_providers.dart:174-179）：缓存首屏交易数据
-- `SyncEngine._statusCache`（[sync_engine.dart:79](../lib/cloud/sync/sync_engine.dart)）：`Map<int, SyncStatus>` 缓存同步状态，`_localChanged` 标记失效
+- `SyncEngine._statusCache`（`sync_engine.dart:79`）：`Map<int, SyncStatus>` 缓存同步状态，`_localChanged` 标记失效
 
 #### 4.6.3 APK 更新缓存
 
@@ -715,7 +715,7 @@ Future<T> timed<T>(String label, Future<T> future) async {
 
 ### 6.2 同步日志
 
-**实现位置**：[sync_engine.dart](../lib/cloud/sync/sync_engine.dart)
+**实现位置**：`sync_engine.dart`
 
 ```dart
 logger.info('SyncEngine', 'pull: since=$nextSince 无新变更,跳过 LookupCache prime');
@@ -759,8 +759,8 @@ logger.info('SyncEngine', 'pull: applied ${page.changes.length} changes in ${sw.
 ### 8.2 关键源码文件
 - [lib/main.dart](../lib/main.dart)：启动入口
 - [lib/data/db.dart](../lib/data/db.dart)：数据库初始化与索引
-- [lib/cloud/sync/sync_engine.dart](../lib/cloud/sync/sync_engine.dart)：同步引擎
-- [lib/cloud/sync/sync_engine_pull.dart](../lib/cloud/sync/sync_engine_pull.dart)：LookupCache 实现
+- `lib/cloud/sync/sync_engine.dart`：同步引擎
+- `lib/cloud/sync/sync_engine_pull.dart`：LookupCache 实现
 - [lib/providers/ui_state_providers.dart](../lib/providers/ui_state_providers.dart)：Splash 预加载
 - [lib/widgets/biz/transaction_list.dart](../lib/widgets/biz/transaction_list.dart)：列表优化
 - [lib/services/attachment_service.dart](../lib/services/attachment_service.dart)：图片压缩

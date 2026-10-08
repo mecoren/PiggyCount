@@ -1,6 +1,6 @@
 # 日历节假日与月历样式（calendar_holiday）
 
-> 参考实现：`C:\Develop\project\00_AI\orbit`（桌面 + 移动端同源）
+> 参考实现：外部项目 `orbit`（桌面 + 移动端同源；不在本仓库内，下列路径均为该仓库内相对路径）
 > - 月历样式：`apps/mobile/lib/shared/widgets/shadcn/orbit_month_calendar.dart`
 > - 历法副标签：`apps/mobile/lib/core/lunar/{lunar_calendar,chinese_almanac}.dart`
 > - 节假日数据层：`crates/orbit-core/src/api/holiday_api.rs`（数据源 timor.tech）

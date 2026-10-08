@@ -6,10 +6,10 @@
 
 ## 二、参考资源
 
-### 2.1 wait-home 参考实现
-- `c:\Develop\project\00_AI\wait-home\mobile\lib\shared\widgets\expandable_bottom_sheet.dart` - 可扩展底部抽屉容器
-- `c:\Develop\project\00_AI\wait-home\mobile\lib\modules\movie\movie_form_bottom_sheet.dart` - 影视表单抽屉
-- `c:\Develop\project\00_AI\wait-home\mobile\lib\modules\movie\movie_form_body.dart` - 表单主体
+### 2.1 wait-home 参考实现（外部项目，下列为该仓库内相对路径）
+- `lib/shared/widgets/expandable_bottom_sheet.dart` - 可扩展底部抽屉容器
+- `lib/modules/movie/movie_form_bottom_sheet.dart` - 影视表单抽屉
+- `lib/modules/movie/movie_form_body.dart` - 表单主体
 
 ### 2.2 BeeCount 现有实现
 - `lib/pages/transaction/transaction_editor_page.dart` - 记账页面（全屏）

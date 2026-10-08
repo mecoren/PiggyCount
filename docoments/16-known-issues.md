@@ -250,7 +250,7 @@ LazyDatabase _openConnection() {
 
 #### 5.2.1 LWW 冲突解决可能丢数据
 
-**问题位置**：[lib/cloud/sync/sync_conflict_resolver.dart](../lib/cloud/sync/sync_conflict_resolver.dart)
+**问题位置**：`lib/cloud/sync/sync_conflict_resolver.dart`
 
 - **现状**：使用 Last-Write-Wins（最后写入胜出）策略
 - **风险**：两台设备同时修改同一笔交易，后同步的覆盖先同步的，无合并机制
@@ -321,7 +321,7 @@ LazyDatabase _openConnection() {
 
 #### 6.1.1 文件过长
 
-- **现状**：部分文件超过 1000 行（如 [annual_report_page.dart](../lib/pages/report/annual_report_page.dart)、`piggycount_cloud_provider.dart`、[sync_engine.dart](../lib/cloud/sync/sync_engine.dart)）
+- **现状**：部分文件超过 1000 行（如 [annual_report_page.dart](../lib/pages/report/annual_report_page.dart)、`piggycount_cloud_provider.dart`、`sync_engine.dart`）
 - **建议修复**：按职责拆分为多个文件，单文件控制在 500 行内
 
 #### 6.1.2 TODO/FIXME 标记

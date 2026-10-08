@@ -241,15 +241,7 @@ PiggyCount is completely free and open-source — **no ads, no paid features**. 
 
 [![PayPal](https://img.shields.io/badge/PayPal-Donate-0070BA?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/sunxiaoyes)
 
-<details><summary>Alipay / WeChat QR codes</summary>
-
-| Alipay | WeChat Pay |
-|:---:|:---:|
-| <img src="docs/donate/alipay.png" width="160" alt="Alipay"/> | <img src="docs/donate/wechat.png" width="160" alt="WeChat"/> |
-
-</details>
-
-**USDT (TRC20)**: `TKBV69B2AoU67p3vDhnJUbMJtZ1DxuUF5C` · <details><summary>Binance QR code</summary>![Binance](docs/donate/binance.png)</details>
+**USDT (TRC20)**: `TKBV69B2AoU67p3vDhnJUbMJtZ1DxuUF5C`
 
 ### Cost Transparency
 

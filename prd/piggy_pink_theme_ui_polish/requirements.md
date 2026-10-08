@@ -27,7 +27,7 @@
 #### 1c. 按钮开关参考 wait-home 设计，全面替换
 
 - **现状**：[SettingsToggleItem](../../lib/widgets/biz/settings_widgets.dart) 使用 `Switch.adaptive`（iOS 端为 CupertinoSwitch，视觉偏大）；另有 4 处页面直接使用 `Switch` / `Switch.adaptive`。
-- **目标**：参照 [wait-home/app_theme.dart](../../../../wait-home/mobile/lib/core/theme/app_theme.dart) 的 `switchTheme`：无描边、选中纯色轨道、白色 thumb；并缩小触控尺寸（`shrinkWrap`），视觉更紧凑。
+- **目标**：参照外部项目 `wait-home` 的 `app_theme.dart` 的 `switchTheme`：无描边、选中纯色轨道、白色 thumb；并缩小触控尺寸（`shrinkWrap`），视觉更紧凑。
 - **范围**（全量替换）：
   - `lib/widgets/biz/settings_widgets.dart`（SettingsToggleItem）
   - `lib/pages/transaction/recurring_transaction_page.dart`

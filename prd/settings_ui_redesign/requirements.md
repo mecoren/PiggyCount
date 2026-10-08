@@ -2,7 +2,7 @@
 
 ## 1. 用户需求理解
 
-参考 `C:\Develop\project\00_AI\wait-home\mobile` 项目的设置页面设计，对 PiggyCount 的设置页面进行 UI 样式改造，**只动样式 UI，要一模一样，功能不能变**。
+参考外部项目 `wait-home`（移动端）的设置页面设计，对 PiggyCount 的设置页面进行 UI 样式改造，**只动样式 UI，要一模一样，功能不能变**。
 
 ## 2. 改造范围
 

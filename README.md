@@ -263,15 +263,7 @@ A: 使用自己的服务器 / Storage / Bucket,WebDAV 和 S3 建议 HTTPS 加密
 
 [![PayPal](https://img.shields.io/badge/PayPal-Donate-0070BA?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/sunxiaoyes)
 
-<details><summary>支付宝 / 微信二维码</summary>
-
-| 支付宝 | 微信支付 |
-|:---:|:---:|
-| <img src="docs/donate/alipay.png" width="160" alt="支付宝"/> | <img src="docs/donate/wechat.png" width="160" alt="微信支付"/> |
-
-</details>
-
-**USDT (TRC20)**:`TKBV69B2AoU67p3vDhnJUbMJtZ1DxuUF5C` · <details><summary>币安二维码</summary>![币安](docs/donate/binance.png)</details>
+**USDT (TRC20)**:`TKBV69B2AoU67p3vDhnJUbMJtZ1DxuUF5C`
 
 ### 资金透明度
 

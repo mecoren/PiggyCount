@@ -37,7 +37,7 @@
 涉及文件：
 1. [local_transaction_repository.dart:576-587](../../lib/data/repositories/local/local_transaction_repository.dart#L576-L587) `deleteTransaction`（单条，被 `deleteTransactionBySyncId` 复用）
 2. [local_transaction_repository.dart:1481-1507](../../lib/data/repositories/local/local_transaction_repository.dart#L1481-L1507) `deleteTransactionsBatchBySyncIds`（批量）
-3. [sync_engine_apply.dart:73-81](../../lib/cloud/sync/sync_engine_apply.dart#L73-L81) `_applyTransactionChange` delete 路径（远端推送）
+3. `sync_engine_apply.dart:73-81` `_applyTransactionChange` delete 路径（远端推送）
 
 **验收标准**：
 - AC-C1：三处删除路径均清理 `transaction_tag_overrides`（按 `transactionSyncId` 删除）。
@@ -75,7 +75,7 @@
 
 1. [main.dart:424](../../lib/main.dart#L424) `appLinks.uriLinkStream.listen` 返回的 subscription 未保存/cancel。
 2. [ui_state_providers.dart:187](../../lib/providers/ui_state_providers.dart#L187) `cachedTransactionsWithCategoryProvider` 是死代码（无写入，仅一处 invalidate）。
-3. [sync_engine_realtime.dart:394-448](../../lib/cloud/sync/sync_engine_realtime.dart#L394-L448) `fetchAndStoreSharedResources` 逐条 insert，可改 batch。
+3. `sync_engine_realtime.dart:394-448` `fetchAndStoreSharedResources` 逐条 insert，可改 batch。
 4. db.dart 缺 `account_id` / `category_id` / `to_account_id` 单列索引（级联删除/统计用）。
 
 **验收标准**：F 组为可选优化，不设硬性 AC；若实施需保证现有测试不回归。

@@ -225,7 +225,7 @@ static const _maxStorageHours = 48; // 保留48小时
 ### 6.1 入口
 
 两处入口：
-- [piggycount_cloud_sync_page.dart:332](../lib/pages/cloud/piggycount_cloud_sync_page.dart) —— 云同步页面跳转
+- `piggycount_cloud_sync_page.dart:332` —— 云同步页面跳转
 - [about_page.dart:318](../lib/pages/settings/about_page.dart) —— 关于页面跳转
 
 ### 6.2 界面结构
@@ -450,7 +450,7 @@ logger.info('UpdateService', 'UPDATE_CRASH: 当前flavor: ${const String.fromEnv
 
 ### 10.1 sync_engine.dart 主流程
 
-[lib/cloud/sync/sync_engine.dart](../lib/cloud/sync/sync_engine.dart) 内 50+ 处 `logger.*` 调用，级别使用规范：
+`lib/cloud/sync/sync_engine.dart` 内 50+ 处 `logger.*` 调用，级别使用规范：
 
 - **info**：流程入口/出口、阶段性进度（如 `:204 上传账本`、`:221 上传完成：增量推送 $pushed 条变更`、`:372 开始同步`、`:497 同步完成: $result`）
 - **debug**：细粒度单条变更（如 `:747`、`:894 legacy backfill: 无需补登记`、`:964`）
@@ -597,7 +597,7 @@ Grep `^\s*print\(` 命中 80+ 处，主要集中在：
 ### 15.2 关键源码文件
 - [lib/services/system/logger_service.dart](../lib/services/system/logger_service.dart)：日志服务核心
 - [lib/pages/settings/log_center_page.dart](../lib/pages/settings/log_center_page.dart)：日志中心 UI
-- [lib/cloud/sync/sync_engine.dart](../lib/cloud/sync/sync_engine.dart)：同步日志
+- `lib/cloud/sync/sync_engine.dart`：同步日志
 - [lib/services/update/update_installer.dart](../lib/services/update/update_installer.dart)：UPDATE_CRASH 日志
 - [lib/providers/ui_state_providers.dart](../lib/providers/ui_state_providers.dart)：timed 包装器
 - [android/app/src/main/kotlin/com/wait/piggycount/LoggerPlugin.kt](../android/app/src/main/kotlin/com/wait/piggycount/LoggerPlugin.kt)：Android 日志桥接
