@@ -412,8 +412,8 @@ class WidgetDataService {
   ///
   /// 底层用新增的 [BaseRepository.getRecentTransactions](纯 Transaction 行、
   /// 无 join、不做 exclude 过滤),分类/账户在这里按 id 逐条查—— N 通常很小
-  /// (小组件展示 3~4 笔),N+1 查询的开销可忽略,换来的是不需要处理
-  /// `getRecentTransactionsWithCategory` 那套共享账本 override hydration。
+  /// (小组件展示 3~4 笔),N+1 查询的开销可忽略,换来的是不复用
+  /// `getRecentTransactionsWithCategory` 那套较重的 join 投影。
   static Future<List<RecentTransactionItem>> gatherRecent({
     required BaseRepository repository,
     required int ledgerId,

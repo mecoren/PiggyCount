@@ -158,8 +158,8 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) async {
 // 使用 autoDispose 在页面关闭时自动取消订阅
 final categoriesWithCountProvider = StreamProvider.autoDispose<List<({Category category, int transactionCount})>>((ref) {
   final repo = ref.watch(repositoryProvider);
-  // §7 决策 v25:Owner 资源不再 mirror 主表,管理页直接读主 Categories
-  // 自然只看到用户自己 user-global 行,无需过滤。
+  // 管理页直接读主 Categories（Owner 资源镜像表已随共享账本下线删除），
+  // 自然只看到用户自己的 user-global 行，无需过滤。
   return repo.watchCategoriesWithCount();
 });
 

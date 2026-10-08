@@ -32,8 +32,7 @@ import 'tag_chip.dart';
 import '../category_icon.dart';
 import '../../pages/attachment/attachment_preview_page.dart';
 
-/// 共享账本 tx 作者信息(创建人 + 最后编辑人)— 编辑器底部 sheet 用。
-/// editingTransactionId=null(新建 tx)或非共享账本 → 返 null,widget 不渲染。
+/// 金额表单（编辑器底部 sheet）的提交结果 —— 调用方以此为准写库。
 typedef AmountEditorResult = ({
   double amount,
   String? note,
@@ -395,9 +394,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
   Future<void> _loadAccountCurrency(int accountId) async {
     final repo = ref.read(repositoryProvider);
-    // getAccountCurrencyByAnyId:正数查主表;负数是共享账本 Owner 资源的
-    // synthetic id(§7),查镜像表 —— 否则成员选 Owner 外币账户会被静默
-    // 解析成本位币(审查发现)。
+    // 账户币种按 id 查主表（getAccountCurrencyByAnyId 现只有正数路径；
+    // 共享账本的 synthetic 负 id / Owner 镜像表查询已随功能下线删除）。
     final currency = await repo.getAccountCurrencyByAnyId(accountId);
     if (!mounted) return;
     setState(() {

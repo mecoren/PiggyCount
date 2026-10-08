@@ -280,7 +280,7 @@ class MinePage extends ConsumerWidget {
                 SizedBox(height: 8.0.scaled(context, ref)),
                 SettingsCard(
                   children: [
-                    // 智能记账(共享账本入口已移到"账本管理"页 PrimaryHeader)
+                    // 智能记账
                     SettingsNavItem(
                       icon: Icons.auto_awesome_outlined,
                       title: AppLocalizations.of(context).smartBilling,

@@ -689,8 +689,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     );
   }
 
-  /// 把金额表单的提交结果写库（附件 / 标签 / 共享账本 override / 同步触发 /
-  /// 缓存刷新）。
+  /// 把金额表单的提交结果写库（附件 / 标签 / 同步触发 / 缓存刷新）。
   ///
   /// 两条路径共用：「分类网格」旧流程（金额表单盖在网格上）与「金额表单优先」
   /// 新流程（分类是表单的子界面）的**写库语义必须逐字一致**，差别只在关几层

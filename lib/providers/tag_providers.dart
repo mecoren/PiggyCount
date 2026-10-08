@@ -31,7 +31,7 @@ final tagsForCurrentLedgerProvider = FutureProvider<List<Tag>>((ref) async {
 final tagsWithStatsProvider =
     StreamProvider<List<({Tag tag, int transactionCount})>>((ref) {
   ref.watch(tagListRefreshProvider);
-  // §7 决策 v25:Owner 资源不 mirror 主表,管理页直接读主 Tags。
+  // 管理页直接读主 Tags（Owner 资源镜像表已随共享账本下线删除）。
   final repo = ref.watch(repositoryProvider);
   return repo.watchTagsWithStats();
 });

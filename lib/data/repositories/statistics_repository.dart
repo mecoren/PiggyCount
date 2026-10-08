@@ -131,7 +131,7 @@ abstract class StatisticsRepository {
   });
 
   /// 偏差分类排行。名称/图标随 SQL 一并 LEFT JOIN 出来，调用方不必二次解析；
-  /// 共享账本 Editor 行（category_id 为空）落到 [categoryId] == null。
+  /// 无分类交易（category_id 为空）落到 [categoryId] == null。
   Future<
       List<
           ({
