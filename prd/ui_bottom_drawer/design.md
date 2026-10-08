@@ -175,3 +175,26 @@
 | 标题栏 action 无处安放 | 见 requirements 的「落点」表；分类两枚、AI 提示词两枚、周期账单删除、AI 服务商保存均已安置 |
 | 页面被别处当作路由 push（测试宿主 / 深链） | 全仓检索调用点逐个改为新入口；`tag_edit_page_result_test` 与 `recurring_edit_currency_test` 已同步调整并保持绿 |
 | 缩进错位 | 大块结构上提后用 `dart format` 归一（只格式化了本批实际改动的文件） |
+
+### 追加（2026-10-08 同日，同一批收口）：外壳两处体验修正
+
+用户反馈两点，都改在**共享外壳** `lib/widgets/ui/form_sheet.dart` 上，一次覆盖全部表单抽屉：
+
+1. **「取消｜保存」固定在卡片底部**。原结构把「标题 + 字段 + 按钮行」整体塞进一个 `SingleChildScrollView`（在 `PiggySheetCard` 内），长表单（周期账单 12+ 字段、分类图标网格、AI 提示词）必须滚到底才能看到/点到按钮。现在拆成：
+
+   ```
+   抓取条(32×4) → 标题(固定) → p16 → Flexible(loose) → SingleChildScrollView(字段区) → p20 → PiggySheetActions(固定)
+   ```
+
+   `Flexible(loose)` 是照 `PiggyPickerSheet` 的既有做法（本版 Flutter 给 Column 非 flex 子项的主轴约束无界，`Expanded` 会直接报 unbounded；loose flex 拿到的剩余高度有界，且不会把自然高度的子项撑满）。
+
+2. **可下拉关闭**。原结构下长表单**完全无法拖动关闭** —— 探针测试实测：长内容时在标题上向下拖也不会关（整个卡片是滚动区，手势被 `Scrollable` 在手势竞技场里吃掉）；云同步那类短表单能拖，只是因为内容短、卡片本身不高。现在三处都能关：
+
+   - 抓取条 / 标题 / 按钮行（非滚动区）→ 靠模态抽屉自身手势（`enableDrag` 默认开）；
+   - 字段区 → 新增 `_DragToDismiss`：`NotificationListener<OverscrollNotification>`，只在**顶部**过度滚动累计（`overscroll < 0`），累计 ≥ 72 逻辑像素触发 `onCancel`，滚动开始/结束清零。字段区显式用 `ClampingScrollPhysics`：bouncing 物理在顶部回弹时**不发** `OverscrollNotification`，不固定物理 iOS 上就永远关不掉；代价是抽屉字段区不做回弹（各平台一致）。
+
+### 顺带收口：加密「设置密码」抽屉
+
+`lib/widgets/encryption/password_setup_dialog.dart` 是**手抄了一遍外壳**（`KeyboardBottomInsetPadding` + `SafeArea` + `p16` 留距 + `Material(surfaceElevated/radiusXl/antiAlias)` + 整卡 `SingleChildScrollView` + 自带标题与 `PiggySheetActions`），因此同样有「长内容按钮滚走 / 拖不动」的问题，还多一份 chrome 漂移风险。已改为直接返回 `PiggyFormSheet`（字段区外什么都不留），入口 `_showSheet` 也换成 `showPiggyFormSheet`，净减约 40 行。
+
+> 备注：`AGENTS.md` 第 259 条对表单抽屉结构的描述（标题 → p16 → 字段 → p20 → 按钮行）**未同步**这两点（抓取条、按钮行固定）—— 该文件当时正被另一并发会话修改，本批没动，待其落地后补一句即可。
