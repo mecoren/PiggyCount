@@ -8746,4 +8746,86 @@ class AppLocalizationsEn extends AppLocalizations {
   String holidayFetchRangePartial(int updated, int count) {
     return '$updated year(s) backfilled, $count failed';
   }
+
+  @override
+  String get mineSubscriptionManagement => 'Subscriptions';
+
+  @override
+  String get mineSubscriptionManagementSubtitle =>
+      'Recurring charges and yearly spend';
+
+  @override
+  String get subscriptionPageTitle => 'Subscriptions';
+
+  @override
+  String get subscriptionEmpty => 'No Subscriptions';
+
+  @override
+  String get subscriptionEmptyHint =>
+      'Subscriptions come from recurring bills. Create an expense-type recurring bill for fixed charges (memberships, rent, broadband) and it shows up here.';
+
+  @override
+  String get subscriptionEmptyAction => 'Create Recurring Bill';
+
+  @override
+  String get subscriptionAnnualLabel => 'Yearly';
+
+  @override
+  String get subscriptionMonthlyLabel => 'Monthly Avg';
+
+  @override
+  String subscriptionCountLabel(int n) {
+    return '$n subscription(s)';
+  }
+
+  @override
+  String subscriptionForeignHint(int n) {
+    return '$n foreign-currency subscription(s) excluded from the total';
+  }
+
+  @override
+  String subscriptionNextDue(String date) {
+    return 'Next charge $date';
+  }
+
+  @override
+  String get subscriptionNoNextDue => 'Ended';
+
+  @override
+  String get subscriptionUnknownName => 'Unnamed subscription';
+
+  @override
+  String get reminderBudgetOverspendTitle => 'Budget Overspend Alert';
+
+  @override
+  String get reminderBudgetOverspendSubtitle =>
+      'Notify me when spending exceeds a budget';
+
+  @override
+  String get reminderRecurringDueTitle => 'Recurring Bill Due Alert';
+
+  @override
+  String get reminderRecurringDueSubtitle =>
+      'Notify me 3 days before a recurring charge';
+
+  @override
+  String get budgetOverspendNotifyTitle => 'Budget exceeded';
+
+  @override
+  String budgetOverspendNotifyBody(String name, String used, String budget) {
+    return '$name: spent $used of $budget';
+  }
+
+  @override
+  String get budgetOverspendTotalBudgetName => 'Monthly total budget';
+
+  @override
+  String recurringDueNotifyTitle(String name) {
+    return '$name is due soon';
+  }
+
+  @override
+  String recurringDueNotifyBody(String amount, String date) {
+    return '$amount will be charged on $date';
+  }
 }

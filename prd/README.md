@@ -6,6 +6,13 @@
 > 约定：新增需求请建 `prd/<snake_case_id>/`，两个文件都写。
 > `requirements.md` 是验收依据，缺了它这个需求就无法判定「做完了没有」。
 
+## 本轮（2026-10-08 订阅视图 + 到期/超支提醒）新增
+
+| 目录 | 主题 | 状态 |
+|---|---|---|
+| `subscription_and_overspend_alerts` | 从周期账单派生「订阅」视图（年支出/月均折算，零识别）+ 周期账单到期提醒（扣款前 3 天 10:00）+ 预算超支实时推送（仅 100%，同预算同周期只推一次）+ 两个全局提醒开关（含配置导出/导入）+ 周期账单编辑器改统一**表单抽屉**（`showRecurringFormBottomSheet`，含列表两入口与订阅页入口）。**零数据模型改动**：无新表、不升 `schemaVersion`、不动同步契约 | 实施中 |
+| `ui_bottom_drawer`（追加 2026-10-08 节） | **存量表单页全量收口**：标签 / 分类 / AI 服务商 / AI 提示词 / 周期账单五处整屏表单统一到 `PiggyFormSheet` 抽屉（各页新增 `showXxxFormBottomSheet`，调用点全部改道；标题栏动作逐项安置不丢）。证据：`test/widgets/form_drawer_unification_test.dart`、`recurring_form_drawer_test.dart`、`tag_edit_page_result_test.dart` | 已落地 |
+
 ## 本轮（2026-10-05 加固批次）新增
 
 方案正文不在仓库（会话内批准），落地证据以本表列出的门禁测试为入口。

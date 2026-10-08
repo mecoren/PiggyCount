@@ -71,6 +71,33 @@ class ReminderSettingsPage extends ConsumerWidget {
                   }
                 },
               ),
+              // 预算超支提醒（只推 100% 超支，记账后实时检测）
+              SettingsToggleItem(
+                icon: Icons.speed_outlined,
+                title:
+                    AppLocalizations.of(context).reminderBudgetOverspendTitle,
+                subtitle: AppLocalizations.of(context)
+                    .reminderBudgetOverspendSubtitle,
+                value: reminderSettings.budgetOverspendEnabled,
+                onChanged: (value) {
+                  ref
+                      .read(reminderSettingsProvider.notifier)
+                      .updateBudgetOverspendEnabled(value);
+                },
+              ),
+              // 周期账单到期提醒（扣款前 3 天）
+              SettingsToggleItem(
+                icon: Icons.event_available_outlined,
+                title: AppLocalizations.of(context).reminderRecurringDueTitle,
+                subtitle:
+                    AppLocalizations.of(context).reminderRecurringDueSubtitle,
+                value: reminderSettings.recurringDueEnabled,
+                onChanged: (value) {
+                  ref
+                      .read(reminderSettingsProvider.notifier)
+                      .updateRecurringDueEnabled(value);
+                },
+              ),
             ],
           ),
 

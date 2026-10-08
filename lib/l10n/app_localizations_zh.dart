@@ -8408,6 +8408,85 @@ class AppLocalizationsZh extends AppLocalizations {
   String holidayFetchRangePartial(int updated, int count) {
     return '已补写 $updated 个年份，$count 个年份获取失败';
   }
+
+  @override
+  String get mineSubscriptionManagement => '订阅管理';
+
+  @override
+  String get mineSubscriptionManagementSubtitle => '查看周期扣款与年支出';
+
+  @override
+  String get subscriptionPageTitle => '订阅管理';
+
+  @override
+  String get subscriptionEmpty => '暂无订阅';
+
+  @override
+  String get subscriptionEmptyHint =>
+      '订阅来自「周期账单」：把会员、房租、宽带这类固定支出建成支出型周期账单，这里会自动汇总。';
+
+  @override
+  String get subscriptionEmptyAction => '去创建周期账单';
+
+  @override
+  String get subscriptionAnnualLabel => '年支出';
+
+  @override
+  String get subscriptionMonthlyLabel => '月均';
+
+  @override
+  String subscriptionCountLabel(int n) {
+    return '共 $n 个订阅';
+  }
+
+  @override
+  String subscriptionForeignHint(int n) {
+    return '另有 $n 个外币订阅未计入合计';
+  }
+
+  @override
+  String subscriptionNextDue(String date) {
+    return '下次扣款 $date';
+  }
+
+  @override
+  String get subscriptionNoNextDue => '已结束';
+
+  @override
+  String get subscriptionUnknownName => '未命名订阅';
+
+  @override
+  String get reminderBudgetOverspendTitle => '预算超支提醒';
+
+  @override
+  String get reminderBudgetOverspendSubtitle => '支出超出预算时通知我';
+
+  @override
+  String get reminderRecurringDueTitle => '周期账单到期提醒';
+
+  @override
+  String get reminderRecurringDueSubtitle => '扣款前 3 天提醒我';
+
+  @override
+  String get budgetOverspendNotifyTitle => '预算已超支';
+
+  @override
+  String budgetOverspendNotifyBody(String name, String used, String budget) {
+    return '$name：已支出 $used，预算 $budget';
+  }
+
+  @override
+  String get budgetOverspendTotalBudgetName => '本月总预算';
+
+  @override
+  String recurringDueNotifyTitle(String name) {
+    return '$name 即将扣款';
+  }
+
+  @override
+  String recurringDueNotifyBody(String amount, String date) {
+    return '$date 预计扣款 $amount';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -16814,5 +16893,84 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String holidayFetchRangePartial(int updated, int count) {
     return '已補寫 $updated 個年份，$count 個年份取得失敗';
+  }
+
+  @override
+  String get mineSubscriptionManagement => '訂閱管理';
+
+  @override
+  String get mineSubscriptionManagementSubtitle => '查看週期扣款與年支出';
+
+  @override
+  String get subscriptionPageTitle => '訂閱管理';
+
+  @override
+  String get subscriptionEmpty => '暫無訂閱';
+
+  @override
+  String get subscriptionEmptyHint =>
+      '訂閱來自「週期帳單」：把會員、房租、寬頻這類固定支出建成支出型週期帳單，這裡會自動彙總。';
+
+  @override
+  String get subscriptionEmptyAction => '去建立週期帳單';
+
+  @override
+  String get subscriptionAnnualLabel => '年支出';
+
+  @override
+  String get subscriptionMonthlyLabel => '月均';
+
+  @override
+  String subscriptionCountLabel(int n) {
+    return '共 $n 個訂閱';
+  }
+
+  @override
+  String subscriptionForeignHint(int n) {
+    return '另有 $n 個外幣訂閱未計入合計';
+  }
+
+  @override
+  String subscriptionNextDue(String date) {
+    return '下次扣款 $date';
+  }
+
+  @override
+  String get subscriptionNoNextDue => '已結束';
+
+  @override
+  String get subscriptionUnknownName => '未命名訂閱';
+
+  @override
+  String get reminderBudgetOverspendTitle => '預算超支提醒';
+
+  @override
+  String get reminderBudgetOverspendSubtitle => '支出超出預算時通知我';
+
+  @override
+  String get reminderRecurringDueTitle => '週期帳單到期提醒';
+
+  @override
+  String get reminderRecurringDueSubtitle => '扣款前 3 天提醒我';
+
+  @override
+  String get budgetOverspendNotifyTitle => '預算已超支';
+
+  @override
+  String budgetOverspendNotifyBody(String name, String used, String budget) {
+    return '$name：已支出 $used，預算 $budget';
+  }
+
+  @override
+  String get budgetOverspendTotalBudgetName => '本月總預算';
+
+  @override
+  String recurringDueNotifyTitle(String name) {
+    return '$name 即將扣款';
+  }
+
+  @override
+  String recurringDueNotifyBody(String amount, String date) {
+    return '$date 預計扣款 $amount';
   }
 }

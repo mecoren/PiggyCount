@@ -4218,5 +4218,78 @@
         "type": "String"
       }
     }
+  },
+  "mineSubscriptionManagement": "Subscriptions",
+  "mineSubscriptionManagementSubtitle": "Recurring charges and yearly spend",
+  "subscriptionPageTitle": "Subscriptions",
+  "subscriptionEmpty": "No Subscriptions",
+  "subscriptionEmptyHint": "Subscriptions come from recurring bills. Create an expense-type recurring bill for fixed charges (memberships, rent, broadband) and it shows up here.",
+  "subscriptionEmptyAction": "Create Recurring Bill",
+  "subscriptionAnnualLabel": "Yearly",
+  "subscriptionMonthlyLabel": "Monthly Avg",
+  "subscriptionCountLabel": "{n} subscription(s)",
+  "@subscriptionCountLabel": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionForeignHint": "{n} foreign-currency subscription(s) excluded from the total",
+  "@subscriptionForeignHint": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "subscriptionNextDue": "Next charge {date}",
+  "@subscriptionNextDue": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "subscriptionNoNextDue": "Ended",
+  "subscriptionUnknownName": "Unnamed subscription",
+  "reminderBudgetOverspendTitle": "Budget Overspend Alert",
+  "reminderBudgetOverspendSubtitle": "Notify me when spending exceeds a budget",
+  "reminderRecurringDueTitle": "Recurring Bill Due Alert",
+  "reminderRecurringDueSubtitle": "Notify me 3 days before a recurring charge",
+  "budgetOverspendNotifyTitle": "Budget exceeded",
+  "budgetOverspendNotifyBody": "{name}: spent {used} of {budget}",
+  "@budgetOverspendNotifyBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "used": {
+        "type": "String"
+      },
+      "budget": {
+        "type": "String"
+      }
+    }
+  },
+  "budgetOverspendTotalBudgetName": "Monthly total budget",
+  "recurringDueNotifyTitle": "{name} is due soon",
+  "@recurringDueNotifyTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "recurringDueNotifyBody": "{amount} will be charged on {date}",
+  "@recurringDueNotifyBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -114,21 +114,12 @@ class RecurringTransactionService {
       case RecurringFrequency.monthly:
         // 月度重复：落在指定的"几号"。首笔取基准月当月,之后推进 interval 个月。
         final targetDay = recurring.dayOfMonth ?? baseDate.day;
-        DateTime buildMonthly(int year, int month) {
-          while (month > 12) {
-            month -= 12;
-            year += 1;
-          }
-          // 处理不存在的日期（如2月30日）
-          final daysInMonth = DateTime(year, month + 1, 0).day;
-          final day = targetDay > daysInMonth ? daysInMonth : targetDay;
-          return DateTime(year, month, day);
-        }
-
-        nextDate = buildMonthly(baseDate.year, baseDate.month + (firstGen ? 0 : interval));
+        nextDate = _buildMonthlyDate(
+            baseDate.year, baseDate.month + (firstGen ? 0 : interval), targetDay);
         // 首笔:若当月目标日早于基准(本月已过)→ 顺延一个 interval 月,避免回溯
         if (firstGen && nextDate.isBefore(baseDate)) {
-          nextDate = buildMonthly(baseDate.year, baseDate.month + interval);
+          nextDate = _buildMonthlyDate(
+              baseDate.year, baseDate.month + interval, targetDay);
         }
         break;
 
@@ -136,17 +127,12 @@ class RecurringTransactionService {
         // 年度重复
         final targetMonth = recurring.monthOfYear ?? baseDate.month;
         final targetDay = recurring.dayOfMonth ?? baseDate.day;
-        DateTime buildYearly(int year) {
-          // 处理闰年2月29日
-          final daysInMonth = DateTime(year, targetMonth + 1, 0).day;
-          final day = targetDay > daysInMonth ? daysInMonth : targetDay;
-          return DateTime(year, targetMonth, day);
-        }
-
-        nextDate = buildYearly(baseDate.year + (firstGen ? 0 : interval));
+        nextDate = _buildYearlyDate(
+            baseDate.year + (firstGen ? 0 : interval), targetMonth, targetDay);
         // 首笔:若当年目标日早于基准(今年已过)→ 顺延 interval 年
         if (firstGen && nextDate.isBefore(baseDate)) {
-          nextDate = buildYearly(baseDate.year + interval);
+          nextDate = _buildYearlyDate(
+              baseDate.year + interval, targetMonth, targetDay);
         }
         break;
     }
@@ -168,6 +154,122 @@ class RecurringTransactionService {
     logger.info(_tag,
         'calc id=${recurring.id} freq=${frequency.value} interval=$interval firstGen=$firstGen base=$baseDate lastGen=$lastGenerated → 生成 next=$nextDate');
     return nextDate;
+  }
+
+  /// 返回**严格晚于 [now] 的下一次发生日**（扣款日/下次生成日），供到期提醒使用。
+  ///
+  /// 与 [calculateNextDate] 的区别：后者回答「本次是否需要生成」（未来日期一律
+  /// 返回 null），本方法回答「下一笔什么时候发生」，故口径是 `> now` 而非 `<= now`。
+  /// **两者必须同源**：推进规则（月/年构建、`dayOfMonth` / `monthOfYear` 语义、
+  /// 首笔特例）都走 [_buildMonthlyDate] / [_buildYearlyDate]，任一侧改动都要同步
+  /// 另一侧，否则「提前 3 天提醒」会与实际扣款日错位。
+  ///
+  /// - `interval < 1` 按 1 处理（脏数据兜底，防死循环）；
+  /// - `endDate` 已过、或算出的发生日超过 `endDate` → 返回 null；
+  /// - 首笔未生成时基准不早于今天零点（issue #135，不回溯补历史）。
+  DateTime? nextDueDateAfter(RecurringTransaction recurring, {DateTime? now}) {
+    final nowTs = now ?? DateTime.now();
+    final frequency = RecurringFrequency.fromString(recurring.frequency);
+    final interval = recurring.interval < 1 ? 1 : recurring.interval;
+    final lastGenerated = recurring.lastGeneratedDate;
+    final firstGen = lastGenerated == null;
+    final endDate = recurring.endDate;
+
+    // 结束日期已过：不会再有下一次
+    if (endDate != null && nowTs.isAfter(endDate)) return null;
+
+    final todayStart = DateTime(nowTs.year, nowTs.month, nowTs.day);
+    final rawBase = lastGenerated ?? recurring.startDate;
+    final baseDate =
+        firstGen && rawBase.isBefore(todayStart) ? todayStart : rawBase;
+
+    // 目标"几号"/"几月"取自基准日并**固定不变**：否则 1/31 被 2 月夹成 28 后
+    // 后续永久塌陷成 28 号（calculateNextDate 同款做法）。
+    final targetDay = recurring.dayOfMonth ?? baseDate.day;
+    final targetMonth = recurring.monthOfYear ?? baseDate.month;
+
+    // 首个候选日必须与 calculateNextDate 的产出**完全同款**：
+    // - 首笔（从未生成）→ 落在 baseDate 所在周期的目标日（月/年），若早于 baseDate 再顺延一个 interval；
+    // - 非首笔（lastGenerated != null）→ **baseDate + interval**（按月/年构建），
+    //   而不是「baseDate 当月/当年的目标日」。后者会在用户把 dayOfMonth 往未来改
+    //   （如 15 → 25，lastGenerated=1/15，now=1/20）时报出 1/25，而生成逻辑要到
+    //   2/25 才扣款 —— 提醒日与实际扣款日错位（2026-10 评审发现）。
+    DateTime candidate;
+    switch (frequency) {
+      case RecurringFrequency.daily:
+      case RecurringFrequency.weekly:
+        candidate = baseDate;
+        break;
+      case RecurringFrequency.monthly:
+        candidate = _buildMonthlyDate(baseDate.year,
+            baseDate.month + (firstGen ? 0 : interval), targetDay);
+        if (firstGen && candidate.isBefore(baseDate)) {
+          candidate = _buildMonthlyDate(
+              baseDate.year, baseDate.month + interval, targetDay);
+        }
+        break;
+      case RecurringFrequency.yearly:
+        candidate = _buildYearlyDate(
+            baseDate.year + (firstGen ? 0 : interval), targetMonth, targetDay);
+        if (firstGen && candidate.isBefore(baseDate)) {
+          candidate = _buildYearlyDate(
+              baseDate.year + interval, targetMonth, targetDay);
+        }
+        break;
+    }
+
+    // 向前滚到第一个严格晚于 now 的发生日。正常最多滚 1~2 次；带上限防御
+    // 脏数据（如历史遗留的异常 interval）导致的长循环。
+    var guard = 0;
+    while (!candidate.isAfter(nowTs)) {
+      if (++guard > _maxAdvanceSteps) {
+        logger.warning(_tag,
+            'nextDueDateAfter id=${recurring.id} 推进超过 $_maxAdvanceSteps 次，放弃计算');
+        return null;
+      }
+      switch (frequency) {
+        case RecurringFrequency.daily:
+          candidate = candidate.add(Duration(days: interval));
+          break;
+        case RecurringFrequency.weekly:
+          candidate = candidate.add(Duration(days: 7 * interval));
+          break;
+        case RecurringFrequency.monthly:
+          candidate = _buildMonthlyDate(
+              candidate.year, candidate.month + interval, targetDay);
+          break;
+        case RecurringFrequency.yearly:
+          candidate = _buildYearlyDate(
+              candidate.year + interval, targetMonth, targetDay);
+          break;
+      }
+    }
+
+    if (endDate != null && candidate.isAfter(endDate)) return null;
+    return candidate;
+  }
+
+  /// 单次推进步数上限（防御脏数据造成的长循环/死循环）。
+  static const int _maxAdvanceSteps = 2000;
+
+  /// 构建「某年某月的 [targetDay] 日」；月份越界自动进位；目标日超出该月
+  /// 天数时夹到月末（如 2 月 30 日 → 2 月 28/29 日）。
+  static DateTime _buildMonthlyDate(int year, int month, int targetDay) {
+    while (month > 12) {
+      month -= 12;
+      year += 1;
+    }
+    final daysInMonth = DateTime(year, month + 1, 0).day;
+    final day = targetDay > daysInMonth ? daysInMonth : targetDay;
+    return DateTime(year, month, day);
+  }
+
+  /// 构建「某年 [targetMonth] 月 [targetDay] 日」；处理闰年 2 月 29 日等
+  /// 不存在日期（夹到月末）。
+  static DateTime _buildYearlyDate(int year, int targetMonth, int targetDay) {
+    final daysInMonth = DateTime(year, targetMonth + 1, 0).day;
+    final day = targetDay > daysInMonth ? daysInMonth : targetDay;
+    return DateTime(year, targetMonth, day);
   }
 
   /// 生成待处理的交易记录

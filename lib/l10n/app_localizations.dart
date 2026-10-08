@@ -15714,6 +15714,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{updated} year(s) backfilled, {count} failed'**
   String holidayFetchRangePartial(int updated, int count);
+
+  /// No description provided for @mineSubscriptionManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscriptions'**
+  String get mineSubscriptionManagement;
+
+  /// No description provided for @mineSubscriptionManagementSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring charges and yearly spend'**
+  String get mineSubscriptionManagementSubtitle;
+
+  /// No description provided for @subscriptionPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscriptions'**
+  String get subscriptionPageTitle;
+
+  /// No description provided for @subscriptionEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No Subscriptions'**
+  String get subscriptionEmpty;
+
+  /// No description provided for @subscriptionEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscriptions come from recurring bills. Create an expense-type recurring bill for fixed charges (memberships, rent, broadband) and it shows up here.'**
+  String get subscriptionEmptyHint;
+
+  /// No description provided for @subscriptionEmptyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Recurring Bill'**
+  String get subscriptionEmptyAction;
+
+  /// No description provided for @subscriptionAnnualLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly'**
+  String get subscriptionAnnualLabel;
+
+  /// No description provided for @subscriptionMonthlyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Avg'**
+  String get subscriptionMonthlyLabel;
+
+  /// No description provided for @subscriptionCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} subscription(s)'**
+  String subscriptionCountLabel(int n);
+
+  /// No description provided for @subscriptionForeignHint.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} foreign-currency subscription(s) excluded from the total'**
+  String subscriptionForeignHint(int n);
+
+  /// No description provided for @subscriptionNextDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Next charge {date}'**
+  String subscriptionNextDue(String date);
+
+  /// No description provided for @subscriptionNoNextDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended'**
+  String get subscriptionNoNextDue;
+
+  /// No description provided for @subscriptionUnknownName.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed subscription'**
+  String get subscriptionUnknownName;
+
+  /// No description provided for @reminderBudgetOverspendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget Overspend Alert'**
+  String get reminderBudgetOverspendTitle;
+
+  /// No description provided for @reminderBudgetOverspendSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notify me when spending exceeds a budget'**
+  String get reminderBudgetOverspendSubtitle;
+
+  /// No description provided for @reminderRecurringDueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring Bill Due Alert'**
+  String get reminderRecurringDueTitle;
+
+  /// No description provided for @reminderRecurringDueSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notify me 3 days before a recurring charge'**
+  String get reminderRecurringDueSubtitle;
+
+  /// No description provided for @budgetOverspendNotifyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget exceeded'**
+  String get budgetOverspendNotifyTitle;
+
+  /// No description provided for @budgetOverspendNotifyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: spent {used} of {budget}'**
+  String budgetOverspendNotifyBody(String name, String used, String budget);
+
+  /// No description provided for @budgetOverspendTotalBudgetName.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly total budget'**
+  String get budgetOverspendTotalBudgetName;
+
+  /// No description provided for @recurringDueNotifyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is due soon'**
+  String recurringDueNotifyTitle(String name);
+
+  /// No description provided for @recurringDueNotifyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} will be charged on {date}'**
+  String recurringDueNotifyBody(String amount, String date);
 }
 
 class _AppLocalizationsDelegate

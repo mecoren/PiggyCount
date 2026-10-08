@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/custom_field_providers.dart';
 import '../../services/data/recurring_transaction_service.dart';
 import '../../services/system/logger_service.dart';
+import '../../services/system/recurring_due_reminder_service.dart';
 import '../../utils/category_utils.dart';
 import '../../utils/currencies.dart';
 import '../../styles/tokens.dart';
@@ -18,6 +19,25 @@ import '../../widgets/biz/custom_field_input.dart';
 import '../../widgets/currency/currency_flag.dart';
 import '../../widgets/currency/currency_picker_sheet.dart';
 
+/// 以底部抽屉形式弹出周期账单编辑器（新建 / 编辑通用）。
+///
+/// 唯一入口：新建与编辑都走项目统一的**悬浮卡片表单抽屉**（[PiggyFormSheet]：
+/// 居中标题 + 卡片内滚动表单 + 底部「取消｜保存」双等宽按钮），与预算 / 账户 /
+/// 云同步配置表单同款。表单逻辑仍在本文件的 [RecurringTransactionEditPage]。
+///
+/// 编辑态的「删除」渲染在表单主体末尾、「取消｜保存」之上；保存 / 删除都走
+/// `Navigator.pop(true)`，调用方据返回值决定要不要连带刷新上一层。
+Future<bool?> showRecurringFormBottomSheet(
+  BuildContext context, {
+  RecurringTransaction? recurring,
+}) {
+  return showPiggyFormSheet<bool>(
+    context,
+    builder: (_) => RecurringTransactionEditPage(recurring: recurring),
+  );
+}
+
+/// 周期账单编辑表单（悬浮卡片抽屉内容）。
 class RecurringTransactionEditPage extends ConsumerStatefulWidget {
   final RecurringTransaction? recurring;
 
@@ -46,6 +66,7 @@ class _RecurringTransactionEditPageState
   late bool _enabled;
   bool _hasAttemptedSave = false; // 是否已尝试保存
   int? _selectedLedgerId; // 选中的账本ID
+  bool _saving = false; // 抽屉「保存」进行中（防连点 + confirmBusy）
 
   /// v42(移植 BeeCount #444)模板币种:null = 所选账本的本位币。
   /// 与记账页 L12 同构 —— 币种优先联动:改币种 → 账户列表按新币种过滤、
@@ -147,145 +168,146 @@ class _RecurringTransactionEditPageState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: PiggyTitleBar(
-        title: _isEditing
-            ? l10n.recurringTransactionEdit
-            : l10n.recurringTransactionAdd,
-        showBack: true,
-        actions: _isEditing
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  tooltip: l10n.commonDelete,
-                  onPressed: _deleteRecurringTransaction,
-                ),
-              ]
-            : null,
-      ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
-        ),
+    return PiggyFormSheet(
+      title: _isEditing
+          ? l10n.recurringTransactionEdit
+          : l10n.recurringTransactionAdd,
+      cancelLabel: l10n.commonCancel,
+      confirmLabel: l10n.commonSave,
+      onCancel: () => Navigator.of(context).pop(),
+      // 不做 `_isFormValid()` 门控:必填项校验交给 _saveRecurringTransaction 内的
+      // validate + _hasAttemptedSave(抽屉形态下按钮常在,错误提示才看得见)
+      onConfirm: _saving ? null : _saveRecurringTransaction,
+      confirmBusy: _saving,
+      child: Form(
+        key: _formKey,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    // Type selection
-                    _buildTypeSelector(l10n),
-                    const SizedBox(height: 16),
+            // Type selection
+            _buildTypeSelector(l10n),
+            const SizedBox(height: PiggyDimens.p16),
 
-                    // Ledger selection
-                    _buildLedgerSelector(l10n),
-                    const SizedBox(height: 16),
+            // Ledger selection
+            _buildLedgerSelector(l10n),
+            const SizedBox(height: PiggyDimens.p16),
 
-                    // Currency (v42 / 移植 BeeCount #444)
-                    _buildCurrencySelector(l10n),
-                    const SizedBox(height: 16),
+            // Currency (v42 / 移植 BeeCount #444)
+            _buildCurrencySelector(l10n),
+            const SizedBox(height: PiggyDimens.p16),
 
-                    // Amount
-                    TextFormField(
-                      controller: _amountController,
-                      decoration: piggyOutlinedDecoration(
-                        context,
-                        label: l10n.importFieldAmount,
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return l10n.commonError;
-                        }
-                        if (double.tryParse(value) == null) {
-                          return l10n.commonError;
-                        }
-                        return null;
-                      },
+            // Amount
+            TextFormField(
+              controller: _amountController,
+              decoration: piggyOutlinedDecoration(
+                context,
+                label: l10n.importFieldAmount,
+              ),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return l10n.commonError;
+                }
+                if (double.tryParse(value) == null) {
+                  return l10n.commonError;
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: PiggyDimens.p16),
+
+            // Category selection (not for transfer)
+            if (_type != 'transfer') ...[
+              _buildCategorySelector(l10n),
+              const SizedBox(height: PiggyDimens.p16),
+            ],
+
+            // Account selection (from account)
+            _buildAccountSelector(l10n, isFromAccount: true),
+            const SizedBox(height: PiggyDimens.p16),
+
+            // To account selection (only for transfer)
+            if (_type == 'transfer') ...[
+              _buildAccountSelector(l10n, isFromAccount: false),
+              const SizedBox(height: PiggyDimens.p16),
+            ],
+
+            // Frequency
+            _buildFrequencySelector(l10n),
+            const SizedBox(height: PiggyDimens.p16),
+
+            // Interval
+            if (_frequency != RecurringFrequency.daily)
+              _buildIntervalSelector(l10n),
+            if (_frequency != RecurringFrequency.daily)
+              const SizedBox(height: PiggyDimens.p16),
+
+            // Day of month (for monthly)
+            if (_frequency == RecurringFrequency.monthly)
+              _buildDayOfMonthSelector(l10n),
+            if (_frequency == RecurringFrequency.monthly)
+              const SizedBox(height: PiggyDimens.p16),
+
+            // Start date
+            _buildDateField(
+              label: l10n.recurringTransactionStartDate,
+              date: _startDate,
+              onTap: () => _selectDate(context, true),
+            ),
+            const SizedBox(height: PiggyDimens.p16),
+
+            // End date
+            _buildDateField(
+              label: l10n.recurringTransactionEndDate,
+              date: _endDate,
+              onTap: () => _selectDate(context, false),
+              allowClear: true,
+              onClear: () => setState(() => _endDate = null),
+            ),
+            const SizedBox(height: PiggyDimens.p16),
+
+            // Note
+            TextFormField(
+              controller: _noteController,
+              decoration: piggyOutlinedDecoration(
+                context,
+                label: l10n.commonNoteHint,
+              ),
+              maxLines: 3,
+            ),
+            const SizedBox(height: PiggyDimens.p16),
+
+            // v47 模板级自定义字段
+            _buildTemplateCustomFields(l10n),
+
+            // 删除（仅编辑态）：卸载在「取消｜保存」之上，error 色描边按钮
+            // （与预算 / 账户编辑抽屉同款）
+            if (_isEditing) ...[
+              const SizedBox(height: PiggyDimens.p24),
+              SizedBox(
+                width: double.infinity,
+                height: PiggySheetActions.kHeight,
+                child: OutlinedButton(
+                  onPressed: _saving ? null : _deleteRecurringTransaction,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: PiggyTokens.error(context),
+                    side: BorderSide(
+                        color: PiggyTokens.error(context), width: 1.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                     ),
-                    const SizedBox(height: 16),
-
-                    // Category selection (not for transfer)
-                    if (_type != 'transfer') ...[
-                      _buildCategorySelector(l10n),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // Account selection (from account)
-                    _buildAccountSelector(l10n, isFromAccount: true),
-                    const SizedBox(height: 16),
-
-                    // To account selection (only for transfer)
-                    if (_type == 'transfer') ...[
-                      _buildAccountSelector(l10n, isFromAccount: false),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // Frequency
-                    _buildFrequencySelector(l10n),
-                    const SizedBox(height: 16),
-
-                    // Interval
-                    if (_frequency != RecurringFrequency.daily)
-                      _buildIntervalSelector(l10n),
-                    if (_frequency != RecurringFrequency.daily)
-                      const SizedBox(height: 16),
-
-                    // Day of month (for monthly)
-                    if (_frequency == RecurringFrequency.monthly)
-                      _buildDayOfMonthSelector(l10n),
-                    if (_frequency == RecurringFrequency.monthly)
-                      const SizedBox(height: 16),
-
-                    // Start date
-                    _buildDateField(
-                      label: l10n.recurringTransactionStartDate,
-                      date: _startDate,
-                      onTap: () => _selectDate(context, true),
+                  ),
+                  child: Text(
+                    l10n.commonDelete,
+                    style: const TextStyle(
+                      fontSize: PiggyTextTokens.fs16,
+                      fontWeight: FontWeight.w600,
                     ),
-                    const SizedBox(height: 16),
-
-                    // End date
-                    _buildDateField(
-                      label: l10n.recurringTransactionEndDate,
-                      date: _endDate,
-                      onTap: () => _selectDate(context, false),
-                      allowClear: true,
-                      onClear: () => setState(() => _endDate = null),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Note
-                    TextFormField(
-                      controller: _noteController,
-                      decoration: piggyOutlinedDecoration(
-                        context,
-                        label: l10n.commonNoteHint,
-                      ),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // v47 模板级自定义字段
-                    _buildTemplateCustomFields(l10n),
-                  ],
+                  ),
                 ),
               ),
-            ),
-
-            // 底部保存按钮
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              child: FilledButton(
-                onPressed: _isFormValid() ? _saveRecurringTransaction : null,
-                child: Text(l10n.commonSave),
-              ),
-            ),
+            ],
           ],
         ),
       ),
@@ -916,6 +938,7 @@ class _RecurringTransactionEditPageState
 
     final repo = ref.read(repositoryProvider);
 
+    setState(() => _saving = true);
     try {
       if (_isEditing) {
         // 编辑模式：检查是否需要重置 lastGeneratedDate
@@ -978,11 +1001,22 @@ class _RecurringTransactionEditPageState
       if (mounted) {
         Navigator.of(context).pop(true); // 返回 true 表示数据已更改
       }
+      // 到期提醒跟随模板变更收敛（金额/频率/日期/启停都可能改了下次扣款日）。
+      // fire-and-forget：不阻塞返回，失败只记日志（提醒丢了还有启动/前台恢复兜底）。
+      unawaitedLog(
+        RecurringDueReminderService(repository: repo).rescheduleAll(),
+        '周期账单到期提醒重调度',
+      );
     } catch (e, stackTrace) {
       // 使用 logger 记录详细错误信息
       logger.error('周期账单保存', '保存失败', e, stackTrace);
       if (mounted) {
         showToast(context, '${l10n.commonError}: $e');
+      }
+    } finally {
+      // 抽屉保持打开时解除「保存」忙碌态；已 pop 的路径不必再 setState
+      if (mounted && _saving) {
+        setState(() => _saving = false);
       }
     }
   }
@@ -1003,6 +1037,12 @@ class _RecurringTransactionEditPageState
       if (mounted) {
         Navigator.of(context).pop(true); // 返回 true 表示数据已更改
       }
+      // 模板已删 → 取消它那条到期提醒（ID 按 recurringId 分配，可精确撤销）
+      unawaitedLog(
+        RecurringDueReminderService(repository: repo)
+            .cancelForTemplate(widget.recurring!.id),
+        '周期账单到期提醒取消',
+      );
     }
   }
 }

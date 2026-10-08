@@ -5,7 +5,9 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:drift/drift.dart' as d;
 import '../../data/db.dart';
 import '../../data/repositories/base_repository.dart';
+import '../system/budget_overspend_notifier.dart';
 import '../system/logger_service.dart';
+import '../system/recurring_due_reminder_service.dart';
 import '../../ai/providers/ai_constants.dart';
 import '../../ai/providers/ai_provider_config.dart';
 import '../../ai/providers/ai_provider_manager.dart';
@@ -549,6 +551,13 @@ class AppSettingsConfig {
   final int? reminderHour;
   final int? reminderMinute;
 
+  /// 预算超支提醒（只推 100% 超支）。见
+  /// prd/subscription_and_overspend_alerts/requirements.md §4.5：开关随配置迁移。
+  final bool? budgetOverspendReminderEnabled;
+
+  /// 周期账单到期提醒（扣款前 3 天）。
+  final bool? recurringDueReminderEnabled;
+
   // 语言设置
   final String? languageCode;
   final String? countryCode;
@@ -586,6 +595,8 @@ class AppSettingsConfig {
     this.reminderEnabled,
     this.reminderHour,
     this.reminderMinute,
+    this.budgetOverspendReminderEnabled,
+    this.recurringDueReminderEnabled,
     this.languageCode,
     this.countryCode,
     this.primaryColor,
@@ -627,6 +638,12 @@ class AppSettingsConfig {
     }
     if (reminderMinute != null) {
       map['reminder_minute'] = reminderMinute;
+    }
+    if (budgetOverspendReminderEnabled != null) {
+      map['budget_overspend_reminder_enabled'] = budgetOverspendReminderEnabled;
+    }
+    if (recurringDueReminderEnabled != null) {
+      map['recurring_due_reminder_enabled'] = recurringDueReminderEnabled;
     }
     if (languageCode != null && languageCode!.isNotEmpty) {
       map['language_code'] = languageCode;
@@ -699,6 +716,10 @@ class AppSettingsConfig {
         reminderEnabled: map['reminder_enabled'] as bool?,
         reminderHour: map['reminder_hour'] as int?,
         reminderMinute: map['reminder_minute'] as int?,
+        budgetOverspendReminderEnabled:
+            map['budget_overspend_reminder_enabled'] as bool?,
+        recurringDueReminderEnabled:
+            map['recurring_due_reminder_enabled'] as bool?,
         languageCode: map['language_code'] as String?,
         countryCode: map['country_code'] as String?,
         primaryColor: map['primary_color'] as int?,
@@ -1448,6 +1469,10 @@ class ConfigExportService {
     final reminderEnabled = prefs.getBool('reminder_enabled');
     final reminderHour = prefs.getInt('reminder_hour');
     final reminderMinute = prefs.getInt('reminder_minute');
+    final budgetOverspendReminderEnabled =
+        prefs.getBool(kBudgetOverspendReminderEnabledKey);
+    final recurringDueReminderEnabled =
+        prefs.getBool(kRecurringDueReminderEnabledKey);
     final languageCode = prefs.getString('selected_language');
     final countryCode = prefs.getString('selected_language_country');
     final primaryColor = prefs.getInt('primaryColor');
@@ -1498,6 +1523,8 @@ class ConfigExportService {
       reminderEnabled: reminderEnabled,
       reminderHour: reminderHour,
       reminderMinute: reminderMinute,
+      budgetOverspendReminderEnabled: budgetOverspendReminderEnabled,
+      recurringDueReminderEnabled: recurringDueReminderEnabled,
       languageCode: languageCode,
       countryCode: countryCode,
       primaryColor: primaryColor,
@@ -1936,7 +1963,9 @@ class ConfigExportService {
 
       if (settings.containsKey('reminder_enabled') ||
           settings.containsKey('reminder_hour') ||
-          settings.containsKey('reminder_minute')) {
+          settings.containsKey('reminder_minute') ||
+          settings.containsKey('budget_overspend_reminder_enabled') ||
+          settings.containsKey('recurring_due_reminder_enabled')) {
         buffer.writeln('  # 记账提醒');
         if (settings.containsKey('reminder_enabled')) {
           buffer.writeln('  reminder_enabled: ${settings['reminder_enabled']}');
@@ -1946,6 +1975,14 @@ class ConfigExportService {
         }
         if (settings.containsKey('reminder_minute')) {
           buffer.writeln('  reminder_minute: ${settings['reminder_minute']}');
+        }
+        if (settings.containsKey('budget_overspend_reminder_enabled')) {
+          buffer.writeln(
+              '  budget_overspend_reminder_enabled: ${settings['budget_overspend_reminder_enabled']}');
+        }
+        if (settings.containsKey('recurring_due_reminder_enabled')) {
+          buffer.writeln(
+              '  recurring_due_reminder_enabled: ${settings['recurring_due_reminder_enabled']}');
         }
       }
 
@@ -2463,6 +2500,15 @@ class ConfigExportService {
       }
       if (settings.reminderMinute != null) {
         await prefs.setInt('reminder_minute', settings.reminderMinute!);
+      }
+      // 两个新提醒开关（2026-10 订阅/提醒批次）：缺键的老导出包按「不修改」处理
+      if (settings.budgetOverspendReminderEnabled != null) {
+        await prefs.setBool(kBudgetOverspendReminderEnabledKey,
+            settings.budgetOverspendReminderEnabled!);
+      }
+      if (settings.recurringDueReminderEnabled != null) {
+        await prefs.setBool(kRecurringDueReminderEnabledKey,
+            settings.recurringDueReminderEnabled!);
       }
 
       // 语言设置

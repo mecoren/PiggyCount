@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers.dart';
 import '../../cloud/sync_service.dart';
 import '../attachment_service.dart';
+import '../system/budget_overspend_notifier.dart';
 import '../system/logger_service.dart';
 
 /// 数据变更后的统一后处理服务
@@ -104,9 +105,28 @@ class PostProcessor {
     logger.info('PostProcessor', '云端下载后刷新完成');
   }
 
+  // ============ 预算超支实时推送 ============
+
+  /// 记账后检测预算是否超支（只推 100%，同预算同周期只推一次）。
+  ///
+  /// 挂在三个 `_doSync*` 出口 = 覆盖全部六个记账/变更入口（`run` / `runC` /
+  /// `runR` / `sync` / `syncC` / `syncR`）—— 手动编辑器保存走的是 `sync` 系列，
+  /// 逐个入口插桩必漏（见 design.md §3）。
+  ///
+  /// 服务内部先读开关短路：关闭时只花一次偏好读，不做任何预算查询；
+  /// fire-and-forget，失败只记日志（`unawaitedLog`），不阻塞记账路径。
+  static void _checkBudgetOverspend(dynamic repository, int ledgerId) {
+    unawaitedLog(
+      BudgetOverspendNotifier(repository: repository)
+          .checkAfterWrite(ledgerId: ledgerId),
+      '预算超支检测',
+    );
+  }
+
   // ============ 内部同步实现 ============
 
   static Future<void> _doSync(WidgetRef ref, int ledgerId) async {
+    _checkBudgetOverspend(ref.read(repositoryProvider), ledgerId);
     final sync = ref.read(syncServiceProvider);
     try {
       sync.markLocalChanged(ledgerId: ledgerId);
@@ -147,6 +167,7 @@ class PostProcessor {
   }
 
   static Future<void> _doSyncC(ProviderContainer c, int ledgerId) async {
+    _checkBudgetOverspend(c.read(repositoryProvider), ledgerId);
     final sync = c.read(syncServiceProvider);
     try {
       sync.markLocalChanged(ledgerId: ledgerId);
@@ -184,6 +205,7 @@ class PostProcessor {
   }
 
   static Future<void> _doSyncR(Ref ref, int ledgerId) async {
+    _checkBudgetOverspend(ref.read(repositoryProvider), ledgerId);
     final sync = ref.read(syncServiceProvider);
     try {
       sync.markLocalChanged(ledgerId: ledgerId);

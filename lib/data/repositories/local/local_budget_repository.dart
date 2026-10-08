@@ -243,7 +243,8 @@ class LocalBudgetRepository implements BudgetRepository {
     // 计算剩余天数(周期跟随账本 monthStartDay,与 getBudgetUsage 同口径)
     final now = DateTime.now();
     final sd = await _monthStartDayOf(ledgerId);
-    final endDate = periodContaining(now, sd).end;
+    final period = periodContaining(now, sd);
+    final endDate = period.end;
     final daysRemaining = endDate.difference(now).inDays;
 
     // 计算日均可用
@@ -255,6 +256,9 @@ class LocalBudgetRepository implements BudgetRepository {
       categoryBudgets: categoryUsages,
       daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
       dailyAvailable: dailyAvailable > 0 ? dailyAvailable : 0,
+      // 本地计算字段(不进快照):预算超支推送用它做「同周期只推一次」的水位 key
+      periodStart: period.start,
+      periodEnd: period.end,
     );
   }
 

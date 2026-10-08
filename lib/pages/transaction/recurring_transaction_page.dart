@@ -10,6 +10,7 @@ import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/data/recurring_transaction_service.dart';
 import '../../services/system/logger_service.dart';
+import '../../services/system/recurring_due_reminder_service.dart';
 import '../../utils/category_utils.dart';
 import '../../styles/tokens.dart';
 import 'recurring_transaction_edit_page.dart';
@@ -103,12 +104,9 @@ class RecurringTransactionPage extends ConsumerWidget {
     );
   }
 
+  /// 新建：统一走表单抽屉（[showRecurringFormBottomSheet]），不再跳全屏页。
   void _addRecurringTransaction(BuildContext context, WidgetRef ref) async {
-    final result = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => const RecurringTransactionEditPage(),
-      ),
-    );
+    final result = await showRecurringFormBottomSheet(context);
     // 如果返回 true，表示数据已更改，强制刷新列表
     if (result == true) {
       ref.invalidate(allRecurringTransactionsProvider);
@@ -154,11 +152,9 @@ class _RecurringTransactionCard extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () async {
-            final result = await Navigator.of(context).push<bool>(
-              MaterialPageRoute(
-                builder: (_) =>
-                    RecurringTransactionEditPage(recurring: recurring),
-              ),
+            final result = await showRecurringFormBottomSheet(
+              context,
+              recurring: recurring,
             );
             // 如果返回 true，表示数据已更改，强制刷新列表
             if (result == true) {
@@ -356,6 +352,14 @@ class _RecurringTransactionCard extends ConsumerWidget {
                               const Duration(milliseconds: 100));
 
                           ref.invalidate(allRecurringTransactionsProvider);
+
+                          // 到期提醒跟随启停收敛（停用即取消、启用即重排）。
+                          // fire-and-forget：不阻塞开关视觉反馈。
+                          unawaitedLog(
+                            RecurringDueReminderService(repository: repo)
+                                .rescheduleAll(),
+                            '周期账单到期提醒重调度',
+                          );
                         } catch (e, stackTrace) {
                           logger.warning(
                               'RecurringPage', '切换周期记账失败: $e', stackTrace);

@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'database_providers.dart' show repositoryProvider;
+import '../services/system/budget_overspend_notifier.dart';
+import '../services/system/recurring_due_reminder_service.dart';
 import '../utils/notification_factory.dart';
 
 /// 记账提醒设置
@@ -8,10 +11,18 @@ class ReminderSettings {
   final int hour;  // 0-23
   final int minute; // 0-59
 
+  /// 预算超支提醒（只推 100% 超支，记账后实时检测）。
+  final bool budgetOverspendEnabled;
+
+  /// 周期账单到期提醒（扣款前 3 天）。
+  final bool recurringDueEnabled;
+
   const ReminderSettings({
     required this.isEnabled,
     required this.hour,
     required this.minute,
+    this.budgetOverspendEnabled = false,
+    this.recurringDueEnabled = false,
   });
 
   factory ReminderSettings.defaultSettings() {
@@ -26,11 +37,16 @@ class ReminderSettings {
     bool? isEnabled,
     int? hour,
     int? minute,
+    bool? budgetOverspendEnabled,
+    bool? recurringDueEnabled,
   }) {
     return ReminderSettings(
       isEnabled: isEnabled ?? this.isEnabled,
       hour: hour ?? this.hour,
       minute: minute ?? this.minute,
+      budgetOverspendEnabled:
+          budgetOverspendEnabled ?? this.budgetOverspendEnabled,
+      recurringDueEnabled: recurringDueEnabled ?? this.recurringDueEnabled,
     );
   }
 
@@ -47,15 +63,27 @@ class ReminderSettings {
           runtimeType == other.runtimeType &&
           isEnabled == other.isEnabled &&
           hour == other.hour &&
-          minute == other.minute;
+          minute == other.minute &&
+          budgetOverspendEnabled == other.budgetOverspendEnabled &&
+          recurringDueEnabled == other.recurringDueEnabled;
 
   @override
-  int get hashCode => isEnabled.hashCode ^ hour.hashCode ^ minute.hashCode;
+  int get hashCode =>
+      isEnabled.hashCode ^
+      hour.hashCode ^
+      minute.hashCode ^
+      budgetOverspendEnabled.hashCode ^
+      recurringDueEnabled.hashCode;
 }
 
 /// 记账提醒设置的StateNotifier
 class ReminderSettingsNotifier extends StateNotifier<ReminderSettings> {
-  ReminderSettingsNotifier() : super(ReminderSettings.defaultSettings()) {
+  /// 只读仓储：周期账单到期提醒开关变化时用它重调度/取消调度。
+  final dynamic _repository;
+
+  ReminderSettingsNotifier({dynamic repository})
+      : _repository = repository,
+        super(ReminderSettings.defaultSettings()) {
     _loadSettings();
   }
 
@@ -75,6 +103,10 @@ class ReminderSettingsNotifier extends StateNotifier<ReminderSettings> {
         isEnabled: isEnabled,
         hour: hour,
         minute: minute,
+        budgetOverspendEnabled:
+            prefs.getBool(kBudgetOverspendReminderEnabledKey) ?? false,
+        recurringDueEnabled:
+            prefs.getBool(kRecurringDueReminderEnabledKey) ?? false,
       );
     } catch (e) {
       // 保持默认设置
@@ -88,9 +120,39 @@ class ReminderSettingsNotifier extends StateNotifier<ReminderSettings> {
       await prefs.setBool(_keyEnabled, state.isEnabled);
       await prefs.setInt(_keyHour, state.hour);
       await prefs.setInt(_keyMinute, state.minute);
+      await prefs.setBool(
+          kBudgetOverspendReminderEnabledKey, state.budgetOverspendEnabled);
+      await prefs.setBool(
+          kRecurringDueReminderEnabledKey, state.recurringDueEnabled);
     } catch (e) {
       // 忽略保存错误
     }
+  }
+
+  /// 周期账单到期提醒的调度收敛（开关开启 → 全量重调度；关闭 → 取消全段）。
+  ///
+  /// 服务内部自带 try-catch 与开关短路：仓储未注入时直接跳过（测试场景）。
+  Future<void> _syncRecurringDueReminders() async {
+    if (_repository == null) return;
+    final service = RecurringDueReminderService(repository: _repository);
+    if (state.recurringDueEnabled) {
+      await service.rescheduleAll();
+    } else {
+      await service.cancelAllPending();
+    }
+  }
+
+  /// 更新「预算超支提醒」开关（被动检测，无需调度，纯持久化）。
+  Future<void> updateBudgetOverspendEnabled(bool enabled) async {
+    state = state.copyWith(budgetOverspendEnabled: enabled);
+    await _saveSettings();
+  }
+
+  /// 更新「周期账单到期提醒」开关：开启即全量重调度，关闭即取消全部待发。
+  Future<void> updateRecurringDueEnabled(bool enabled) async {
+    state = state.copyWith(recurringDueEnabled: enabled);
+    await _saveSettings();
+    await _syncRecurringDueReminders();
   }
 
   /// 更新启用状态
@@ -147,10 +209,13 @@ class ReminderSettingsNotifier extends StateNotifier<ReminderSettings> {
     } else {
       await notificationUtil.cancelNotification(1001);
     }
+    // 配置整体替换（导入/恢复）后周期账单到期提醒也要收敛
+    await _syncRecurringDueReminders();
   }
 }
 
 /// 记账提醒设置Provider
-final reminderSettingsProvider = StateNotifierProvider<ReminderSettingsNotifier, ReminderSettings>((ref) {
-  return ReminderSettingsNotifier();
+final reminderSettingsProvider =
+    StateNotifierProvider<ReminderSettingsNotifier, ReminderSettings>((ref) {
+  return ReminderSettingsNotifier(repository: ref.watch(repositoryProvider));
 });

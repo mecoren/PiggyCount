@@ -8508,4 +8508,83 @@ class AppLocalizationsKo extends AppLocalizations {
   String holidayFetchRangePartial(int updated, int count) {
     return '$updated개 연도를 업데이트하고 $count개 연도는 실패했습니다';
   }
+
+  @override
+  String get mineSubscriptionManagement => '구독 관리';
+
+  @override
+  String get mineSubscriptionManagementSubtitle => '정기 결제와 연간 지출 확인';
+
+  @override
+  String get subscriptionPageTitle => '구독 관리';
+
+  @override
+  String get subscriptionEmpty => '구독 없음';
+
+  @override
+  String get subscriptionEmptyHint =>
+      '구독은 \'정기 청구\'에서 옵니다. 멤버십, 월세, 인터넷처럼 고정 지출을 지출형 정기 청구로 만들면 여기에 자동으로 집계됩니다.';
+
+  @override
+  String get subscriptionEmptyAction => '정기 청구 만들기';
+
+  @override
+  String get subscriptionAnnualLabel => '연간';
+
+  @override
+  String get subscriptionMonthlyLabel => '월평균';
+
+  @override
+  String subscriptionCountLabel(int n) {
+    return '구독 $n개';
+  }
+
+  @override
+  String subscriptionForeignHint(int n) {
+    return '외화 구독 $n개는 합계에서 제외됨';
+  }
+
+  @override
+  String subscriptionNextDue(String date) {
+    return '다음 결제 $date';
+  }
+
+  @override
+  String get subscriptionNoNextDue => '종료됨';
+
+  @override
+  String get subscriptionUnknownName => '이름 없는 구독';
+
+  @override
+  String get reminderBudgetOverspendTitle => '예산 초과 알림';
+
+  @override
+  String get reminderBudgetOverspendSubtitle => '지출이 예산을 넘으면 알려줍니다';
+
+  @override
+  String get reminderRecurringDueTitle => '정기 청구 예정 알림';
+
+  @override
+  String get reminderRecurringDueSubtitle => '결제 3일 전에 알려줍니다';
+
+  @override
+  String get budgetOverspendNotifyTitle => '예산 초과';
+
+  @override
+  String budgetOverspendNotifyBody(String name, String used, String budget) {
+    return '$name: $used 사용, 예산 $budget';
+  }
+
+  @override
+  String get budgetOverspendTotalBudgetName => '이번 달 총예산';
+
+  @override
+  String recurringDueNotifyTitle(String name) {
+    return '$name 결제 예정';
+  }
+
+  @override
+  String recurringDueNotifyBody(String amount, String date) {
+    return '$date에 $amount 결제 예정';
+  }
 }

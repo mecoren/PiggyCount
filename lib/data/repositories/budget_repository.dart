@@ -29,11 +29,22 @@ class BudgetOverview {
   final int daysRemaining;
   final double dailyAvailable;
 
+  /// 本轮预算周期范围（本地计算字段，由 [LocalBudgetRepository.getBudgetOverview]
+  /// 按账本 `monthStartDay` 填充）。
+  ///
+  /// **不进快照 / 不参与指纹与 diff**：纯读侧派生，改动它不影响同步契约。
+  /// 可选是因为小组件样例数据与测试夹具构造 |BudgetOverview| 时拿不到账本周期。
+  /// 预算超支推送用它生成「同一周期只推一次」的水位 key。
+  final DateTime? periodStart;
+  final DateTime? periodEnd;
+
   const BudgetOverview({
     this.totalBudget,
     this.categoryBudgets = const [],
     required this.daysRemaining,
     required this.dailyAvailable,
+    this.periodStart,
+    this.periodEnd,
   });
 }
 

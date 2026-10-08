@@ -19,6 +19,7 @@ import 'pages/auth/welcome_page.dart';
 import 'pages/auth/app_lock_screen.dart';
 import 'providers/security_providers.dart';
 import 'services/system/reminder_monitor_service.dart';
+import 'services/system/recurring_due_reminder_service.dart';
 import 'providers/credit_card_reminder_providers.dart';
 import 'services/attachment_service.dart' show attachmentServiceProvider;
 import 'services/platform/screenshot_monitor_service.dart';
@@ -131,9 +132,12 @@ Future<void> main() async {
   // 硬编码 SQL 重建表会导致新增字段丢失（如 sort_order），故移除
 
   // 启动提醒监控服务（监听应用生命周期，自动恢复丢失的提醒）。
-  // 放在并行链之后：两类提醒已恢复完，监控接管的是之后的生命周期变化。
+  // 放在并行链之后：三类提醒已恢复完，监控接管的是之后的生命周期变化。
+  // 注入只读仓储供周期账单到期提醒补种（未注入时该项跳过，每日提醒不受影响）。
   try {
-    ReminderMonitorService().startMonitoring();
+    ReminderMonitorService()
+      ..attachRepository(container.read(repositoryProvider))
+      ..startMonitoring();
   } catch (e) {
     logger.warning('App', '⚠️  提醒监控服务启动失败（可能在不支持的平台上运行）: $e');
   }
@@ -208,11 +212,11 @@ void _configureImageCache() {
       'imageCache 分档: 长边 ${longSide.toInt()}px → ${cache.maximumSize} 张 / ${cache.maximumSizeBytes >> 20}MB');
 }
 
-/// 启动链1：通知服务初始化 + 两类提醒恢复。
+/// 启动链1：通知服务初始化 + 三类提醒恢复。
 ///
-/// 通知服务就绪后，记账提醒与信用卡还款提醒只依赖通知服务、彼此独立
-/// （通知 ID 互不冲突），再并行恢复。全程吞异常并记日志，不让
-/// Future.wait 短路。
+/// 通知服务就绪后，记账提醒、信用卡还款提醒、周期账单到期提醒只依赖通知服务、
+/// 彼此独立（通知 ID 段互不冲突：1001 / 2000+ / 3000+），再并行恢复。
+/// 全程吞异常并记日志，不让 Future.wait 短路。
 Future<void> _initNotificationChain(ProviderContainer container) async {
   try {
     final notificationUtil = NotificationFactory.getInstance();
@@ -224,6 +228,7 @@ Future<void> _initNotificationChain(ProviderContainer container) async {
   await Future.wait([
     _restoreUserReminder(),
     _restoreCreditCardReminders(container),
+    _restoreRecurringDueReminders(container),
   ]);
 }
 
@@ -245,6 +250,16 @@ Future<void> _restoreCreditCardReminders(ProviderContainer container) async {
     await CreditCardReminderService.restoreAllReminders(
       getCreditCardAccounts: () => repo.getCreditCardAccounts(),
     );
+  } catch (e) {
+    // 静默失败，不影响启动
+  }
+}
+
+/// 启动链1 子步骤：恢复周期账单到期提醒（开关默认关闭，关闭时零查询返回）。
+Future<void> _restoreRecurringDueReminders(ProviderContainer container) async {
+  try {
+    final repo = container.read(repositoryProvider);
+    await RecurringDueReminderService(repository: repo).rescheduleAll();
   } catch (e) {
     // 静默失败，不影响启动
   }
