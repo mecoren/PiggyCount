@@ -336,7 +336,7 @@ PRODUCT_BUNDLE_IDENTIFIER=com.wait.piggycount
 **触发**：tag push (`v*`) 或 workflow_dispatch（手动，可选 tag_name、release_name、prerelease、dry_run 输入）
 **并发**：`cancel-in-progress: false`（发版宁可排队也不可腰斩）
 **权限**：默认 `contents: read`，仅 `release` job 级提权 `contents: write`
-**Flutter 版本**：以 `pubspec.yaml#environment.flutter` 为唯一来源（当前 `3.44.3`，CI 经 `flutter-version-file` 读取）
+**Flutter 版本**：以 `pubspec.yaml#environment.flutter` 为唯一来源（当前 `3.47.6`，CI 经 `flutter-version-file` 读取；工作流内**不写死版本号**，见 AGENTS.md「Flutter 版本单一来源」）
 
 #### 5.1.1 Job 1：audit（发版前置门禁）
 

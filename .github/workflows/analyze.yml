@@ -20,9 +20,10 @@ name: CI
 # 并在 PR 说明里写清原因与归还计划，不要静默改成非阻断。
 #
 # 注意：Flutter 版本由 pubspec.yaml 的 `environment.flutter` 单一提供
-# （当前 3.44.3），这里用 flutter-version-file 读取，避免与 pubspec.lock 的
-# `sdks.flutter` 约束（>=3.44.0）漂移——历史上 release.yml 曾停留 3.27.3，
-# 会让 runner 上的 `flutter pub get` 直接解析失败。
+# （见 AGENTS.md「Flutter 版本单一来源」——**本文件与 release.yml 都不写死
+# 版本号**，写死必然随升级过期），这里用 flutter-version-file 读取，避免与
+# pubspec.lock 的 `sdks.flutter` 约束漂移——历史上 release.yml 曾停留 3.27.3
+# 而 lock 已要求更高版本，会让 runner 上的 `flutter pub get` 直接解析失败。
 # 升版本请只改 pubspec.yaml 一处。
 
 # 触发契约（与 release.yml 的 `v*` tag 发版配套）：

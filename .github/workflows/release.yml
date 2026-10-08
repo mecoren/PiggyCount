@@ -43,10 +43,11 @@ concurrency:
 permissions:
   contents: read
 
-# Flutter 版本由 pubspec.yaml 的 environment.flutter 单一提供（当前 3.44.3），
-# 通过 flutter-version-file 读取。不要再在这里写 FLUTTER_VERSION：
-# 历史上此处曾固定 3.27.3，而 pubspec.lock 已要求 >=3.44.0，
-# 两者漂移会让下一次打 tag 发版在 `flutter pub get` 阶段直接失败。
+# Flutter 版本由 pubspec.yaml 的 environment.flutter 单一提供（见 AGENTS.md
+# 「Flutter 版本单一来源」——**本文件与 analyze.yml 都不写死版本号**，写死必然
+# 随升级过期），通过 flutter-version-file 读取。不要再在这里写 FLUTTER_VERSION：
+# 历史上此处曾固定 3.27.3，而 pubspec.lock 已要求更高版本，两者漂移会让下一次
+# 打 tag 发版在 `flutter pub get` 阶段直接失败。
 # 升级 Flutter 请只改 pubspec.yaml 一处。
 
 jobs:
