@@ -112,3 +112,33 @@
 3. **键盘避让风险**：抽屉 + 键盘 + DraggableScrollableSheet 三者协调，需用 `_KeyboardBottomPadding` 隔离 viewInsets 重建
 4. **AppLink 兼容风险**：AppLink 深链可能直接 push TransactionEditorPage，需保留原页面入口
 5. **编辑模式风险**：编辑现有交易/账户时是否也用抽屉，还是保留全屏页（建议编辑模式仍用全屏页，新建模式用抽屉）
+
+---
+
+## 追加批次（2026-10-08）：存量表单页全量收口
+
+> 背景：本文件第一/二节的原始范围只覆盖「记账」与「账户」两个入口。此后项目陆续把**新建即走抽屉**推广到预算、云同步配置、加密设置密码、自定义字段，但**标签 / 分类 / AI 服务商 / AI 提示词 / 周期账单**五处仍是整屏 `Scaffold + PiggyTitleBar + 底部保存条`，形成两套形态。本批把它们一次性收到同一口径。
+
+**统一后的入口一览**（`XxxEditPage` 只作为抽屉内容，`build()` 返回 `PiggyFormSheet`，不再自带 `Scaffold`）：
+
+| 功能 | 统一入口 | 调用点 |
+|---|---|---|
+| 周期账单 | `showRecurringFormBottomSheet`（`lib/pages/transaction/recurring_transaction_edit_page.dart`） | 周期记账列表「+」、列表条目、订阅页条目 / 新建订阅 |
+| 标签 | `showTagFormBottomSheet`（`lib/pages/tag/tag_edit_page.dart`） | 标签管理「+」、标签详情「编辑」、`TagSelector` 内「新建标签」 |
+| 分类 | `showCategoryFormBottomSheet`（`lib/pages/category/category_edit_page.dart`） | 分类管理「+」/编辑/新建二级分类、转账分类卡、分类详情「编辑」 |
+| AI 服务商 | `showAIProviderFormBottomSheet`（`lib/pages/ai/ai_provider_manage_page.dart`） | 服务商列表「+」/条目编辑 |
+| AI 提示词 | `showAIPromptFormBottomSheet`（`lib/pages/ai/ai_prompt_edit_page.dart`） | AI 设置页「自定义提示词」 |
+
+**标题栏 action 的落点（抽屉外壳没有 action 位，必须显式安置，不能丢）**：
+
+- 周期账单「删除」→ 表单主体末尾的 error 色描边按钮（同预算 / 账户；`PiggySheetActions.kHeight` + `radiusLg` + `fs16/w600`）
+- 分类「详情 / 迁移」→ 表单首行（分类类型提示行）`trailing` 的两个 `IconButton`（图标 + tooltip 原样保留）
+- AI 提示词「分享 / 粘贴」→ 提示词区块标题行右侧的两个 `IconButton`（作用对象就是这段文本）
+- AI 服务商「保存」→ 抽屉底部「保存」（原有 `_saving` / `_isTesting` 禁用语义保留）
+
+**验收**：
+
+- 五页均由 `PiggyFormSheet` 承载（契约测试：`test/widgets/form_drawer_unification_test.dart`、`test/widgets/recurring_form_drawer_test.dart`、`test/widgets/tag_edit_page_result_test.dart`）
+- 表单分组卡在抽屉内一律 `SectionCard(flat: true)`（字段直接浮在卡片底上，不出现卡片套卡片）
+- 保存 / 删除返回值语义不变（`pop(true)` 或 `pop(保存后的实体)`），调用方刷新逻辑不改
+- 本批次**未改动**任何页面级列表 / 设置 / 详情页形态（`category_manage_page`、`tag_manage_page`、汇率管理、账本列表、附件预览等）

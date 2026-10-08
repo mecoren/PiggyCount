@@ -14,7 +14,20 @@ import '../../ai/core/prompt_builder.dart';
 import '../../ai/providers/ai_constants.dart';
 import '../../ai/providers/ai_provider_manager.dart';
 
-/// AI提示词编辑页面
+/// 以底部抽屉形式弹出 AI 自定义提示词编辑器。
+///
+/// 走项目统一的**悬浮卡片表单抽屉**（[PiggyFormSheet]）：标题 + 卡片内滚动内容 +
+/// 底部「取消｜保存」。原先挂在标题栏的「分享 / 粘贴」两个动作移入提示词区块标题行
+/// （抽屉外壳不提供标题栏 action）；「预览 / 恢复默认」仍留在内容里（预览要能看到
+/// 编辑结果，属于编辑过程而非收尾动作）。
+Future<void> showAIPromptFormBottomSheet(BuildContext context) {
+  return showPiggyFormSheet<void>(
+    context,
+    builder: (_) => const AIPromptEditPage(),
+  );
+}
+
+/// AI 自定义提示词编辑表单（悬浮卡片抽屉内容）。
 class AIPromptEditPage extends ConsumerStatefulWidget {
   const AIPromptEditPage({super.key});
 
@@ -38,7 +51,8 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
           {'name': p.token, 'desc': _placeholderDesc(p.token, l10n)},
       ];
 
-  String _placeholderDesc(String token, AppLocalizations l10n) => switch (token) {
+  String _placeholderDesc(String token, AppLocalizations l10n) =>
+      switch (token) {
         '{{BILL_GUARD}}' => l10n.aiPromptVarBillGuard,
         '{{INPUT_SOURCE}}' => l10n.aiPromptVarInputSource,
         '{{CURRENT_TIME}}' => l10n.aiPromptVarCurrentTime,
@@ -142,8 +156,8 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
     setState(() {
       _hasChanges = _promptController.text != _savedPrompt;
     });
-    showToast(
-        context, AppLocalizations.of(context).aiPromptVarSectionInserted(p.token));
+    showToast(context,
+        AppLocalizations.of(context).aiPromptVarSectionInserted(p.token));
   }
 
   Future<void> _pastePrompt() async {
@@ -266,91 +280,49 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
     final primaryColor = ref.watch(primaryColorProvider);
 
     if (_loading) {
-      return Scaffold(
-        backgroundColor: PiggyTokens.scaffoldBackground(context),
-        extendBodyBehindAppBar: true,
-        appBar: PiggyTitleBar(
-          title: l10n.aiPromptEditTitle,
-          showBack: true,
-        ),
-        body: Padding(
-          padding: EdgeInsets.only(
-            top: PiggyTokens.topScrollablePadding(context),
-          ),
-          child: Column(
-            children: [
-              Expanded(
-                child: Center(
-                  child: PiggySpinner(
-                      size: 36, color: PiggyTokens.primary(context)),
-                ),
-              ),
-            ],
+      // 抽屉外壳下的加载态：同一张悬浮卡片里转圈，避免先闪一个空白抽屉
+      return PiggySheetCard(
+        child: SizedBox(
+          height: 160.0.scaled(context, ref),
+          child: Center(
+            child: PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
           ),
         ),
       );
     }
 
-    return Scaffold(
-      backgroundColor: PiggyTokens.scaffoldBackground(context),
-      extendBodyBehindAppBar: true,
-      appBar: PiggyTitleBar(
-        title: l10n.aiPromptEditTitle,
-        subtitle: l10n.aiPromptEditSubtitle,
-        showBack: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share),
-            tooltip: l10n.tooltipShare,
-            onPressed: _sharePrompt,
-          ),
-          IconButton(
-            icon: const Icon(Icons.paste),
-            tooltip: l10n.tooltipPaste,
-            onPressed: _pastePrompt,
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 80,
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 12.0.scaled(context, ref),
-                  vertical: 8.0.scaled(context, ref),
-                ),
-                children: [
-                  // 变量说明
-                  _buildVariablesSection(primaryColor),
+    return PiggyFormSheet(
+      title: l10n.aiPromptEditTitle,
+      cancelLabel: l10n.commonCancel,
+      confirmLabel: l10n.aiPromptSave,
+      onCancel: () => Navigator.of(context).pop(),
+      // 无改动时禁用保存（沿用原 `_hasChanges` 门控）。保存后不自动关抽屉：
+      // 「未保存」角标消失即已落库，用户可继续预览 / 微调（原整屏页行为不变）。
+      onConfirm: _hasChanges ? _savePrompt : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 变量说明
+          _buildVariablesSection(primaryColor),
 
-                  // 能力缺失提示(移植 BeeCount #437 A7):默认模板新增占位符后,
-                  // 老的自定义模板拿不到对应能力 —— 我们不覆盖用户模板,只给
-                  // 提示 + 可安全追加的一键补丁。
-                  if (_missingPlaceholders.isNotEmpty) ...[
-                    SizedBox(height: 8.0.scaled(context, ref)),
-                    _buildMissingPlaceholderHint(primaryColor),
-                  ],
-
-                  SizedBox(height: 8.0.scaled(context, ref)),
-
-                  // 提示词编辑区
-                  _buildPromptEditor(primaryColor),
-
-                  SizedBox(height: 8.0.scaled(context, ref)),
-
-                  // 操作按钮
-                  _buildActionButtons(primaryColor),
-
-                  SizedBox(height: 16.0.scaled(context, ref)),
-                ],
-              ),
-            ),
+          // 能力缺失提示(移植 BeeCount #437 A7):默认模板新增占位符后,
+          // 老的自定义模板拿不到对应能力 —— 我们不覆盖用户模板,只给
+          // 提示 + 可安全追加的一键补丁。
+          if (_missingPlaceholders.isNotEmpty) ...[
+            SizedBox(height: 8.0.scaled(context, ref)),
+            _buildMissingPlaceholderHint(primaryColor),
           ],
-        ),
+
+          SizedBox(height: 8.0.scaled(context, ref)),
+
+          // 提示词编辑区
+          _buildPromptEditor(primaryColor),
+
+          SizedBox(height: 8.0.scaled(context, ref)),
+
+          // 预览 / 恢复默认（保存已由抽屉底部「取消｜保存」承担）
+          _buildActionButtons(primaryColor),
+        ],
       ),
     );
   }
@@ -361,7 +333,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
     final missing = _missingPlaceholders;
     final insertable = missing.where((p) => p.appendSnippet != null).toList();
     return SectionCard(
-      margin: EdgeInsets.zero,
+      flat: true,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -427,13 +399,13 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
     final variables = _getVariables(l10n);
 
     return SectionCard(
-      margin: EdgeInsets.zero,
-      borderColor: ref.watch(primaryColorProvider),
+      flat: true,
       child: ExpansionTile(
         leading: Icon(Icons.code, color: primaryColor, size: 20),
         title: Text(
           l10n.aiPromptVariables,
-          style: const TextStyle(fontSize: PiggyTextTokens.fs15, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+              fontSize: PiggyTextTokens.fs15, fontWeight: FontWeight.w600),
         ),
         subtitle: Text(l10n.aiPromptVariablesHint,
             style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
@@ -493,8 +465,7 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
     final l10n = AppLocalizations.of(context);
 
     return SectionCard(
-      margin: EdgeInsets.zero,
-      borderColor: primaryColor,
+      flat: true,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -507,10 +478,11 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                 Text(
                   l10n.aiPromptContent,
                   style: const TextStyle(
-                      fontSize: PiggyTextTokens.fs15, fontWeight: FontWeight.w600),
+                      fontSize: PiggyTextTokens.fs15,
+                      fontWeight: FontWeight.w600),
                 ),
-                const Spacer(),
-                if (_hasChanges)
+                if (_hasChanges) ...[
+                  const SizedBox(width: 8),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -525,6 +497,22 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
                           .copyWith(color: PiggyTokens.warning(context)),
                     ),
                   ),
+                ],
+                const Spacer(),
+                // 分享 / 粘贴：原先挂在标题栏（抽屉外壳无 action 位），
+                // 落到提示词区块标题行 —— 两者都作用于这段文本。
+                IconButton(
+                  icon: const Icon(Icons.share, size: 20),
+                  tooltip: l10n.tooltipShare,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _sharePrompt,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.paste, size: 20),
+                  tooltip: l10n.tooltipPaste,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _pastePrompt,
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -557,41 +545,23 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
     final l10n = AppLocalizations.of(context);
 
     return SectionCard(
-      margin: EdgeInsets.zero,
-      borderColor: primaryColor,
+      flat: true,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // 预览和保存按钮（并排）
-            Row(
-              children: [
-                // 预览按钮
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _showPreviewDialog,
-                    icon: const Icon(Icons.preview),
-                    label: Text(l10n.aiPromptPreview),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: primaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
+            // 预览（保存已由抽屉底部按钮承担，此处不再重复放一个保存键）
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _showPreviewDialog,
+                icon: const Icon(Icons.preview),
+                label: Text(l10n.aiPromptPreview),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: primaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                const SizedBox(width: 12),
-                // 保存按钮
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _hasChanges ? _savePrompt : null,
-                    icon: const Icon(Icons.save),
-                    label: Text(l10n.aiPromptSave),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
             const SizedBox(height: 12),
             // 恢复默认按钮

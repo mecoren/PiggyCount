@@ -547,10 +547,8 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                   style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
               trailing: const Icon(Icons.chevron_right, size: 20),
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AIPromptEditPage()),
-                );
+                // 统一走表单抽屉（[showAIPromptFormBottomSheet]）
+                showAIPromptFormBottomSheet(context);
               },
             ),
 

@@ -1,6 +1,9 @@
 /// 创建标签后将已落库的 Tag 通过路由返回给调用方(移植 BeeCount #455)。
 /// TagSelector 的自动选中逻辑依赖这个返回值;此前 TagEditPage 保存后
 /// pop() 不带参数,自动选中从未生效。
+///
+/// 同时钉住「表单形态 = 悬浮卡片抽屉」：标签编辑器走
+/// [showTagFormBottomSheet]（`PiggyFormSheet`），不再是整屏路由。
 library;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +16,7 @@ import 'package:piggycount/data/repositories/local/local_repository.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/pages/tag/tag_edit_page.dart';
 import 'package:piggycount/providers/database_providers.dart';
+import 'package:piggycount/widgets/ui/form_sheet.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -44,9 +48,7 @@ void main() {
           builder: (context) => Scaffold(
             body: ElevatedButton(
               onPressed: () async {
-                routeResult = await Navigator.of(context).push<Tag>(
-                  MaterialPageRoute(builder: (_) => const TagEditPage()),
-                );
+                routeResult = await showTagFormBottomSheet(context);
               },
               child: const Text('打开'),
             ),
@@ -61,6 +63,8 @@ void main() {
     await tester.tap(find.text('打开'));
     await tester.pumpAndSettle();
 
+    // 抽屉形态：先确认外壳，再填字段、点底部「保存」
+    expect(find.byType(PiggyFormSheet), findsOneWidget);
     await tester.enterText(find.byType(TextFormField), '新标签');
     await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();

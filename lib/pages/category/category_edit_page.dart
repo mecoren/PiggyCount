@@ -18,6 +18,31 @@ import '../../services/system/logger_service.dart';
 import '../transaction/category_detail_page.dart';
 import 'category_migration_page.dart';
 
+/// 以底部抽屉形式弹出分类编辑器（新建 / 编辑 / 新建二级分类通用）。
+///
+/// 走项目统一的**悬浮卡片表单抽屉**（[PiggyFormSheet]），与预算 / 账户 / 周期账单 /
+/// 标签 / AI 服务商编辑器同款；返回 true 表示已保存，调用方据此刷新。表单逻辑仍在
+/// 本文件的 [CategoryEditPage]。
+///
+/// 编辑态的「详情 / 迁移」原先挂在标题栏，抽屉外壳没有 action 位 → 落到表单首行
+/// （分类类型提示行）尾部的两个图标按钮，入口与 tooltip 都不丢。
+Future<bool?> showCategoryFormBottomSheet(
+  BuildContext context, {
+  db.Category? category,
+  required String kind,
+  db.Category? parentCategory,
+}) {
+  return showPiggyFormSheet<bool>(
+    context,
+    builder: (_) => CategoryEditPage(
+      category: category,
+      kind: kind,
+      parentCategory: parentCategory,
+    ),
+  );
+}
+
+/// 分类编辑表单（悬浮卡片抽屉内容）。
 class CategoryEditPage extends ConsumerStatefulWidget {
   final db.Category? category; // null表示新建
   final String kind; // expense 或 income
@@ -172,269 +197,229 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-
-    String headerTitle;
-    if (isEditing) {
-      headerTitle = l10n.categoryEditTitle;
-    } else {
-      headerTitle = l10n.categoryNewTitle;
-    }
-
-    return _buildScaffold(context, headerTitle, null);
-  }
-
-  Widget _buildScaffold(
-      BuildContext context, String headerTitle, String? headerSubtitle) {
     final primaryColor = ref.watch(primaryColorProvider);
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: PiggyTitleBar(
-        title: headerTitle,
-        subtitle: headerSubtitle,
-        showBack: true,
-        actions: isEditing && widget.category != null
-            ? [
-                // 分类详情按钮
-                IconButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => CategoryDetailPage(
-                          categoryId: widget.category!.id,
-                          categoryName: widget.category!.name,
-                          allLedgers: true,
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.analytics_outlined),
-                  tooltip: AppLocalizations.of(context).categoryDetailTooltip,
-                ),
-                // 分类迁移按钮
-                IconButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => CategoryMigrationPage(
-                          preselectedFromCategory: widget.category!,
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.move_down_outlined),
-                  tooltip:
-                      AppLocalizations.of(context).categoryMigrationTooltip,
-                ),
-              ]
-            : null,
-      ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top +
-              (headerSubtitle != null ? 80 : 56),
-        ),
+    final title = isEditing ? l10n.categoryEditTitle : l10n.categoryNewTitle;
+    // 「详情 / 迁移」原先挂在标题栏（表单抽屉外壳没有 action 位）→ 落到类型提示行
+    // 尾部，仍是图标 + tooltip，入口不丢。
+    final showSecondaryActions = isEditing && widget.category != null;
+
+    return PiggyFormSheet(
+      title: title,
+      cancelLabel: l10n.commonCancel,
+      confirmLabel: l10n.commonSave,
+      onCancel: () => Navigator.of(context).pop(),
+      onConfirm: (_saving || _isDuplicateName) ? null : _saveCategory,
+      confirmBusy: _saving,
+      child: Form(
+        key: _formKey,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    // 分类类型提示
-                    SectionCard(
-                      borderColor: primaryColor,
-                      margin: EdgeInsets.zero,
-                      child: ListTile(
-                        leading: Icon(
-                          widget.kind == 'expense'
-                              ? Icons.trending_down
-                              : Icons.trending_up,
-                          color: widget.kind == 'expense'
-                              ? PiggyTokens.error(context)
-                              : PiggyTokens.success(context),
-                        ),
-                        title: Text(widget.kind == 'expense'
-                            ? AppLocalizations.of(context).categoryExpenseType
-                            : AppLocalizations.of(context).categoryIncomeType),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // 二级分类开关
-                    SectionCard(
-                      borderColor: primaryColor,
-                      margin: EdgeInsets.zero,
-                      child: PiggySwitchListTile(
-                        title: Text(AppLocalizations.of(context)
-                            .categorySubCategoryTitle),
-                        subtitle: Text(_isSubCategory
-                            ? AppLocalizations.of(context)
-                                .categorySubCategoryDescriptionEnabled
-                            : AppLocalizations.of(context)
-                                .categorySubCategoryDescriptionDisabled),
-                        value: _isSubCategory,
-                        // 从添加二级分类入口进来 或 编辑模式时不允许修改层级
-                        onChanged: (widget.parentCategory != null || isEditing)
-                            ? null
-                            : (value) => _onSubCategoryToggle(value),
-                      ),
-                    ),
-
-                    // 父分类选择器
-                    if (_isSubCategory) ...[
-                      const SizedBox(height: 16),
-                      SectionCard(
-                        borderColor: primaryColor,
-                        margin: EdgeInsets.zero,
-                        child: ListTile(
-                          leading: Icon(
-                            Icons.arrow_upward,
-                            color: PiggyTokens.primary(context),
-                          ),
-                          title: Text(AppLocalizations.of(context)
-                              .categoryParentCategoryTitle),
-                          subtitle: _selectedParentCategory != null
-                              ? Text(CategoryUtils.getDisplayName(
-                                  _selectedParentCategory!.name, context))
-                              : Text(AppLocalizations.of(context)
-                                  .categoryParentCategoryHint),
-                          trailing: const Icon(Icons.chevron_right),
-                          // 只有从添加二级分类入口进来时不允许修改，编辑模式可以修改
-                          enabled: widget.parentCategory == null,
-                          onTap: () => _selectParentCategory(),
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 16),
-
-                    // 分类名称
-                    SectionCard(
-                      borderColor: primaryColor,
-                      margin: EdgeInsets.zero,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              AppLocalizations.of(context).categoryNameLabel,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _nameController,
-                              decoration: piggyOutlinedDecoration(
-                                context,
-                                hint: AppLocalizations.of(context)
-                                    .categoryNameHint,
-                                errorText: _duplicateErrorMessage,
-                              ),
-                              maxLength: 10,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return AppLocalizations.of(context)
-                                      .categoryNameRequired;
-                                }
-                                if (value.trim().length > 10) {
-                                  return AppLocalizations.of(context)
-                                      .categoryNameTooLong;
-                                }
-                                if (_isDuplicateName) {
-                                  return _duplicateErrorMessage;
-                                }
-                                return null;
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 图标选择
-                    SectionCard(
-                      borderColor: primaryColor,
-                      margin: EdgeInsets.zero,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              AppLocalizations.of(context).categoryIconLabel,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 16),
-                            // 自定义图标选项
-                            _buildCustomIconSection(context),
-                            const SizedBox(height: 16),
-                            const Divider(),
-                            const SizedBox(height: 16),
-                            // Material 图标网格
-                            _GroupedIconGrid(
-                              selectedIcon: _iconType == 'material'
-                                  ? _selectedIcon
-                                  : null,
-                              kind: widget.kind,
-                              onIconSelected: (icon) {
-                                setState(() {
-                                  _iconType = 'material';
-                                  _selectedIcon = icon;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    if (isEditing) ...[
-                      const SizedBox(height: 32),
-                      const Divider(),
-                      const SizedBox(height: 16),
-                      Text(
-                        AppLocalizations.of(context)
-                            .categoryDangerousOperations,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: PiggyTokens.error(context),
+            // 分类类型提示（+ 编辑态的「详情 / 迁移」次级入口）
+            SectionCard(
+              flat: true,
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  widget.kind == 'expense'
+                      ? Icons.trending_down
+                      : Icons.trending_up,
+                  color: widget.kind == 'expense'
+                      ? PiggyTokens.error(context)
+                      : PiggyTokens.success(context),
+                ),
+                title: Text(widget.kind == 'expense'
+                    ? AppLocalizations.of(context).categoryExpenseType
+                    : AppLocalizations.of(context).categoryIncomeType),
+                trailing: showSecondaryActions
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 分类详情
+                          IconButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => CategoryDetailPage(
+                                    categoryId: widget.category!.id,
+                                    categoryName: widget.category!.name,
+                                    allLedgers: true,
+                                  ),
                                 ),
+                              );
+                            },
+                            icon: const Icon(Icons.analytics_outlined),
+                            tooltip: l10n.categoryDetailTooltip,
+                          ),
+                          // 分类迁移
+                          IconButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => CategoryMigrationPage(
+                                    preselectedFromCategory: widget.category!,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.move_down_outlined),
+                            tooltip: l10n.categoryMigrationTooltip,
+                          ),
+                        ],
+                      )
+                    : null,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 二级分类开关
+            SectionCard(
+              flat: true,
+              child: PiggySwitchListTile(
+                title:
+                    Text(AppLocalizations.of(context).categorySubCategoryTitle),
+                subtitle: Text(_isSubCategory
+                    ? AppLocalizations.of(context)
+                        .categorySubCategoryDescriptionEnabled
+                    : AppLocalizations.of(context)
+                        .categorySubCategoryDescriptionDisabled),
+                value: _isSubCategory,
+                // 从添加二级分类入口进来 或 编辑模式时不允许修改层级
+                onChanged: (widget.parentCategory != null || isEditing)
+                    ? null
+                    : (value) => _onSubCategoryToggle(value),
+              ),
+            ),
+
+            // 父分类选择器
+            if (_isSubCategory) ...[
+              const SizedBox(height: 16),
+              SectionCard(
+                borderColor: primaryColor,
+                margin: EdgeInsets.zero,
+                child: ListTile(
+                  leading: Icon(
+                    Icons.arrow_upward,
+                    color: PiggyTokens.primary(context),
+                  ),
+                  title: Text(
+                      AppLocalizations.of(context).categoryParentCategoryTitle),
+                  subtitle: _selectedParentCategory != null
+                      ? Text(CategoryUtils.getDisplayName(
+                          _selectedParentCategory!.name, context))
+                      : Text(AppLocalizations.of(context)
+                          .categoryParentCategoryHint),
+                  trailing: const Icon(Icons.chevron_right),
+                  // 只有从添加二级分类入口进来时不允许修改，编辑模式可以修改
+                  enabled: widget.parentCategory == null,
+                  onTap: () => _selectParentCategory(),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 16),
+
+            // 分类名称
+            SectionCard(
+              flat: true,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context).categoryNameLabel,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: piggyOutlinedDecoration(
+                        context,
+                        hint: AppLocalizations.of(context).categoryNameHint,
+                        errorText: _duplicateErrorMessage,
                       ),
-                      const SizedBox(height: 8),
-                      SectionCard(
-                        borderColor: primaryColor,
-                        margin: EdgeInsets.zero,
-                        child: ListTile(
-                          leading: Icon(Icons.delete,
-                              color: PiggyTokens.error(context)),
-                          title: Text(
-                              AppLocalizations.of(context).categoryDeleteTitle),
-                          subtitle: Text(AppLocalizations.of(context)
-                              .categoryDeleteSubtitle),
-                          onTap: _deleteCategory,
-                        ),
-                      ),
-                    ],
+                      maxLength: 10,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return AppLocalizations.of(context)
+                              .categoryNameRequired;
+                        }
+                        if (value.trim().length > 10) {
+                          return AppLocalizations.of(context)
+                              .categoryNameTooLong;
+                        }
+                        if (_isDuplicateName) {
+                          return _duplicateErrorMessage;
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // 图标选择
+            SectionCard(
+              flat: true,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context).categoryIconLabel,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    // 自定义图标选项
+                    _buildCustomIconSection(context),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    // Material 图标网格
+                    _GroupedIconGrid(
+                      selectedIcon:
+                          _iconType == 'material' ? _selectedIcon : null,
+                      kind: widget.kind,
+                      onIconSelected: (icon) {
+                        setState(() {
+                          _iconType = 'material';
+                          _selectedIcon = icon;
+                        });
+                      },
+                    ),
                   ],
                 ),
               ),
             ),
 
-            // 底部保存按钮
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              child: FilledButton(
-                onPressed: (_saving || _isDuplicateName) ? null : _saveCategory,
-                child: _saving
-                    ? PiggySpinner(
-                        size: 20, color: PiggyTokens.textOnPrimary(context))
-                    : Text(AppLocalizations.of(context).commonSave),
+            if (isEditing) ...[
+              const SizedBox(height: 32),
+              const Divider(),
+              const SizedBox(height: 16),
+              Text(
+                AppLocalizations.of(context).categoryDangerousOperations,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: PiggyTokens.error(context),
+                    ),
               ),
-            ),
+              const SizedBox(height: 8),
+              SectionCard(
+                flat: true,
+                child: ListTile(
+                  leading:
+                      Icon(Icons.delete, color: PiggyTokens.error(context)),
+                  title: Text(AppLocalizations.of(context).categoryDeleteTitle),
+                  subtitle:
+                      Text(AppLocalizations.of(context).categoryDeleteSubtitle),
+                  onTap: _deleteCategory,
+                ),
+              ),
+            ],
           ],
         ),
       ),

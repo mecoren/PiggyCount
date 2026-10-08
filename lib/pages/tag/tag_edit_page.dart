@@ -10,11 +10,24 @@ import '../../services/billing/post_processor.dart';
 import '../../services/data/tag_seed_service.dart';
 import '../../styles/tokens.dart';
 import '../../widgets/ui/ui.dart';
-import '../../widgets/biz/section_card.dart';
 import '../../widgets/biz/tag_chip.dart';
 
-/// 标签编辑页面
-/// 用于新增或编辑标签
+/// 以底部抽屉形式弹出标签编辑器（新建 / 编辑通用）。
+///
+/// 走项目统一的**悬浮卡片表单抽屉**（[PiggyFormSheet]），与预算 / 账户 / 周期账单
+/// 编辑器同款；返回值是**保存后重读的 Tag**（调用方 `TagSelector` 的自动选中依赖它），
+/// 取消则返回 null。表单逻辑仍在本文件的 [TagEditPage]。
+Future<Tag?> showTagFormBottomSheet(
+  BuildContext context, {
+  Tag? tag,
+}) {
+  return showPiggyFormSheet<Tag>(
+    context,
+    builder: (_) => TagEditPage(tag: tag),
+  );
+}
+
+/// 标签编辑表单（悬浮卡片抽屉内容）。
 class TagEditPage extends ConsumerStatefulWidget {
   /// 要编辑的标签，为空表示新增
   final Tag? tag;
@@ -50,106 +63,62 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Scaffold(
-      backgroundColor: PiggyTokens.scaffoldBackground(context),
-      extendBodyBehindAppBar: true,
-      appBar: PiggyTitleBar(
-        title: _isEditing ? l10n.tagEditTitle : l10n.tagAddTitle,
-        showBack: true,
-        actions: [
-          TextButton(
-            onPressed: _isSubmitting ? null : _submit,
-            child: Text(
-              l10n.commonSave,
-              style: TextStyle(
-                color: _isSubmitting
-                    ? PiggyTokens.textTertiary(context)
-                    : PiggyTokens.textPrimary(context),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
-        ),
+    return PiggyFormSheet(
+      title: _isEditing ? l10n.tagEditTitle : l10n.tagAddTitle,
+      cancelLabel: l10n.commonCancel,
+      confirmLabel: l10n.commonSave,
+      onCancel: () => Navigator.of(context).pop(),
+      onConfirm: _isSubmitting ? null : _submit,
+      confirmBusy: _isSubmitting,
+      child: Form(
+        key: _formKey,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    // 预览
-                    _buildPreview(),
-                    const SizedBox(height: 24),
+            // 预览
+            _buildPreview(),
+            const SizedBox(height: PiggyDimens.p24),
 
-                    // 标签名称
-                    SectionCard(
-                      borderColor: Theme.of(context).colorScheme.primary,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4, bottom: 8),
-                            child: Text(
-                              l10n.tagNameLabel,
-                              style: TextStyle(
-                                fontSize: PiggyTextTokens.fs14,
-                                fontWeight: FontWeight.w500,
-                                color: PiggyTokens.textSecondary(context),
-                              ),
-                            ),
-                          ),
-                          TextFormField(
-                            controller: _nameController,
-                            decoration: piggyOutlinedDecoration(
-                              context,
-                              hint: l10n.tagNameHint,
-                            ),
-                            maxLength: 20,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return l10n.tagNameRequired;
-                              }
-                              return null;
-                            },
-                            onChanged: (_) => setState(() {}),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 颜色选择
-                    SectionCard(
-                      borderColor: Theme.of(context).colorScheme.primary,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4, bottom: 12),
-                            child: Text(
-                              l10n.tagColorLabel,
-                              style: TextStyle(
-                                fontSize: PiggyTextTokens.fs14,
-                                fontWeight: FontWeight.w500,
-                                color: PiggyTokens.textSecondary(context),
-                              ),
-                            ),
-                          ),
-                          _buildColorPicker(),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+            // 标签名称（字段直接浮在抽屉卡片底上，不再套描边卡片）
+            _buildSectionLabel(context, l10n.tagNameLabel),
+            const SizedBox(height: PiggyDimens.p8),
+            TextFormField(
+              controller: _nameController,
+              decoration: piggyOutlinedDecoration(
+                context,
+                hint: l10n.tagNameHint,
               ),
+              maxLength: 20,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return l10n.tagNameRequired;
+                }
+                return null;
+              },
+              onChanged: (_) => setState(() {}),
             ),
+            const SizedBox(height: PiggyDimens.p16),
+
+            // 颜色选择
+            _buildSectionLabel(context, l10n.tagColorLabel),
+            const SizedBox(height: PiggyDimens.p12),
+            _buildColorPicker(),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// 表单分区标题（与预算 / 账户抽屉同一口径）。
+  Widget _buildSectionLabel(BuildContext context, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: PiggyTextTokens.fs14,
+          fontWeight: FontWeight.w500,
+          color: PiggyTokens.textSecondary(context),
         ),
       ),
     );

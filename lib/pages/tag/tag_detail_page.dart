@@ -178,11 +178,8 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
               tooltip: l10n.commonEdit,
               onPressed: tag != null
                   ? () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => TagEditPage(tag: tag),
-                        ),
-                      );
+                      // 统一走表单抽屉（[showTagFormBottomSheet]）
+                      await showTagFormBottomSheet(context, tag: tag);
                     }
                   : null,
             ),

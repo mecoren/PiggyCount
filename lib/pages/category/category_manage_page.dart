@@ -129,11 +129,8 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
 
   void _addCategory() async {
     final kind = _selectedKind;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => CategoryEditPage(kind: kind),
-      ),
-    );
+    // 统一走表单抽屉（[showCategoryFormBottomSheet]）
+    await showCategoryFormBottomSheet(context, kind: kind);
     // 无需手动刷新，Repository 层会自动处理
   }
 
@@ -494,13 +491,11 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
             child: InkWell(
               borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
               onTap: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => CategoryEditPage(
-                      category: transferCategory,
-                      kind: 'transfer',
-                    ),
-                  ),
+                // 统一走表单抽屉（[showCategoryFormBottomSheet]）
+                await showCategoryFormBottomSheet(
+                  context,
+                  category: transferCategory,
+                  kind: 'transfer',
                 );
               },
               child: Padding(
@@ -740,24 +735,20 @@ class _CategoryGridViewState extends ConsumerState<_CategoryGridView> {
   }
 
   Future<void> _onEditCategory(db.Category category) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => CategoryEditPage(
-          category: category,
-          kind: category.kind,
-        ),
-      ),
+    // 统一走表单抽屉（[showCategoryFormBottomSheet]）
+    await showCategoryFormBottomSheet(
+      context,
+      category: category,
+      kind: category.kind,
     );
   }
 
   Future<void> _onAddSubCategory(db.Category parent) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => CategoryEditPage(
-          kind: parent.kind,
-          parentCategory: parent,
-        ),
-      ),
+    // 统一走表单抽屉（[showCategoryFormBottomSheet]）
+    await showCategoryFormBottomSheet(
+      context,
+      kind: parent.kind,
+      parentCategory: parent,
     );
     _loadData();
   }

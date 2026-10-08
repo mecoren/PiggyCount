@@ -283,11 +283,8 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
   }
 
   void _createNewTag() async {
-    final result = await Navigator.of(context).push<Tag?>(
-      MaterialPageRoute(
-        builder: (_) => const TagEditPage(),
-      ),
-    );
+    // 统一走表单抽屉（[showTagFormBottomSheet]），保存后回传已落库的 Tag
+    final result = await showTagFormBottomSheet(context);
 
     // 异步返回后页面可能已卸载,先查 mounted 再动状态。
     if (!mounted) return;

@@ -120,11 +120,8 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
   }
 
   void _addTag() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const TagEditPage(),
-      ),
-    );
+    // 统一走表单抽屉（[showTagFormBottomSheet]）
+    await showTagFormBottomSheet(context);
   }
 
   void _viewTagDetail(Tag tag) async {

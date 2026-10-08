@@ -157,13 +157,11 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
               tooltip: AppLocalizations.of(context).commonEdit,
               onPressed: category != null
                   ? () async {
-                      final result = await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => CategoryEditPage(
-                            category: category,
-                            kind: category.kind,
-                          ),
-                        ),
+                      // 统一走表单抽屉（[showCategoryFormBottomSheet]）
+                      final result = await showCategoryFormBottomSheet(
+                        context,
+                        category: category,
+                        kind: category.kind,
                       );
 
                       // 如果编辑成功，数据会自动通过Stream更新，无需手动刷新

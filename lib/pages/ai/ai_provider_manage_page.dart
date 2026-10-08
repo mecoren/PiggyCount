@@ -285,12 +285,8 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
   }
 
   Future<void> _addProvider(BuildContext context) async {
-    final result = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const AIProviderEditPage(),
-      ),
-    );
+    // 统一走表单抽屉（[showAIProviderFormBottomSheet]）
+    final result = await showAIProviderFormBottomSheet(context);
 
     if (result == true) {
       ref.read(aiProviderListRefreshProvider.notifier).state++;
@@ -299,12 +295,9 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
 
   Future<void> _editProvider(
       BuildContext context, AIServiceProviderConfig provider) async {
-    final result = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AIProviderEditPage(provider: provider),
-      ),
-    );
+    // 统一走表单抽屉（[showAIProviderFormBottomSheet]）
+    final result =
+        await showAIProviderFormBottomSheet(context, provider: provider);
 
     if (result == true) {
       ref.read(aiProviderListRefreshProvider.notifier).state++;
@@ -349,7 +342,22 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
   }
 }
 
-/// AI 服务商编辑页面
+/// 以底部抽屉形式弹出 AI 服务商编辑器（新建 / 编辑通用）。
+///
+/// 走项目统一的**悬浮卡片表单抽屉**（[PiggyFormSheet]），与预算 / 账户 / 周期账单 /
+/// 标签编辑器同款；返回 true 表示已保存，调用方据此刷新列表。表单逻辑仍在本文件的
+/// [AIProviderEditPage]（本文件另一个 [AIProviderManagePage] 是列表页，形态不变）。
+Future<bool?> showAIProviderFormBottomSheet(
+  BuildContext context, {
+  AIServiceProviderConfig? provider,
+}) {
+  return showPiggyFormSheet<bool>(
+    context,
+    builder: (_) => AIProviderEditPage(provider: provider),
+  );
+}
+
+/// AI 服务商编辑表单（悬浮卡片抽屉内容）。
 class AIProviderEditPage extends ConsumerStatefulWidget {
   final AIServiceProviderConfig? provider;
 
@@ -416,270 +424,235 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
 
-    return Scaffold(
-      backgroundColor: PiggyTokens.scaffoldBackground(context),
-      extendBodyBehindAppBar: true,
-      appBar: PiggyTitleBar(
-        title: _isEditing ? l10n.aiProviderEditTitle : l10n.aiProviderAddTitle,
-        showBack: true,
-        actions: [
-          TextButton(
-            onPressed: _saving || _isTesting ? null : _saveProvider,
-            child: _saving
-                ? PiggySpinner(
-                    size: 16,
-                    color: PiggyTokens.iconPrimary(context),
-                  )
-                : Text(
-                    l10n.commonSave,
-                    style: TextStyle(
-                      color: PiggyTokens.iconPrimary(context),
+    return PiggyFormSheet(
+      title: _isEditing ? l10n.aiProviderEditTitle : l10n.aiProviderAddTitle,
+      cancelLabel: l10n.commonCancel,
+      confirmLabel: l10n.commonSave,
+      onCancel: () => Navigator.of(context).pop(),
+      // 保存 / 测试进行中禁用确认键（保持原标题栏保存键的同一口径）
+      onConfirm: (_saving || _isTesting) ? null : _saveProvider,
+      confirmBusy: _saving,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 基本信息（flat：字段直接浮在抽屉卡片底上，不再套描边卡片）
+          SectionCard(
+            flat: true,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.aiProviderBasicInfo,
+                    style: const TextStyle(
+                      fontSize: PiggyTextTokens.fs14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 12.0.scaled(context, ref),
-                  vertical: 8.0.scaled(context, ref),
-                ),
-                children: [
-                  // 基本信息
-                  SectionCard(
-                    margin: EdgeInsets.zero,
-                    borderColor: ref.watch(primaryColorProvider),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.aiProviderBasicInfo,
-                            style: const TextStyle(
-                              fontSize: PiggyTextTokens.fs14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                          // 名称
-                          TextField(
-                            controller: _nameController,
-                            enabled: !_isBuiltIn,
-                            decoration: piggyOutlinedDecoration(
-                              context,
-                              label: l10n.aiProviderName,
-                              hint: l10n.aiProviderNameHint,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
+                  // 名称
+                  TextField(
+                    controller: _nameController,
+                    enabled: !_isBuiltIn,
+                    decoration: piggyOutlinedDecoration(
+                      context,
+                      label: l10n.aiProviderName,
+                      hint: l10n.aiProviderNameHint,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-                          // Base URL（内置服务商不可编辑）
-                          TextField(
-                            controller: _baseUrlController,
-                            enabled: !_isBuiltIn,
-                            decoration: piggyOutlinedDecoration(
-                              context,
-                              label: 'Base URL',
-                              hint: 'https://api.example.com/v1',
-                              helper: _isBuiltIn
-                                  ? null
-                                  : l10n.aiCustomBaseUrlHelper,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
+                  // Base URL（内置服务商不可编辑）
+                  TextField(
+                    controller: _baseUrlController,
+                    enabled: !_isBuiltIn,
+                    decoration: piggyOutlinedDecoration(
+                      context,
+                      label: 'Base URL',
+                      hint: 'https://api.example.com/v1',
+                      helper: _isBuiltIn ? null : l10n.aiCustomBaseUrlHelper,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-                          // API Key 标题行（带测试按钮）
-                          Row(
-                            children: [
-                              const Text(
-                                'API Key',
-                                style: TextStyle(
-                                    fontSize: PiggyTextTokens.fs14, fontWeight: FontWeight.w500),
-                              ),
-                              const Spacer(),
-                              _buildInlineTestButton(
-                                status: _textTestStatus,
-                                onTest: _testTextCapability,
-                                enabled: _apiKeyController.text.isNotEmpty,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          TextField(
-                            controller: _apiKeyController,
-                            obscureText: _obscureApiKey,
-                            decoration: piggyOutlinedDecoration(
-                              context,
-                              hint: l10n.aiCloudApiKeyHintCustom,
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscureApiKey
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                  size: 20,
-                                ),
-                                tooltip: l10n.tooltipToggleVisibility,
-                                onPressed: () {
-                                  setState(
-                                      () => _obscureApiKey = !_obscureApiKey);
-                                },
-                              ),
-                            ),
-                          ),
-
-                          // 文本测试错误信息
-                          if (_textTestStatus == TestStatus.failed &&
-                              _textTestError != null) ...[
-                            const SizedBox(height: 8),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: PiggyTokens.error(context)
-                                    .withValues(alpha: 0.08),
-                                borderRadius:
-                                    BorderRadius.circular(PiggyDimens.radiusXs),
-                              ),
-                              child: Text(
-                                _textTestError!,
-                                style: TextStyle(
-                                    fontSize: PiggyTextTokens.fs12,
-                                    color: PiggyTokens.error(context)),
-                              ),
-                            ),
-                          ],
-
-                          // 内置服务商显示获取Key和教程链接
-                          if (_isBuiltIn) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              l10n.aiCloudApiKeyHelper,
-                              style: PiggyTextTokens.label(context).copyWith(
-                                  color: PiggyTokens.textTertiary(context)),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                TextButton.icon(
-                                  onPressed: _openGlmWebsite,
-                                  icon: const Icon(Icons.open_in_new, size: 16),
-                                  label: Text(l10n.aiCloudApiGetKey),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: primaryColor,
-                                    textStyle: const TextStyle(fontSize: PiggyTextTokens.fs13),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4),
-                                  ),
-                                ),
-                                const Spacer(),
-                                TextButton.icon(
-                                  onPressed: _openTutorial,
-                                  icon:
-                                      const Icon(Icons.help_outline, size: 16),
-                                  label: Text(l10n.aiCloudApiTutorial),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: primaryColor,
-                                    textStyle: const TextStyle(fontSize: PiggyTextTokens.fs13),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
+                  // API Key 标题行（带测试按钮）
+                  Row(
+                    children: [
+                      const Text(
+                        'API Key',
+                        style: TextStyle(
+                            fontSize: PiggyTextTokens.fs14,
+                            fontWeight: FontWeight.w500),
+                      ),
+                      const Spacer(),
+                      _buildInlineTestButton(
+                        status: _textTestStatus,
+                        onTest: _testTextCapability,
+                        enabled: _apiKeyController.text.isNotEmpty,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _apiKeyController,
+                    obscureText: _obscureApiKey,
+                    decoration: piggyOutlinedDecoration(
+                      context,
+                      hint: l10n.aiCloudApiKeyHintCustom,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureApiKey
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          size: 20,
+                        ),
+                        tooltip: l10n.tooltipToggleVisibility,
+                        onPressed: () {
+                          setState(() => _obscureApiKey = !_obscureApiKey);
+                        },
                       ),
                     ),
                   ),
 
-                  SizedBox(height: 8.0.scaled(context, ref)),
-
-                  // 模型配置
-                  SectionCard(
-                    margin: EdgeInsets.zero,
-                    borderColor: ref.watch(primaryColorProvider),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.aiProviderModels,
-                            style: const TextStyle(
-                              fontSize: PiggyTextTokens.fs14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            l10n.aiProviderModelsHint,
-                            style: PiggyTextTokens.label(context).copyWith(
-                                color: PiggyTokens.textTertiary(context)),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 文本模型
-                          _buildModelInputWithTest(
-                            controller: _textModelController,
-                            label: l10n.aiTextModelTitle,
-                            hintText: _isBuiltIn
-                                ? AIConstants.defaultGlmModel
-                                : 'gpt-4o-mini',
-                            testStatus: _textTestStatus,
-                            testError: _textTestError,
-                            onTest: _testTextCapability,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 视觉模型
-                          _buildModelInputWithTest(
-                            controller: _visionModelController,
-                            label: l10n.aiVisionModelTitle,
-                            hintText: _isBuiltIn
-                                ? AIConstants.defaultGlmVisionModel
-                                : 'gpt-4o',
-                            testStatus: _visionTestStatus,
-                            testError: _visionTestError,
-                            onTest: _testVisionCapability,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // 语音模型
-                          _buildModelInputWithTest(
-                            controller: _audioModelController,
-                            label: l10n.aiAudioModelTitle,
-                            hintText: _isBuiltIn
-                                ? AIConstants.defaultGlmAudioModel
-                                : 'whisper-1',
-                            testStatus: _speechTestStatus,
-                            testError: _speechTestError,
-                            onTest: _testSpeechCapability,
-                          ),
-
-                          // 一键测试按钮
-                          const SizedBox(height: 16),
-                          _buildTestAllButton(),
-                        ],
+                  // 文本测试错误信息
+                  if (_textTestStatus == TestStatus.failed &&
+                      _textTestError != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color:
+                            PiggyTokens.error(context).withValues(alpha: 0.08),
+                        borderRadius:
+                            BorderRadius.circular(PiggyDimens.radiusXs),
+                      ),
+                      child: Text(
+                        _textTestError!,
+                        style: TextStyle(
+                            fontSize: PiggyTextTokens.fs12,
+                            color: PiggyTokens.error(context)),
                       ),
                     ),
-                  ),
+                  ],
 
-                  SizedBox(height: 32.0.scaled(context, ref)),
+                  // 内置服务商显示获取Key和教程链接
+                  if (_isBuiltIn) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.aiCloudApiKeyHelper,
+                      style: PiggyTextTokens.label(context)
+                          .copyWith(color: PiggyTokens.textTertiary(context)),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        TextButton.icon(
+                          onPressed: _openGlmWebsite,
+                          icon: const Icon(Icons.open_in_new, size: 16),
+                          label: Text(l10n.aiCloudApiGetKey),
+                          style: TextButton.styleFrom(
+                            foregroundColor: primaryColor,
+                            textStyle:
+                                const TextStyle(fontSize: PiggyTextTokens.fs13),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton.icon(
+                          onPressed: _openTutorial,
+                          icon: const Icon(Icons.help_outline, size: 16),
+                          label: Text(l10n.aiCloudApiTutorial),
+                          style: TextButton.styleFrom(
+                            foregroundColor: primaryColor,
+                            textStyle:
+                                const TextStyle(fontSize: PiggyTextTokens.fs13),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+
+          SizedBox(height: 8.0.scaled(context, ref)),
+
+          // 模型配置（flat：同上，字段直接浮在抽屉卡片底上）
+          SectionCard(
+            flat: true,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.aiProviderModels,
+                    style: const TextStyle(
+                      fontSize: PiggyTextTokens.fs14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.aiProviderModelsHint,
+                    style: PiggyTextTokens.label(context)
+                        .copyWith(color: PiggyTokens.textTertiary(context)),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 文本模型
+                  _buildModelInputWithTest(
+                    controller: _textModelController,
+                    label: l10n.aiTextModelTitle,
+                    hintText: _isBuiltIn
+                        ? AIConstants.defaultGlmModel
+                        : 'gpt-4o-mini',
+                    testStatus: _textTestStatus,
+                    testError: _textTestError,
+                    onTest: _testTextCapability,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 视觉模型
+                  _buildModelInputWithTest(
+                    controller: _visionModelController,
+                    label: l10n.aiVisionModelTitle,
+                    hintText: _isBuiltIn
+                        ? AIConstants.defaultGlmVisionModel
+                        : 'gpt-4o',
+                    testStatus: _visionTestStatus,
+                    testError: _visionTestError,
+                    onTest: _testVisionCapability,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 语音模型
+                  _buildModelInputWithTest(
+                    controller: _audioModelController,
+                    label: l10n.aiAudioModelTitle,
+                    hintText: _isBuiltIn
+                        ? AIConstants.defaultGlmAudioModel
+                        : 'whisper-1',
+                    testStatus: _speechTestStatus,
+                    testError: _speechTestError,
+                    onTest: _testSpeechCapability,
+                  ),
+
+                  // 一键测试按钮
+                  const SizedBox(height: 16),
+                  _buildTestAllButton(),
+                ],
+              ),
+            ),
+          ),
+
+          SizedBox(height: 32.0.scaled(context, ref)),
+        ],
       ),
     );
   }
@@ -879,7 +852,8 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: PiggyTextTokens.fs14, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                  fontSize: PiggyTextTokens.fs14, fontWeight: FontWeight.w500),
             ),
             const Spacer(),
             _buildInlineTestButton(
@@ -914,7 +888,8 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
             child: Text(
               testError,
               style: TextStyle(
-                  fontSize: PiggyTextTokens.fs12, color: PiggyTokens.error(context)),
+                  fontSize: PiggyTextTokens.fs12,
+                  color: PiggyTokens.error(context)),
             ),
           ),
         ],

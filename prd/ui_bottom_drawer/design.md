@@ -146,3 +146,32 @@
 9. ✅ 键盘弹出时内容正确上移
 10. ✅ AppLink 深链仍能打开全屏页
 11. ✅ 编辑交易/账户仍能打开全屏页
+
+---
+
+## 追加批次（2026-10-08）：存量表单页全量收口
+
+> **上一条 11 的取舍已被本批推翻**：账户编辑（含编辑态）早已全部走 `showAccountFormBottomSheet`，本批又把剩余五个表单页（周期账单 / 标签 / 分类 / AI 服务商 / AI 提示词）也统一到抽屉，「新建抽屉、编辑全屏」的过渡期口径不再存在。
+
+### 改造手法（五页一致，可直接照搬）
+
+1. 在编辑页文件顶部加 `showXxxFormBottomSheet(context, {...})`：内部只调 `showPiggyFormSheet<T>(context, builder: (_) => XxxEditPage(...))`，把「怎么弹」集中到一处。
+2. 页面 `build()` 由 `Scaffold(appBar: PiggyTitleBar, body: Padding(top: scrollablePadding) → Column → Expanded → Form → ListView)` 改为
+   `PiggyFormSheet(title, cancelLabel, confirmLabel, onCancel: pop, onConfirm, confirmBusy, child: Form → Column(crossAxisAlignment: stretch))`：
+   - `ListView` 去掉（`PiggyFormSheet` 内容区已自带滚动），否则嵌套滚动；
+   - 外层 `Padding` / `Expanded` / 顶部 `topScrollablePadding` 全去掉（卡片 chrome 由 `PiggySheetCard` 统一提供）；
+   - 底部「保存」按钮去掉（底部按钮行由 `PiggySheetActions` 提供）。
+3. 分组卡 `SectionCard(borderColor: primary, margin: zero)` → `SectionCard(flat: true)`：`flat` 只透传 child，避免「卡片套卡片」（该参数就是为表单抽屉形态设计的，见 `section_card.dart` 注释）。
+4. 标题栏 `actions` 逐项搬迁（删除 → 主体末尾描边按钮；次要入口 → 就近行的 `trailing` 图标按钮），不静默丢弃。
+5. 全部 `Navigator.push(MaterialPageRoute(... EditPage ...))` 调用点改为 `await showXxxFormBottomSheet(...)`；返回值语义保持不变。
+6. 各页的 `dispose` / 校验 / 保存 / 删除逻辑一行未动 —— 抽屉只是外壳。
+
+### 风险与已验证项
+
+| 风险 | 处置 |
+|---|---|
+| 表单内容超长（周期账单 12+ 字段、分类含图标网格） | `PiggyFormSheet` 内容区受限并内部滚动；分类页的图标网格本身是 `GridView(shrinkWrap: true, physics: NeverScrollableScrollPhysics())`，可直接嵌 |
+| 抽屉内再弹选择器（分类 / 账户 / 币种 / 日期 / 父分类） | 与账户抽屉同款，`showModalBottomSheet` 可嵌套，5 页全部实测通过 |
+| 标题栏 action 无处安放 | 见 requirements 的「落点」表；分类两枚、AI 提示词两枚、周期账单删除、AI 服务商保存均已安置 |
+| 页面被别处当作路由 push（测试宿主 / 深链） | 全仓检索调用点逐个改为新入口；`tag_edit_page_result_test` 与 `recurring_edit_currency_test` 已同步调整并保持绿 |
+| 缩进错位 | 大块结构上提后用 `dart format` 归一（只格式化了本批实际改动的文件） |
