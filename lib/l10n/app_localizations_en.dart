@@ -7204,6 +7204,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'All local data erased. Please restart the app.';
 
   @override
+  String get screenshotProtectionTitle => 'Screenshot protection';
+
+  @override
+  String get screenshotProtectionDesc =>
+      'When on, screenshots, screen recording and casting cannot show this app\'s content';
+
+  @override
+  String get screenshotProtectionDisableTitle =>
+      'Turn off screenshot protection?';
+
+  @override
+  String get screenshotProtectionDisableMessage =>
+      'Once off, this app\'s content may appear in screenshots, screen recording, casting and the recent-tasks thumbnail. Keep it on to protect your data.';
+
+  @override
   String get creditCardSettings => 'Credit Card Settings';
 
   @override

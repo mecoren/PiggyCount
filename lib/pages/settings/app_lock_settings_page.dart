@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../styles/tokens.dart';
+import '../../utils/platform_info.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../providers/security_providers.dart';
 import '../../services/security/app_lock_service.dart';
@@ -119,6 +120,23 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
     }
   }
 
+  /// 切换防截屏保护。关闭属于隐私保护降级（可逆但属危险开关），
+  /// 走「单次危险确认」档；开启无风险，直接生效。
+  Future<void> _toggleScreenshotProtection(bool enable) async {
+    final l10n = AppLocalizations.of(context);
+    if (!enable) {
+      final confirmed = await showDangerConfirmDialog(
+        context,
+        title: l10n.screenshotProtectionDisableTitle,
+        message: l10n.screenshotProtectionDisableMessage,
+        countdownSeconds: 3,
+      );
+      if (!confirmed || !mounted) return;
+    }
+    // 只改 Provider 状态；持久化 + 下发原生由 securityInitProvider 的 listener 完成
+    ref.read(screenshotProtectionEnabledProvider.notifier).state = enable;
+  }
+
   void _showTimeoutPicker() {
     final l10n = AppLocalizations.of(context);
     final currentTimeout = ref.read(appLockTimeoutProvider);
@@ -163,6 +181,8 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
     final enabled = ref.watch(appLockEnabledProvider);
     final biometricEnabled = ref.watch(appLockBiometricEnabledProvider);
     final timeout = ref.watch(appLockTimeoutProvider);
+    final screenshotProtection =
+        ref.watch(screenshotProtectionEnabledProvider);
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
@@ -233,6 +253,21 @@ class _AppLockSettingsPageState extends ConsumerState<AppLockSettingsPage> {
                   subtitle: l10n.appLockWipeSubtitle,
                   value: _wipeEnabled,
                   onChanged: _toggleWipe,
+                ),
+              ],
+            ),
+          ],
+          // 防截屏保护（Android 专属：iOS 无 FLAG_SECURE 同等开关，靠模糊屏缓解）
+          if (PlatformInfo.isAndroid) ...[
+            const SizedBox(height: 16),
+            SettingsCard(
+              children: [
+                SettingsToggleItem(
+                  icon: Icons.shield_outlined,
+                  title: l10n.screenshotProtectionTitle,
+                  subtitle: l10n.screenshotProtectionDesc,
+                  value: screenshotProtection,
+                  onChanged: _toggleScreenshotProtection,
                 ),
               ],
             ),

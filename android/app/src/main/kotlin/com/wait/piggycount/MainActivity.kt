@@ -23,6 +23,7 @@ class MainActivity: FlutterFragmentActivity() {
     private val CHANNEL = "notification_channel"
     private val INSTALL_CHANNEL = "com.wait.piggycount/install"
     private val SCREENSHOT_CHANNEL = "com.wait.piggycount/screenshot"
+    private val SECURITY_CHANNEL = "com.wait.piggycount/security"
     private val LOGGER_CHANNEL = "com.piggycount.logger"
     private val SHARE_CHANNEL = "com.wait.piggycount/share"
 
@@ -32,7 +33,10 @@ class MainActivity: FlutterFragmentActivity() {
         super.onCreate(savedInstanceState)
         // 防截屏/防录屏：窗口内容不进系统截屏与最近任务缩略图。
         // iOS 无同等开关，靠前后台切换模糊屏缓解（已有）。
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        // 默认开启；用户在设置里关闭后，Flutter 侧
+        // （lib/services/security/screenshot_protection_service.dart）会在启动初始化时
+        // 经 SECURITY_CHANNEL 回落该标志。启动瞬间短暂保持保护是无害的（保护是默认态）。
+        applyScreenshotProtection(true)
         handleNotificationIntent(intent)
         handleSharedImage(intent)
     }
@@ -173,6 +177,18 @@ class MainActivity: FlutterFragmentActivity() {
             }
         }
 
+        // 隐私保护的MethodChannel（防截屏开关；Android 专属）
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SECURITY_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "setScreenshotProtection" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    applyScreenshotProtection(enabled)
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
         // 安装APK的MethodChannel
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, INSTALL_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -238,6 +254,21 @@ class MainActivity: FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    /**
+     * 应用 / 解除防截屏（FLAG_SECURE）。
+     *
+     * 开启后窗口内容不进系统截屏、录屏、投屏与最近任务缩略图；
+     * 关闭供用户自行取舍（远程协助 / 投屏演示等场景）。
+     */
+    private fun applyScreenshotProtection(enabled: Boolean) {
+        if (enabled) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+        LoggerPlugin.info("MainActivity", "防截屏保护: ${if (enabled) "开启" else "关闭"}")
     }
 
     private fun scheduleNotification(title: String, body: String, scheduledTimeMillis: Long, notificationId: Int) {

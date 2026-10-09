@@ -6999,6 +6999,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get appLockWipedMessage => '모든 로컬 데이터가 삭제되었습니다. 앱을 다시 시작하세요';
 
   @override
+  String get screenshotProtectionTitle => '화면 캡처 보호';
+
+  @override
+  String get screenshotProtectionDesc =>
+      '켜면 스크린샷, 화면 녹화, 화면 공유에 이 앱의 화면이 표시되지 않습니다';
+
+  @override
+  String get screenshotProtectionDisableTitle => '화면 캡처 보호를 끌까요?';
+
+  @override
+  String get screenshotProtectionDisableMessage =>
+      '끄면 이 앱의 화면이 스크린샷, 화면 녹화, 화면 공유 및 최근 앱 미리보기에 표시될 수 있습니다. 데이터를 보호하려면 켜 두세요.';
+
+  @override
   String get creditCardSettings => '신용카드 설정';
 
   @override

@@ -13003,6 +13003,30 @@ abstract class AppLocalizations {
   /// **'All local data erased. Please restart the app.'**
   String get appLockWipedMessage;
 
+  /// No description provided for @screenshotProtectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Screenshot protection'**
+  String get screenshotProtectionTitle;
+
+  /// No description provided for @screenshotProtectionDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'When on, screenshots, screen recording and casting cannot show this app\'s content'**
+  String get screenshotProtectionDesc;
+
+  /// No description provided for @screenshotProtectionDisableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off screenshot protection?'**
+  String get screenshotProtectionDisableTitle;
+
+  /// No description provided for @screenshotProtectionDisableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Once off, this app\'s content may appear in screenshots, screen recording, casting and the recent-tasks thumbnail. Keep it on to protect your data.'**
+  String get screenshotProtectionDisableMessage;
+
   /// No description provided for @creditCardSettings.
   ///
   /// In en, this message translates to:

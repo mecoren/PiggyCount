@@ -6920,6 +6920,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appLockWipedMessage => '已清除全部本地数据，请重启应用';
 
   @override
+  String get screenshotProtectionTitle => '防截屏保护';
+
+  @override
+  String get screenshotProtectionDesc => '开启后截屏、录屏与投屏均无法显示本应用画面';
+
+  @override
+  String get screenshotProtectionDisableTitle => '关闭防截屏保护？';
+
+  @override
+  String get screenshotProtectionDisableMessage =>
+      '关闭后本应用画面会出现在系统截屏、录屏、投屏与最近任务缩略图中。若需保护数据请保持开启。';
+
+  @override
   String get creditCardSettings => '信用卡设置';
 
   @override
@@ -15727,6 +15740,19 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get appLockWipedMessage => '已清除全部本地資料，請重啟應用';
+
+  @override
+  String get screenshotProtectionTitle => '防截屏保護';
+
+  @override
+  String get screenshotProtectionDesc => '開啟後截圖、錄影與投屏均無法顯示本應用畫面';
+
+  @override
+  String get screenshotProtectionDisableTitle => '關閉防截屏保護？';
+
+  @override
+  String get screenshotProtectionDisableMessage =>
+      '關閉後本應用畫面會出現在系統截圖、錄影、投屏與最近任務縮圖中。若需保護資料請保持開啟。';
 
   @override
   String get creditCardSettings => '信用卡設定';
