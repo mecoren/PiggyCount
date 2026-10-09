@@ -22,8 +22,9 @@ import '../../providers/credit_card_reminder_providers.dart';
 /// 居中标题 + 卡片内滚动表单 + 底部「取消｜保存」双等宽按钮），与云同步配置表单 /
 /// 加密设置密码抽屉同款。表单逻辑仍在本文件的 [AccountEditPage]。
 ///
-/// 编辑态的「隐藏 / 删除」渲染在表单主体末尾、「取消｜保存」之上；保存 / 删除 /
-/// 隐藏都走 `Navigator.pop(true)`，调用方据返回值决定要不要连带刷新上一层。
+/// 编辑态的「删除 / 隐藏」渲染在**标题栏两侧的图标槽**（删除在左、隐藏 / 恢复在
+/// 右，都只显示图标、文案走 tooltip）；保存 / 删除 / 隐藏都走 `Navigator.pop(true)`，
+/// 调用方据返回值决定要不要连带刷新上一层。
 Future<bool?> showAccountFormBottomSheet(
   BuildContext context, {
   required int ledgerId,
@@ -648,71 +649,14 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
               minLines: 1,
             ),
           ),
-
-          SizedBox(height: 24.0.scaled(context, ref)),
-
-          // 隐藏/恢复 + 删除按钮（仅编辑时显示；账户隐藏 #240,产品设计
-          // 01 §3.2:隐藏=留数据、可恢复、仍计资产,删除=硬删除且不可逆;
-          // 二者并列,删除按钮样式保持原样不变）
-          if (isEditing) ...[
-            SizedBox(height: 12.0.scaled(context, ref)),
-            SizedBox(
-              width: double.infinity,
-              height: 48.0.scaled(context, ref),
-              child: OutlinedButton(
-                onPressed: _saving ? null : _toggleHidden,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: primaryColor,
-                  side: BorderSide(color: primaryColor, width: 1.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                        PiggyDimens.radiusSm.scaled(context, ref)),
-                  ),
-                ),
-                child: Text(
-                  widget.account!.hidden
-                      ? l10n.accountUnhide
-                      : l10n.accountHide,
-                  style: const TextStyle(
-                    fontSize: PiggyTextTokens.fs16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 12.0.scaled(context, ref)),
-            SizedBox(
-              width: double.infinity,
-              height: 48.0.scaled(context, ref),
-              child: OutlinedButton(
-                onPressed: _saving ? null : _delete,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: PiggyTokens.error(context),
-                  // U3：边框与前景同源（Colors.red 不跟随暗黑/主题错误色）
-                  side:
-                      BorderSide(color: PiggyTokens.error(context), width: 1.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(
-                        PiggyDimens.radiusSm.scaled(context, ref)),
-                  ),
-                ),
-                child: Text(
-                  l10n.commonDelete,
-                  style: const TextStyle(
-                    fontSize: PiggyTextTokens.fs16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
 
     // 外壳走项目统一的悬浮卡片表单抽屉（[PiggyFormSheet]：居中标题 + 卡片内
     // 滚动 + 底部「取消｜保存」），与云同步配置 / 加密设置密码 / 账户新建同款。
-    // 新建与编辑共用本表单，差别只有标题文案与编辑态多出的「隐藏 / 删除」。
+    // 新建与编辑共用本表单，差别只有标题文案与编辑态多出的「删除（左上）/
+    // 隐藏、恢复（右上）」两个标题栏图标（后者见 [_buildHideAction]）。
     return PiggyFormSheet(
       title: isEditing ? l10n.accountEditTitle : l10n.accountNewTitle,
       cancelLabel: l10n.commonCancel,
@@ -720,7 +664,33 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
       onCancel: () => Navigator.of(context).pop(),
       onConfirm: _save,
       confirmBusy: _saving || _isNameDuplicate,
+      // 删除（仅编辑态）：标题栏左上角垃圾桶图标（PiggyFormSheet 的 deleteLabel
+      // 便捷写法，只显示图标、文案走 tooltip）。
+      deleteLabel: isEditing ? l10n.commonDelete : null,
+      onDelete: _delete,
+      deleteBusy: _saving,
+      trailingAction: _buildHideAction(l10n, primaryColor),
       child: formWidget,
+    );
+  }
+
+  /// 标题栏右上角的隐藏 / 恢复入口（只要图标，文案走 tooltip）。
+  ///
+  /// 语义见账户隐藏 #240：隐藏 = 留数据、可恢复、仍计资产。左上角归删除
+  /// （不可逆，走双重危险确认），可逆的隐藏 / 恢复放右上角。
+  Widget? _buildHideAction(AppLocalizations l10n, Color primaryColor) {
+    final account = widget.account;
+    if (account == null) return null;
+    return IconButton(
+      onPressed: _saving ? null : _toggleHidden,
+      icon: Icon(
+        account.hidden
+            ? Icons.visibility_outlined
+            : Icons.visibility_off_outlined,
+      ),
+      color: primaryColor,
+      tooltip: account.hidden ? l10n.accountUnhide : l10n.accountHide,
+      iconSize: 22,
     );
   }
 

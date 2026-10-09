@@ -198,3 +198,33 @@
 `lib/widgets/encryption/password_setup_dialog.dart` 是**手抄了一遍外壳**（`KeyboardBottomInsetPadding` + `SafeArea` + `p16` 留距 + `Material(surfaceElevated/radiusXl/antiAlias)` + 整卡 `SingleChildScrollView` + 自带标题与 `PiggySheetActions`），因此同样有「长内容按钮滚走 / 拖不动」的问题，还多一份 chrome 漂移风险。已改为直接返回 `PiggyFormSheet`（字段区外什么都不留），入口 `_showSheet` 也换成 `showPiggyFormSheet`，净减约 40 行。
 
 > 备注：`AGENTS.md` 里「表单抽屉一律用悬浮卡片外壳」那条已同步本次改动：基准实现指针改指 `lib/widgets/ui/form_sheet.dart`（唯一外壳），结构描述补上「抓取条 + 标题与按钮行常驻不滚动、只有字段区滚动 + 下拉关闭（抓取条/标题/按钮行靠自身手势，字段区 `_DragToDismiss`，显式 ClampingScrollPhysics）」，并钉上 `test/widgets/form_sheet_shell_test.dart` 为门禁。原描述把基准实现写成加密「设置密码」抽屉与云同步 `_CloudConfigSheet`，那两份现在都只是 `PiggyFormSheet` 的调用方。
+
+### 追加（2026-10-09）：下拉关闭改成整卡一条通路
+
+用户反馈：**同一个「往下滑」，从抓取条拖和从中间字段区拖是两种动画** —— 抓取条上是模态抽屉自身的手势（跟手、可中途停住），字段区是 `_DragToDismiss` 攒够 72 逻辑像素直接 `pop`（不跟手、到点就跳走、松手前停不住）。要求两处一致且「可以停住」。
+
+**为什么不能只把字段区接回模态抽屉自身的手势**：模态抽屉的 `_handleDragUpdate` 是把 `route.animation` 的**裸值**按 `1 - 位移/子高度` 折算，跟手只在它自己的回调链里成立 —— 它靠 `handleDragStart` 临时把 `_sheetAnimation` 从「曲线动画」改绑成裸动画，`handleDragEnd` 再用 `Split` 曲线接回去。字段区的手势在手势竞技场里被内部 `Scrollable` 吃掉（探针用例），进不了那套回调；若另起一路直接改 `route.animation`，就会落回曲线折算（手指移 50%、卡片只走 20% 那种「拽不动」的手感），而且遮挡层会跟着曲线变浅，两路依然不一致。
+
+**改法**（都在 `lib/widgets/ui/form_sheet.dart`）：
+
+1. `showPiggyFormSheet` 传 `enableDrag: false` —— 关掉模态抽屉自身的拖拽，避免两套驱动源抢同一张卡。
+2. `PiggyFormSheet` 改 `StatefulWidget`：卡片整体垫在 `Transform.translate` 上，纵向位移 = `_pull.value × 卡片高度`，`_pull` 是一个 0~1 的 `AnimationController`（`AnimatedBuilder` 只重建 `Transform` 这一层，卡片子树不重建）。
+3. 两路输入都只是「喂进度」：
+   - 非滚动区（抓取条 / 标题 / 按钮行）→ 外层 `GestureDetector` 的 `primaryDelta`；
+   - 字段区 → `NotificationListener<ScrollNotification>`，只认自己那层（`depth == 0` + 纵向轴）的 `OverscrollNotification`，按 `-overscroll` 喂进度。
+4. 判定与收尾沿用模态抽屉自身的口径：位移超过卡片高度一半（`_kCloseProgressThreshold`）或下滑速度 > 700px/s（`_kMinFlingVelocity`）关闭，否则 `animateBack(0)` 回弹 —— 所以拖动中卡片就停在手指位置，松手才有结果。字段区拿不到 `DragEndDetails`，松手速度用最近 100ms 的 `(sourceTimeStamp, 累计位移)` 采样估一次。
+5. 判定关闭时不把位移归零：卡片停在手指松开处，余下行程由路由自身的退场动画接着滑完（`onCancel` 必须真的 `pop`，见类注释）。
+
+**代价（已知并接受）**：拖拽期间遮挡层（barrier）不随之变浅 —— 它由 `route.animation` 驱动，这里没有动那个控制器；关闭动画开始时照旧淡出。
+
+**验收**：`test/widgets/form_sheet_shell_test.dart` 十二例，其中新增/改写的是「抓取条上下拉关闭」「字段区与标题各自跟手 1:1（分步增量断言，避免把框架 slop 语义写进契约）」「拖到阈值以内先停住、再回弹归位」「快速下滑两条通路各一例」。
+
+#### 同日修复：长表单「上滑收回」卡顿
+
+用户反馈：**长表单下拉之后上滑，收回动画会卡顿**。三个原因叠在一起，都在同一处修掉（`lib/widgets/ui/form_sheet.dart`）：
+
+1. **折返时内容先滚走，抽屉再自己定时弹回** —— 两个动作同时发生，长表单上尤其明显。改成 `_PullPinnedScrollPhysics`：抽屉一下拉就把字段内容**钉在顶部**（`applyBoundaryConditions` 把任意目标值整段判成 overscroll，`setPixels` 里 `pixels = value - overscroll` 正好原地不动），于是上滑的位移同样按 overscroll 上报，**上滑 = 1:1 收回抽屉、内容一动不动**；收回到底后再继续上滑才解除钉住、把内容交回滚动（丢一帧位移，可接受）。平时（没在下拉）它就是普通 `ClampingScrollPhysics`。⚠️ 这个物理实例必须在 `State` 里只建一次：`Scrollable` 靠 `physics != oldPhysics` 决定要不要重建 `ScrollPosition`，每帧新建会把滚动状态连同进行中的手势一起丢掉。
+2. **回弹动画被逐帧重启** —— `ScrollUpdateNotification` 每帧都调一次 `animateBack` 的话，位移会逐帧「重新起步」，看着一顿一顿。现在 `_settle()` 只在没在回弹时起步（`status == AnimationStatus.reverse` 直接 return），折返也不再走它（第 1 条已经让折返 1:1 跟手）。
+3. **整卡逐帧重绘** —— 卡片整体在做 `Transform` 位移，长表单（周期账单十几个字段）每帧重绘一遍。给卡片套 `RepaintBoundary`，位移只重新合成这一层，不再重绘。
+
+**验收**：`test/widgets/form_sheet_shell_test.dart` 十三例，新增「下拉后上滑：抽屉跟手收回、字段内容一动不动、收回到底后上滑才交给内容滚动」。

@@ -179,7 +179,7 @@ class _RecurringTransactionEditPageState
       // validate + _hasAttemptedSave(抽屉形态下按钮常在,错误提示才看得见)
       onConfirm: _saving ? null : _saveRecurringTransaction,
       confirmBusy: _saving,
-      // 删除（仅编辑态）：标题栏右上角垃圾桶图标 —— 本表单字段多，放在字段区
+      // 删除（仅编辑态）：标题栏左上角垃圾桶图标 —— 本表单字段多，放在字段区
       // 末尾会被推到屏幕外（用户以为没有删除入口）。
       deleteLabel: _isEditing ? l10n.commonDelete : null,
       onDelete: _deleteRecurringTransaction,
