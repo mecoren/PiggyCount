@@ -10,6 +10,46 @@ class PiggySegmentOption<T> {
   final String label;
 }
 
+/// 选中态填充透明度（主色 @ 12%）。**唯一真值**：分段控件的段与账户选择器的
+/// 芯片都取它，改一处两处一起变。
+const double kPiggySelectableFillAlpha = 0.12;
+
+/// 可选中格子（分段控件的一段 / 账户选择器的横滑芯片）的**统一装饰**。
+///
+/// 选中 = 主色描边 1.5 + 12% 主色底；未选 = 中性描边 1 + 无填充。
+///
+/// 抽出来是为了让两处**同源**：账户芯片原先自画一套「实心主色底 + 白字」，
+/// 与同一个抽屉里的「进度来源」分段控件并排时像两个体系，而且实心蓝的视觉
+/// 重量远超备注 / 账户 / 标签等普通字段，把「已选中」喊得比「金额」还响。
+BoxDecoration piggySelectableDecoration(
+  BuildContext context, {
+  required bool selected,
+  Color? primaryColor,
+  BorderRadius? borderRadius,
+}) {
+  final primary = primaryColor ?? PiggyTokens.primary(context);
+  return BoxDecoration(
+    color: selected
+        ? primary.withValues(alpha: kPiggySelectableFillAlpha)
+        : null,
+    borderRadius: borderRadius ?? BorderRadius.circular(PiggyDimens.radiusSm),
+    border: Border.all(
+      color: selected ? primary : PiggyTokens.border(context),
+      width: selected ? 1.5 : 1,
+    ),
+  );
+}
+
+/// 与 [piggySelectableDecoration] 配套的文字色（选中 = 主色，未选 = 次要文字）。
+Color piggySelectableTextColor(
+  BuildContext context, {
+  required bool selected,
+  Color? primaryColor,
+}) =>
+    selected
+        ? (primaryColor ?? PiggyTokens.primary(context))
+        : PiggyTokens.textSecondary(context);
+
 /// 等宽分段控件：2~3 个互斥选项并排，选中项 = 主色描边 + 12% 主色底。
 ///
 /// 为什么不用 `ChoiceChip`：Chip 自带留白且各自成块，两三个并排就会显得零碎，
@@ -73,16 +113,16 @@ class _PiggySegment extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
+        // 供 widget 测试取装饰（账户芯片与分段控件必须同源，见 segmented_control
+        // 测试里的逐字段比对）。
+        key: ValueKey('piggySegment_$label'),
         duration: const Duration(milliseconds: 150),
         height: 40,
         alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? primaryColor.withValues(alpha: 0.12) : null,
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-          border: Border.all(
-            color: selected ? primaryColor : PiggyTokens.border(context),
-            width: selected ? 1.5 : 1,
-          ),
+        decoration: piggySelectableDecoration(
+          context,
+          selected: selected,
+          primaryColor: primaryColor,
         ),
         child: Text(
           label,
@@ -91,8 +131,8 @@ class _PiggySegment extends StatelessWidget {
           style: TextStyle(
             fontSize: PiggyTextTokens.fs13,
             fontWeight: FontWeight.w600,
-            color:
-                selected ? primaryColor : PiggyTokens.textSecondary(context),
+            color: piggySelectableTextColor(context,
+                selected: selected, primaryColor: primaryColor),
           ),
         ),
       ),

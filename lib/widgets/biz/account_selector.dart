@@ -9,9 +9,17 @@ import '../../providers.dart';
 import '../../services/system/logger_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../ui/piggy_spinner.dart';
+import '../ui/segmented_control.dart';
 
 /// 账户选择器组件
-/// 横滑标签形式，支持 LRU 排序
+///
+/// **横滑**芯片形式（账户数不定，分段控件那种等宽 2~3 段放不下），支持 LRU
+/// 排序，首个恒为「不选择账户」。
+///
+/// 芯片的选中 / 未选视觉与「进度来源」的 [PiggySegmentedControl] **共用**
+/// [piggySelectableDecoration]（主色描边 + 12% 主色底），高度也同为 40：
+/// 原先这里自画的是「实心主色底 + 白字」，与同一个记账抽屉里的分段控件像两个
+/// 体系，且实心蓝的视觉重量盖过了金额位。
 class AccountSelector extends ConsumerStatefulWidget {
   final int? selectedAccountId;
   final ValueChanged<int?> onAccountSelected;
@@ -24,6 +32,14 @@ class AccountSelector extends ConsumerStatefulWidget {
   /// 能原样保存;其余隐藏账户仍不出现。null = 不钉住(新建交易场景)。
   final int? pinnedAccountId;
 
+  /// 是否**按内容取宽**（默认 false = 占满调用方给的宽度）。
+  ///
+  /// 记账抽屉把账户 / 标签 / 附件 / 旗标合并成一条属性行时传 true：那里账户区
+  /// 是「非 flex 子项 + 内容宽」，账户少时才不会被 `Expanded` 份额撑到半行、
+  /// 在右边留一段空洞（见 `amount_editor_sheet.dart` 的 `_buildAccountAndTagRow`）。
+  /// 供其它调用方（转账表单等）保持原样。
+  final bool shrinkWrapToContent;
+
   const AccountSelector({
     super.key,
     required this.selectedAccountId,
@@ -31,6 +47,7 @@ class AccountSelector extends ConsumerStatefulWidget {
     required this.ledgerId,
     this.filterCurrency,
     this.pinnedAccountId,
+    this.shrinkWrapToContent = false,
   });
 
   @override
@@ -172,8 +189,10 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
+      // 高度与 [rowHeight] 一致：加载完从 32 跳到 40 会让整张表单抖一下。
       return SizedBox(
-        height: 32,
+        height: rowHeight,
+        width: widget.shrinkWrapToContent ? 0 : null,
         child: Center(
           child: PiggySpinner(size: 16, color: PiggyTokens.primary(context)),
         ),
@@ -182,41 +201,67 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
 
     final sortedAccounts = _getSortedAccounts();
 
+    // 按内容取宽（记账抽屉的合并属性行专用）：用 [SingleChildScrollView] + [Row]
+    // 而不是 [ListView] —— scroll view 的视口尺寸会收缩到内容宽
+    // （`constrain(child.size)`），内容真的超出调用方给的上界时才横滑。
+    //
+    // 刻意**不自己量文本宽度**：量出来的值与实际渲染差几个像素，最后一个芯片
+    // 就会被裁掉一截或右侧多留一道缝（两处口径必须逐像素一致，不值得）。
+    if (widget.shrinkWrapToContent) {
+      return SizedBox(
+        height: rowHeight,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var i = 0; i <= sortedAccounts.length; i++) ...[
+                if (i > 0) const SizedBox(width: PiggyDimens.p8),
+                _chipFor(i, sortedAccounts),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
-      height: 32,
+      height: rowHeight,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 2),
         itemCount: sortedAccounts.length + 1, // +1 for "no account" option
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
-        itemBuilder: (context, index) {
-          // "无账户"永远在第一位
-          if (index == 0) {
-            final isSelected = widget.selectedAccountId == null;
-            return _buildAccountChip(
-              label: AppLocalizations.of(context).accountNone,
-              isSelected: isSelected,
-              onTap: () => _onAccountTap(null),
-            );
-          }
-
-          // 其他账户从索引 1 开始
-          final accountIndex = index - 1;
-          final account = sortedAccounts[accountIndex];
-          final isSelected = widget.selectedAccountId == account.id;
-
-          return _buildAccountChip(
-            label: account.name,
-            isSelected: isSelected,
-            // account.hidden 只可能在 E1 钉住场景为 true(其余隐藏账户已被
-            // 过滤,不会出现在 sortedAccounts 里),借该字段直接打灰标。
-            isHidden: account.hidden,
-            onTap: () => _onAccountTap(account.id),
-          );
-        },
+        separatorBuilder: (_, __) => const SizedBox(width: PiggyDimens.p8),
+        itemBuilder: (_, index) => _chipFor(index, sortedAccounts),
       ),
     );
   }
+
+  /// 第 [index] 个芯片（0 = 「不选择账户」，其余按 [sortedAccounts] 顺序）。
+  Widget _chipFor(int index, List<Account> sortedAccounts) {
+    if (index == 0) {
+      return _buildAccountChip(
+        label: AppLocalizations.of(context).accountNone,
+        isSelected: widget.selectedAccountId == null,
+        onTap: () => _onAccountTap(null),
+      );
+    }
+
+    final account = sortedAccounts[index - 1];
+    return _buildAccountChip(
+      label: account.name,
+      isSelected: widget.selectedAccountId == account.id,
+      // account.hidden 只可能在 E1 钉住场景为 true(其余隐藏账户已被过滤,
+      // 不会出现在 sortedAccounts 里),借该字段直接打灰标。
+      isHidden: account.hidden,
+      onTap: () => _onAccountTap(account.id),
+    );
+  }
+
+  /// 芯片行高：与「进度来源」分段控件同高（40），触控目标更大，也让同一个记
+  /// 账抽屉里的可选格子看起来是一套东西。
+  static const double rowHeight = 40;
 
   Widget _buildAccountChip({
     required String label,
@@ -224,41 +269,53 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
     required VoidCallback onTap,
     bool isHidden = false,
   }) {
-    final primaryColor = ref.watch(primaryColorProvider);
+    // 主色取 `PiggyTokens.primary`（= 主题 colorScheme.primary，其值就是用户的
+    // 个性化主色）而**不是**再 read 一遍 primaryColorProvider：两处取值在真实
+    // 主题里等价，但混用两个来源意味着将来主题主色一旦改成别的公式（例如按
+    // 明暗微调）两处就会漂移 —— 这里与 PiggySegmentedControl 共用同一个入口。
+    final textColor =
+        piggySelectableTextColor(context, selected: isSelected);
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected ? primaryColor : PiggyTokens.surfaceChip(context),
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        // 供 widget 测试取装饰（与 PiggySegmentedControl 逐字段比对，防再退回
+        // 「实心主色底」那一版）。
+        key: ValueKey('accountChip_$label'),
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.center,
+        // 与 PiggySegmentedControl 共用同一套装饰（主色描边 + 12% 主色底），
+        // 让账户行与「进度来源」那种分段控件是同一套视觉语言。
+        decoration: piggySelectableDecoration(
+          context,
+          selected: isSelected,
         ),
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (isHidden) ...[
-                Icon(
-                  Icons.visibility_off,
-                  size: 12,
-                  color: isSelected
-                      ? Colors.white70
-                      : PiggyTokens.textTertiary(context),
-                ),
-                const SizedBox(width: 4),
-              ],
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: PiggyTextTokens.fs13,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected ? Colors.white : PiggyTokens.textSecondary(context),
-                  height: 1.2,
-                ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isHidden) ...[
+              Icon(
+                Icons.visibility_off,
+                size: 12,
+                color: isSelected
+                    ? textColor.withValues(alpha: 0.7)
+                    : PiggyTokens.textTertiary(context),
               ),
+              const SizedBox(width: 4),
             ],
-          ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: PiggyTextTokens.fs13,
+                // 与分段控件一致：选中 / 未选都是 w600，靠颜色与描边分主次
+                fontWeight: FontWeight.w600,
+                color: textColor,
+                height: 1.2,
+              ),
+            ),
+          ],
         ),
       ),
     );
