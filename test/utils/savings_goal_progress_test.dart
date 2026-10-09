@@ -122,9 +122,9 @@ void main() {
     test('只汇总本位币（大小写不敏感），外币只计数', () {
       final s = summarizeSavingsGoals(
         [
-          (target: 10000.0, saved: 2500.0, currency: 'CNY'),
-          (target: 5000.0, saved: 1000.0, currency: 'cny'),
-          (target: 1000.0, saved: 200.0, currency: 'USD'),
+          (target: 10000.0, saved: 2500.0, currency: 'CNY', accountId: null),
+          (target: 5000.0, saved: 1000.0, currency: 'cny', accountId: null),
+          (target: 1000.0, saved: 200.0, currency: 'USD', accountId: null),
         ],
         ledgerCurrency: 'CNY',
       );
@@ -145,14 +145,79 @@ void main() {
     test('全部为外币 → 合计为 0 且全部计数', () {
       final s = summarizeSavingsGoals(
         [
-          (target: 100.0, saved: 10.0, currency: 'USD'),
-          (target: 200.0, saved: 20.0, currency: 'JPY'),
+          (target: 100.0, saved: 10.0, currency: 'USD', accountId: null),
+          (target: 200.0, saved: 20.0, currency: 'JPY', accountId: null),
         ],
         ledgerCurrency: 'CNY',
       );
       expect(s.totalCount, 2);
       expect(s.foreignCount, 2);
       expect(s.totalTarget, 0);
+      expect(s.totalSaved, 0);
+    });
+
+    test('同一账户的多个目标：总已存只计一次余额，目标额仍逐项累加', () {
+      // 现实场景：账户余额 12.37 万，两个目标都挂在它上面。
+      // 修前逐项相加 → 24.73 万（余额的 2 倍，虚高）。
+      final s = summarizeSavingsGoals(
+        [
+          (target: 1000.0, saved: 123700.0, currency: 'CNY', accountId: 7),
+          (target: 2000.0, saved: 123700.0, currency: 'CNY', accountId: 7),
+        ],
+        ledgerCurrency: 'CNY',
+      );
+      expect(s.totalTarget, 3000);
+      expect(s.totalSaved, 123700);
+    });
+
+    test('不同账户各自计入（去重只针对同一账户）', () {
+      final s = summarizeSavingsGoals(
+        [
+          (target: 1000.0, saved: 500.0, currency: 'CNY', accountId: 7),
+          (target: 1000.0, saved: 300.0, currency: 'CNY', accountId: 8),
+        ],
+        ledgerCurrency: 'CNY',
+      );
+      expect(s.totalTarget, 2000);
+      expect(s.totalSaved, 800);
+    });
+
+    test('手动模式（accountId 为空）逐项累加：那是各自独立的累计额', () {
+      final s = summarizeSavingsGoals(
+        [
+          (target: 1000.0, saved: 200.0, currency: 'CNY', accountId: null),
+          (target: 1000.0, saved: 300.0, currency: 'CNY', accountId: null),
+        ],
+        ledgerCurrency: 'CNY',
+      );
+      expect(s.totalTarget, 2000);
+      expect(s.totalSaved, 500);
+    });
+
+    test('账户模式与手动模式混合：手动项照常计入，不动账户去重', () {
+      final s = summarizeSavingsGoals(
+        [
+          (target: 1000.0, saved: 800.0, currency: 'CNY', accountId: 7),
+          (target: 1000.0, saved: 800.0, currency: 'CNY', accountId: 7),
+          (target: 1000.0, saved: 150.0, currency: 'CNY', accountId: null),
+        ],
+        ledgerCurrency: 'CNY',
+      );
+      expect(s.totalTarget, 3000);
+      expect(s.totalSaved, 950);
+    });
+
+    test('外币目标同样按账户去重前就被排除（只计数）', () {
+      final s = summarizeSavingsGoals(
+        [
+          (target: 1000.0, saved: 100.0, currency: 'USD', accountId: 7),
+          (target: 2000.0, saved: 400.0, currency: 'USD', accountId: 7),
+        ],
+        ledgerCurrency: 'CNY',
+      );
+      expect(s.foreignCount, 2);
+      expect(s.totalTarget, 0);
+      expect(s.totalSaved, 0);
     });
   });
 }

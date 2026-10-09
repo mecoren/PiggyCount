@@ -118,17 +118,29 @@ class SavingsGoalSummary {
 
 /// 汇总目标清单。
 ///
-/// [items] 每项是「(目标金额, 已存金额, 币种)」——同样刻意不吃行对象，账户模式的
-/// 已存由调用方先解算好。币种 ≠ 账本本位币的目标**只计数不计金额**：视图期没有
-/// 可靠汇率，硬折会给出错误数字（沿用订阅视图同款口径）。
+/// [items] 每项是「(目标金额, 已存金额, 币种, 进度来源账户)」——同样刻意不吃行
+/// 对象，账户模式的已存由调用方先解算好。币种 ≠ 账本本位币的目标**只计数不计
+/// 金额**：视图期没有可靠汇率，硬折会给出错误数字（沿用订阅视图同款口径）。
+///
+/// **总已存按账户去重**：账户模式下 `saved` 就是该账户的余额，多个目标盯同一个
+/// 账户（「换手机」和「旅游」都挂在储蓄卡上）时那笔钱只有一份 —— 逐项相加会让
+/// 合计虚高成余额的 N 倍。故 `accountId != null` 的项按账户**只计一次**（该账户
+/// 首次出现时计入），[SavingsGoalSummary.totalSaved] 因此是「这些目标实际可用
+/// 的攒钱总额」。手动模式（`accountId == null`，含账户被删后的悬空引用回退）逐项
+/// 累加 —— 那是各目标独立记录的手动累计额，不存在重复。
+///
+/// [SavingsGoalSummary.totalTarget] 恒逐项累加：每个目标是独立诉求（存 1000 换
+/// 手机 + 存 2000 去旅游 = 要攒 3000），目标金额不因共用一个账户而去重。
 SavingsGoalSummary summarizeSavingsGoals(
-  List<({double target, double saved, String currency})> items, {
+  List<({double target, double saved, String currency, int? accountId})> items, {
   required String ledgerCurrency,
 }) {
   final base = ledgerCurrency.trim().toUpperCase();
   var totalTarget = 0.0;
   var totalSaved = 0.0;
   var foreignCount = 0;
+  // 已计入总已存的「进度来源账户」（账户模式去重）。
+  final countedAccountIds = <int>{};
 
   for (final item in items) {
     if (item.currency.trim().toUpperCase() != base) {
@@ -136,6 +148,12 @@ SavingsGoalSummary summarizeSavingsGoals(
       continue;
     }
     totalTarget += item.target;
+
+    final accountId = item.accountId;
+    if (accountId != null && !countedAccountIds.add(accountId)) {
+      // 同一账户的余额已在前面计过，跳过本次累加（目标额不受影响）。
+      continue;
+    }
     totalSaved += item.saved;
   }
 

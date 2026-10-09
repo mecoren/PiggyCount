@@ -74,6 +74,10 @@ final savingsGoalProgressProvider =
 });
 
 /// 列表页顶部汇总（**仅账本本位币口径**，外币目标只计数不计金额）。
+///
+/// 总已存按账户去重：只有 [SavingsGoalWithProgress.tracksAccount] 为真（确实按
+/// 账户余额跟踪）的目标才带上账户锚点 —— 账户被删后的悬空引用已回退手动口径
+/// （`saved = saved_amount`），那份累计额是独立的，不该被当成同一笔余额。
 final savingsGoalSummaryProvider = FutureProvider<SavingsGoalSummary>((ref) async {
   final items = await ref.watch(savingsGoalProgressProvider.future);
   final ledger = await ref.watch(currentLedgerProvider.future);
@@ -84,6 +88,7 @@ final savingsGoalSummaryProvider = FutureProvider<SavingsGoalSummary>((ref) asyn
           target: item.goal.targetAmount,
           saved: item.progress.saved,
           currency: item.goal.currency,
+          accountId: item.tracksAccount ? item.goal.accountId : null,
         ),
     ],
     ledgerCurrency: ledger?.currency ?? 'CNY',
