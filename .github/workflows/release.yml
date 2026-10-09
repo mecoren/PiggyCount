@@ -244,7 +244,8 @@ jobs:
               > android/key.properties
             echo "key.properties created."
           else
-            echo "No Android signing secrets provided; will use fallback CI keystore in Gradle."
+            echo "::error::No Android signing secrets provided (ANDROID_KEYSTORE_BASE64). Refusing to build release with a random fallback keystore, which would break upgrade installs. Please configure the signing secrets or use a pre-provisioned android/key.properties."
+            exit 1
           fi
 
       # CI 不写回 pubspec.yaml（原 sed 会污染工作区、且 GNU/BSD sed 口径不一致）：

@@ -98,22 +98,27 @@ fi
 
 echo "已生成 keystore: ${KEystore_OUT}"
 
-# 写入 android/key.properties（位置固定在 android/），但 storeFile 需相对于 android/app
-KEYPROPS_DIR="$(cd "$(dirname "${KEystore_OUT}")"/.. && pwd)" # android/
-KEYPROPS_APP_DIR="${KEYPROPS_DIR}/app"                         # android/app
-KEYPROPS_FILE="${KEYPROPS_DIR}/key.properties"
+# key.properties 固定写入本仓库 android/ 目录（Gradle 从 rootProject 读取），
+# 不随 keystore 存放位置变化，否则 keystore 放到仓库外（如 ~/.PiggyCount）时会写错地方
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ANDROID_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)/android"
+APP_DIR="${ANDROID_DIR}/app"
+KEYPROPS_FILE="${ANDROID_DIR}/key.properties"
 
-# 计算 storeFile 相对于 android/app 目录的路径（Gradle 中 file() 相对 app 模块解析）
-STORE_REL="$(python3 - <<'PY'
-import os,sys
-kp = os.path.abspath(sys.argv[1])
-app_dir = os.path.abspath(sys.argv[2])
-print(os.path.relpath(kp, app_dir).replace('\\\\','/'))
-PY
-"${KEystore_OUT}" "${KEYPROPS_APP_DIR}")"
+# 计算 storeFile 写入值（Gradle file() 解析）：
+#   keystore 在 android/app 下   → 相对路径（如 app/release.keystore）
+#   keystore 在仓库外            → 绝对路径（如 C:/Users/A/.PiggyCount/release.keystore）
+STORE_ABS="$(cd "$(dirname "${KEystore_OUT}")" && pwd)/$(basename "${KEystore_OUT}")"
+if [[ "${STORE_ABS}" == "${APP_DIR}"/* ]]; then
+  STORE_PROP="${STORE_ABS#"${APP_DIR}"/}"
+else
+  # cygpath -m 输出 Windows 混合路径（C:/...）；非 Git Bash 环境无 cygpath 时保留原样
+  STORE_PROP="$(cygpath -m "${STORE_ABS}" 2>/dev/null || echo "${KEystore_OUT}")"
+fi
+STORE_PROP="${STORE_PROP//\\//}"
 
 cat > "${KEYPROPS_FILE}" <<EOF
-storeFile=${STORE_REL}
+storeFile=${STORE_PROP}
 storePassword=${STORE_PASS}
 keyAlias=${ALIAS}
 keyPassword=${KEY_PASS}
