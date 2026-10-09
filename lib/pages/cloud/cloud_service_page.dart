@@ -1452,11 +1452,9 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
     if (!mounted) return;
 
-    final result = await showModalBottomSheet<Map<String, dynamic>?>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
+    // 走表单抽屉统一入口：整卡一套下拉关闭，且显式 enableDrag: false
+    final result = await showPiggyFormSheet<Map<String, dynamic>?>(
+      context,
       builder: (dialogContext) => _SupabaseConfigDialog(
         initialUrl: existing?.supabaseUrl ?? '',
         initialKey: existing?.supabaseAnonKey ?? '',
@@ -1520,11 +1518,9 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
     if (!mounted) return;
 
-    final result = await showModalBottomSheet<Map<String, dynamic>?>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
+    // 走表单抽屉统一入口：整卡一套下拉关闭，且显式 enableDrag: false
+    final result = await showPiggyFormSheet<Map<String, dynamic>?>(
+      context,
       builder: (dialogContext) => _WebdavConfigDialog(
         initialUrl: existing?.webdavUrl ?? '',
         initialUsername: existing?.webdavUsername ?? '',
@@ -1593,11 +1589,9 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
 
     if (!mounted) return;
 
-    final result = await showModalBottomSheet<Map<String, dynamic>?>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
+    // 走表单抽屉统一入口：整卡一套下拉关闭，且显式 enableDrag: false
+    final result = await showPiggyFormSheet<Map<String, dynamic>?>(
+      context,
       builder: (dialogContext) => _S3ConfigDialog(
         initialEndpoint: existing?.s3Endpoint ?? '',
         initialRegion: existing?.s3Region ?? 'us-east-1',
