@@ -38,7 +38,7 @@ class SavingsGoalCard extends ConsumerWidget {
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: PiggyDimens.p16,
-          vertical: 12.0.scaled(context, ref),
+          vertical: 14.0.scaled(context, ref),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,7 +59,7 @@ class SavingsGoalCard extends ConsumerWidget {
                 if (progress.achieved)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
+                        horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
@@ -74,16 +74,16 @@ class SavingsGoalCard extends ConsumerWidget {
                   ),
               ],
             ),
-            SizedBox(height: 2.0.scaled(context, ref)),
+            SizedBox(height: 4.0.scaled(context, ref)),
             Text(source, style: muted),
-            SizedBox(height: 8.0.scaled(context, ref)),
+            SizedBox(height: 12.0.scaled(context, ref)),
             BudgetProgressBar(
               used: progress.saved,
               budget: progress.target,
               showLabel: false,
               height: 8,
             ),
-            SizedBox(height: 6.0.scaled(context, ref)),
+            SizedBox(height: 8.0.scaled(context, ref)),
             Row(
               children: [
                 Flexible(
@@ -125,7 +125,7 @@ class SavingsGoalCard extends ConsumerWidget {
               ],
             ),
             if (progress.estimatedDate != null) ...[
-              SizedBox(height: 4.0.scaled(context, ref)),
+              SizedBox(height: 6.0.scaled(context, ref)),
               Text(
                 l10n.savingsGoalEstimatedDate(
                   _formatDate(progress.estimatedDate!),

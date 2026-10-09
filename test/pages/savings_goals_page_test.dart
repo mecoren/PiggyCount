@@ -4,7 +4,8 @@
 /// 1. 无目标 → 空态引导（不能是空白页，否则用户找不到录入入口）；
 /// 2. 有目标 → 汇总卡 + 目标名 + 进度条渲染；
 /// 3. 账户模式的目标必须透出「关联账户 · 账户名」，让用户知道进度来自哪里；
-/// 4. 新增目标表单保存后**真的落库**（走 Repository，不是直接写 Drift）。
+/// 4. 新增目标表单保存后**真的落库**（走 Repository，不是直接写 Drift）；
+/// 5. 明细区滚动时**汇总卡固定在标题栏下方**（总进度常驻，不被滚走 / 不被标题栏切掉）。
 ///
 /// ⚠️ 每个用例结束都要 [settlePage] 推时间：drift 的 QueryStream 在 dispose 时用
 /// `Timer(Duration.zero)` 异步关闭、LoggerService 有 2s 落盘节流定时器 —— 不推进
@@ -24,6 +25,7 @@ import 'package:piggycount/pages/budget/widgets/budget_progress_bar.dart';
 import 'package:piggycount/pages/savings_goal/savings_goal_edit_page.dart';
 import 'package:piggycount/pages/savings_goal/savings_goals_page.dart';
 import 'package:piggycount/providers/database_providers.dart';
+import 'package:piggycount/widgets/savings_goal/savings_goal_card.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -131,6 +133,38 @@ void main() {
       reason: '账户模式必须让用户看出进度来自哪个账户',
     );
     expect(find.text(l10n.savingsGoalSourceManual), findsNothing);
+
+    await settlePage(tester, container);
+  });
+
+  testWidgets('明细区滚动 → 汇总卡固定在标题栏下方', (tester) async {
+    for (var i = 0; i < 12; i++) {
+      await repo.createSavingsGoal(
+        ledgerId: 1,
+        name: '目标$i',
+        targetAmount: 1000,
+        savedAmount: 100,
+      );
+    }
+    final container = await pumpPage(tester);
+    final l10n = l10nOf(tester);
+
+    final summaryLabel = find.text(l10n.savingsGoalTotalTarget);
+    final before = tester.getTopLeft(summaryLabel);
+    expect(before.dy, greaterThan(kToolbarHeight),
+        reason: '汇总卡应落在标题栏下方，而不是被标题栏盖住');
+
+    final firstCardBefore = tester.getTopLeft(find.byType(SavingsGoalCard).first);
+
+    // 只拖明细区：汇总卡跟着走就是 bug（原先整页一个 ListView 会把它滚上去）
+    await tester.drag(
+        find.byType(SavingsGoalCard).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    expect(tester.getTopLeft(summaryLabel), before, reason: '汇总卡必须固定不动');
+    // 明细确实滚了（否则上面那条断言等于没测）
+    expect(tester.getTopLeft(find.byType(SavingsGoalCard).first).dy,
+        lessThan(firstCardBefore.dy));
 
     await settlePage(tester, container);
   });
