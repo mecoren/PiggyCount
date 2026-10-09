@@ -82,6 +82,8 @@ class SavingsGoalCard extends ConsumerWidget {
               budget: progress.target,
               showLabel: false,
               height: 8,
+              // 目标型进度：达成/超额是好事，不套用预算的「超支红」危险档位。
+              positiveOverflow: true,
             ),
             SizedBox(height: 8.0.scaled(context, ref)),
             Row(

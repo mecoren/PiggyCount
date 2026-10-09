@@ -180,6 +180,8 @@ class _SummaryCard extends ConsumerWidget {
               // 比目标卡的 8 更粗（同预算页「总预算卡」的 12）：汇总卡是主线，
               // 粗细差异让「总进度」与「单条进度」一眼分层
               height: 12,
+              // 目标型进度：达成不报警（同目标卡口径）。
+              positiveOverflow: true,
             ),
             if (summary.foreignCount > 0) ...[
               SizedBox(height: PiggyDimens.p12.scaled(context, ref)),

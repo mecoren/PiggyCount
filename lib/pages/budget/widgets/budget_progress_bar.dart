@@ -4,7 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../styles/tokens.dart';
 import '../../../utils/ui_scale_extensions.dart';
 
-/// 预算进度条组件
+/// 预算进度条组件。
+///
+/// [positiveOverflow] 用来区分两类**相反**的进度语义：
+/// - `false`（默认，预算）：用得越多越危险 —— 0.7 黄、0.9/1.0 红；
+/// - `true`（目标型进度，如储蓄目标）：越多越好 —— 未达成走主题色表示「进行中」，
+///   达成走成功色。储蓄目标若沿用预算的红色档位，会把「已达成」渲染成危险信号。
 class BudgetProgressBar extends ConsumerWidget {
   final double used;
   final double budget;
@@ -12,12 +17,16 @@ class BudgetProgressBar extends ConsumerWidget {
   final double height;
   final String currencySymbol;
 
+  /// 超额是否算正向（目标型进度）。见类注释。
+  final bool positiveOverflow;
+
   const BudgetProgressBar({
     required this.used,
     required this.budget,
     this.showLabel = true,
     this.height = 8,
     this.currencySymbol = '¥',
+    this.positiveOverflow = false,
     super.key,
   });
 
@@ -50,6 +59,12 @@ class BudgetProgressBar extends ConsumerWidget {
   }
 
   Color _getColor(BuildContext context, double rate) {
+    // 目标型进度：达成是终点而非警报 —— 未达成为「进行中」主题色，达成为成功色。
+    if (positiveOverflow) {
+      return rate >= 1.0
+          ? PiggyTokens.success(context)
+          : PiggyTokens.primary(context);
+    }
     if (rate >= 1.0) return PiggyTokens.error(context);
     if (rate >= 0.9) return PiggyTokens.error(context);
     if (rate >= 0.7) return PiggyTokens.warning(context);
