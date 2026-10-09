@@ -46,6 +46,13 @@ class PiggyTheme {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primary,
         foregroundColor: Colors.white,
+        // 圆角走 token（radiusXl = 16，恰与 M3 默认值相同，显式钉住防漂移）：
+        // 全项目 FAB 只在这里声明一次，页面不要再逐处写 `shape:`。
+        // 注意主题级 shape 会一并覆盖 FloatingActionButton.small(12) / .large(28)
+        // 的 M3 默认形状，要用这两个变体必须自行传 `shape`。
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+        ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         selectedItemColor: primary,
@@ -89,6 +96,10 @@ class PiggyTheme {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primary,
         foregroundColor: Colors.black,   // 黑色文字（对比度更好）
+        // 同亮色主题：FAB 圆角统一走 PiggyDimens.radiusXl（亮/暗不得分叉）
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusXl),
+        ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         selectedItemColor: primary,
