@@ -40,6 +40,95 @@ class ChangelogVersion {
 /// 全部版本，最新在前
 const kChangelogVersions = <ChangelogVersion>[
   ChangelogVersion(
+    version: '0.1.2',
+    date: '2026-10-10',
+    summary: '修复正式包签名不稳定导致的覆盖安装失败，后续版本可正常覆盖升级。',
+    sections: [
+      ChangelogSection(
+        icon: Icons.verified_outlined,
+        title: '修复与改进',
+        items: [
+          '统一正式包签名证书，修复覆盖安装时报「签名不一样」的问题（已装旧版本需卸载后重装一次）',
+          '缺少签名配置时打包直接失败，不再产出随机签名的安装包',
+          '发版流水线与本地使用同一签名证书，GitHub 发版产物可正常覆盖升级',
+        ],
+      ),
+    ],
+  ),
+  ChangelogVersion(
+    version: '0.1.1',
+    date: '2026-10-09',
+    summary: '体验打磨与功能增强：记账抽屉更顺手，新增储蓄目标与投资持仓，搜索支持多维筛选。',
+    sections: [
+      ChangelogSection(
+        icon: Icons.edit_note_outlined,
+        title: '记账体验',
+        items: [
+          '记账抽屉键盘钉底，金额行按内容取宽，账户 / 标签合并一行',
+          '新建记账不再预填分类，强制明确选择分类',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.savings_outlined,
+        title: '储蓄目标',
+        items: [
+          '全新增储蓄目标模块：设定目标、记录已存，进度一目了然',
+          '总已存按账户去重，同账户多目标不再重复计入',
+          '达成 / 超额进度条改用主题色与成功色，语义更清晰',
+          '表单改行式字段 + 分段控件，汇总卡分层固定在标题栏下方',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.trending_up_outlined,
+        title: '投资持仓',
+        items: [
+          '新增投资持仓模块，手动记录持仓与估值，行情接入已预留',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.notifications_active_outlined,
+        title: '提醒与订阅',
+        items: [
+          '新增订阅视图，周期账单集中查看',
+          '周期账单到期提醒与预算超支提醒',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.search_outlined,
+        title: '搜索与筛选',
+        items: [
+          '多维筛选补齐账户 / 标签 / 附件 / 币种，筛选面板改底部抽屉',
+          '搜索页视觉精简：描边式搜索框、去除多层色块',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.design_services_outlined,
+        title: '界面统一',
+        items: [
+          '存量表单统一为表单抽屉：固定底部按钮行、支持下拉关闭',
+          '编辑抽屉删除入口统一，破坏性操作改用危险确认分档',
+          '抽出行式字段 / 分段控件公共组件，各表单版式更一致',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.calendar_month_outlined,
+        title: '日历修正',
+        items: [
+          '农历与节气表按天文历校准，修正多处月长与 57 项节气',
+          '修复 1975 年节气数据导致的日历崩溃',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.speed_outlined,
+        title: '内部与稳定性',
+        items: [
+          '下线共享账本功能，移除相关数据表与代码，数据结构更精简',
+          '修复 Android 高版本 SDK 构建目标查找失败的问题',
+        ],
+      ),
+    ],
+  ),
+  ChangelogVersion(
     version: '0.1.0',
     date: '2026-10-07',
     summary: '首个公开版本：离线优先、隐私可控的个人记账应用正式发布。',
