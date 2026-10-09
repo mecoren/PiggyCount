@@ -768,6 +768,32 @@ class AppLocalizationsKo extends AppLocalizations {
   String get searchNotSet => '설정 안 됨';
 
   @override
+  String get searchAccountFilter => '계정 필터';
+
+  @override
+  String get searchTagFilter => '태그 필터';
+
+  @override
+  String searchTagFilterSelected(int count) {
+    return '태그 $count개 선택됨';
+  }
+
+  @override
+  String get searchAttachmentFilter => '첨부파일 필터';
+
+  @override
+  String get searchAttachmentAny => '전체';
+
+  @override
+  String get searchAttachmentHas => '첨부 있음';
+
+  @override
+  String get searchAttachmentNone => '첨부 없음';
+
+  @override
+  String get searchCurrencyFilter => '통화 필터';
+
+  @override
   String get searchClearFilter => '필터 지우기';
 
   @override

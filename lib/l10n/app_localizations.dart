@@ -1440,6 +1440,54 @@ abstract class AppLocalizations {
   /// **'Not Set'**
   String get searchNotSet;
 
+  /// No description provided for @searchAccountFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Filter'**
+  String get searchAccountFilter;
+
+  /// No description provided for @searchTagFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag Filter'**
+  String get searchTagFilter;
+
+  /// No description provided for @searchTagFilterSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tags selected'**
+  String searchTagFilterSelected(int count);
+
+  /// No description provided for @searchAttachmentFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachment Filter'**
+  String get searchAttachmentFilter;
+
+  /// No description provided for @searchAttachmentAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Any'**
+  String get searchAttachmentAny;
+
+  /// No description provided for @searchAttachmentHas.
+  ///
+  /// In en, this message translates to:
+  /// **'With attachment'**
+  String get searchAttachmentHas;
+
+  /// No description provided for @searchAttachmentNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Without attachment'**
+  String get searchAttachmentNone;
+
+  /// No description provided for @searchCurrencyFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency Filter'**
+  String get searchCurrencyFilter;
+
   /// No description provided for @searchClearFilter.
   ///
   /// In en, this message translates to:

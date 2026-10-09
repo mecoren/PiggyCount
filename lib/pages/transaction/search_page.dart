@@ -12,7 +12,10 @@ import '../../styles/tokens.dart';
 import '../../utils/category_utils.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/transaction_edit_utils.dart';
+import '../../utils/transaction_search_filter.dart';
 import '../../utils/ui_scale_extensions.dart';
+import '../../widgets/currency/currency_picker_sheet.dart';
+import '../tag/widgets/tag_selector.dart';
 import '../../widgets/category_icon.dart';
 import 'category_detail_page.dart';
 
@@ -62,7 +65,19 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   DateTime? _startDate;
   DateTime? _endDate;
   Category? _selectedCategory;
-  bool _hasScheduledSearch = false; // 防止重复调度搜索
+  // 多维筛选（账户 / 标签 / 附件 / 币种）：标签与附件不在交易行上，需要按需
+  // 查关联表（见 _ensureFilterRelations），其余两类直接读交易行字段。
+  Account? _selectedAccount;
+  final Set<int> _selectedTagIds = {};
+  bool? _hasAttachmentFilter;
+  String? _selectedCurrency;
+  Map<int, Set<int>> _txTagIds = const {};
+  Set<int> _txWithAttachment = const {};
+  bool _relationsLoaded = false;
+  // 交易数据代际：StreamBuilder 每次拿到新快照才重新过滤，避免「结果为空 →
+  // 每帧重新调度搜索」的循环。
+  int _allTxGeneration = 0;
+  int _searchedGeneration = -1;
   Timer? _searchDebounce; // 搜索防抖：输入停顿后才执行全量过滤
 
   // 缓存汇总金额，避免每次 build() 重复计算
@@ -96,86 +111,55 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     });
   }
 
+  /// 当前筛选条件（各维度零散字段 → 单一条件对象，判定逻辑在
+  /// [TransactionSearchFilter.matches]）。
+  TransactionSearchFilter get _currentFilter => TransactionSearchFilter(
+        keyword: _searchText,
+        categoryId: _selectedCategory?.id,
+        minAmount: _minAmount,
+        maxAmount: _maxAmount,
+        startDate: _startDate,
+        endDate: _endDate,
+        accountId: _selectedAccount?.id,
+        tagIds: _selectedTagIds,
+        hasAttachment: _hasAttachmentFilter,
+        currencyCode: _selectedCurrency,
+      );
+
+  bool get _hasAnyFilter => _currentFilter.isNotEmpty;
+
   /// 执行搜索
   void _performSearch() {
     // 防抖期间 _searchText 可能滞后，这里从 controller 同步最新输入。
     _searchText = _searchController.text.trim();
 
     // 如果没有任何搜索条件，清空结果
-    if (_searchText.isEmpty &&
-        _minAmount == null &&
-        _maxAmount == null &&
-        _startDate == null &&
-        _endDate == null &&
-        _selectedCategory == null) {
+    if (!_hasAnyFilter) {
       setState(() {
         _searchResults = [];
         _totalExpense = 0.0;
         _totalIncome = 0.0;
         _isSearching = false;
-        _hasScheduledSearch = false;
       });
       return;
     }
 
     // 500~3000 条数据的内存过滤为同步操作（<10ms），无需转圈（转圈在同一帧
     // 内也不会渲染），直接过滤后一次 setState。
-    final searchLower = _searchText.toLowerCase();
+    final filter = _currentFilter;
+    // 交易未显式记币种时按账本本位币参与币种匹配。
+    final ledgerCurrency =
+        ref.read(currentLedgerProvider).value?.currency ?? '';
     final results = _allTransactions.where((item) {
-      final transaction = item.t;
-      final category = item.category;
-
-      // 文本搜索
-      bool textMatch = true;
-      if (_searchText.isNotEmpty) {
-        final note = transaction.note?.toLowerCase() ?? '';
-        final categoryName =
-            CategoryUtils.getDisplayName(category?.name, context).toLowerCase();
-        final amountStr = transaction.amount.toString();
-
-        textMatch = note.contains(searchLower) ||
-            categoryName.contains(searchLower) ||
-            amountStr.contains(searchLower);
-      }
-
-      // 分类筛选：选择一级分类时，同时包含其二级分类交易。
-      final categoryMatch = _selectedCategory == null ||
-          category?.id == _selectedCategory!.id ||
-          category?.parentId == _selectedCategory!.id;
-
-      // 金额范围搜索
-      bool amountMatch = true;
-      if (_minAmount != null || _maxAmount != null) {
-        final amount = transaction.amount.abs();
-        if (_minAmount != null && amount < _minAmount!) {
-          amountMatch = false;
-        }
-        if (_maxAmount != null && amount > _maxAmount!) {
-          amountMatch = false;
-        }
-      }
-
-      // 时间范围搜索
-      bool dateMatch = true;
-      if (_startDate != null || _endDate != null) {
-        final happenedAt = transaction.happenedAt;
-        if (_startDate != null) {
-          final startOfDay =
-              DateTime(_startDate!.year, _startDate!.month, _startDate!.day);
-          if (happenedAt.isBefore(startOfDay)) {
-            dateMatch = false;
-          }
-        }
-        if (_endDate != null) {
-          final endOfDay = DateTime(
-              _endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
-          if (happenedAt.isAfter(endOfDay)) {
-            dateMatch = false;
-          }
-        }
-      }
-
-      return textMatch && categoryMatch && amountMatch && dateMatch;
+      return filter.matches(
+        t: item.t,
+        category: item.category,
+        categoryDisplayName:
+            CategoryUtils.getDisplayName(item.category?.name, context),
+        transactionTagIds: _txTagIds[item.t.id] ?? const <int>{},
+        hasTransactionAttachment: _txWithAttachment.contains(item.t.id),
+        ledgerCurrency: ledgerCurrency,
+      );
     }).toList();
 
     setState(() {
@@ -187,8 +171,63 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           .where((e) => e.t.type == 'income')
           .fold(0.0, (sum, e) => sum + (e.t.nativeAmount ?? e.t.amount).abs());
       _isSearching = false;
-      _hasScheduledSearch = false;
     });
+  }
+
+  /// 交易数据换代（全量替换 / 从库重拉）时作废标签、附件筛选的关联缓存。
+  void _invalidateFilterRelations() {
+    _relationsLoaded = false;
+    _txTagIds = const {};
+    _txWithAttachment = const {};
+  }
+
+  /// 按需加载标签 / 附件筛选所需的关联数据（未启用这两个维度时不查库）。
+  Future<void> _ensureFilterRelations() async {
+    if (_relationsLoaded) return;
+    if (_selectedTagIds.isEmpty && _hasAttachmentFilter == null) {
+      _relationsLoaded = true;
+      return;
+    }
+    final ids = [for (final e in _allTransactions) e.t.id];
+    if (ids.isEmpty) {
+      _relationsLoaded = true;
+      return;
+    }
+
+    final repo = ref.read(repositoryProvider);
+    var tagIds = const <int, Set<int>>{};
+    var withAttachment = const <int>{};
+    try {
+      if (_selectedTagIds.isNotEmpty) {
+        final map = await repo.getTagsForTransactions(ids);
+        tagIds = {
+          for (final e in map.entries)
+            e.key: {for (final tag in e.value) tag.id},
+        };
+      }
+      if (_hasAttachmentFilter != null) {
+        final counts = await repo.getAttachmentCountsForTransactions(ids);
+        withAttachment = {
+          for (final e in counts.entries)
+            if (e.value > 0) e.key,
+        };
+      }
+    } catch (_) {
+      // 关联数据读失败按「无标签 / 无附件」处理，不阻断搜索主流程。
+    }
+
+    if (!mounted) return;
+    _txTagIds = tagIds;
+    _txWithAttachment = withAttachment;
+    _relationsLoaded = true;
+  }
+
+  /// 筛选条件变化后的统一入口：作废关联缓存 → 按需重载 → 重新过滤。
+  Future<void> _refreshSearch() async {
+    _invalidateFilterRelations();
+    await _ensureFilterRelations();
+    if (!mounted) return;
+    _performSearch();
   }
 
   /// 从数据库重新加载并执行搜索
@@ -210,8 +249,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
     // 更新_allTransactions
     _allTransactions = allTransactions;
+    _allTxGeneration++;
+    _searchedGeneration = _allTxGeneration;
+    _invalidateFilterRelations();
 
     // 执行搜索筛选
+    await _ensureFilterRelations();
+    if (!mounted) return;
     _performSearch();
   }
 
@@ -248,6 +292,39 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     });
   }
 
+  /// 账户筛选选择器：返回选中账户；null = 用户取消（清除账户条件走 ListTile
+  /// 尾部的 X，与分类筛选同一交互）。
+  Future<Account?> _showAccountFilterPicker(
+    BuildContext context,
+    int? currentId,
+  ) async {
+    final accounts = await ref.read(repositoryProvider).getAllAccounts();
+    if (!context.mounted) return null;
+    final l10n = AppLocalizations.of(context);
+    final primaryColor = ref.read(primaryColorProvider);
+    return showPiggyPickerSheet<Account>(
+      context,
+      builder: (sheetCtx) => PiggyPickerSheet(
+        title: l10n.searchAccountFilter,
+        maxHeight: MediaQuery.sizeOf(sheetCtx).height * 0.7,
+        // shrinkWrap：账户少时抽屉紧凑，超出 maxHeight 时内部滚动。
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.symmetric(horizontal: PiggyDimens.p16),
+          children: [
+            for (final account in accounts)
+              PiggyOptionRow(
+                title: account.name,
+                isSelected: account.id == currentId,
+                primaryColor: primaryColor,
+                onTap: () => Navigator.pop(sheetCtx, account),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// 显示筛选弹窗
   Future<void> _showFilterDialog() async {
     final l10n = AppLocalizations.of(context);
@@ -256,6 +333,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     DateTime? tempStartDate = _startDate;
     DateTime? tempEndDate = _endDate;
     Category? tempSelectedCategory = _selectedCategory;
+    Account? tempSelectedAccount = _selectedAccount;
+    Set<int> tempTagIds = {..._selectedTagIds};
+    bool? tempHasAttachment = _hasAttachmentFilter;
+    String? tempCurrency = _selectedCurrency;
 
     await showDialog(
       context: context,
@@ -302,6 +383,140 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             onPressed: () {
                               setState(() {
                                 tempSelectedCategory = null;
+                              });
+                            },
+                          ),
+                        const Icon(Icons.chevron_right, size: 24),
+                      ],
+                    ),
+                  ),
+                  // 账户筛选
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    title: Text(l10n.searchAccountFilter),
+                    subtitle: Text(
+                        tempSelectedAccount?.name ?? l10n.searchNotSet),
+                    onTap: () async {
+                      final picked = await _showAccountFilterPicker(
+                          context, tempSelectedAccount?.id);
+                      if (picked != null) {
+                        setState(() {
+                          tempSelectedAccount = picked;
+                        });
+                      }
+                    },
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (tempSelectedAccount != null)
+                          IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            tooltip: l10n.tooltipClear,
+                            onPressed: () {
+                              setState(() {
+                                tempSelectedAccount = null;
+                              });
+                            },
+                          ),
+                        const Icon(Icons.chevron_right, size: 24),
+                      ],
+                    ),
+                  ),
+                  // 标签筛选（多选，命中所选任一标签即算匹配）
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    title: Text(l10n.searchTagFilter),
+                    subtitle: Text(tempTagIds.isEmpty
+                        ? l10n.searchNotSet
+                        : l10n.searchTagFilterSelected(tempTagIds.length)),
+                    onTap: () async {
+                      final picked = await TagSelector.show(
+                        context,
+                        selectedTagIds: tempTagIds.toList(),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          tempTagIds = picked.toSet();
+                        });
+                      }
+                    },
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (tempTagIds.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            tooltip: l10n.tooltipClear,
+                            onPressed: () {
+                              setState(() {
+                                tempTagIds = <int>{};
+                              });
+                            },
+                          ),
+                        const Icon(Icons.chevron_right, size: 24),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // 附件筛选
+                  Text(l10n.searchAttachmentFilter,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: Text(l10n.searchAttachmentAny),
+                        selected: tempHasAttachment == null,
+                        onSelected: (_) =>
+                            setState(() => tempHasAttachment = null),
+                      ),
+                      ChoiceChip(
+                        label: Text(l10n.searchAttachmentHas),
+                        selected: tempHasAttachment == true,
+                        onSelected: (_) =>
+                            setState(() => tempHasAttachment = true),
+                      ),
+                      ChoiceChip(
+                        label: Text(l10n.searchAttachmentNone),
+                        selected: tempHasAttachment == false,
+                        onSelected: (_) =>
+                            setState(() => tempHasAttachment = false),
+                      ),
+                    ],
+                  ),
+                  // 币种筛选
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    title: Text(l10n.searchCurrencyFilter),
+                    subtitle: Text(tempCurrency ?? l10n.searchNotSet),
+                    onTap: () async {
+                      final picked = await showCurrencyPickerSheet(
+                        context,
+                        selected:
+                            tempCurrency ?? ref.read(baseCurrencyProvider),
+                        primaryColor: ref.read(primaryColorProvider),
+                        title: l10n.searchCurrencyFilter,
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          tempCurrency = picked.toUpperCase();
+                        });
+                      }
+                    },
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (tempCurrency != null)
+                          IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            tooltip: l10n.tooltipClear,
+                            onPressed: () {
+                              setState(() {
+                                tempCurrency = null;
                               });
                             },
                           ),
@@ -458,6 +673,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     tempStartDate = null;
                     tempEndDate = null;
                     tempSelectedCategory = null;
+                    tempSelectedAccount = null;
+                    tempTagIds = <int>{};
+                    tempHasAttachment = null;
+                    tempCurrency = null;
                   });
                 },
                 child: Text(l10n.searchClearFilter),
@@ -470,8 +689,14 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     _startDate = tempStartDate;
                     _endDate = tempEndDate;
                     _selectedCategory = tempSelectedCategory;
+                    _selectedAccount = tempSelectedAccount;
+                    _selectedTagIds
+                      ..clear()
+                      ..addAll(tempTagIds);
+                    _hasAttachmentFilter = tempHasAttachment;
+                    _selectedCurrency = tempCurrency;
                   });
-                  _performSearch();
+                  unawaited(_refreshSearch());
                   Navigator.pop(context);
                 },
                 child: Text(l10n.commonConfirm),
@@ -659,6 +884,28 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     }
   }
 
+  /// 已选筛选条件 chip（主色描边 + 浅底 + 删除叉），各维度统一样式。
+  Widget _buildFilterChip({
+    required String label,
+    required Color primaryColor,
+    required VoidCallback onDeleted,
+  }) {
+    return Chip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: PiggyTextTokens.fs12,
+          color: primaryColor,
+        ),
+      ),
+      backgroundColor: primaryColor.withValues(alpha: 0.1),
+      side: BorderSide(color: primaryColor, width: 1),
+      deleteIconColor: primaryColor,
+      deleteIcon: const Icon(Icons.close, size: 16),
+      onDeleted: onDeleted,
+    );
+  }
+
   /// 构建收入/支出汇总标签
   Widget _buildSummaryChip({
     required String label,
@@ -690,6 +937,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final ledgerId = ref.watch(currentLedgerIdProvider);
     final hide = ref.watch(hideAmountsProvider);
     final l10n = AppLocalizations.of(context);
+    final primaryColor = ref.watch(primaryColorProvider);
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
@@ -794,11 +1042,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           onPressed: _showFilterDialog,
                           icon: Icon(
                             Icons.filter_list,
-                            color: (_minAmount != null ||
-                                    _maxAmount != null ||
-                                    _startDate != null ||
-                                    _endDate != null ||
-                                    _selectedCategory != null)
+                            color: _hasAnyFilter
                                 ? ref.watch(primaryColorProvider)
                                 : PiggyTokens.iconPrimary(context),
                           ),
@@ -807,85 +1051,94 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       ],
                     ),
                     // 显示已选筛选条件
-                    if (_minAmount != null ||
-                        _maxAmount != null ||
-                        _startDate != null ||
-                        _endDate != null ||
-                        _selectedCategory != null) ...[
+                    if (_hasAnyFilter) ...[
                       const SizedBox(height: 12),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
                         children: [
                           if (_selectedCategory != null)
-                            Chip(
-                              label: Text(
-                                '${l10n.searchCategoryFilter}: ${CategoryUtils.getDisplayName(_selectedCategory!.name, context)}',
-                                style: TextStyle(
-                                    fontSize: PiggyTextTokens.fs12,
-                                    color: ref.watch(primaryColorProvider)),
-                              ),
-                              backgroundColor: ref
-                                  .watch(primaryColorProvider)
-                                  .withValues(alpha: 0.1),
-                              side: BorderSide(
-                                  color: ref.watch(primaryColorProvider),
-                                  width: 1),
-                              deleteIconColor: ref.watch(primaryColorProvider),
-                              deleteIcon: const Icon(Icons.close, size: 16),
+                            _buildFilterChip(
+                              label:
+                                  '${l10n.searchCategoryFilter}: ${CategoryUtils.getDisplayName(_selectedCategory!.name, context)}',
+                              primaryColor: primaryColor,
                               onDeleted: () {
                                 setState(() {
                                   _selectedCategory = null;
                                 });
-                                _performSearch();
+                                unawaited(_refreshSearch());
                               },
                             ),
                           if (_minAmount != null || _maxAmount != null)
-                            Chip(
-                              label: Text(
-                                '${l10n.searchAmountFilter}: ${_minAmount?.toStringAsFixed(2) ?? '0'} ~ ${_maxAmount?.toStringAsFixed(2) ?? '∞'}',
-                                style: TextStyle(
-                                    fontSize: PiggyTextTokens.fs12,
-                                    color: ref.watch(primaryColorProvider)),
-                              ),
-                              backgroundColor: ref
-                                  .watch(primaryColorProvider)
-                                  .withValues(alpha: 0.1),
-                              side: BorderSide(
-                                  color: ref.watch(primaryColorProvider),
-                                  width: 1),
-                              deleteIconColor: ref.watch(primaryColorProvider),
-                              deleteIcon: const Icon(Icons.close, size: 16),
+                            _buildFilterChip(
+                              label:
+                                  '${l10n.searchAmountFilter}: ${_minAmount?.toStringAsFixed(2) ?? '0'} ~ ${_maxAmount?.toStringAsFixed(2) ?? '∞'}',
+                              primaryColor: primaryColor,
                               onDeleted: () {
                                 setState(() {
                                   _minAmount = null;
                                   _maxAmount = null;
                                 });
-                                _performSearch();
+                                unawaited(_refreshSearch());
                               },
                             ),
                           if (_startDate != null || _endDate != null)
-                            Chip(
-                              label: Text(
-                                '${l10n.searchDateFilter}: ${_startDate != null ? '${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}' : l10n.searchDateStart} ~ ${_endDate != null ? '${_endDate!.year}-${_endDate!.month.toString().padLeft(2, '0')}-${_endDate!.day.toString().padLeft(2, '0')}' : l10n.searchDateEnd}',
-                                style: TextStyle(
-                                    fontSize: PiggyTextTokens.fs12,
-                                    color: ref.watch(primaryColorProvider)),
-                              ),
-                              backgroundColor: ref
-                                  .watch(primaryColorProvider)
-                                  .withValues(alpha: 0.1),
-                              side: BorderSide(
-                                  color: ref.watch(primaryColorProvider),
-                                  width: 1),
-                              deleteIconColor: ref.watch(primaryColorProvider),
-                              deleteIcon: const Icon(Icons.close, size: 16),
+                            _buildFilterChip(
+                              label:
+                                  '${l10n.searchDateFilter}: ${_startDate != null ? '${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}' : l10n.searchDateStart} ~ ${_endDate != null ? '${_endDate!.year}-${_endDate!.month.toString().padLeft(2, '0')}-${_endDate!.day.toString().padLeft(2, '0')}' : l10n.searchDateEnd}',
+                              primaryColor: primaryColor,
                               onDeleted: () {
                                 setState(() {
                                   _startDate = null;
                                   _endDate = null;
                                 });
-                                _performSearch();
+                                unawaited(_refreshSearch());
+                              },
+                            ),
+                          if (_selectedAccount != null)
+                            _buildFilterChip(
+                              label:
+                                  '${l10n.searchAccountFilter}: ${_selectedAccount!.name}',
+                              primaryColor: primaryColor,
+                              onDeleted: () {
+                                setState(() {
+                                  _selectedAccount = null;
+                                });
+                                unawaited(_refreshSearch());
+                              },
+                            ),
+                          if (_selectedTagIds.isNotEmpty)
+                            _buildFilterChip(
+                              label:
+                                  '${l10n.searchTagFilter}: ${l10n.searchTagFilterSelected(_selectedTagIds.length)}',
+                              primaryColor: primaryColor,
+                              onDeleted: () {
+                                setState(_selectedTagIds.clear);
+                                unawaited(_refreshSearch());
+                              },
+                            ),
+                          if (_hasAttachmentFilter != null)
+                            _buildFilterChip(
+                              label:
+                                  '${l10n.searchAttachmentFilter}: ${_hasAttachmentFilter! ? l10n.searchAttachmentHas : l10n.searchAttachmentNone}',
+                              primaryColor: primaryColor,
+                              onDeleted: () {
+                                setState(() {
+                                  _hasAttachmentFilter = null;
+                                });
+                                unawaited(_refreshSearch());
+                              },
+                            ),
+                          if (_selectedCurrency != null)
+                            _buildFilterChip(
+                              label:
+                                  '${l10n.searchCurrencyFilter}: ${_selectedCurrency!}',
+                              primaryColor: primaryColor,
+                              onDeleted: () {
+                                setState(() {
+                                  _selectedCurrency = null;
+                                });
+                                unawaited(_refreshSearch());
                               },
                             ),
                         ],
@@ -916,20 +1169,20 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 }(),
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
-                    _allTransactions = snapshot.data!;
-                    if ((_searchText.isNotEmpty ||
-                            _minAmount != null ||
-                            _maxAmount != null ||
-                            _startDate != null ||
-                            _endDate != null ||
-                            _selectedCategory != null) &&
-                        _searchResults.isEmpty &&
-                        !_isSearching &&
-                        !_hasScheduledSearch) {
-                      _hasScheduledSearch = true;
+                    // 仅在数据换代（首帧 / 库变更 emit 新 list）时重新过滤。
+                    // 用 identical 而非「结果为空就再搜」：后者在零命中时会被
+                    // 每帧重复调度。
+                    if (!identical(snapshot.data, _allTransactions)) {
+                      _allTransactions = snapshot.data!;
+                      _allTxGeneration++;
+                      _invalidateFilterRelations();
+                    }
+                    if (_hasAnyFilter &&
+                        _allTxGeneration != _searchedGeneration) {
+                      _searchedGeneration = _allTxGeneration;
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (mounted) {
-                          _performSearch();
+                          unawaited(_refreshSearch());
                         }
                       });
                     }
@@ -941,12 +1194,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             size: 36, color: PiggyTokens.primary(context)));
                   }
 
-                  if (_searchText.isEmpty &&
-                      _minAmount == null &&
-                      _maxAmount == null &&
-                      _startDate == null &&
-                      _endDate == null &&
-                      _selectedCategory == null) {
+                  if (!_hasAnyFilter) {
                     return AppEmpty(
                       text: AppLocalizations.of(context).searchNoInput,
                       icon: Icons.search,

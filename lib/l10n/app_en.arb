@@ -429,6 +429,21 @@
   "searchStartDate": "Start Date",
   "searchEndDate": "End Date",
   "searchNotSet": "Not Set",
+  "searchAccountFilter": "Account Filter",
+  "searchTagFilter": "Tag Filter",
+  "searchTagFilterSelected": "{count} tags selected",
+  "@searchTagFilterSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchAttachmentFilter": "Attachment Filter",
+  "searchAttachmentAny": "Any",
+  "searchAttachmentHas": "With attachment",
+  "searchAttachmentNone": "Without attachment",
+  "searchCurrencyFilter": "Currency Filter",
   "searchClearFilter": "Clear Filter",
   "searchBatchCategoryTransferError": "Selected transactions contain transfers, cannot change category",
   "searchBatchCategoryTypeError": "Selected transactions have different types, please select all income or all expense",

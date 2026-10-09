@@ -780,6 +780,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchNotSet => 'Not Set';
 
   @override
+  String get searchAccountFilter => 'Account Filter';
+
+  @override
+  String get searchTagFilter => 'Tag Filter';
+
+  @override
+  String searchTagFilterSelected(int count) {
+    return '$count tags selected';
+  }
+
+  @override
+  String get searchAttachmentFilter => 'Attachment Filter';
+
+  @override
+  String get searchAttachmentAny => 'Any';
+
+  @override
+  String get searchAttachmentHas => 'With attachment';
+
+  @override
+  String get searchAttachmentNone => 'Without attachment';
+
+  @override
+  String get searchCurrencyFilter => 'Currency Filter';
+
+  @override
   String get searchClearFilter => 'Clear Filter';
 
   @override

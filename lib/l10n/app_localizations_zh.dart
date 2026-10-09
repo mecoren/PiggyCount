@@ -759,6 +759,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchNotSet => '未设置';
 
   @override
+  String get searchAccountFilter => '账户筛选';
+
+  @override
+  String get searchTagFilter => '标签筛选';
+
+  @override
+  String searchTagFilterSelected(int count) {
+    return '已选 $count 个标签';
+  }
+
+  @override
+  String get searchAttachmentFilter => '附件筛选';
+
+  @override
+  String get searchAttachmentAny => '不限';
+
+  @override
+  String get searchAttachmentHas => '有附件';
+
+  @override
+  String get searchAttachmentNone => '无附件';
+
+  @override
+  String get searchCurrencyFilter => '币种筛选';
+
+  @override
   String get searchClearFilter => '清空筛选';
 
   @override
@@ -9413,6 +9439,32 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get searchNotSet => '未設定';
+
+  @override
+  String get searchAccountFilter => '帳戶篩選';
+
+  @override
+  String get searchTagFilter => '標籤篩選';
+
+  @override
+  String searchTagFilterSelected(int count) {
+    return '已選 $count 個標籤';
+  }
+
+  @override
+  String get searchAttachmentFilter => '附件篩選';
+
+  @override
+  String get searchAttachmentAny => '不限';
+
+  @override
+  String get searchAttachmentHas => '有附件';
+
+  @override
+  String get searchAttachmentNone => '無附件';
+
+  @override
+  String get searchCurrencyFilter => '幣種篩選';
 
   @override
   String get searchClearFilter => '清空篩選';
