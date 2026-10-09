@@ -255,6 +255,8 @@ class _SyncPreviewDialogState extends ConsumerState<_SyncPreviewDialog> {
         return l10n.syncEntityKindTag;
       case SyncEntityKind.budget:
         return l10n.syncEntityKindBudget;
+      case SyncEntityKind.savingsGoal:
+        return l10n.syncEntityKindSavingsGoal;
       case SyncEntityKind.recurring:
         return l10n.syncEntityKindRecurring;
       case SyncEntityKind.rateOverride:

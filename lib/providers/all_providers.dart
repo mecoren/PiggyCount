@@ -56,3 +56,6 @@ export 'holding_providers.dart';
 
 // 行情源装配（v52 预留：当前仅「手动录入」，零网络请求）
 export 'quote_providers.dart';
+
+// 储蓄目标（v53：目标列表 / 进度解算 / 汇总）
+export 'savings_goal_providers.dart';

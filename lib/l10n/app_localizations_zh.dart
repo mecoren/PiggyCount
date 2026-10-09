@@ -8684,6 +8684,133 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get holdingMarketCrypto => '数字货币';
+
+  @override
+  String get syncEntityKindSavingsGoal => '储蓄目标';
+
+  @override
+  String get savingsGoalPageTitle => '储蓄目标';
+
+  @override
+  String get savingsGoalEmpty => '还没有储蓄目标';
+
+  @override
+  String get savingsGoalEmptyHint => '设一个目标，看进度条一点点走完。';
+
+  @override
+  String get savingsGoalAddTitle => '新建储蓄目标';
+
+  @override
+  String get savingsGoalEditTitle => '编辑储蓄目标';
+
+  @override
+  String get savingsGoalName => '名称';
+
+  @override
+  String get savingsGoalNameHint => '例如：日本旅行';
+
+  @override
+  String get savingsGoalTargetAmount => '目标金额';
+
+  @override
+  String get savingsGoalSource => '进度来源';
+
+  @override
+  String get savingsGoalSourceManual => '手动累计';
+
+  @override
+  String get savingsGoalSourceManualHint => '用「存入 / 取出」自己维护进度。';
+
+  @override
+  String get savingsGoalSourceAccount => '关联账户';
+
+  @override
+  String get savingsGoalAccount => '储蓄账户';
+
+  @override
+  String get savingsGoalAccountHint => '进度跟随该账户余额变化。';
+
+  @override
+  String get savingsGoalAccountMissing => '账户已不存在';
+
+  @override
+  String get savingsGoalCurrency => '币种';
+
+  @override
+  String get savingsGoalCurrencyFollowsAccount => '跟随关联账户';
+
+  @override
+  String get savingsGoalStartDate => '起算日';
+
+  @override
+  String get savingsGoalTargetDate => '目标日期';
+
+  @override
+  String get savingsGoalNote => '备注';
+
+  @override
+  String get savingsGoalTotalTarget => '总目标';
+
+  @override
+  String get savingsGoalTotalSaved => '总已存';
+
+  @override
+  String get savingsGoalSaved => '已存';
+
+  @override
+  String get savingsGoalTarget => '目标';
+
+  @override
+  String get savingsGoalRemaining => '还差';
+
+  @override
+  String get savingsGoalAchieved => '已达成';
+
+  @override
+  String get savingsGoalDeposit => '存入';
+
+  @override
+  String get savingsGoalWithdraw => '取出';
+
+  @override
+  String get savingsGoalAmountLabel => '金额';
+
+  @override
+  String savingsGoalEstimatedDate(String date) {
+    return '预计 $date';
+  }
+
+  @override
+  String savingsGoalForeignExcluded(int count) {
+    return '另有 $count 个外币目标未计入合计';
+  }
+
+  @override
+  String get savingsGoalDeleteConfirmTitle => '删除储蓄目标';
+
+  @override
+  String savingsGoalDeleteConfirmBody(String name) {
+    return '确定删除「$name」吗？此操作不可撤销。';
+  }
+
+  @override
+  String get savingsGoalSaveSuccess => '储蓄目标已保存';
+
+  @override
+  String get savingsGoalValidationNameRequired => '请输入目标名称';
+
+  @override
+  String get savingsGoalValidationAmountInvalid => '请输入有效的目标金额';
+
+  @override
+  String get savingsGoalValidationAccountRequired => '请选择一个储蓄账户';
+
+  @override
+  String get categoryDeleteReconfirmMessage =>
+      '再次确认：该分类及其子分类将被永久删除，引用它的预算 / 周期规则也会一并清理。此操作不可撤销。';
+
+  @override
+  String get transactionSelectCategoryRequired => '请先选择分类';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -17367,4 +17494,131 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get holdingMarketCrypto => '加密貨幣';
+
+  @override
+  String get syncEntityKindSavingsGoal => '儲蓄目標';
+
+  @override
+  String get savingsGoalPageTitle => '儲蓄目標';
+
+  @override
+  String get savingsGoalEmpty => '還沒有儲蓄目標';
+
+  @override
+  String get savingsGoalEmptyHint => '設一個目標，看進度條一點點走完。';
+
+  @override
+  String get savingsGoalAddTitle => '新增儲蓄目標';
+
+  @override
+  String get savingsGoalEditTitle => '編輯儲蓄目標';
+
+  @override
+  String get savingsGoalName => '名稱';
+
+  @override
+  String get savingsGoalNameHint => '例如：日本旅行';
+
+  @override
+  String get savingsGoalTargetAmount => '目標金額';
+
+  @override
+  String get savingsGoalSource => '進度來源';
+
+  @override
+  String get savingsGoalSourceManual => '手動累計';
+
+  @override
+  String get savingsGoalSourceManualHint => '用「存入 / 取出」自己維護進度。';
+
+  @override
+  String get savingsGoalSourceAccount => '關聯帳戶';
+
+  @override
+  String get savingsGoalAccount => '儲蓄帳戶';
+
+  @override
+  String get savingsGoalAccountHint => '進度跟隨該帳戶餘額變化。';
+
+  @override
+  String get savingsGoalAccountMissing => '帳戶已不存在';
+
+  @override
+  String get savingsGoalCurrency => '幣種';
+
+  @override
+  String get savingsGoalCurrencyFollowsAccount => '跟隨關聯帳戶';
+
+  @override
+  String get savingsGoalStartDate => '起算日';
+
+  @override
+  String get savingsGoalTargetDate => '目標日期';
+
+  @override
+  String get savingsGoalNote => '備註';
+
+  @override
+  String get savingsGoalTotalTarget => '總目標';
+
+  @override
+  String get savingsGoalTotalSaved => '總已存';
+
+  @override
+  String get savingsGoalSaved => '已存';
+
+  @override
+  String get savingsGoalTarget => '目標';
+
+  @override
+  String get savingsGoalRemaining => '還差';
+
+  @override
+  String get savingsGoalAchieved => '已達成';
+
+  @override
+  String get savingsGoalDeposit => '存入';
+
+  @override
+  String get savingsGoalWithdraw => '取出';
+
+  @override
+  String get savingsGoalAmountLabel => '金額';
+
+  @override
+  String savingsGoalEstimatedDate(String date) {
+    return '預計 $date';
+  }
+
+  @override
+  String savingsGoalForeignExcluded(int count) {
+    return '另有 $count 個外幣目標未計入合計';
+  }
+
+  @override
+  String get savingsGoalDeleteConfirmTitle => '刪除儲蓄目標';
+
+  @override
+  String savingsGoalDeleteConfirmBody(String name) {
+    return '確定刪除「$name」嗎？此操作不可撤銷。';
+  }
+
+  @override
+  String get savingsGoalSaveSuccess => '儲蓄目標已儲存';
+
+  @override
+  String get savingsGoalValidationNameRequired => '請輸入目標名稱';
+
+  @override
+  String get savingsGoalValidationAmountInvalid => '請輸入有效的目標金額';
+
+  @override
+  String get savingsGoalValidationAccountRequired => '請選擇一個儲蓄帳戶';
+
+  @override
+  String get categoryDeleteReconfirmMessage =>
+      '再次確認：該分類及其子分類將被永久刪除，引用它的預算 / 週期規則也會一併清理。此操作不可撤銷。';
+
+  @override
+  String get transactionSelectCategoryRequired => '請先選擇分類';
 }

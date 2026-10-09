@@ -344,6 +344,43 @@ class ImportHolding {
   });
 }
 
+/// 导入储蓄目标（v12 / schema v53：快照恢复 / 合并）。
+///
+/// ⚠️ `updated_at` 是本地审计列（触发器维护），**刻意不出现在本模型里** —— 它
+/// 不进快照、不进指纹，合并时也不得覆盖本地值。
+class ImportSavingsGoal {
+  final String? syncId;
+  final String name;
+  final double targetAmount;
+  final String? currency;
+
+  /// 关联账户引用：**syncId 优先锚点**（跨设备 rename 后仍锚定同一账户），
+  /// `accountName` 兜底（旧快照 / 探不到 syncId 的遗留账户）。
+  final String? accountSyncId;
+  final String? accountName;
+
+  /// 手动累计额（账户模式下不参与进度，但仍随快照往返）
+  final double? savedAmount;
+  final DateTime? startDate;
+  final DateTime? targetDate;
+  final String? note;
+  final int? sortOrder;
+
+  const ImportSavingsGoal({
+    required this.name,
+    required this.targetAmount,
+    this.syncId,
+    this.currency,
+    this.accountSyncId,
+    this.accountName,
+    this.savedAmount,
+    this.startDate,
+    this.targetDate,
+    this.note,
+    this.sortOrder,
+  });
+}
+
 /// 统一的导入数据格式
 class ImportData {
   final List<ImportAccount> accounts;
@@ -356,6 +393,8 @@ class ImportData {
   final List<ImportTransaction> transactions;
   /// v8 G1：预算（快照恢复）
   final List<ImportBudget> budgets;
+  /// v12：储蓄目标（ledger-scoped，快照恢复）
+  final List<ImportSavingsGoal> savingsGoals;
   /// v8 G2：周期规则（快照恢复）
   final List<ImportRecurring> recurrings;
   /// v8 G4：手动汇率覆盖（快照恢复）
@@ -387,6 +426,7 @@ class ImportData {
     this.customFields = const [],
     this.transactions = const [],
     this.budgets = const [],
+    this.savingsGoals = const [],
     this.recurrings = const [],
     this.rateOverrides = const [],
     this.ledgerName,
@@ -507,6 +547,10 @@ class DataImportService {
     // 6. 导入预算 + 手动汇率（v8 G1/G4）
     await importBudgets(repo, ledgerId, data.budgets,
         categoryCache: categoryCache);
+    // 6.1 v12 导入储蓄目标（ledger-scoped）。放在这里：不依赖交易，但依赖账户
+    //     已落库（accountSyncId / accountName 锚定）。
+    await importSavingsGoals(repo, ledgerId, data.savingsGoals,
+        accountNameToId: accountNameToId);
     await importRateOverrides(repo, data.rateOverrides);
 
     // 7. 导入交易
@@ -1558,6 +1602,141 @@ class DataImportService {
           '预算导入完成: 新增=$created 更新=$updated 耗时=${sw.elapsedMilliseconds}ms');
     } catch (e, st) {
       logger.error('BudgetImport', '预算导入失败', e, st);
+    }
+  }
+
+  /// 导入储蓄目标（v12 / schema v53，**ledger-scoped**）。
+  ///
+  /// 匹配锚点：① `syncId`（跨设备 rename 后仍锚定同一目标）；② 业务键 `name`
+  /// 兜底（旧快照无 syncId 时用）。upsert-only：云端快照不删本地多余目标
+  /// （与 importBudgets 同语义 —— 删除由 diff 的实体删除语义承担）。
+  ///
+  /// 账户锚点：先按 `accountSyncId` 查本地账户，未命中再按 `accountName`；
+  /// **两者都未命中时降级为手动模式**（`accountId = null`）而不是丢弃整条 ——
+  /// 目标不像持仓那样「挂错账户会算错钱」（它只是个展示实体，且对端下次同步
+  /// 还能带回来）。带引用但本机解析不出时**保持本地账户不动**，绝不误清。
+  Future<void> importSavingsGoals(
+    BaseRepository repo,
+    int ledgerId,
+    List<ImportSavingsGoal> goals, {
+    required Map<String, int> accountNameToId,
+  }) async {
+    if (goals.isEmpty) return;
+
+    logger.info('SavingsGoalImport', '开始导入储蓄目标: ${goals.length} 条');
+    final sw = Stopwatch()..start();
+    int created = 0;
+    int updated = 0;
+
+    try {
+      // 账户索引（syncId 优先锚点）。账户数量级几十条，一次全量读足够。
+      final accountSyncIdToId = <String, int>{};
+      for (final a in await repo.getAllAccounts()) {
+        final sid = a.syncId;
+        if (sid != null && sid.isNotEmpty) accountSyncIdToId[sid] = a.id;
+      }
+
+      final existing = await repo.getSavingsGoalsByLedger(ledgerId);
+      final existingBySyncId = <String, SavingsGoal>{};
+      final existingByName = <String, SavingsGoal>{};
+      for (final g in existing) {
+        final sid = g.syncId;
+        if (sid != null && sid.isNotEmpty) existingBySyncId[sid] = g;
+        existingByName[g.name] = g;
+      }
+
+      for (final g in goals) {
+        int? accountId;
+        final accountSyncId = g.accountSyncId;
+        if (accountSyncId != null && accountSyncId.isNotEmpty) {
+          accountId = accountSyncIdToId[accountSyncId];
+        }
+        final accountName = g.accountName;
+        if (accountId == null && accountName != null && accountName.isNotEmpty) {
+          accountId = accountNameToId[accountName];
+        }
+
+        SavingsGoal? matched;
+        final syncId = g.syncId;
+        if (syncId != null && syncId.isNotEmpty) {
+          matched = existingBySyncId[syncId];
+        }
+        matched ??= existingByName[g.name];
+
+        if (matched == null) {
+          await repo.createSavingsGoal(
+            ledgerId: ledgerId,
+            name: g.name,
+            targetAmount: g.targetAmount,
+            // 币种缺失时落 'CNY' 兜底（账户模式下 UI 会强制等于账户币种）。
+            currency: g.currency ?? 'CNY',
+            accountId: accountId,
+            savedAmount: g.savedAmount ?? 0,
+            startDate: g.startDate,
+            targetDate: g.targetDate,
+            note: g.note,
+            sortOrder: g.sortOrder ?? 0,
+            syncId: syncId,
+          );
+          created++;
+        } else {
+          // 与 importAccounts / importHoldings 同款：只在「云端值非 null 且确实
+          // 与本地不同」时才写，**绝不把缺键当清空信号**（v45/v46/v47 反复踩过
+          // 的假冲突来源）。
+          bool differs<T>(T? incoming, T? local) =>
+              incoming != null && incoming != local;
+          final localSyncId = matched.syncId;
+          final needBackfillSyncId =
+              (localSyncId == null || localSyncId.isEmpty) &&
+                  syncId != null &&
+                  syncId.isNotEmpty;
+
+          // 账户引用是「可为 null 的实质字段」，三态必须分开：
+          // - 快照带引用且本机解析得出 → 与本地不同则更新；
+          // - 快照带引用但本机解析不出（账户被删 / 名字对不上）→ **保持不动**；
+          // - 快照压根没带（该目标本来就是手动模式）→ 本地有账户则清空。
+          final hasAccountRef =
+              (accountSyncId != null && accountSyncId.isNotEmpty) ||
+                  (accountName != null && accountName.isNotEmpty);
+          final canResolveAccount = hasAccountRef && accountId != null;
+          final needAccountChange =
+              canResolveAccount && accountId != matched.accountId;
+          final needClearAccount = !hasAccountRef && matched.accountId != null;
+
+          final hasUpdates = (g.name.isNotEmpty && g.name != matched.name) ||
+              needBackfillSyncId ||
+              needAccountChange ||
+              needClearAccount ||
+              differs(g.targetAmount, matched.targetAmount) ||
+              differs(g.currency, matched.currency) ||
+              differs(g.savedAmount, matched.savedAmount) ||
+              differs(g.startDate, matched.startDate) ||
+              differs(g.targetDate, matched.targetDate) ||
+              differs(g.note, matched.note) ||
+              differs(g.sortOrder, matched.sortOrder);
+          if (!hasUpdates) continue;
+
+          await repo.updateSavingsGoal(
+            matched.id,
+            name: g.name.isNotEmpty ? g.name : null,
+            targetAmount: g.targetAmount,
+            currency: g.currency,
+            accountId: needAccountChange ? accountId : null,
+            clearAccount: needClearAccount,
+            savedAmount: g.savedAmount,
+            startDate: g.startDate,
+            targetDate: g.targetDate,
+            note: g.note,
+            sortOrder: g.sortOrder,
+            syncId: needBackfillSyncId ? syncId : null,
+          );
+          updated++;
+        }
+      }
+      logger.info('SavingsGoalImport',
+          '储蓄目标导入完成: 新增=$created 更新=$updated 耗时=${sw.elapsedMilliseconds}ms');
+    } catch (e, st) {
+      logger.error('SavingsGoalImport', '储蓄目标导入失败', e, st);
     }
   }
 

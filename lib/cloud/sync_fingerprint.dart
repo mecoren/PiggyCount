@@ -416,6 +416,37 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
       return tiebreakEncode(a).compareTo(tiebreakEncode(b));
     });
 
+  // v12 储蓄目标规范化：字段集与 `exportTransactionsJson` 的 savingsGoals 导出
+  // **一字不差**；缺失键以默认值兜底（「旧快照缺键」与「显式空值」产生同一指纹）。
+  //
+  // ⚠️ **绝不含** updatedAt —— 那是本地审计列（触发器维护），纳进指纹会让本机
+  // 一次无关 UPDATE 就把跨设备指纹改掉，两端永远不收敛。
+  // 守门：test/cloud/sync_contract_savings_goal_test.dart。
+  final savingsGoals = (payload['savingsGoals'] as List?)
+          ?.cast<Map<String, dynamic>>() ??
+      const <Map<String, dynamic>>[];
+  final savingsGoalCanon = savingsGoals
+      .map((g) => {
+            'syncId': g['syncId'] as String? ?? '',
+            'name': g['name'] as String? ?? '',
+            'targetAmount':
+                (g['targetAmount'] as num?)?.toDouble().toString() ?? '0.0',
+            'currency': g['currency'] as String? ?? '',
+            // 账户锚点两个都进指纹：任一变化都意味着「这条目标的进度来源换了」，
+            // 属内容变化，必须被检测到。
+            'accountSyncId': g['accountSyncId'] as String? ?? '',
+            'accountName': g['accountName'] as String? ?? '',
+            'savedAmount':
+                (g['savedAmount'] as num?)?.toDouble().toString() ?? '0.0',
+            'startDate': g['startDate'] as String? ?? '',
+            'targetDate': g['targetDate'] as String? ?? '',
+            'note': g['note'] as String? ?? '',
+            'sortOrder': (g['sortOrder'] as num?)?.toInt().toString() ?? '',
+          })
+      .toList()
+    // 排序键 syncId 优先、name 兜底，平局用完整规范化串定序（全序保证）。
+    ..sort(compareBySyncIdOrName);
+
   final bytes = utf8.encode(jsonEncode({
     'items': canon,
     'accounts': accountCanon,
@@ -424,6 +455,7 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
     'tags': tagCanon,
     'customFields': customFieldCanon,
     'budgets': budgetCanon,
+    'savingsGoals': savingsGoalCanon,
     'recurring': recurringCanon,
     'exchangeRateOverrides': rateOverrideCanon,
     'monthStartDay': (payload['monthStartDay'] as num?)?.toInt() ?? 1,
@@ -449,6 +481,7 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
       'tags': tagCanon.length,
       'customFields': customFieldCanon.length,
       'budgets': budgetCanon.length,
+      'savingsGoals': savingsGoalCanon.length,
       'recurring': recurringCanon.length,
       'rateOverrides': rateOverrideCanon.length,
     },

@@ -9033,4 +9033,137 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get holdingMarketCrypto => 'Crypto';
+
+  @override
+  String get syncEntityKindSavingsGoal => 'Savings goal';
+
+  @override
+  String get savingsGoalPageTitle => 'Savings Goals';
+
+  @override
+  String get savingsGoalEmpty => 'No savings goals yet';
+
+  @override
+  String get savingsGoalEmptyHint =>
+      'Set a target, then watch the progress bar move.';
+
+  @override
+  String get savingsGoalAddTitle => 'New savings goal';
+
+  @override
+  String get savingsGoalEditTitle => 'Edit savings goal';
+
+  @override
+  String get savingsGoalName => 'Name';
+
+  @override
+  String get savingsGoalNameHint => 'e.g. Trip to Japan';
+
+  @override
+  String get savingsGoalTargetAmount => 'Target amount';
+
+  @override
+  String get savingsGoalSource => 'Progress source';
+
+  @override
+  String get savingsGoalSourceManual => 'Manual';
+
+  @override
+  String get savingsGoalSourceManualHint =>
+      'Track it yourself with deposit / withdraw.';
+
+  @override
+  String get savingsGoalSourceAccount => 'Linked account';
+
+  @override
+  String get savingsGoalAccount => 'Savings account';
+
+  @override
+  String get savingsGoalAccountHint =>
+      'Progress follows this account\'s balance.';
+
+  @override
+  String get savingsGoalAccountMissing => 'Account not found';
+
+  @override
+  String get savingsGoalCurrency => 'Currency';
+
+  @override
+  String get savingsGoalCurrencyFollowsAccount => 'Follows the linked account';
+
+  @override
+  String get savingsGoalStartDate => 'Start date';
+
+  @override
+  String get savingsGoalTargetDate => 'Target date';
+
+  @override
+  String get savingsGoalNote => 'Note';
+
+  @override
+  String get savingsGoalTotalTarget => 'Total target';
+
+  @override
+  String get savingsGoalTotalSaved => 'Total saved';
+
+  @override
+  String get savingsGoalSaved => 'Saved';
+
+  @override
+  String get savingsGoalTarget => 'Target';
+
+  @override
+  String get savingsGoalRemaining => 'Remaining';
+
+  @override
+  String get savingsGoalAchieved => 'Achieved';
+
+  @override
+  String get savingsGoalDeposit => 'Deposit';
+
+  @override
+  String get savingsGoalWithdraw => 'Withdraw';
+
+  @override
+  String get savingsGoalAmountLabel => 'Amount';
+
+  @override
+  String savingsGoalEstimatedDate(String date) {
+    return 'Est. $date';
+  }
+
+  @override
+  String savingsGoalForeignExcluded(int count) {
+    return '$count foreign-currency goals excluded from totals';
+  }
+
+  @override
+  String get savingsGoalDeleteConfirmTitle => 'Delete savings goal';
+
+  @override
+  String savingsGoalDeleteConfirmBody(String name) {
+    return 'Delete \"$name\"? This cannot be undone.';
+  }
+
+  @override
+  String get savingsGoalSaveSuccess => 'Savings goal saved';
+
+  @override
+  String get savingsGoalValidationNameRequired => 'Please enter a goal name';
+
+  @override
+  String get savingsGoalValidationAmountInvalid =>
+      'Please enter a valid target amount';
+
+  @override
+  String get savingsGoalValidationAccountRequired =>
+      'Please pick a savings account';
+
+  @override
+  String get categoryDeleteReconfirmMessage =>
+      'Confirm again: this category will be permanently deleted, together with its subcategories and the budgets / recurring rules that reference it. This cannot be undone.';
+
+  @override
+  String get transactionSelectCategoryRequired =>
+      'Please pick a category first';
 }

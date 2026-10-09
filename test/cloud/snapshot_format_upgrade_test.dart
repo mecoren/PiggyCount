@@ -257,12 +257,12 @@ void main() {
   });
 
   group('导出格式版本', () {
-    test('快照 version 常量与写入一致（v11）', () async {
+    test('快照 version 常量与写入一致（v12）', () async {
       final payload = await localPayload();
       expect(payload['version'], kSnapshotFormatVersion);
-      expect(kSnapshotFormatVersion, 11,
+      expect(kSnapshotFormatVersion, 12,
           reason: '格式版本变更必须同步审查消费端的升级门控语义；'
-              'v11 = 新增 holdings 段（指纹白名单同步加 holdingCanon）');
+              'v12 = 新增 savingsGoals 段（指纹白名单同步加 savingsGoalCanon）');
     });
 
     test('v11：本地有持仓时，云端 v10 快照（无持仓段）不会被误判为「仅格式升级」', () async {
@@ -294,6 +294,35 @@ void main() {
         await manager.shouldRepublishSnapshotForFormatUpgrade(ledgerId: 1),
         isFalse,
         reason: '按 v11 重算云端指纹（无持仓）≠ 本地指纹（有持仓）→ 内容确实不同，'
+            '必须交回既有的冲突 / 合并流程，绝不借「格式升级」名义自动覆盖对端数据',
+      );
+    });
+
+    test('v12：本地有储蓄目标时，云端 v11 快照（无该段）不会被误判为「仅格式升级」',
+        () async {
+      // 先在「本地没有目标」的状态下导出 payload，去掉 savingsGoals 键 ——
+      // 这就是一份真实的 v11 云端快照（v11 的导出端根本没有这一节）。
+      final v11Payload = await localPayload();
+      v11Payload.remove('savingsGoals');
+      v11Payload['version'] = 11;
+      v11Payload['contentFingerprint'] = 'legacy-algorithm-fingerprint';
+
+      // 再让本地长出一条储蓄目标
+      await db.customStatement(
+          "INSERT INTO savings_goals (id, ledger_id, name, target_amount, "
+          "currency, account_id, saved_amount, sort_order, sync_id) "
+          "VALUES (1, 1, '日本旅行', 20000, 'CNY', NULL, 0, 0, 'sg-sync-001')");
+
+      final storage = _UpgradeStorage(
+        metadata: const {'fingerprint': 'legacy-algorithm-fingerprint'},
+        snapshot: jsonEncode(v11Payload),
+      );
+      final manager = buildManager(storage);
+
+      expect(
+        await manager.shouldRepublishSnapshotForFormatUpgrade(ledgerId: 1),
+        isFalse,
+        reason: '按 v12 重算云端指纹（无目标）≠ 本地指纹（有目标）→ 内容确实不同，'
             '必须交回既有的冲突 / 合并流程，绝不借「格式升级」名义自动覆盖对端数据',
       );
     });

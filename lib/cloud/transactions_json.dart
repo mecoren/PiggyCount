@@ -26,6 +26,13 @@ import 'sync_fingerprint.dart';
 ///   两端都没有持仓时指纹仍相等，升级门控照常一次性收敛。
 ///   ⚠️ 持仓的行情缓存三列（quotePrice / quoteFetchedAt / quoteSourceId）
 ///   是本地专有列，**故意不进快照、不进指纹**。
+/// - v12：储蓄目标（2026-10-09）—— 顶层新增 `savingsGoals` 段（**ledger-scoped**，
+///   按 ledgerId 过滤，且进快照的只有账本业务字段，`updated_at` 不进），
+///   `sync_fingerprint` 新增 `savingsGoalCanon`。同样改变指纹算法值（理由同 v11）：
+///   云端仍是 v11 快照且本地有目标时，指纹必然不等 → 走正常 diff / 合并，不会
+///   被误判成「仅格式升级」；两端都没有目标时指纹仍相等，升级门控照常一次性收敛。
+///   ⚠️ 该段必须带**段引入版本 12**（`sectionAbsent('savingsGoals', 12)`）——
+///   登错会让旧快照（压根没这个段）被 diff 判成「本地目标全删」。
 ///
 /// 消费方契约：凡是读到「云端快照 version < 本常量」的路径，都**不得**把
 /// 「指纹不相等」当作「内容不同」的证据（那是算法口径差异，不是数据差异）。
@@ -33,7 +40,7 @@ import 'sync_fingerprint.dart';
 /// 正常收敛 —— 判定见
 /// `TransactionsSyncManager.shouldRepublishSnapshotForFormatUpgrade`，
 /// 执行见 `StartupSyncChecker` 的状态检查循环。
-const int kSnapshotFormatVersion = 11;
+const int kSnapshotFormatVersion = 12;
 
 /// 账本交易数据的 JSON 导入导出工具
 ///
@@ -64,7 +71,7 @@ String _sanitizeString(String? input) {
 /// [ledgerId] - 账本ID
 ///
 /// 返回 [ExportedLedgerJson]：jsonStr 内包含以下字段——
-/// - version: 数据格式版本（当前 [kSnapshotFormatVersion] = 10）
+/// - version: 数据格式版本（当前 [kSnapshotFormatVersion]）
 /// - exportedAt: 导出时间戳
 /// - ledgerId: 账本ID
 /// - ledgerName: 账本名称
@@ -506,6 +513,40 @@ Future<ExportedLedgerJson> exportTransactionsJson(
     };
   }).toList();
 
+  // v12：储蓄目标数组。**ledger-scoped**（按 ledgerId 过滤），导出按 syncId 锚定、
+  // 稳定排序（跨设备指纹可比）；accountId 翻成 accountSyncId + accountName 双锚点
+  // （同周期规则策略：syncId 优先，name 兜底）。
+  //
+  // ⚠️ 只导可同步字段：`updated_at` 是本地审计列（触发器维护），进快照会让指纹
+  // 在不该变的时候变；`accountId` 也不直出（本地自增 id 跨设备无意义）。
+  final ledgerSavingsGoals = await (db.select(db.savingsGoals)
+        ..where((g) => g.ledgerId.equals(ledgerId)))
+      .get()
+    ..sort((a, b) {
+      final ka = a.syncId ?? 'savings_goal_${a.id}';
+      final kb = b.syncId ?? 'savings_goal_${b.id}';
+      return ka.compareTo(kb);
+    });
+  final savingsGoalItems = ledgerSavingsGoals.map((g) {
+    String? accSyncId;
+    if (g.accountId != null) accSyncId = accountIdToSyncId[g.accountId];
+    return <String, dynamic>{
+      if (g.syncId != null && g.syncId!.isNotEmpty) 'syncId': g.syncId,
+      'name': _sanitizeString(g.name),
+      'targetAmount': g.targetAmount,
+      'currency': g.currency,
+      if (g.accountId != null) 'accountName': accountIdToName[g.accountId],
+      if (accSyncId != null && accSyncId.isNotEmpty)
+        'accountSyncId': accSyncId,
+      'savedAmount': g.savedAmount,
+      'startDate': g.startDate.toUtc().toIso8601String(),
+      if (g.targetDate != null)
+        'targetDate': g.targetDate!.toUtc().toIso8601String(),
+      if (g.note != null) 'note': _sanitizeString(g.note),
+      'sortOrder': g.sortOrder,
+    };
+  }).toList();
+
   // v8 G2：周期规则数组。int 外键（category/account/toAccount）翻译成
   // name + syncId 双锚点：导入端优先按 syncId 反查，name 兜底。
   final recurringItems = ledgerRecurrings.map((r) {
@@ -604,6 +645,7 @@ Future<ExportedLedgerJson> exportTransactionsJson(
     'tags': tagItems, // 新增：标签信息
     'customFields': customFieldItems, // v46：账本自定义字段定义
     'budgets': budgetItems, // v8 G1：预算
+    'savingsGoals': savingsGoalItems, // v12：储蓄目标（ledger-scoped）
     'recurring': recurringItems, // v8 G2：周期规则
     'exchangeRateOverrides': rateOverrideItems, // v8 G4：手动汇率
     'items': items,
@@ -912,6 +954,45 @@ ImportData parseJsonToImportData(String jsonStr) {
     }
   }
 
+  // 解析储蓄目标（v12；旧快照无此数组 → 空列表，导入跳过不删本地）
+  // H1：name / targetAmount 为必填，缺失或类型不符时跳过该条并计数。
+  final savingsGoals = <ImportSavingsGoal>[];
+  final jsonSavingsGoals = data['savingsGoals'] as List?;
+  if (jsonSavingsGoals != null) {
+    for (final g in jsonSavingsGoals) {
+      if (g is! Map) {
+        _skip(skipped, 'savingsGoals');
+        continue;
+      }
+      try {
+        final m = g.cast<String, dynamic>();
+        final name = _readString(m, 'name');
+        final targetAmount = _readDouble(m, 'targetAmount');
+        if (name == null || targetAmount == null) {
+          _skip(skipped, 'savingsGoals');
+          continue;
+        }
+        savingsGoals.add(ImportSavingsGoal(
+          name: name,
+          targetAmount: targetAmount,
+          syncId: _readString(m, 'syncId'),
+          currency: _readString(m, 'currency'),
+          accountSyncId: _readString(m, 'accountSyncId'),
+          accountName: _readString(m, 'accountName'),
+          savedAmount: _readDouble(m, 'savedAmount'),
+          startDate: _readDate(m, 'startDate'),
+          targetDate: _readDate(m, 'targetDate'),
+          note: _readString(m, 'note'),
+          sortOrder: _readInt(m, 'sortOrder'),
+        ));
+      } catch (e) {
+        // 单条损坏不拖垮整账本恢复（与 budget 段同款）。
+        logger.debug('TransactionsJson', 'savingsGoal 解析失败,跳过: $e');
+        _skip(skipped, 'savingsGoals');
+      }
+    }
+  }
+
   // 解析周期规则（v8 G2；旧快照无此数组 → 空列表）
   // H1：type/amount/frequency/startDate 为必填，缺失或类型不符跳过。
   // M13：兼容旧 SyncEngine 导出器的段键 'recurrings'（官方为 'recurring'），
@@ -1159,6 +1240,7 @@ ImportData parseJsonToImportData(String jsonStr) {
     customFields: customFields,
     transactions: transactions,
     budgets: budgets,
+    savingsGoals: savingsGoals,
     recurrings: recurrings,
     rateOverrides: rateOverrides,
     ledgerName: _readString(data, 'ledgerName'),

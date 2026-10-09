@@ -51,11 +51,12 @@ void main() {
       expect(db.schemaVersion, greaterThanOrEqualTo(40));
     });
 
-    test('触碰触发器覆盖全部受管表（v52 起为七张）', () async {
+    test('触碰触发器覆盖全部受管表（v53 起为八张）', () async {
       // v40：transactions / categories / tags / accounts / ledgers；
       // v46：+ custom_field_definitions（账本自定义字段定义）；
-      // v52：+ holdings（投资持仓；updated_at 是本地审计列，不进快照/指纹）。
-      expect(await triggerCount(), 7);
+      // v52：+ holdings（投资持仓；updated_at 是本地审计列，不进快照/指纹）；
+      // v53：+ savings_goals（储蓄目标；updated_at 同为本地审计列）。
+      expect(await triggerCount(), 8);
     });
   });
 

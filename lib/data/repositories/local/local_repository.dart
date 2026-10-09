@@ -27,6 +27,7 @@ import 'local_ai_repository.dart';
 import 'local_tag_repository.dart';
 import 'local_custom_field_repository.dart';
 import 'local_budget_repository.dart';
+import 'local_savings_goal_repository.dart';
 import 'local_attachment_repository.dart';
 import 'local_exchange_rate_repository.dart';
 import 'local_holding_repository.dart';
@@ -63,6 +64,8 @@ class LocalRepository extends BaseRepository {
   late final LocalHolidayRepository _holidayRepo;
   // v52 投资持仓（user-global，与 _accountRepo 同款：裸实现 + 本类包事务记变更）
   late final LocalHoldingRepository _holdingRepo;
+  // v53 储蓄目标（ledger-scoped，与 _budgetRepo 同款：裸实现 + 本类包事务记变更）
+  late final LocalSavingsGoalRepository _savingsGoalRepo;
 
   LocalRepository(this.db, {this.changeTracker}) {
     _ledgerRepo = LocalLedgerRepository(db);
@@ -84,6 +87,7 @@ class LocalRepository extends BaseRepository {
     // v49 节假日本地缓存：可重建缓存表，不挂 ChangeTracker（见接口注释）。
     _holidayRepo = LocalHolidayRepository(db);
     _holdingRepo = LocalHoldingRepository(db);
+    _savingsGoalRepo = LocalSavingsGoalRepository(db);
   }
 
   // ============================================
@@ -2474,6 +2478,27 @@ class LocalRepository extends BaseRepository {
           );
         }
       }
+      // v53：账户删除时把储蓄目标的 account_id **置空**（降级为手动模式），
+      // 不级联删除目标 —— 删账户是资产结构调整，不该顺手销毁用户的动机数据。
+      // 进度来源从「账户余额」切到「手动累计」属内容变化，逐条登记 update
+      // 让对端收敛（否则对端仍按已被删除的账户算进度）。
+      final orphanGoals = await (db.select(db.savingsGoals)
+            ..where((g) => g.accountId.equals(id)))
+          .get();
+      await _savingsGoalRepo.clearSavingsGoalAccountRefs(id);
+      if (changeTracker != null) {
+        for (final goal in orphanGoals) {
+          final syncId = goal.syncId;
+          if (syncId == null || syncId.isEmpty) continue;
+          await changeTracker!.recordLedgerChange(
+            entityType: 'savings_goal',
+            entityId: goal.id,
+            entitySyncId: syncId,
+            ledgerId: goal.ledgerId,
+            action: 'update',
+          );
+        }
+      }
       await _accountRepo.deleteAccount(id);
     });
   }
@@ -3880,6 +3905,180 @@ class LocalRepository extends BaseRepository {
   @override
   Stream<List<Budget>> watchBudgets(int ledgerId) =>
       _budgetRepo.watchBudgets(ledgerId);
+
+  // ============================================
+  // SavingsGoalRepository 接口实现 - 委托给 LocalSavingsGoalRepository
+  // ============================================
+
+  @override
+  Future<int> createSavingsGoal({
+    required int ledgerId,
+    required String name,
+    required double targetAmount,
+    String currency = 'CNY',
+    int? accountId,
+    double savedAmount = 0,
+    DateTime? startDate,
+    DateTime? targetDate,
+    String? note,
+    int sortOrder = 0,
+    String? syncId,
+  }) {
+    // 写表 + 记 change 同事务（TBL-M9 口径）。ledger-scoped 实体必须走
+    // recordLedgerChange 且 ledgerId > 0 —— 记错作用域（例如漏掉 ledgerId）
+    // 会让变更卡在本地永不推送。
+    return db.transaction(() async {
+      final id = await _savingsGoalRepo.createSavingsGoal(
+        ledgerId: ledgerId,
+        name: name,
+        targetAmount: targetAmount,
+        currency: currency,
+        accountId: accountId,
+        savedAmount: savedAmount,
+        startDate: startDate,
+        targetDate: targetDate,
+        note: note,
+        sortOrder: sortOrder,
+        syncId: syncId,
+      );
+      if (changeTracker != null) {
+        final row = await (db.select(db.savingsGoals)
+              ..where((g) => g.id.equals(id)))
+            .getSingleOrNull();
+        final syncId = row?.syncId;
+        if (syncId != null && syncId.isNotEmpty) {
+          await changeTracker!.recordLedgerChange(
+            entityType: 'savings_goal',
+            entityId: id,
+            entitySyncId: syncId,
+            ledgerId: ledgerId,
+            action: 'create',
+          );
+        }
+      }
+      return id;
+    });
+  }
+
+  @override
+  Future<void> updateSavingsGoal(
+    int id, {
+    String? name,
+    double? targetAmount,
+    String? currency,
+    int? accountId,
+    bool clearAccount = false,
+    double? savedAmount,
+    DateTime? startDate,
+    DateTime? targetDate,
+    bool clearTargetDate = false,
+    String? note,
+    bool clearNote = false,
+    int? sortOrder,
+    String? syncId,
+  }) {
+    return db.transaction(() async {
+      await _savingsGoalRepo.updateSavingsGoal(
+        id,
+        name: name,
+        targetAmount: targetAmount,
+        currency: currency,
+        accountId: accountId,
+        clearAccount: clearAccount,
+        savedAmount: savedAmount,
+        startDate: startDate,
+        targetDate: targetDate,
+        clearTargetDate: clearTargetDate,
+        note: note,
+        clearNote: clearNote,
+        sortOrder: sortOrder,
+        syncId: syncId,
+      );
+      await _recordSavingsGoalUpdateChange(id);
+    });
+  }
+
+  @override
+  Future<void> updateSavingsGoalSavedAmount(int id, double savedAmount) {
+    // 「存入/取出」：只改累计额，但仍是一次内容变更，必须记 change。
+    return db.transaction(() async {
+      await _savingsGoalRepo.updateSavingsGoalSavedAmount(id, savedAmount);
+      await _recordSavingsGoalUpdateChange(id);
+    });
+  }
+
+  @override
+  Future<void> deleteSavingsGoal(int id) {
+    // 预读 syncId 必须在删除前（删完读不到），与 deleteBudget 同款。
+    return db.transaction(() async {
+      if (changeTracker != null) {
+        final row = await (db.select(db.savingsGoals)
+              ..where((g) => g.id.equals(id)))
+            .getSingleOrNull();
+        final syncId = row?.syncId;
+        if (row != null && syncId != null && syncId.isNotEmpty) {
+          await changeTracker!.recordLedgerChange(
+            entityType: 'savings_goal',
+            entityId: id,
+            entitySyncId: syncId,
+            ledgerId: row.ledgerId,
+            action: 'delete',
+          );
+        }
+      }
+      await _savingsGoalRepo.deleteSavingsGoal(id);
+    });
+  }
+
+  /// 记一条 savings_goal 的 update 变更（预读行取 syncId / ledgerId）。
+  Future<void> _recordSavingsGoalUpdateChange(int id) async {
+    if (changeTracker == null) return;
+    final row = await (db.select(db.savingsGoals)..where((g) => g.id.equals(id)))
+        .getSingleOrNull();
+    final syncId = row?.syncId;
+    if (row == null || syncId == null || syncId.isEmpty) return;
+    await changeTracker!.recordLedgerChange(
+      entityType: 'savings_goal',
+      entityId: id,
+      entitySyncId: syncId,
+      ledgerId: row.ledgerId,
+      action: 'update',
+    );
+  }
+
+  @override
+  Future<SavingsGoal?> getSavingsGoal(int id) =>
+      _savingsGoalRepo.getSavingsGoal(id);
+
+  @override
+  Future<List<SavingsGoal>> getSavingsGoalsByLedger(int ledgerId) =>
+      _savingsGoalRepo.getSavingsGoalsByLedger(ledgerId);
+
+  @override
+  Future<List<SavingsGoal>> getAllSavingsGoals() =>
+      _savingsGoalRepo.getAllSavingsGoals();
+
+  @override
+  Stream<List<SavingsGoal>> watchSavingsGoalsByLedger(int ledgerId) =>
+      _savingsGoalRepo.watchSavingsGoalsByLedger(ledgerId);
+
+  @override
+  Future<void> updateSavingsGoalSortOrders(List<SavingsGoal> goals) {
+    // 排序参与快照指纹，漏记不传播（同 updateHoldingSortOrders）。
+    return db.transaction(() async {
+      await _savingsGoalRepo.updateSavingsGoalSortOrders(goals);
+      for (final goal in goals) {
+        await _recordSavingsGoalUpdateChange(goal.id);
+      }
+    });
+  }
+
+  @override
+  Future<int> clearSavingsGoalAccountRefs(int accountId) {
+    // 供删除账户级联使用；调用方（deleteAccount）已自行登记 update 变更，
+    // 这里只做置空，避免同一路径两处记账。
+    return _savingsGoalRepo.clearSavingsGoalAccountRefs(accountId);
+  }
 
   // ============================================
   // AttachmentRepository 接口实现 - 委托给 LocalAttachmentRepository

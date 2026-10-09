@@ -355,13 +355,13 @@ void main() {
       final json = await exportTransactionsJson(db, 1).then((e) => e.jsonStr);
       final data = jsonDecode(json) as Map<String, dynamic>;
       expect(data['version'], kSnapshotFormatVersion,
-          reason: 'v11：新增 holdings 段后指纹口径再次变更'
-              '（v10 共享账本残留移除；v9 ledgerSyncId 身份锚点；'
+          reason: 'v12：新增 savingsGoals 段后指纹口径再次变更'
+              '（v11 holdings 段；v10 共享账本残留移除；v9 ledgerSyncId 身份锚点；'
               'v8 budgets/recurring/汇率覆盖 + 全量分类/标签）');
-      expect(data['version'], 11,
+      expect(data['version'], 12,
           reason: '格式版本常量变更必须同步消费端的升级重传门控'
-              '（shouldRepublishSnapshotForFormatUpgrade 已按 v11 语义复核：'
-              '两端都无持仓时一次性收敛，有差异时交回 diff / 合并）');
+              '（shouldRepublishSnapshotForFormatUpgrade 已按 v12 语义复核：'
+              '两端都无目标时一次性收敛，有差异时交回 diff / 合并）');
     });
 
     test('账户扩展字段在导出→解析后完整保留', () async {

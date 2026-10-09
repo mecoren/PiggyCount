@@ -2811,6 +2811,12 @@ class TransactionsSyncManager implements SyncService {
              FROM tags) AS tg,
           (SELECT COALESCE(MAX(id), -1) || ':' || COUNT(*) || ':' || COALESCE(SUM(updated_at), -1)
              FROM exchange_rate_overrides) AS ex,
+          -- v12 储蓄目标（ledger-scoped）。**新增可同步实体必须在这里登记**：
+          -- 漏了就会「改了目标但指纹缓存没失效」→ getStatus 复用旧指纹判 inSync、
+          -- 静默不上传。（v52 的 holdings 出于历史原因未纳入本信号，沿用现状；
+          -- 本批不动它以免改变既有行为。）
+          (SELECT COALESCE(MAX(id), -1) || ':' || COUNT(*) || ':' || COALESCE(SUM(updated_at), -1)
+             FROM savings_goals WHERE ledger_id = ?) AS sg,
           COALESCE((SELECT COALESCE(updated_at, -1) || ':' || month_start_day || ':' ||
                            name || ':' || currency || ':' || COALESCE(sync_id, '')
                       FROM ledgers WHERE id = ?), '-') AS lg
@@ -2820,6 +2826,8 @@ class TransactionsSyncManager implements SyncService {
           drift.Variable.withInt(ledgerId),
           drift.Variable.withInt(ledgerId),
           drift.Variable.withInt(ledgerId),
+          drift.Variable.withInt(ledgerId),
+          // v12：savings_goals（占位符顺序必须与上方 SQL 的 ? 顺序一致）
           drift.Variable.withInt(ledgerId),
           drift.Variable.withInt(ledgerId),
         ],
@@ -2833,11 +2841,12 @@ class TransactionsSyncManager implements SyncService {
           db.categories,
           db.tags,
           db.exchangeRateOverrides,
+          db.savingsGoals,
           db.ledgers,
         },
       ).getSingle();
 
-      const keys = ['tx', 'bg', 'rc', 'tt', 'ta', 'ac', 'ca', 'tg', 'ex', 'lg'];
+      const keys = ['tx', 'bg', 'rc', 'tt', 'ta', 'ac', 'ca', 'tg', 'ex', 'sg', 'lg'];
       final parts = <String>[
         for (final k in keys) row.read<String?>(k) ?? '',
         localChanges,

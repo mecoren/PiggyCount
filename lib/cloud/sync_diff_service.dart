@@ -36,6 +36,8 @@ enum SyncEntityKind {
   category,
   tag,
   budget,
+  // v12：储蓄目标（ledger-scoped，与 budget 同层）
+  savingsGoal,
   recurring,
   rateOverride,
 }
@@ -53,6 +55,7 @@ const Map<SyncEntityKind, String> _syncEntityChangeType = {
   SyncEntityKind.category: 'category',
   SyncEntityKind.tag: 'tag',
   SyncEntityKind.budget: 'budget',
+  SyncEntityKind.savingsGoal: 'savings_goal',
   SyncEntityKind.recurring: 'recurring',
   SyncEntityKind.rateOverride: 'exchange_rate_override',
 };
@@ -483,6 +486,7 @@ class SyncDiffService {
         'categories',
         'tags',
         'budgets',
+        'savingsGoals',
         'recurring',
         'rateOverrides'
       ])
@@ -517,6 +521,8 @@ class SyncDiffService {
           return cloud.tags.any((t) => t.syncId == sid);
         case SyncEntityKind.budget:
           return cloud.budgets.any((b) => b.syncId == sid);
+        case SyncEntityKind.savingsGoal:
+          return cloud.savingsGoals.any((g) => g.syncId == sid);
         case SyncEntityKind.recurring:
           return cloud.recurrings.any((r) => r.syncId == sid);
         case SyncEntityKind.rateOverride:
@@ -634,6 +640,24 @@ class SyncDiffService {
       }
     }
 
+    // ---- 储蓄目标（ledger-scoped，v12，无外部引用）----
+    // 展示名用目标名称。目标不被任何实体引用（`accountId` 是弱引用，账户删除时
+    // 由仓储**置空**而非级联），故删除不会留悬空外键 —— 与预算同款。
+    //
+    // ⚠️ 段门控用 [sectionAbsent]（带引入版本 12）而不是 sectionLost：v11 及更早
+    // 的快照没有 savingsGoals 段，整段缺失**不具删除语义** —— 用 sectionLost
+    // 会让老用户首次同步就把本地全部目标判成「对端已删」。
+    if (!sectionAbsent('savingsGoals', 12)) {
+      for (final g in await repo.getSavingsGoalsByLedger(ledgerId)) {
+        offer(
+          kind: SyncEntityKind.savingsGoal,
+          localId: g.id,
+          syncId: g.syncId,
+          name: g.name,
+        );
+      }
+    }
+
     // ---- 周期规则（ledger-scoped）----
     // 展示名只用备注；没备注就留空串（不把 `type` 枚举值漏给 UI）。
     if (!sectionLost('recurring')) {
@@ -666,6 +690,7 @@ class SyncDiffService {
         '分类=${changes.where((c) => c.entityDelete!.kind == SyncEntityKind.category).length} '
         '标签=${changes.where((c) => c.entityDelete!.kind == SyncEntityKind.tag).length} '
         '预算=${changes.where((c) => c.entityDelete!.kind == SyncEntityKind.budget).length} '
+        '储蓄目标=${changes.where((c) => c.entityDelete!.kind == SyncEntityKind.savingsGoal).length} '
         '周期=${changes.where((c) => c.entityDelete!.kind == SyncEntityKind.recurring).length} '
         '汇率=${changes.where((c) => c.entityDelete!.kind == SyncEntityKind.rateOverride).length}');
 
@@ -1012,6 +1037,17 @@ class SyncDiffService {
               ledgerId,
               importData.budgets,
               categoryCache: categoryCache,
+            ));
+    // v12 储蓄目标（ledger-scoped）：与预算同为「云端有变更就要落地」的元数据，
+    // 幂等增量 upsert（口径见 sync_fingerprint 白名单 —— 白名单里有的段，合并
+    // 路径就必须能落，否则该账本永久「有差异」却又 diff 不出变更）。
+    await timed(
+        'savingsGoals',
+        () => dataImportService.importSavingsGoals(
+              repo,
+              ledgerId,
+              importData.savingsGoals,
+              accountNameToId: accountNameToId,
             ));
     await timed('rates',
         () => dataImportService.importRateOverrides(repo, importData.rateOverrides));
@@ -1406,6 +1442,8 @@ class SyncDiffService {
           return refs.tagIds.contains(t.localId);
         case SyncEntityKind.budget:
           return false; // 预算无外部引用
+        case SyncEntityKind.savingsGoal:
+          return false; // 储蓄目标无外部引用（accountId 是弱引用，账户删除时置空）
         case SyncEntityKind.recurring:
           return refs.recurringIds.contains(t.localId);
         case SyncEntityKind.rateOverride:
@@ -1452,6 +1490,10 @@ class SyncDiffService {
               }
             }
             await repo.deleteBudget(t.localId);
+            break;
+          case SyncEntityKind.savingsGoal:
+            // 经 Repository 删除 → 记 ledger-scoped 'delete' 变更（不直接写库）。
+            await repo.deleteSavingsGoal(t.localId);
             break;
           case SyncEntityKind.recurring:
             await repo.deleteRecurringTransaction(t.localId);

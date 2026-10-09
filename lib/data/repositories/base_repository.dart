@@ -13,6 +13,7 @@ import 'attachment_repository.dart';
 import 'exchange_rate_repository.dart';
 import 'holding_repository.dart';
 import 'holiday_repository.dart';
+import 'savings_goal_repository.dart';
 
 /// 基础 Repository 抽象类
 /// 组合所有 Repository 接口，用于类型约束
@@ -38,7 +39,9 @@ abstract class BaseRepository
         ExchangeRateRepository,
         // v52：投资持仓（user-global，与 AccountRepository 同层）
         HoldingRepository,
-        HolidayRepository {
+        HolidayRepository,
+        // v53：储蓄目标（ledger-scoped，与 BudgetRepository 同层）
+        SavingsGoalRepository {
   /// 变更追踪器（云同步）。默认 null；LocalRepository 以公开字段覆写。
   /// M3：云→本地合并路径（applySyncChanges）经此拿 tracker 包裹
   /// withRecordingSuppressed，防止合并写入回流 local_changes。

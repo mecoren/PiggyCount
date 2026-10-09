@@ -23,6 +23,7 @@ import '../settings/about_page.dart';
 import '../report/amount_deviation_page.dart';
 import '../report/annual_report_page.dart';
 import '../report/range_report_page.dart';
+import '../savings_goal/savings_goals_page.dart';
 import 'package:in_app_review/in_app_review.dart';
 import '../../utils/ui_scale_extensions.dart';
 
@@ -356,6 +357,19 @@ class MinePage extends ConsumerWidget {
                           MaterialPageRoute(
                               builder: (_) =>
                                   const InvestmentSettingsPage()),
+                        );
+                      },
+                    ),
+                    // 储蓄目标（v53：目标的激励层，与预算的约束层互为镜像）
+                    SettingsNavItem(
+                      icon: Icons.savings_outlined,
+                      title: AppLocalizations.of(context).savingsGoalPageTitle,
+                      subtitle:
+                          AppLocalizations.of(context).savingsGoalEmptyHint,
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (_) => const SavingsGoalsPage()),
                         );
                       },
                     ),

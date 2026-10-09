@@ -8786,4 +8786,131 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get holdingMarketCrypto => '암호화폐';
+
+  @override
+  String get syncEntityKindSavingsGoal => '저축 목표';
+
+  @override
+  String get savingsGoalPageTitle => '저축 목표';
+
+  @override
+  String get savingsGoalEmpty => '저축 목표가 없습니다';
+
+  @override
+  String get savingsGoalEmptyHint => '목표를 세우고 진행률을 확인해 보세요.';
+
+  @override
+  String get savingsGoalAddTitle => '저축 목표 추가';
+
+  @override
+  String get savingsGoalEditTitle => '저축 목표 편집';
+
+  @override
+  String get savingsGoalName => '이름';
+
+  @override
+  String get savingsGoalNameHint => '예: 일본 여행';
+
+  @override
+  String get savingsGoalTargetAmount => '목표 금액';
+
+  @override
+  String get savingsGoalSource => '진행 기준';
+
+  @override
+  String get savingsGoalSourceManual => '수동 누적';
+
+  @override
+  String get savingsGoalSourceManualHint => '입금 / 출금으로 직접 관리합니다.';
+
+  @override
+  String get savingsGoalSourceAccount => '연결 계정';
+
+  @override
+  String get savingsGoalAccount => '저축 계정';
+
+  @override
+  String get savingsGoalAccountHint => '진행률이 해당 계정 잔액을 따릅니다.';
+
+  @override
+  String get savingsGoalAccountMissing => '계정을 찾을 수 없음';
+
+  @override
+  String get savingsGoalCurrency => '통화';
+
+  @override
+  String get savingsGoalCurrencyFollowsAccount => '연결 계정을 따름';
+
+  @override
+  String get savingsGoalStartDate => '시작일';
+
+  @override
+  String get savingsGoalTargetDate => '목표일';
+
+  @override
+  String get savingsGoalNote => '메모';
+
+  @override
+  String get savingsGoalTotalTarget => '총 목표';
+
+  @override
+  String get savingsGoalTotalSaved => '총 저축';
+
+  @override
+  String get savingsGoalSaved => '저축';
+
+  @override
+  String get savingsGoalTarget => '목표';
+
+  @override
+  String get savingsGoalRemaining => '남은 금액';
+
+  @override
+  String get savingsGoalAchieved => '달성';
+
+  @override
+  String get savingsGoalDeposit => '입금';
+
+  @override
+  String get savingsGoalWithdraw => '출금';
+
+  @override
+  String get savingsGoalAmountLabel => '금액';
+
+  @override
+  String savingsGoalEstimatedDate(String date) {
+    return '$date 예상';
+  }
+
+  @override
+  String savingsGoalForeignExcluded(int count) {
+    return '외화 목표 $count개는 합계에서 제외';
+  }
+
+  @override
+  String get savingsGoalDeleteConfirmTitle => '저축 목표 삭제';
+
+  @override
+  String savingsGoalDeleteConfirmBody(String name) {
+    return '\"$name\"을(를) 삭제할까요? 되돌릴 수 없습니다.';
+  }
+
+  @override
+  String get savingsGoalSaveSuccess => '저축 목표를 저장했습니다';
+
+  @override
+  String get savingsGoalValidationNameRequired => '목표 이름을 입력해 주세요';
+
+  @override
+  String get savingsGoalValidationAmountInvalid => '올바른 목표 금액을 입력해 주세요';
+
+  @override
+  String get savingsGoalValidationAccountRequired => '저축 계정을 선택해 주세요';
+
+  @override
+  String get categoryDeleteReconfirmMessage =>
+      '다시 확인: 이 카테고리와 하위 카테고리가 영구 삭제되며, 이를 참조하는 예산 / 반복 규칙도 함께 정리됩니다. 되돌릴 수 없습니다.';
+
+  @override
+  String get transactionSelectCategoryRequired => '먼저 카테고리를 선택하세요';
 }

@@ -4382,5 +4382,66 @@
   "holdingMarketHk": "Hong Kong",
   "holdingMarketUs": "US",
   "holdingMarketFund": "Mutual fund",
-  "holdingMarketCrypto": "Crypto"
+  "holdingMarketCrypto": "Crypto",
+  "syncEntityKindSavingsGoal": "Savings goal",
+  "savingsGoalPageTitle": "Savings Goals",
+  "savingsGoalEmpty": "No savings goals yet",
+  "savingsGoalEmptyHint": "Set a target, then watch the progress bar move.",
+  "savingsGoalAddTitle": "New savings goal",
+  "savingsGoalEditTitle": "Edit savings goal",
+  "savingsGoalName": "Name",
+  "savingsGoalNameHint": "e.g. Trip to Japan",
+  "savingsGoalTargetAmount": "Target amount",
+  "savingsGoalSource": "Progress source",
+  "savingsGoalSourceManual": "Manual",
+  "savingsGoalSourceManualHint": "Track it yourself with deposit / withdraw.",
+  "savingsGoalSourceAccount": "Linked account",
+  "savingsGoalAccount": "Savings account",
+  "savingsGoalAccountHint": "Progress follows this account's balance.",
+  "savingsGoalAccountMissing": "Account not found",
+  "savingsGoalCurrency": "Currency",
+  "savingsGoalCurrencyFollowsAccount": "Follows the linked account",
+  "savingsGoalStartDate": "Start date",
+  "savingsGoalTargetDate": "Target date",
+  "savingsGoalNote": "Note",
+  "savingsGoalTotalTarget": "Total target",
+  "savingsGoalTotalSaved": "Total saved",
+  "savingsGoalSaved": "Saved",
+  "savingsGoalTarget": "Target",
+  "savingsGoalRemaining": "Remaining",
+  "savingsGoalAchieved": "Achieved",
+  "savingsGoalDeposit": "Deposit",
+  "savingsGoalWithdraw": "Withdraw",
+  "savingsGoalAmountLabel": "Amount",
+  "savingsGoalEstimatedDate": "Est. {date}",
+  "@savingsGoalEstimatedDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "savingsGoalForeignExcluded": "{count} foreign-currency goals excluded from totals",
+  "@savingsGoalForeignExcluded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "savingsGoalDeleteConfirmTitle": "Delete savings goal",
+  "savingsGoalDeleteConfirmBody": "Delete \"{name}\"? This cannot be undone.",
+  "@savingsGoalDeleteConfirmBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "savingsGoalSaveSuccess": "Savings goal saved",
+  "savingsGoalValidationNameRequired": "Please enter a goal name",
+  "savingsGoalValidationAmountInvalid": "Please enter a valid target amount",
+  "savingsGoalValidationAccountRequired": "Please pick a savings account",
+  "categoryDeleteReconfirmMessage": "Confirm again: this category will be permanently deleted, together with its subcategories and the budgets / recurring rules that reference it. This cannot be undone.",
+  "transactionSelectCategoryRequired": "Please pick a category first"
 }

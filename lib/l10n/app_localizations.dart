@@ -16224,6 +16224,246 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Crypto'**
   String get holdingMarketCrypto;
+
+  /// No description provided for @syncEntityKindSavingsGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings goal'**
+  String get syncEntityKindSavingsGoal;
+
+  /// No description provided for @savingsGoalPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings Goals'**
+  String get savingsGoalPageTitle;
+
+  /// No description provided for @savingsGoalEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No savings goals yet'**
+  String get savingsGoalEmpty;
+
+  /// No description provided for @savingsGoalEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a target, then watch the progress bar move.'**
+  String get savingsGoalEmptyHint;
+
+  /// No description provided for @savingsGoalAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New savings goal'**
+  String get savingsGoalAddTitle;
+
+  /// No description provided for @savingsGoalEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit savings goal'**
+  String get savingsGoalEditTitle;
+
+  /// No description provided for @savingsGoalName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get savingsGoalName;
+
+  /// No description provided for @savingsGoalNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Trip to Japan'**
+  String get savingsGoalNameHint;
+
+  /// No description provided for @savingsGoalTargetAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Target amount'**
+  String get savingsGoalTargetAmount;
+
+  /// No description provided for @savingsGoalSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress source'**
+  String get savingsGoalSource;
+
+  /// No description provided for @savingsGoalSourceManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual'**
+  String get savingsGoalSourceManual;
+
+  /// No description provided for @savingsGoalSourceManualHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Track it yourself with deposit / withdraw.'**
+  String get savingsGoalSourceManualHint;
+
+  /// No description provided for @savingsGoalSourceAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked account'**
+  String get savingsGoalSourceAccount;
+
+  /// No description provided for @savingsGoalAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings account'**
+  String get savingsGoalAccount;
+
+  /// No description provided for @savingsGoalAccountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress follows this account\'s balance.'**
+  String get savingsGoalAccountHint;
+
+  /// No description provided for @savingsGoalAccountMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Account not found'**
+  String get savingsGoalAccountMissing;
+
+  /// No description provided for @savingsGoalCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get savingsGoalCurrency;
+
+  /// No description provided for @savingsGoalCurrencyFollowsAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Follows the linked account'**
+  String get savingsGoalCurrencyFollowsAccount;
+
+  /// No description provided for @savingsGoalStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date'**
+  String get savingsGoalStartDate;
+
+  /// No description provided for @savingsGoalTargetDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Target date'**
+  String get savingsGoalTargetDate;
+
+  /// No description provided for @savingsGoalNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get savingsGoalNote;
+
+  /// No description provided for @savingsGoalTotalTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Total target'**
+  String get savingsGoalTotalTarget;
+
+  /// No description provided for @savingsGoalTotalSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Total saved'**
+  String get savingsGoalTotalSaved;
+
+  /// No description provided for @savingsGoalSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get savingsGoalSaved;
+
+  /// No description provided for @savingsGoalTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Target'**
+  String get savingsGoalTarget;
+
+  /// No description provided for @savingsGoalRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get savingsGoalRemaining;
+
+  /// No description provided for @savingsGoalAchieved.
+  ///
+  /// In en, this message translates to:
+  /// **'Achieved'**
+  String get savingsGoalAchieved;
+
+  /// No description provided for @savingsGoalDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit'**
+  String get savingsGoalDeposit;
+
+  /// No description provided for @savingsGoalWithdraw.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw'**
+  String get savingsGoalWithdraw;
+
+  /// No description provided for @savingsGoalAmountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get savingsGoalAmountLabel;
+
+  /// No description provided for @savingsGoalEstimatedDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Est. {date}'**
+  String savingsGoalEstimatedDate(String date);
+
+  /// No description provided for @savingsGoalForeignExcluded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} foreign-currency goals excluded from totals'**
+  String savingsGoalForeignExcluded(int count);
+
+  /// No description provided for @savingsGoalDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete savings goal'**
+  String get savingsGoalDeleteConfirmTitle;
+
+  /// No description provided for @savingsGoalDeleteConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{name}\"? This cannot be undone.'**
+  String savingsGoalDeleteConfirmBody(String name);
+
+  /// No description provided for @savingsGoalSaveSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings goal saved'**
+  String get savingsGoalSaveSuccess;
+
+  /// No description provided for @savingsGoalValidationNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a goal name'**
+  String get savingsGoalValidationNameRequired;
+
+  /// No description provided for @savingsGoalValidationAmountInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid target amount'**
+  String get savingsGoalValidationAmountInvalid;
+
+  /// No description provided for @savingsGoalValidationAccountRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please pick a savings account'**
+  String get savingsGoalValidationAccountRequired;
+
+  /// No description provided for @categoryDeleteReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm again: this category will be permanently deleted, together with its subcategories and the budgets / recurring rules that reference it. This cannot be undone.'**
+  String get categoryDeleteReconfirmMessage;
+
+  /// No description provided for @transactionSelectCategoryRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please pick a category first'**
+  String get transactionSelectCategoryRequired;
 }
 
 class _AppLocalizationsDelegate
