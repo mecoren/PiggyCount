@@ -228,3 +228,20 @@
 3. **整卡逐帧重绘** —— 卡片整体在做 `Transform` 位移，长表单（周期账单十几个字段）每帧重绘一遍。给卡片套 `RepaintBoundary`，位移只重新合成这一层，不再重绘。
 
 **验收**：`test/widgets/form_sheet_shell_test.dart` 十三例，新增「下拉后上滑：抽屉跟手收回、字段内容一动不动、收回到底后上滑才交给内容滚动」。
+
+#### 同日追加：抽公共件 + 列表型选择器也接下拉关闭
+
+1. **抽公共件**。下拉机制原先整块长在 `PiggyFormSheet` 里（`_PiggyFormSheetState` + `_PullPinnedScrollPhysics`），选择器要用就得复制一份 —— 拆成 `lib/widgets/ui/sheet_drag.dart`：
+   - `PiggySheetDragScope`：套在卡片外面的作用域（整卡手势 + `RepaintBoundary` + `Transform` + 跟手位移 + 判定 / 收尾），`PiggyFormSheet` 与选择器入口共用；
+   - `PiggySheetDragContent`：套在内容滚动区外面，把 `overscroll` 折算成位移，并**注入内容区物理**（链 `ClampingScrollPhysics` + 钉顶装饰器，实例只建一次 —— `Scrollable` 靠 `physics != oldPhysics` 决定要不要重建 `ScrollPosition`）；作用域不存在时原样返回，等于原生行为；
+   - `_PullPinnedScrollPhysics`：从「继承 `ClampingScrollPhysics`」改成**纯装饰器**（继承 `ScrollPhysics`，只在钉住时 override 边界条件，其余全交给父链），这样接在谁的物理链上都行。
+   重构后 `PiggyFormSheet` 变回 `StatelessWidget`，行为不变（原有十三例全绿）。
+2. **选择器按内容类型开**。`showPiggyPickerSheet` 新增 `dragToDismiss`：
+   - 开了就 `enableDrag: false` + 把 builder 结果包进 `PiggySheetDragScope`（`onDismiss` 与顶栏 X 同语义：`Navigator.pop`）；`PiggyPickerSheet` 侧把内容区包进 `PiggySheetDragContent`，**作用域在不在由外壳自己探测**，所以外壳不用多一个开关参数；
+   - 只给**内容是可滚动列表 / 网格**的 7 处开：币种 / 分类（选择器 + 筛选）/ 1~28 日 `/` 筛选-账户 / 动作菜单 / 标签列表（标签选择器顺带从手写 `showModalBottomSheet` 收回统一入口）；
+   - **滚轮型一律不开**（`CupertinoPicker`：日期 / 时间 / 通用 / 年份范围、账户 `AccountPicker` 也是滚轮）：钉顶物理会把滚轮手势抢走；内容不可滚动的动作菜单 / 日历 likewise 不开 —— 整卡本来就能被模态抽屉自身拖走，开了只白丢遮挡层淡出。
+   - ⚠️ 账户选择器 `AccountPicker` 名字像列表、实现是 `CupertinoPicker` —— 典型坑，白名单守门就是为了挡它。
+
+**代价**：开启的这 7 处内容区物理统一 Clamping（`OverscrollNotification` 的前提），iOS 上列表不再回弹 —— 与表单抽屉字段区同口径。
+
+**验收**：新增 `test/widgets/picker_sheet_drag_test.dart` 六例，其中「白名单守门」用例扫 `lib/**` 源码里所有 `dragToDismiss: true`（跳过注释行）与代码内白名单逐一比对，防止顺手给滚轮型开上。

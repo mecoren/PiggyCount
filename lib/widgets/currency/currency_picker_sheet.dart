@@ -23,6 +23,8 @@ Future<String?> showCurrencyPickerSheet(
   final current = selected.toUpperCase();
   return showPiggyPickerSheet<String>(
     context,
+    // 内容是可滚动列表：列表滚到顶后继续下拉也能收抽屉。
+    dragToDismiss: true,
     builder: (bctx) {
       String query = '';
       final sheetTitle = title ?? AppLocalizations.of(bctx).baseCurrencyLabel;

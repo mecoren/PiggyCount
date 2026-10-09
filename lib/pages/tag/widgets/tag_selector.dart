@@ -29,11 +29,12 @@ class TagSelector extends ConsumerStatefulWidget {
     BuildContext context, {
     List<int> selectedTagIds = const [],
   }) async {
-    return await showModalBottomSheet<List<int>>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => TagSelector(
+    // 统一走选择器外壳入口（原来手写 `showModalBottomSheet`，白底参数与外壳重复）。
+    // 内容是可滚动标签列表：列表滚到顶后继续下拉也能收抽屉。
+    return await showPiggyPickerSheet<List<int>>(
+      context,
+      dragToDismiss: true,
+      builder: (_) => TagSelector(
         selectedTagIds: selectedTagIds,
       ),
     );
@@ -71,8 +72,7 @@ class _TagSelectorState extends ConsumerState<TagSelector> {
     final recentTagsAsync =
         ref.watch(recentTagsForCurrentLedgerProvider).unwrapPrevious();
     final canCreateTag = ref.watch(canCreateTagForCurrentLedgerProvider);
-    final visibleTagIds =
-        allTagsAsync.value?.map((tag) => tag.id).toSet();
+    final visibleTagIds = allTagsAsync.value?.map((tag) => tag.id).toSet();
 
     return PiggyPickerSheet(
       title: l10n.tagSelectTitle,

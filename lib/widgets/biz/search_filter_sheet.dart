@@ -161,6 +161,8 @@ class _SearchFilterSheetState extends ConsumerState<_SearchFilterSheet> {
     final primaryColor = ref.read(primaryColorProvider);
     final picked = await showPiggyPickerSheet<Account>(
       context,
+      // 内容是可滚动账户列表：滚到顶后继续下拉也能收抽屉。
+      dragToDismiss: true,
       builder: (sheetCtx) => PiggyPickerSheet(
         title: l10n.searchAccountFilter,
         maxHeight: MediaQuery.sizeOf(sheetCtx).height * 0.7,

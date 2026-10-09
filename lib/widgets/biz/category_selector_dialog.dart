@@ -151,6 +151,8 @@ Future<Category?> showCategorySelectorSheet(
   final l10n = AppLocalizations.of(context);
   return showPiggyPickerSheet<Category>(
     context,
+    // 内容是可滚动分类列表：滚到顶后继续下拉也能收抽屉。
+    dragToDismiss: true,
     builder: (sheetCtx) => PiggyPickerSheet(
       title: title ??
           (type == 'income' ? l10n.categoryIncome : l10n.categoryExpense),

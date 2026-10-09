@@ -45,6 +45,8 @@ Future<void> showPiggyOptionSheet<T>({
   final primary = highlightColor ?? PiggyTokens.primary(context);
   return showPiggyPickerSheet<void>(
     context,
+    // 内容是选项列表 + 滚动兜底（大字号 / 显示缩放下会滚）：滚到顶后继续下拉也能收抽屉。
+    dragToDismiss: true,
     builder: (ctx) => PiggyPickerSheet(
       title: title,
       // 选项在系统大字号 / 显示缩放下可能超出卡片高度，

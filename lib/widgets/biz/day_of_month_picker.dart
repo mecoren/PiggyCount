@@ -23,6 +23,8 @@ Future<int?> showDayOfMonthPickerSheet(
   final primary = PiggyTokens.primary(context);
   return showPiggyPickerSheet<int>(
     context,
+    // 内容是数字网格 + 滚动兜底（大字号下会滚）：滚到顶后继续下拉也能收抽屉。
+    dragToDismiss: true,
     builder: (_) => PiggyPickerSheet(
       title: title,
       subtitle: hint,

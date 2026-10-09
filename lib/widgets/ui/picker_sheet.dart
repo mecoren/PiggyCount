@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'sheet_card.dart';
+import 'sheet_drag.dart';
 import 'sheet_header.dart';
 
 /// 选择器底部抽屉的统一外壳（滚轮 / 列表 / 网格 / 单选 / 动作菜单共用）。
@@ -74,7 +75,11 @@ class PiggyPickerSheet extends StatelessWidget {
         //「non-zero flex but incoming height constraints are unbounded」；
         // 包一层 loose flex 后拿到的剩余高度有界，同时不会拉伸滚轮这类
         // 自然高度的子项（tight 才会撑满）。
-        Flexible(child: child),
+        //
+        // 再套 [PiggySheetDragContent]：内容区手势在手势竞技场里归内部滚动区，
+        // 模态抽屉自身的拖拽够不到它；开了 `dragToDismiss` 时由它把内容区
+        // overscroll 折算成整卡下拉（没开时原样返回，行为与原生一字不差）。
+        Flexible(child: PiggySheetDragContent(child: child)),
         const SizedBox(height: 12),
       ],
     );
@@ -93,9 +98,23 @@ class PiggyPickerSheet extends StatelessWidget {
 }
 
 /// 以统一外壳弹出选择器抽屉：[T] 是抽屉返回值类型。
+///
+/// [dragToDismiss]：是否给这张卡片接上**整卡下拉关闭**（[PiggySheetDragScope]）。
+///
+/// **只给「内容是可滚动列表 / 网格」的选择器开**：内容区手势在手势竞技场里归它，
+/// 模态抽屉自身的拖拽够不到内容区（列表滚到顶后继续下拉什么也不会发生）。
+///
+/// ⚠️ **滚轮型必须保持 false**（`WheelPicker` / `WheelDatePicker` / `WheelTimePicker`
+/// / 年份范围等 `CupertinoPicker`）：竖直拖拽本身就是滚轮的操作，钉顶物理会把
+/// 滚轮手势抢走，选值直接变难用。同理内容不可滚动的动作菜单 / 日历也**不必开** ——
+/// 它们整卡本来就能被模态抽屉自身拖拽，开了只会白丢拖拽时的遮挡层淡出。
+///
+/// 开了之后内容区物理统一为 Clamping（顶部继续下拉必须发 `OverscrollNotification`，
+/// 回弹物理不发），iOS 上这些列表不再回弹，与表单抽屉字段区同口径。
 Future<T?> showPiggyPickerSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
+  bool dragToDismiss = false,
 }) {
   // 弹层底透明，卡片本身由 [PiggyPickerSheet] 内的 Material 绘制四角圆角
   return showModalBottomSheet<T>(
@@ -103,6 +122,14 @@ Future<T?> showPiggyPickerSheet<T>(
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: builder,
+    // 开了整卡下拉就关掉模态抽屉自身的拖拽：两套驱动会抢同一张卡。
+    enableDrag: !dragToDismiss,
+    builder: dragToDismiss
+        ? (sheetContext) => PiggySheetDragScope(
+              // 与顶栏 X 同语义（`PiggySheetHeader` 的 onCancel 默认就是它）。
+              onDismiss: () => Navigator.of(sheetContext).pop(),
+              child: builder(sheetContext),
+            )
+        : builder,
   );
 }
