@@ -117,6 +117,10 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
       onCancel: () => Navigator.of(context).pop(),
       onConfirm: _saveBudget,
       confirmBusy: _isLoading,
+      // 删除（仅编辑态）：固定在「取消｜保存」之上的常驻层，与其它编辑抽屉一致。
+      deleteLabel: _isEditing ? l10n.commonDelete : null,
+      onDelete: _deleteBudget,
+      deleteBusy: _isLoading,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -172,33 +176,6 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
           // 预算周期跟随「账本设置 → 每月起始日」(period-start-date 设计 D5),
           // 不再提供 per-budget 起始日;独立覆盖若有需求走二期新列。
           //
-          // 删除（仅编辑态）：卸载在「取消｜保存」之上，error 色描边按钮
-          if (_isEditing) ...[
-            const SizedBox(height: PiggyDimens.p24),
-            SizedBox(
-              width: double.infinity,
-              height: PiggySheetActions.kHeight,
-              child: OutlinedButton(
-                onPressed: _isLoading ? null : _deleteBudget,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: PiggyTokens.error(context),
-                  // 边框与前景同源（Colors.red 不跟随暗黑 / 主题错误色）
-                  side:
-                      BorderSide(color: PiggyTokens.error(context), width: 1.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                  ),
-                ),
-                child: Text(
-                  l10n.commonDelete,
-                  style: const TextStyle(
-                    fontSize: PiggyTextTokens.fs16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );

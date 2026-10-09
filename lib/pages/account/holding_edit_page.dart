@@ -129,6 +129,10 @@ class _HoldingEditPageState extends ConsumerState<HoldingEditPage> {
       onCancel: () => Navigator.of(context).pop(),
       onConfirm: _saving ? null : _save,
       confirmBusy: _saving,
+      // 删除（仅编辑态）：固定在「取消｜保存」之上的常驻层，与其它编辑抽屉一致。
+      deleteLabel: _isEdit ? l10n.commonDelete : null,
+      onDelete: _confirmDelete,
+      deleteBusy: _saving,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -248,27 +252,6 @@ class _HoldingEditPageState extends ConsumerState<HoldingEditPage> {
               label: l10n.holdingFieldNote,
             ),
           ),
-          // 删除渲染在表单末尾、「取消｜保存」之上（与预算 / 周期账单同款）
-          if (_isEdit) ...[
-            const SizedBox(height: PiggyDimens.p24),
-            SizedBox(
-              width: double.infinity,
-              height: PiggySheetActions.kHeight,
-              child: OutlinedButton.icon(
-                onPressed: _saving ? null : _confirmDelete,
-                icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                label: Text(l10n.commonDelete),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: PiggyTokens.error(context),
-                  // 边框与前景同源（裸 Colors.red 不跟暗黑 / 主题错误色）
-                  side: BorderSide(color: PiggyTokens.error(context), width: 1.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );

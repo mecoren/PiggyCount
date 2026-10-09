@@ -312,6 +312,10 @@ class _SavingsGoalEditPageState extends ConsumerState<SavingsGoalEditPage> {
       onCancel: () => Navigator.of(context).pop(),
       onConfirm: _saving ? null : _save,
       confirmBusy: _saving,
+      // 删除（仅编辑态）：固定在「取消｜保存」之上的常驻层，与其它编辑抽屉一致。
+      deleteLabel: _isEdit ? l10n.commonDelete : null,
+      onDelete: _confirmDelete,
+      deleteBusy: _saving,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -450,20 +454,6 @@ class _SavingsGoalEditPageState extends ConsumerState<SavingsGoalEditPage> {
               label: l10n.savingsGoalNote,
             ),
           ),
-
-          if (_isEdit) ...[
-            SizedBox(height: PiggyDimens.p16.scaled(context, ref)),
-            Center(
-              child: TextButton.icon(
-                onPressed: _saving ? null : _confirmDelete,
-                icon: const Icon(Icons.delete_outline, size: 18),
-                style: TextButton.styleFrom(
-                  foregroundColor: PiggyTokens.error(context),
-                ),
-                label: Text(l10n.commonDelete),
-              ),
-            ),
-          ],
         ],
       ),
     );

@@ -179,6 +179,11 @@ class _RecurringTransactionEditPageState
       // validate + _hasAttemptedSave(抽屉形态下按钮常在,错误提示才看得见)
       onConfirm: _saving ? null : _saveRecurringTransaction,
       confirmBusy: _saving,
+      // 删除（仅编辑态）：固定在「取消｜保存」之上的常驻层 —— 本表单字段多，
+      // 放在字段区末尾会被推到屏幕外（用户以为没有删除入口）。
+      deleteLabel: _isEditing ? l10n.commonDelete : null,
+      onDelete: _deleteRecurringTransaction,
+      deleteBusy: _saving,
       child: Form(
         key: _formKey,
         child: Column(
@@ -280,34 +285,6 @@ class _RecurringTransactionEditPageState
 
             // v47 模板级自定义字段
             _buildTemplateCustomFields(l10n),
-
-            // 删除（仅编辑态）：卸载在「取消｜保存」之上，error 色描边按钮
-            // （与预算 / 账户编辑抽屉同款）
-            if (_isEditing) ...[
-              const SizedBox(height: PiggyDimens.p24),
-              SizedBox(
-                width: double.infinity,
-                height: PiggySheetActions.kHeight,
-                child: OutlinedButton(
-                  onPressed: _saving ? null : _deleteRecurringTransaction,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: PiggyTokens.error(context),
-                    side: BorderSide(
-                        color: PiggyTokens.error(context), width: 1.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                    ),
-                  ),
-                  child: Text(
-                    l10n.commonDelete,
-                    style: const TextStyle(
-                      fontSize: PiggyTextTokens.fs16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ],
         ),
       ),

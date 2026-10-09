@@ -64,3 +64,56 @@ class PiggySheetActions extends StatelessWidget {
     );
   }
 }
+
+/// 编辑态表单抽屉底部的「删除」按钮：全宽、error 色描边、与 [PiggySheetActions]
+/// 同高（48）。
+///
+/// 位置口径：**固定在卡片底部**、排在「取消｜保存」之上，不随字段区滚动 ——
+/// 长表单（周期账单有十几个字段）也必须一眼看得到删除入口，不必滚到底。
+///
+/// 一般不用手写本组件：[PiggyFormSheet] 的 `deleteLabel` / `onDelete` 会在正确
+/// 位置渲染它。手写会漏掉「不滚动」这一条（此前四个编辑抽屉都把它塞在字段区
+/// 末尾，长表单里删除入口被推到屏幕外）。
+class PiggySheetDeleteButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onDelete;
+
+  /// 删除进行中：转圈并禁用（防连点）。
+  final bool busy;
+
+  const PiggySheetDeleteButton({
+    super.key,
+    required this.label,
+    required this.onDelete,
+    this.busy = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final error = PiggyTokens.error(context);
+    return SizedBox(
+      width: double.infinity,
+      height: PiggySheetActions.kHeight,
+      child: OutlinedButton(
+        onPressed: busy ? null : onDelete,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: error,
+          // 边框与前景同源（不写死 Colors.red：不跟随暗黑与主题错误色）。
+          side: BorderSide(color: error, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+          ),
+        ),
+        child: busy
+            ? PiggySpinner(size: 18, color: error)
+            : Text(
+                label,
+                style: const TextStyle(
+                  fontSize: PiggyTextTokens.fs16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+      ),
+    );
+  }
+}

@@ -16,6 +16,7 @@ import 'sheet_card.dart';
 /// ┌ 字段区（限高 + 内部滚动，下拉到顶继续拉 = 关闭）┐
 /// └ Flexible(loose) → SingleChildScrollView ┘
 /// p20
+/// [可选]「删除」（PiggySheetDeleteButton，**固定层**，仅编辑态：传 deleteLabel）
 /// 「取消｜保存」（PiggySheetActions，**固定在卡片底部**）
 /// ```
 ///
@@ -41,6 +42,9 @@ class PiggyFormSheet extends StatelessWidget {
     required this.onCancel,
     required this.onConfirm,
     this.confirmBusy = false,
+    this.deleteLabel,
+    this.onDelete,
+    this.deleteBusy = false,
   });
 
   /// 卡片标题（居中展示，常驻不滚动）。
@@ -64,8 +68,22 @@ class PiggyFormSheet extends StatelessWidget {
   /// 确认进行中：确认键转圈并与取消键一并禁用（防连点）。
   final bool confirmBusy;
 
+  /// 编辑态抽屉的底部「删除」按钮文案；`null` = 不渲染（新建态就该传 null）。
+  ///
+  /// ⚠️ 删除按钮**不要**塞进 [child]（字段区）：字段区是滚动区，周期账单那种
+  /// 十几个字段的长表单会把删除入口推到屏幕外，用户以为「没有删除」。交给本参数
+  /// 渲染，它会固定在「取消｜保存」之上、不随滚动移动。
+  final String? deleteLabel;
+
+  /// 删除回调；与 [deleteLabel] 成对使用。
+  final VoidCallback? onDelete;
+
+  /// 删除进行中：删除键转圈并禁用。
+  final bool deleteBusy;
+
   @override
   Widget build(BuildContext context) {
+    final deleteLabel = this.deleteLabel;
     return PiggySheetCard(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -106,6 +124,20 @@ class PiggyFormSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: PiggyDimens.p20),
+          // 删除（仅编辑态）：固定层，与下方「取消｜保存」同层不滚动。
+          if (deleteLabel != null) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: PiggyDimens.p20,
+              ),
+              child: PiggySheetDeleteButton(
+                label: deleteLabel,
+                onDelete: onDelete,
+                busy: deleteBusy,
+              ),
+            ),
+            const SizedBox(height: PiggyDimens.p12),
+          ],
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: PiggyDimens.p20,
