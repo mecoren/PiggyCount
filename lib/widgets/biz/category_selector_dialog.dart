@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/category_utils.dart';
 import '../category_icon.dart';
 import '../ui/dialog.dart';
+import '../ui/picker_sheet.dart';
 import '../ui/piggy_input.dart';
 import '../ui/piggy_spinner.dart';
 
@@ -59,19 +60,11 @@ Future<Category?> showCategorySelector(
   );
 }
 
-class CategorySelectorDialog extends ConsumerStatefulWidget {
-  final String type;
-  final int? currentCategoryId;
-  final bool includeParentCategories;
-  final List<String>? excludeNames;
-  final List<int>? excludeIds;
-  final bool showTransactionCount;
-  final int? ledgerId;
-  final bool expandChildrenByDefault;
-  final bool onlyTopLevel;
-  final CategoryFilterCallback? categoryFilter;
-  final String? title;
-
+/// 分类选择器的**居中弹窗**外壳（[AppDialogShell] + 内容区 [CategorySelectorContent]）。
+///
+/// 搜索页的筛选走底部抽屉（[showCategorySelectorSheet]）；预算 / 周期交易 /
+/// 分类迁移 / 批量改分类等入口保持居中弹窗形态。
+class CategorySelectorDialog extends StatelessWidget {
   const CategorySelectorDialog({
     super.key,
     required this.type,
@@ -87,13 +80,165 @@ class CategorySelectorDialog extends ConsumerStatefulWidget {
     this.title,
   });
 
+  final String type;
+  final int? currentCategoryId;
+  final bool includeParentCategories;
+  final List<String>? excludeNames;
+  final List<int>? excludeIds;
+  final bool showTransactionCount;
+  final int? ledgerId;
+  final bool expandChildrenByDefault;
+  final bool onlyTopLevel;
+  final CategoryFilterCallback? categoryFilter;
+  final String? title;
+
   @override
-  ConsumerState<CategorySelectorDialog> createState() =>
-      _CategorySelectorDialogState();
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    // 外壳走项目弹窗语言（[AppDialogShell]）：居中标题 + 项目卡片 + 底部分栏
+    // 动作区，标题固定不随列表滚动。
+    return AppDialogShell(
+      wide: true,
+      title: Text(
+        title ??
+            (type == 'income' ? l10n.categoryIncome : l10n.categoryExpense),
+      ),
+      content: CategorySelectorContent(
+        type: type,
+        onSelected: (category) => Navigator.pop(context, category),
+        currentCategoryId: currentCategoryId,
+        includeParentCategories: includeParentCategories,
+        excludeNames: excludeNames,
+        excludeIds: excludeIds,
+        showTransactionCount: showTransactionCount,
+        ledgerId: ledgerId,
+        expandChildrenByDefault: expandChildrenByDefault,
+        onlyTopLevel: onlyTopLevel,
+        categoryFilter: categoryFilter,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.commonCancel),
+        ),
+      ],
+    );
+  }
 }
 
-class _CategorySelectorDialogState
-    extends ConsumerState<CategorySelectorDialog> {
+/// 以底部抽屉弹出「可搜索的分类树」，返回选中分类（`null` = 取消）。
+///
+/// 与 [showCategorySelector]（居中弹窗）共用内容区 [CategorySelectorContent]，
+/// 只换外壳 —— 搜索页的账户 / 标签 / 币种筛选都是底部抽屉，分类筛选对齐同一手感。
+///
+/// [heightFactor] 决定内容区高度占屏幕比例（列表需确定高度才能滚动）。
+Future<Category?> showCategorySelectorSheet(
+  BuildContext context, {
+  required String type,
+  int? currentCategoryId,
+  bool includeParentCategories = false,
+  List<String>? excludeNames,
+  List<int>? excludeIds,
+  bool showTransactionCount = false,
+  int? ledgerId,
+  bool expandChildrenByDefault = false,
+  bool onlyTopLevel = false,
+  CategoryFilterCallback? categoryFilter,
+  String? title,
+  double heightFactor = 0.6,
+}) {
+  final l10n = AppLocalizations.of(context);
+  return showPiggyPickerSheet<Category>(
+    context,
+    builder: (sheetCtx) => PiggyPickerSheet(
+      title: title ??
+          (type == 'income' ? l10n.categoryIncome : l10n.categoryExpense),
+      // 顶栏之外还要装下固定高度的内容区，限高给足余量（超出时内容自身滚动）。
+      maxHeight: MediaQuery.sizeOf(sheetCtx).height * (heightFactor + 0.2),
+      child: CategorySelectorContent(
+        type: type,
+        onSelected: (category) => Navigator.of(sheetCtx).pop(category),
+        currentCategoryId: currentCategoryId,
+        includeParentCategories: includeParentCategories,
+        excludeNames: excludeNames,
+        excludeIds: excludeIds,
+        showTransactionCount: showTransactionCount,
+        ledgerId: ledgerId,
+        expandChildrenByDefault: expandChildrenByDefault,
+        onlyTopLevel: onlyTopLevel,
+        categoryFilter: categoryFilter,
+        heightFactor: heightFactor,
+      ),
+    ),
+  );
+}
+
+/// 分类选择器的**内容区**（搜索框 + 分类树列表），不含外壳。
+///
+/// 两个外壳共用这一份：搜索页筛选抽屉（[PiggyPickerSheet]）与
+/// [CategorySelectorDialog]（[AppDialogShell]）—— 数据加载、搜索过滤、
+/// 分组展开只有一份实现，差别只在最外层容器。
+class CategorySelectorContent extends ConsumerStatefulWidget {
+  const CategorySelectorContent({
+    super.key,
+    required this.type,
+    required this.onSelected,
+    this.currentCategoryId,
+    this.includeParentCategories = false,
+    this.excludeNames,
+    this.excludeIds,
+    this.showTransactionCount = false,
+    this.ledgerId,
+    this.expandChildrenByDefault = false,
+    this.onlyTopLevel = false,
+    this.categoryFilter,
+    this.heightFactor = 0.6,
+  });
+
+  /// 分类类型：'income'、'expense' 或 'all'。
+  final String type;
+
+  /// 用户点选分类（一级 / 二级）时回调；由外壳负责收尾（pop 出返回值）。
+  final ValueChanged<Category> onSelected;
+
+  /// 当前选中的分类ID（用于高亮显示）。
+  final int? currentCategoryId;
+
+  /// 是否包含有子分类的一级分类。
+  final bool includeParentCategories;
+
+  /// 排除的分类名称列表。
+  final List<String>? excludeNames;
+
+  /// 排除的分类ID列表。
+  final List<int>? excludeIds;
+
+  /// 是否显示交易笔数。
+  final bool showTransactionCount;
+
+  /// 显示笔数时需要的账本ID。
+  final int? ledgerId;
+
+  /// 是否默认展开二级分类。
+  final bool expandChildrenByDefault;
+
+  /// 是否只显示一级分类。
+  final bool onlyTopLevel;
+
+  /// 自定义过滤器，决定分类是否可选。
+  final CategoryFilterCallback? categoryFilter;
+
+  /// 内容区高度占屏幕高度比例（列表需要确定高度才能滚动）。
+  final double heightFactor;
+
+  @override
+  ConsumerState<CategorySelectorContent> createState() =>
+      _CategorySelectorContentState();
+}
+
+class _CategorySelectorContentState
+    extends ConsumerState<CategorySelectorContent> {
   final TextEditingController _searchController = TextEditingController();
   String _searchText = '';
   Map<int, int> _transactionCounts = {};
@@ -293,114 +438,94 @@ class _CategorySelectorDialogState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    // 外壳走项目弹窗语言（[AppDialogShell]）：居中标题 + 项目卡片 + 底部分栏
-    // 动作区，标题固定不随列表滚动；不再自绘 Dialog(shape radiusXl) + 自绘顶部栏。
-    return AppDialogShell(
-      wide: true,
-      title: Text(
-        widget.title ??
-            (widget.type == 'income'
-                ? l10n.categoryIncome
-                : l10n.categoryExpense),
-      ),
-      content: SizedBox(
-        // 列表需要确定高度才能滚动：给内容区一屏内的固定高度，Expanded 才能分到空间
-        height: MediaQuery.sizeOf(context).height * 0.6,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 搜索框：选择器内搜索行走项目轻量内嵌输入口径（piggyFilledDecoration）
-            TextField(
-              controller: _searchController,
-              decoration: piggyFilledDecoration(
-                context,
-                hint: l10n.searchCategoryHint,
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: PiggyTokens.iconTertiary(context),
-                ),
-                suffixIcon: _searchText.isNotEmpty
-                    ? IconButton(
-                        onPressed: () => _searchController.clear(),
-                        icon: Icon(
-                          Icons.clear,
-                          color: PiggyTokens.iconTertiary(context),
-                        ),
-                      )
-                    : null,
+    return SizedBox(
+      // 列表需要确定高度才能滚动：给内容区一屏内的固定高度，Expanded 才能分到空间
+      height: MediaQuery.sizeOf(context).height * widget.heightFactor,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 搜索框：选择器内搜索行走项目轻量内嵌输入口径（piggyFilledDecoration）
+          TextField(
+            controller: _searchController,
+            decoration: piggyFilledDecoration(
+              context,
+              hint: l10n.searchCategoryHint,
+              prefixIcon: Icon(
+                Icons.search,
+                color: PiggyTokens.iconTertiary(context),
               ),
+              suffixIcon: _searchText.isNotEmpty
+                  ? IconButton(
+                      onPressed: () => _searchController.clear(),
+                      icon: Icon(
+                        Icons.clear,
+                        color: PiggyTokens.iconTertiary(context),
+                      ),
+                    )
+                  : null,
             ),
-            const SizedBox(height: PiggyDimens.p8),
-            // 分类列表
-            Expanded(
-              child: FutureBuilder<List<Category>>(
-                future: _loadAllCategories(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return Center(
-                      child: PiggySpinner(
-                        size: 36,
-                        color: PiggyTokens.primary(context),
-                      ),
-                    );
-                  }
-
-                  final groups = _buildCategoryGroups(snapshot.data!);
-
-                  if (groups.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.search_off,
-                            size: 64,
-                            color: PiggyTokens.textTertiary(context),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _searchText.isNotEmpty
-                                ? l10n.searchNoResults
-                                : l10n.categoryEmpty,
-                            style: PiggyTextTokens.body(context)
-                                .copyWith(
-                                    color: PiggyTokens.textTertiary(context)),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    itemCount: groups.length,
-                    itemBuilder: (context, index) {
-                      final group = groups[index];
-                      return _CategoryGroupItem(
-                        group: group,
-                        currentCategoryId: widget.currentCategoryId,
-                        showTransactionCount: widget.showTransactionCount,
-                        transactionCounts: _transactionCounts,
-                        primaryColor: ref.watch(primaryColorProvider),
-                        onCategorySelected: (category) {
-                          Navigator.pop(context, category);
-                        },
-                      );
-                    },
+          ),
+          const SizedBox(height: PiggyDimens.p8),
+          // 分类列表
+          Expanded(
+            child: FutureBuilder<List<Category>>(
+              future: _loadAllCategories(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return Center(
+                    child: PiggySpinner(
+                      size: 36,
+                      color: PiggyTokens.primary(context),
+                    ),
                   );
-                },
-              ),
+                }
+
+                final groups = _buildCategoryGroups(snapshot.data!);
+
+                if (groups.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 64,
+                          color: PiggyTokens.textTertiary(context),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _searchText.isNotEmpty
+                              ? l10n.searchNoResults
+                              : l10n.categoryEmpty,
+                          style: PiggyTextTokens.body(context).copyWith(
+                              color: PiggyTokens.textTertiary(context)),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  itemCount: groups.length,
+                  itemBuilder: (context, index) {
+                    final group = groups[index];
+                    return _CategoryGroupItem(
+                      group: group,
+                      currentCategoryId: widget.currentCategoryId,
+                      showTransactionCount: widget.showTransactionCount,
+                      transactionCounts: _transactionCounts,
+                      primaryColor: ref.watch(primaryColorProvider),
+                      onCategorySelected: widget.onSelected,
+                    );
+                  },
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(l10n.commonCancel),
-        ),
-      ],
     );
   }
 }

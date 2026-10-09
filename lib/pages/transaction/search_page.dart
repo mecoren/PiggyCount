@@ -7,6 +7,7 @@ import '../../providers.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/custom_field_providers.dart';
 import '../../widgets/biz/biz.dart';
+import '../../widgets/biz/search_filter_sheet.dart';
 import '../../widgets/ui/ui.dart';
 import '../../styles/tokens.dart';
 import '../../utils/category_utils.dart';
@@ -14,8 +15,6 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/transaction_edit_utils.dart';
 import '../../utils/transaction_search_filter.dart';
 import '../../utils/ui_scale_extensions.dart';
-import '../../widgets/currency/currency_picker_sheet.dart';
-import '../tag/widgets/tag_selector.dart';
 import '../../widgets/category_icon.dart';
 import 'category_detail_page.dart';
 
@@ -292,420 +291,39 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     });
   }
 
-  /// 账户筛选选择器：返回选中账户；null = 用户取消（清除账户条件走 ListTile
-  /// 尾部的 X，与分类筛选同一交互）。
-  Future<Account?> _showAccountFilterPicker(
-    BuildContext context,
-    int? currentId,
-  ) async {
-    final accounts = await ref.read(repositoryProvider).getAllAccounts();
-    if (!context.mounted) return null;
-    final l10n = AppLocalizations.of(context);
-    final primaryColor = ref.read(primaryColorProvider);
-    return showPiggyPickerSheet<Account>(
+  /// 显示筛选抽屉：把当前各维度取值交给 [showSearchFilterSheet]，确认后
+  /// 整包回写并重新搜索（取消 / 下滑关闭保持原条件）。
+  Future<void> _showFilterSheet() async {
+    final result = await showSearchFilterSheet(
       context,
-      builder: (sheetCtx) => PiggyPickerSheet(
-        title: l10n.searchAccountFilter,
-        maxHeight: MediaQuery.sizeOf(sheetCtx).height * 0.7,
-        // shrinkWrap：账户少时抽屉紧凑，超出 maxHeight 时内部滚动。
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(horizontal: PiggyDimens.p16),
-          children: [
-            for (final account in accounts)
-              PiggyOptionRow(
-                title: account.name,
-                isSelected: account.id == currentId,
-                primaryColor: primaryColor,
-                onTap: () => Navigator.pop(sheetCtx, account),
-              ),
-          ],
-        ),
+      initial: SearchFilterValues(
+        minAmount: _minAmount,
+        maxAmount: _maxAmount,
+        startDate: _startDate,
+        endDate: _endDate,
+        category: _selectedCategory,
+        account: _selectedAccount,
+        tagIds: _selectedTagIds,
+        hasAttachment: _hasAttachmentFilter,
+        currency: _selectedCurrency,
       ),
     );
-  }
+    if (result == null || !mounted) return;
 
-  /// 显示筛选弹窗
-  Future<void> _showFilterDialog() async {
-    final l10n = AppLocalizations.of(context);
-    double? tempMinAmount = _minAmount;
-    double? tempMaxAmount = _maxAmount;
-    DateTime? tempStartDate = _startDate;
-    DateTime? tempEndDate = _endDate;
-    Category? tempSelectedCategory = _selectedCategory;
-    Account? tempSelectedAccount = _selectedAccount;
-    Set<int> tempTagIds = {..._selectedTagIds};
-    bool? tempHasAttachment = _hasAttachmentFilter;
-    String? tempCurrency = _selectedCurrency;
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return AppDialogShell(
-            wide: true,
-            title: Text(l10n.searchFilterTitle),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    title: Text(l10n.searchCategoryFilter),
-                    subtitle: Text(tempSelectedCategory != null
-                        ? CategoryUtils.getDisplayName(
-                            tempSelectedCategory!.name, context)
-                        : l10n.searchNotSet),
-                    onTap: () async {
-                      final selected = await showCategorySelector(
-                        context,
-                        type: 'all',
-                        currentCategoryId: tempSelectedCategory?.id,
-                        includeParentCategories: true,
-                        expandChildrenByDefault: true,
-                        title: l10n.searchCategoryFilter,
-                      );
-                      if (selected != null) {
-                        setState(() {
-                          tempSelectedCategory = selected;
-                        });
-                      }
-                    },
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (tempSelectedCategory != null)
-                          IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            tooltip: l10n.tooltipClear,
-                            onPressed: () {
-                              setState(() {
-                                tempSelectedCategory = null;
-                              });
-                            },
-                          ),
-                        const Icon(Icons.chevron_right, size: 24),
-                      ],
-                    ),
-                  ),
-                  // 账户筛选
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    title: Text(l10n.searchAccountFilter),
-                    subtitle: Text(
-                        tempSelectedAccount?.name ?? l10n.searchNotSet),
-                    onTap: () async {
-                      final picked = await _showAccountFilterPicker(
-                          context, tempSelectedAccount?.id);
-                      if (picked != null) {
-                        setState(() {
-                          tempSelectedAccount = picked;
-                        });
-                      }
-                    },
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (tempSelectedAccount != null)
-                          IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            tooltip: l10n.tooltipClear,
-                            onPressed: () {
-                              setState(() {
-                                tempSelectedAccount = null;
-                              });
-                            },
-                          ),
-                        const Icon(Icons.chevron_right, size: 24),
-                      ],
-                    ),
-                  ),
-                  // 标签筛选（多选，命中所选任一标签即算匹配）
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    title: Text(l10n.searchTagFilter),
-                    subtitle: Text(tempTagIds.isEmpty
-                        ? l10n.searchNotSet
-                        : l10n.searchTagFilterSelected(tempTagIds.length)),
-                    onTap: () async {
-                      final picked = await TagSelector.show(
-                        context,
-                        selectedTagIds: tempTagIds.toList(),
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          tempTagIds = picked.toSet();
-                        });
-                      }
-                    },
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (tempTagIds.isNotEmpty)
-                          IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            tooltip: l10n.tooltipClear,
-                            onPressed: () {
-                              setState(() {
-                                tempTagIds = <int>{};
-                              });
-                            },
-                          ),
-                        const Icon(Icons.chevron_right, size: 24),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // 附件筛选
-                  Text(l10n.searchAttachmentFilter,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      ChoiceChip(
-                        label: Text(l10n.searchAttachmentAny),
-                        selected: tempHasAttachment == null,
-                        onSelected: (_) =>
-                            setState(() => tempHasAttachment = null),
-                      ),
-                      ChoiceChip(
-                        label: Text(l10n.searchAttachmentHas),
-                        selected: tempHasAttachment == true,
-                        onSelected: (_) =>
-                            setState(() => tempHasAttachment = true),
-                      ),
-                      ChoiceChip(
-                        label: Text(l10n.searchAttachmentNone),
-                        selected: tempHasAttachment == false,
-                        onSelected: (_) =>
-                            setState(() => tempHasAttachment = false),
-                      ),
-                    ],
-                  ),
-                  // 币种筛选
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    title: Text(l10n.searchCurrencyFilter),
-                    subtitle: Text(tempCurrency ?? l10n.searchNotSet),
-                    onTap: () async {
-                      final picked = await showCurrencyPickerSheet(
-                        context,
-                        selected:
-                            tempCurrency ?? ref.read(baseCurrencyProvider),
-                        primaryColor: ref.read(primaryColorProvider),
-                        title: l10n.searchCurrencyFilter,
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          tempCurrency = picked.toUpperCase();
-                        });
-                      }
-                    },
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (tempCurrency != null)
-                          IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            tooltip: l10n.tooltipClear,
-                            onPressed: () {
-                              setState(() {
-                                tempCurrency = null;
-                              });
-                            },
-                          ),
-                        const Icon(Icons.chevron_right, size: 24),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // 金额筛选
-                  Text(l10n.searchAmountFilter,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          decoration: piggyOutlinedDecoration(
-                            context,
-                            label: l10n.searchMinAmount,
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          controller: TextEditingController(
-                              text: tempMinAmount?.toString() ?? ''),
-                          onChanged: (value) {
-                            tempMinAmount = double.tryParse(value);
-                          },
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8),
-                        child: Text('~'),
-                      ),
-                      Expanded(
-                        child: TextField(
-                          decoration: piggyOutlinedDecoration(
-                            context,
-                            label: l10n.searchMaxAmount,
-                          ),
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          controller: TextEditingController(
-                              text: tempMaxAmount?.toString() ?? ''),
-                          onChanged: (value) {
-                            tempMaxAmount = double.tryParse(value);
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // 时间筛选
-                  Text(l10n.searchDateFilter,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    title: Text(l10n.searchStartDate),
-                    subtitle: Text(tempStartDate != null
-                        ? '${tempStartDate!.year}-${tempStartDate!.month.toString().padLeft(2, '0')}-${tempStartDate!.day.toString().padLeft(2, '0')}'
-                        : l10n.searchNotSet),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (tempStartDate != null)
-                          IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            tooltip: l10n.tooltipClear,
-                            onPressed: () {
-                              setState(() {
-                                tempStartDate = null;
-                              });
-                            },
-                          ),
-                        IconButton(
-                          icon: const Icon(Icons.calendar_today, size: 20),
-                          tooltip: l10n.searchStartDate,
-                          onPressed: () async {
-                            final date = await showWheelDatePicker(
-                              context,
-                              initial: tempStartDate ?? DateTime.now(),
-                              mode: WheelDatePickerMode.ymd,
-                              minDate: DateTime(2000),
-                              maxDate: DateTime.now(),
-                            );
-                            if (date != null) {
-                              setState(() {
-                                tempStartDate = date;
-                              });
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    title: Text(l10n.searchEndDate),
-                    subtitle: Text(tempEndDate != null
-                        ? '${tempEndDate!.year}-${tempEndDate!.month.toString().padLeft(2, '0')}-${tempEndDate!.day.toString().padLeft(2, '0')}'
-                        : l10n.searchNotSet),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (tempEndDate != null)
-                          IconButton(
-                            icon: const Icon(Icons.clear, size: 20),
-                            tooltip: l10n.tooltipClear,
-                            onPressed: () {
-                              setState(() {
-                                tempEndDate = null;
-                              });
-                            },
-                          ),
-                        IconButton(
-                          icon: const Icon(Icons.calendar_today, size: 20),
-                          tooltip: l10n.searchEndDate,
-                          onPressed: () async {
-                            final date = await showWheelDatePicker(
-                              context,
-                              initial: tempEndDate ?? DateTime.now(),
-                              mode: WheelDatePickerMode.ymd,
-                              minDate: DateTime(2000),
-                              maxDate: DateTime.now(),
-                            );
-                            if (date != null) {
-                              setState(() {
-                                tempEndDate = date;
-                              });
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: Text(l10n.commonCancel),
-              ),
-              TextButton(
-                onPressed: () {
-                  // 清空筛选
-                  setState(() {
-                    tempMinAmount = null;
-                    tempMaxAmount = null;
-                    tempStartDate = null;
-                    tempEndDate = null;
-                    tempSelectedCategory = null;
-                    tempSelectedAccount = null;
-                    tempTagIds = <int>{};
-                    tempHasAttachment = null;
-                    tempCurrency = null;
-                  });
-                },
-                child: Text(l10n.searchClearFilter),
-              ),
-              TextButton(
-                onPressed: () {
-                  this.setState(() {
-                    _minAmount = tempMinAmount;
-                    _maxAmount = tempMaxAmount;
-                    _startDate = tempStartDate;
-                    _endDate = tempEndDate;
-                    _selectedCategory = tempSelectedCategory;
-                    _selectedAccount = tempSelectedAccount;
-                    _selectedTagIds
-                      ..clear()
-                      ..addAll(tempTagIds);
-                    _hasAttachmentFilter = tempHasAttachment;
-                    _selectedCurrency = tempCurrency;
-                  });
-                  unawaited(_refreshSearch());
-                  Navigator.pop(context);
-                },
-                child: Text(l10n.commonConfirm),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+    setState(() {
+      _minAmount = result.minAmount;
+      _maxAmount = result.maxAmount;
+      _startDate = result.startDate;
+      _endDate = result.endDate;
+      _selectedCategory = result.category;
+      _selectedAccount = result.account;
+      _selectedTagIds
+        ..clear()
+        ..addAll(result.tagIds);
+      _hasAttachmentFilter = result.hasAttachment;
+      _selectedCurrency = result.currency;
+    });
+    unawaited(_refreshSearch());
   }
 
   /// 批量操作完成后刷新
@@ -912,7 +530,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     required double amount,
     required Color color,
   }) {
-    final style = TextStyle(fontSize: PiggyTextTokens.fs12.scaled(context, ref), color: color);
+    final style = TextStyle(
+        fontSize: PiggyTextTokens.fs12.scaled(context, ref), color: color);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1039,7 +658,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         const SizedBox(width: 8),
                         // 筛选按钮
                         IconButton(
-                          onPressed: _showFilterDialog,
+                          onPressed: _showFilterSheet,
                           icon: Icon(
                             Icons.filter_list,
                             color: _hasAnyFilter
@@ -1323,7 +942,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                       icon:
                                           const Icon(Icons.edit_note, size: 16),
                                       label: Text(l10n.searchBatchSetNote,
-                                          style: const TextStyle(fontSize: PiggyTextTokens.fs13)),
+                                          style: const TextStyle(
+                                              fontSize: PiggyTextTokens.fs13)),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor:
                                             ref.watch(primaryColorProvider),
@@ -1343,7 +963,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                           const Icon(Icons.category, size: 16),
                                       label: Text(
                                           l10n.searchBatchChangeCategory,
-                                          style: const TextStyle(fontSize: PiggyTextTokens.fs13)),
+                                          style: const TextStyle(
+                                              fontSize: PiggyTextTokens.fs13)),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor:
                                             ref.watch(primaryColorProvider),
@@ -1362,7 +983,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                       icon: const Icon(Icons.delete_outline,
                                           size: 16),
                                       label: Text(l10n.commonDelete,
-                                          style: const TextStyle(fontSize: PiggyTextTokens.fs13)),
+                                          style: const TextStyle(
+                                              fontSize: PiggyTextTokens.fs13)),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor:
                                             PiggyTokens.error(context),
@@ -1419,10 +1041,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                   transactionId: item.t.id,
                                   currencyCode: item.t.currencyCode,
                                   nativeAmount: item.t.nativeAmount,
-                                  customFieldBadges:
-                                      customBadgeTexts.isNotEmpty
-                                          ? customBadgeTexts
-                                          : null,
+                                  customFieldBadges: customBadgeTexts.isNotEmpty
+                                      ? customBadgeTexts
+                                      : null,
                                   isExpense: isExpense,
                                   hide: hide,
                                   happenedAt: item.t.happenedAt,
