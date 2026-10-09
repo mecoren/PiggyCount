@@ -594,20 +594,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           children: [
             // 搜索框区域
             if (!_isBatchMode) // 批量模式下隐藏搜索框
-              Container(
+              Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                decoration: BoxDecoration(
-                  color: PiggyTokens.surfaceElevated(context),
-                  boxShadow: PiggyTokens.isDark(context)
-                      ? null
-                      : [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                ),
+                // 不铺白底也不投影：顶部搜索区与标题栏同色（页面派生的主题淡色），
+                // 整页只剩「一种背景色 + 浮在其中的描边搜索框」，不再出现
+                // 标题栏淡色 / 搜索区白色 / 页面淡色三层色块。
                 child: Column(
                   children: [
                     // 搜索框和筛选按钮
@@ -620,11 +611,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             valueListenable: _searchController,
                             builder: (context, value, _) => TextField(
                               controller: _searchController,
-                              decoration: InputDecoration(
-                                hintText:
-                                    AppLocalizations.of(context).searchHint,
+                              // 顶部搜索框直接浮在页面底色上 → 走描边式
+                              //（filled 底色与页面同色系会让边界消失）。
+                              decoration: piggyOutlinedDecoration(
+                                context,
+                                hint: AppLocalizations.of(context).searchHint,
                                 prefixIcon: Icon(Icons.search,
-                                    color: PiggyTokens.textTertiary(context)),
+                                    color: PiggyTokens.iconTertiary(context)),
                                 suffixIcon: value.text.isNotEmpty
                                     ? IconButton(
                                         onPressed: () {
@@ -633,24 +626,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                         tooltip: AppLocalizations.of(context)
                                             .tooltipClear,
                                         icon: Icon(Icons.clear,
-                                            color: PiggyTokens.textTertiary(
+                                            color: PiggyTokens.iconTertiary(
                                                 context)),
                                       )
                                     : null,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(
-                                      PiggyDimens.radiusLg),
-                                  borderSide: BorderSide(
-                                      color: PiggyTokens.divider(context)),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(
-                                      PiggyDimens.radiusLg),
-                                  borderSide: BorderSide(
-                                      color: PiggyTokens.primary(context)),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 12, horizontal: 16),
                               ),
                             ),
                           ),
@@ -661,9 +640,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           onPressed: _showFilterSheet,
                           icon: Icon(
                             Icons.filter_list,
+                            // 未筛选时用次级图标色（与搜索框内的图标同档），
+                            // 不再用近乎纯黑的 iconPrimary；
+                            // 有筛选条件时切主色，与页内主色元素一致。
                             color: _hasAnyFilter
                                 ? ref.watch(primaryColorProvider)
-                                : PiggyTokens.iconPrimary(context),
+                                : PiggyTokens.iconSecondary(context),
                           ),
                           tooltip: l10n.searchFilterTitle,
                         ),
@@ -832,11 +814,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     children: [
                       // 批量操作入口 - 仅在非批量模式且有搜索结果时显示
                       if (!_isBatchMode)
-                        Container(
+                        Padding(
+                          // 结果汇总条不铺白底：与列表同底色，页面只有一种背景色
                           padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                          decoration: BoxDecoration(
-                            color: PiggyTokens.surfaceElevated(context),
-                          ),
                           child: Row(
                             children: [
                               Text(
@@ -890,11 +870,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         ),
                       // 批量模式下的操作栏
                       if (_isBatchMode)
-                        Container(
+                        Padding(
+                          // 批量操作栏同样不铺白底（与列表/页面同底色）
                           padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                          decoration: BoxDecoration(
-                            color: PiggyTokens.surfaceElevated(context),
-                          ),
                           child: Column(
                             children: [
                               // 全选按钮
