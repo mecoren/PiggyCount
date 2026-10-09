@@ -3113,20 +3113,32 @@ class TransactionsSyncManager implements SyncService {
   /// 包内 CloudSyncManager.download 自带完整性校验，但 App 层全部直连
   /// provider.storage.download，该防线是死代码；此前的对位物是只记
   /// warning 的软告警 —— CDN 陈旧副本/网关截断的脏数据可以无声流入
-  /// 破坏性恢复。现收口为与 manager 层（M14）同语义的硬校验：
+  /// 破坏性恢复。现收口为与 manager 层（M14）同语义的硬校验。
   ///
-  /// 基准取**快照内嵌指纹**（'contentFingerprint'，与内容同生共死，
-  /// 比 metadata 指纹更权威）而非 metadata —— 软告警时代的错位误报
-  /// （M2 指纹算法升级后 metadata 残留旧值）在换基准后不复存在：
-  /// 内嵌值不存在「算法迁移错位」问题，只有「内容确实变了」一种解释。
+  /// 基准取**快照内嵌指纹**（'contentFingerprint'）：它与 metadata 指纹不同，
+  /// **内嵌值随内容同批写出**，不存在「metadata 残留旧值」那类错位。
   ///
-  /// - 内容非 JSON / 无内嵌指纹（v6 前旧快照）→ 退回 metadata 交叉
-  ///   软告警（旧算法迁移窗口兼容，维持 M4 的既有取舍）；
-  /// - 内嵌指纹 ≠ 内容重算指纹 → **重下重试一次**（并发竞态自愈：
-  ///   「下载内容」与「内容本身」都是同一请求的产物，此处重验的是
-  ///   内容自洽性而非跨请求比对，重下应对 CDN/网关陈旧副本窗口）；
-  ///   仍不一致 → 硬失败抛 [fcs.CloudStorageException]（完整性校验
-  ///   失败，恢复中止）—— 破坏性恢复吃进坏数据比阻断更危险。
+  /// ⚠️ **但「内嵌 vs 重算」只有在上传侧与本机用同一版指纹算法时才可比**
+  /// （[kSnapshotFormatVersion]：v10 删共享账本残留键、v11 加持仓、v12 加
+  /// 储蓄目标，每一版都改变了指纹值）。旧版 App 写出的快照里，内嵌值是**旧
+  /// 算法**算的，本机重算永远不等 —— 那不是「内容变了」，是「口径不同」。
+  /// 曾经的实现对此也硬失败，于是「旧格式 + 两端内容确实不同」的账本陷入死
+  /// 循环：启动检查只提示不动手（different 不入候选），用户点进冲突框无论
+  /// 「对比合并」还是「下载到本地」都报「内嵌指纹与内容不匹配」，而**重下永远
+  /// 救不了算法漂移**（2026-10-10 真机复现，默认账本两入口全废）。
+  /// 注意这与 [shouldRepublishSnapshotForFormatUpgrade] 的一键重传是两个场景：
+  /// 那条路径要求「按当前算法重算 == 本地指纹」（两端内容完全一致，纯算法差异），
+  /// 内容真的不同时不会触发，只能靠本闸门放行合并/下载。
+  ///
+  /// - 内容非 JSON → 硬失败（连快照都不是，无可救）；
+  /// - 无内嵌指纹（v6 前旧快照）→ metadata 交叉软告警（M4 既有取舍）；
+  /// - 有内嵌指纹且 `version == 当前格式` → **可比**：不一致时
+  ///   **重下重试一次**（并发竞态自愈：应对 CDN/网关陈旧副本窗口），
+  ///   仍不一致 → 硬失败抛 [fcs.CloudStorageException]（破坏性恢复吃进
+  ///   坏数据比阻断更危险）；
+  /// - 有内嵌指纹但版本不同/缺失/更新（旧端或更新端写入）→ **不可比**：
+  ///   转软告警（基准换成 metadata↔内嵌，两者同批同算法写出，不一致才可疑），
+  ///   不阻断恢复 —— 否则旧格式快照永远进不了本机。
   Future<String> _verifyDownloadedSnapshotIntegrity({
     required fcs.CloudProvider provider,
     required String path,
@@ -3142,8 +3154,25 @@ class TransactionsSyncManager implements SyncService {
           '云端数据完整性校验失败（内容不是合法 JSON 快照）: $path');
     }
     if (embeddedFp != null && embeddedFp.isNotEmpty) {
-      if (contentFp == embeddedFp) {
+      // 可比性前置：内嵌值由上传侧那一版算法算出，只有同版才谈得上「相等」。
+      final comparable = probe.version == kSnapshotFormatVersion;
+      if (comparable && contentFp == embeddedFp) {
         logger.debug('CloudSync', '完整性终审通过(内嵌指纹): $path');
+        return plainJson;
+      }
+      if (!comparable) {
+        // 算法口径不同（旧格式快照 / 未知版本）→ 不能据此判内容损坏。
+        // **绝不硬失败**：那会让这类账本的下载与对比合并永久不可用。
+        logger.warning(
+            'CloudSync',
+            '完整性终审跳过：云端快照版本(${probe.version})≠本机格式($kSnapshotFormatVersion)，'
+            '内嵌指纹由另一版算法算出、不可比对，转软告警继续: $path');
+        await _warnIfRemoteFingerprintMismatch(
+          provider: provider,
+          path: path,
+          plainJson: plainJson,
+          embeddedFp: embeddedFp,
+        );
         return plainJson;
       }
       // 陈旧副本窗口：重下一次再验（对齐 core manager M14 的竞态重试）
@@ -3182,13 +3211,19 @@ class TransactionsSyncManager implements SyncService {
 
   /// M4：下载内容与元数据指纹交叉自检（软告警版，不阻断恢复）。
   ///
-  /// P1-5 后本方法只服务「无内嵌指纹的旧快照」—— 新快照走
-  /// [_verifyDownloadedSnapshotIntegrity] 的硬闸门。旧算法元数据错位
-  /// 硬失败会把「一次性 outOfSync」恶化成「恢复被阻断」，维持软告警。
+  /// 两个调用方，基准不同：
+  /// - **无内嵌指纹的旧快照**（不传 [embeddedFp]）→ 基准＝内容按当前算法重算。
+  ///   旧算法 metadata 必然可能错位，硬失败会把「一次性 outOfSync」恶化成
+  ///   「恢复被阻断」，维持软告警。
+  /// - **版本不同、内嵌指纹不可比**的快照（传 [embeddedFp]）→ 基准换成内嵌值：
+  ///   它与 metadata 指纹**同批、同算法**写出，二者一致即自洽，不一致才可疑
+  ///  （CDN 陈旧副本 / 半写）。此时拿当前算法重算去比旧 metadata 只会恒告警，
+  ///   那是噪声不是检查。
   Future<void> _warnIfRemoteFingerprintMismatch({
     required fcs.CloudProvider provider,
     required String path,
     required String plainJson,
+    String? embeddedFp,
   }) async {
     try {
       final meta = await provider.storage.getMetadata(path: path);
@@ -3196,18 +3231,19 @@ class TransactionsSyncManager implements SyncService {
       if (raw == null || raw.isEmpty) return;
       final remoteFp = _normalizeFingerprintMeta(raw);
       // P4：解析+指纹重算移入后台 isolate（旧快照旁路，语义不变）
-      final contentFp =
-          (await _fingerprintSnapshotInIsolate(plainJson)).contentFp;
-      if (contentFp == null) {
+      final baseline =
+          embeddedFp ?? (await _fingerprintSnapshotInIsolate(plainJson)).contentFp;
+      final hasEmbedded = embeddedFp != null && embeddedFp.isNotEmpty;
+      if (baseline == null || baseline.isEmpty) {
         logger.warning(
             'CloudSync', '完整性自检：下载内容不是 JSON 对象(path=$path)，请留意数据完整性');
         return;
       }
-      if (contentFp != remoteFp) {
+      if (baseline != remoteFp) {
         logger.warning(
             'CloudSync',
             '完整性自检：云端快照指纹不一致(path=$path) '
-                'metadata=$remoteFp content=$contentFp。'
+                'metadata=$remoteFp ${hasEmbedded ? 'embedded' : 'content'}=$baseline。'
                 '可能为 CDN 陈旧副本或旧算法元数据；恢复继续执行');
       }
     } catch (e) {

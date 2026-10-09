@@ -2,17 +2,23 @@
 //
 // 硬校验链路（_verifyDownloadedSnapshotIntegrity）：
 // - 内容非 JSON → 硬失败（CloudStorageException）；
-// - 内嵌指纹与内容重算指纹一致 → 放行；
+// - 内嵌指纹与内容重算指纹一致（且**快照 version == 当前格式**）→ 放行；
 // - 不一致 → 重下一次 → 自愈采用新内容；仍不一致 → 硬失败（破坏性
 //   恢复吃进坏数据比阻断更危险）；
-// - 旧快照（无内嵌指纹）→ 退回 metadata 软告警路径，不阻断（M2 指纹
-//   算法升级迁移窗口的既有兼容取舍）。
+// - 无内嵌指纹（v6 前旧快照）→ 退回 metadata 软告警路径，不阻断；
+// - 快照 version ≠ 当前格式（旧端/更新端写入）→ 内嵌指纹是**另一版算法**
+//   算出来的、不可比对 → 转软告警不阻断（2026-10-10 修复的死循环：旧格式
+//   + 两端内容确实不同时，「下载到本地」「对比合并」两入口都报内嵌指纹
+//   不匹配，而重下救不了算法漂移 → 该类账本永久不可同步）。
 //
-// 测试走 downloadAndRestoreToCurrentLedger 公共入口（真实内存库 +
-// fake provider），不 mock 校验函数本身 —— 验证的是接线与端到端语义。
+// 测试走 downloadAndRestoreToCurrentLedger / downloadAndPreview 公共入口
+// （真实内存库 + fake provider），不 mock 校验函数本身 —— 验证的是接线与
+// 端到端语义。
 import 'dart:convert';
 
 import 'package:piggycount/cloud/sync_fingerprint.dart';
+import 'package:piggycount/cloud/transactions_json.dart'
+    show kSnapshotFormatVersion;
 import 'package:piggycount/cloud/transactions_sync_manager.dart';
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
@@ -106,12 +112,17 @@ class _ScriptedStorage implements fcs.CloudStorageService {
 }
 
 /// 构造带自洽内嵌指纹的快照（同 exportTransactionsJson 的写入形态）。
+///
+/// [version] 默认**当前格式** —— 只有上传侧与本机同版算法时「内嵌 vs 重算」
+/// 才可比；传旧版本（或 null 表示缺键）即进入「不可比对」分支，内嵌值可以
+/// 故意写成旧算法口径（见下方案例）。
 String _snapshotWithTx({
   required int ledgerId,
   required String note,
+  int? version = kSnapshotFormatVersion,
 }) {
   final payload = <String, dynamic>{
-    'version': 9,
+    if (version != null) 'version': version,
     'exportedAt': '2026-09-09T00:00:00Z',
     'ledgerId': ledgerId,
     'ledgerName': 'test',
@@ -135,6 +146,15 @@ String _snapshotWithTx({
   };
   payload['contentFingerprint'] = contentFingerprintFromMap(payload);
   return jsonEncode(payload);
+}
+
+/// 旧格式快照：内嵌指纹按**旧版算法**写出（与当前算法重算值必然不等）。
+String _legacySnapshot({required int ledgerId, required String note}) {
+  final map = jsonDecode(
+    _snapshotWithTx(ledgerId: ledgerId, note: note, version: 9),
+  ) as Map<String, dynamic>;
+  map['contentFingerprint'] = 'legacy-algorithm-fingerprint';
+  return jsonEncode(map);
 }
 
 void main() {
@@ -254,6 +274,39 @@ void main() {
       expect(result.inserted, 1, reason: '无内嵌指纹的老快照必须保持可恢复'
           '（M2 指纹算法升级的迁移窗口兼容）');
     });
+
+    test('旧格式快照（version < 当前格式）→ 内嵌指纹不可比对，放行恢复', () async {
+      await seedLedger(1);
+      // 真机复刻：云端是旧版 App 写的 v9 快照，内嵌指纹由当时那版算法算出。
+      // v10/v11/v12 都改过指纹算法值 —— 拿当前算法重算必然不等，而这与
+      // 「内容损坏」无关。
+      final storage = _ScriptedStorage([
+        _legacySnapshot(ledgerId: 1, note: 'v9-cloud'),
+      ]);
+      final tsm = buildTsm(storage);
+
+      final result = await tsm.downloadAndRestoreToCurrentLedger(ledgerId: 1);
+
+      expect(result.inserted, 1,
+          reason: '硬失败会让这类账本的「下载到本地」永久不可用');
+      expect(storage.downloadCallCount, 1,
+          reason: '不可比对时不该白白重下一次 —— 算法漂移重下多少次都一样');
+    });
+
+    test('快照缺 version 键但含内嵌指纹 → 同样按不可比对处理，放行', () async {
+      await seedLedger(1);
+      final snap = _snapshotWithTx(ledgerId: 1, note: 'no-version', version: null);
+      final map = jsonDecode(snap) as Map<String, dynamic>;
+      map['contentFingerprint'] = 'unknown-algorithm-fingerprint';
+
+      final storage = _ScriptedStorage([jsonEncode(map)]);
+      final tsm = buildTsm(storage);
+
+      final result = await tsm.downloadAndRestoreToCurrentLedger(ledgerId: 1);
+
+      expect(result.inserted, 1);
+      expect(storage.downloadCallCount, 1);
+    });
   });
 
   group('P1-5: downloadAndPreview 完整性终审', () {
@@ -270,6 +323,21 @@ void main() {
       final result = await tsm.downloadAndPreview(ledgerId: 1);
       expect(result, isNotNull, reason: '重下自愈后预览正常可用');
       expect(storage.downloadCallCount, 2);
+    });
+
+    test('旧格式快照（不可比对）→ 预览链路也放行（修「对比合并」永久报不一致）',
+        () async {
+      await seedLedger(1);
+      final storage = _ScriptedStorage([
+        _legacySnapshot(ledgerId: 1, note: 'v9-preview'),
+      ]);
+      final tsm = buildTsm(storage);
+
+      final result = await tsm.downloadAndPreview(ledgerId: 1);
+
+      expect(result, isNotNull,
+          reason: '冲突框里「对比合并」走的就是预览链路，阻断等于把用户的出路全堵死');
+      expect(storage.downloadCallCount, 1);
     });
   });
 }
