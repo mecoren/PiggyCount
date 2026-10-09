@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/pages/settings/changelog_data.dart';
 import 'package:piggycount/pages/settings/changelog_page.dart';
+import 'package:piggycount/widgets/biz/settings_widgets.dart';
 
 void main() {
   setUp(() {
@@ -29,8 +30,18 @@ void main() {
 
     final v010 = kChangelogVersions.first;
     expect(find.text('v${v010.version}'), findsOneWidget);
-    // 副标题含发布日期
-    expect(find.textContaining(v010.date), findsOneWidget);
+    // 副标题含发布日期。断言收在「最新版本卡片」内：同一天可以发多个版本，
+    // 全列表 `find.textContaining(date)` 会命中多条（0.1.2 / 0.1.3 同为 2026-10-10）。
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text('v${v010.version}'),
+          matching: find.byType(SettingsCard),
+        ),
+        matching: find.textContaining(v010.date),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('v${v010.version}'));
     await tester.pumpAndSettle();

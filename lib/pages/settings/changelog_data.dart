@@ -40,6 +40,37 @@ class ChangelogVersion {
 /// 全部版本，最新在前
 const kChangelogVersions = <ChangelogVersion>[
   ChangelogVersion(
+    version: '0.1.3',
+    date: '2026-10-10',
+    summary: '修复旧格式云端快照卡死「下载 / 对比合并」与账本切换不生效，新增可关闭的防截屏保护。',
+    sections: [
+      ChangelogSection(
+        icon: Icons.cloud_sync_outlined,
+        title: '云同步修复',
+        items: [
+          '修复云端快照格式版本不一致时，下载到本地 / 对比合并永久报「指纹不匹配」的问题',
+          '旧格式云端快照改为告警放行，不再反复重新下载',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.account_balance_wallet_outlined,
+        title: '账本修复',
+        items: [
+          '新设备导入云端账本后，当次即可切换到该账本，不再需要重启应用',
+          '删除最后一个账本后当前账本立即归零，不再残留无效账本',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.security_outlined,
+        title: '安全与隐私',
+        items: [
+          'Android 新增「防截屏保护」开关（默认开启），需要投屏或远程调试时可关闭',
+          '关闭防截屏保护需通过危险确认，避免误操作',
+        ],
+      ),
+    ],
+  ),
+  ChangelogVersion(
     version: '0.1.2',
     date: '2026-10-10',
     summary: '修复正式包签名不稳定导致的覆盖安装失败，后续版本可正常覆盖升级。',
