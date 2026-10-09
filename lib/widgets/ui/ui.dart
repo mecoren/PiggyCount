@@ -16,6 +16,8 @@ export 'wheel_date_picker.dart';
 export 'picker_sheet.dart';
 export 'sheet_card.dart';
 export 'sheet_header.dart';
+export 'segmented_control.dart';
+export 'value_row.dart';
 export 'wheel_time_picker.dart';
 export 'wheel_picker.dart';
 

@@ -230,7 +230,6 @@ class _SearchFilterSheetState extends ConsumerState<_SearchFilterSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final primaryColor = ref.watch(primaryColorProvider);
 
     return PiggyFormSheet(
       title: l10n.searchFilterTitle,
@@ -263,9 +262,10 @@ class _SearchFilterSheetState extends ConsumerState<_SearchFilterSheet> {
             ),
           ),
           const SizedBox(height: PiggyDimens.p4),
-          _FilterRow(
+          PiggyValueRow(
             icon: Icons.category_outlined,
             label: l10n.searchCategoryFilter,
+            placeholder: l10n.searchNotSet,
             value: _category == null
                 ? null
                 : CategoryUtils.getDisplayName(_category!.name, context),
@@ -275,18 +275,20 @@ class _SearchFilterSheetState extends ConsumerState<_SearchFilterSheet> {
                 : () => setState(() => _category = null),
           ),
           const SizedBox(height: PiggyDimens.p8),
-          _FilterRow(
+          PiggyValueRow(
             icon: Icons.account_balance_wallet_outlined,
             label: l10n.searchAccountFilter,
+            placeholder: l10n.searchNotSet,
             value: _account?.name,
             onTap: _pickAccount,
             onClear:
                 _account == null ? null : () => setState(() => _account = null),
           ),
           const SizedBox(height: PiggyDimens.p8),
-          _FilterRow(
+          PiggyValueRow(
             icon: Icons.sell_outlined,
             label: l10n.searchTagFilter,
+            placeholder: l10n.searchNotSet,
             value: _tagIds.isEmpty
                 ? null
                 : l10n.searchTagFilterSelected(_tagIds.length),
@@ -296,9 +298,10 @@ class _SearchFilterSheetState extends ConsumerState<_SearchFilterSheet> {
                 : () => setState(() => _tagIds = <int>{}),
           ),
           const SizedBox(height: PiggyDimens.p8),
-          _FilterRow(
+          PiggyValueRow(
             icon: Icons.currency_exchange_outlined,
             label: l10n.searchCurrencyFilter,
+            placeholder: l10n.searchNotSet,
             value: _currency,
             onTap: _pickCurrency,
             onClear: _currency == null
@@ -306,9 +309,10 @@ class _SearchFilterSheetState extends ConsumerState<_SearchFilterSheet> {
                 : () => setState(() => _currency = null),
           ),
           const SizedBox(height: PiggyDimens.p8),
-          _FilterRow(
+          PiggyValueRow(
             icon: Icons.event_outlined,
             label: l10n.searchStartDate,
+            placeholder: l10n.searchNotSet,
             value: _startDate == null ? null : _formatDate(_startDate!),
             onTap: () => _pickDate(isStart: true),
             onClear: _startDate == null
@@ -316,16 +320,17 @@ class _SearchFilterSheetState extends ConsumerState<_SearchFilterSheet> {
                 : () => setState(() => _startDate = null),
           ),
           const SizedBox(height: PiggyDimens.p8),
-          _FilterRow(
+          PiggyValueRow(
             icon: Icons.event_outlined,
             label: l10n.searchEndDate,
+            placeholder: l10n.searchNotSet,
             value: _endDate == null ? null : _formatDate(_endDate!),
             onTap: () => _pickDate(isStart: false),
             onClear:
                 _endDate == null ? null : () => setState(() => _endDate = null),
           ),
           const SizedBox(height: PiggyDimens.p20),
-          _SectionLabel(l10n.searchAmountFilter),
+          PiggySectionLabel(l10n.searchAmountFilter),
           const SizedBox(height: PiggyDimens.p8),
           Row(
             children: [
@@ -366,232 +371,24 @@ class _SearchFilterSheetState extends ConsumerState<_SearchFilterSheet> {
             ],
           ),
           const SizedBox(height: PiggyDimens.p20),
-          _SectionLabel(l10n.searchAttachmentFilter),
+          PiggySectionLabel(l10n.searchAttachmentFilter),
           const SizedBox(height: PiggyDimens.p8),
-          _AttachmentSegmented(
-            value: _hasAttachment,
-            primaryColor: primaryColor,
+          PiggySegmentedControl<bool?>(
+            selected: _hasAttachment,
             onChanged: (value) => setState(() => _hasAttachment = value),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 分组小标题（金额 / 附件这两块没有独立行标题，单独起一节）。
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: PiggyTextTokens.label(context).copyWith(
-        fontWeight: FontWeight.w600,
-        color: PiggyTokens.textSecondary(context),
-      ),
-    );
-  }
-}
-
-/// 单个筛选维度行：图标 + 名称 + 当前值（未设置时显示占位文案）+ 尾部箭头。
-///
-/// [onClear] 非空时尾部多一个 X —— 只清本维度的值，与整体「清空筛选」分开。
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.value,
-    this.onClear,
-  });
-
-  final IconData icon;
-  final String label;
-
-  /// 当前值；null = 未设置。
-  final String? value;
-
-  final VoidCallback onTap;
-
-  /// 清空本维度；null = 无值可清（不显示清除键）。
-  final VoidCallback? onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final primaryColor = PiggyTokens.primary(context);
-    final hasValue = value != null;
-
-    return Material(
-      color: PiggyTokens.surfaceSecondary(context),
-      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: PiggyDimens.p12,
-            vertical: 12,
-          ),
-          child: Row(
-            children: [
-              Icon(icon, size: 20, color: PiggyTokens.iconSecondary(context)),
-              const SizedBox(width: PiggyDimens.p12),
-              // 标签按自身宽度占位（**不参与 flex**）：若包 Flexible，它会与值区
-              // 各分一半剩余空间，而标签用不完自己那份 —— 多出来的空间会被 Row
-              // 丢到末尾（start 对齐），尾部箭头就被推到行中间、贴不到最右。
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: PiggyTextTokens.body(context)
-                    .copyWith(color: PiggyTokens.textSecondary(context)),
+            options: [
+              PiggySegmentOption(value: null, label: l10n.searchAttachmentAny),
+              PiggySegmentOption(
+                value: true,
+                label: l10n.searchAttachmentHas,
               ),
-              const SizedBox(width: PiggyDimens.p8),
-              // Expanded 独享剩余空间：值右对齐到清除槽位左侧，箭头永远贴行右缘。
-              Expanded(
-                child: Text(
-                  hasValue ? value! : l10n.searchNotSet,
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: PiggyTextTokens.body(context).copyWith(
-                    color: hasValue
-                        ? primaryColor
-                        : PiggyTokens.textTertiary(context),
-                    fontWeight: hasValue ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                ),
-              ),
-              // 尾部只有一个固定槽位（贴行右缘）：未设置 = 进入选择的箭头；
-              // 已有值 = 就地清除键，**取代**箭头而不是与它并排 —— 并排会白白
-              // 吃掉一段宽度，把长值（如「退税退费」）挤到贴着图标。清除键取
-              // 警示色（error），与「值」的选中主色区分开：这是**移除**动作，
-              // 不是又一次「选择」。
-              SizedBox(
-                width: 32,
-                height: 32,
-                child: hasValue
-                    ? Semantics(
-                        button: true,
-                        label: l10n.tooltipClear,
-                        child: InkResponse(
-                          onTap: onClear,
-                          radius: 20,
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Icon(
-                              Icons.close,
-                              size: 20,
-                              color: PiggyTokens.error(context),
-                            ),
-                          ),
-                        ),
-                      )
-                    : Align(
-                        alignment: Alignment.centerRight,
-                        child: Icon(
-                          Icons.chevron_right,
-                          size: 20,
-                          color: PiggyTokens.iconTertiary(context),
-                        ),
-                      ),
+              PiggySegmentOption(
+                value: false,
+                label: l10n.searchAttachmentNone,
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 附件筛选分段控件：不限 / 有附件 / 无附件，三个等宽按钮。
-///
-/// 不用三个并排 ChoiceChip：Chip 自带留白且各自成块，占两行宽度后视觉碎片化；
-/// 分段控件与「自定义字段类型」选择器同一套语言（选中 = 主色描边 + 12% 底）。
-class _AttachmentSegmented extends StatelessWidget {
-  const _AttachmentSegmented({
-    required this.value,
-    required this.primaryColor,
-    required this.onChanged,
-  });
-
-  /// null = 不限，true = 有附件，false = 无附件。
-  final bool? value;
-  final Color primaryColor;
-  final ValueChanged<bool?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final options = <({bool? value, String label})>[
-      (value: null, label: l10n.searchAttachmentAny),
-      (value: true, label: l10n.searchAttachmentHas),
-      (value: false, label: l10n.searchAttachmentNone),
-    ];
-
-    return Row(
-      children: [
-        for (var i = 0; i < options.length; i++) ...[
-          if (i > 0) const SizedBox(width: PiggyDimens.p8),
-          Expanded(
-            child: _Segment(
-              label: options[i].label,
-              selected: value == options[i].value,
-              primaryColor: primaryColor,
-              onTap: () => onChanged(options[i].value),
-            ),
-          ),
         ],
-      ],
-    );
-  }
-}
-
-class _Segment extends StatelessWidget {
-  const _Segment({
-    required this.label,
-    required this.selected,
-    required this.primaryColor,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final Color primaryColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        height: 40,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? primaryColor.withValues(alpha: 0.12) : null,
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-          border: Border.all(
-            color: selected ? primaryColor : PiggyTokens.border(context),
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: PiggyTextTokens.fs13,
-            fontWeight: FontWeight.w600,
-            color: selected ? primaryColor : PiggyTokens.textSecondary(context),
-          ),
-        ),
       ),
     );
   }
