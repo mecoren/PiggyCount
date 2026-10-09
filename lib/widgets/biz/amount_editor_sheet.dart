@@ -98,6 +98,10 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   final int ledgerId;
   final int? editingTransactionId; // 编辑模式时的交易ID，用于显示已有附件
   final String transactionKind; // 'expense' / 'income' / 'transfer'，决定标记开关可见性
+
+  /// 是否**强制选择分类**：新建记账按项目口径必须选分类，未选时点「完成」会被
+  /// 拦下并提示。编辑存量无分类交易时必须传 false —— 否则会把历史数据逼着加分类。
+  final bool requireCategory;
   final bool initialExcludeFromStats; // 不计入收支，编辑模式回显
   final bool initialExcludeFromBudget; // 不计入预算，编辑模式回显
   // v30 编辑模式回显:该笔的原币种与折算快照(用于推隐含汇率,只改备注时
@@ -127,6 +131,7 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
     required this.ledgerId,
     this.editingTransactionId,
     this.transactionKind = 'expense',
+    this.requireCategory = false,
     this.initialExcludeFromStats = false,
     this.initialExcludeFromBudget = false,
     this.initialCurrencyCode,
@@ -1413,6 +1418,17 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                               if (isInCalcMode) {
                                 // 运算模式：点击等号计算结果
                                 applyEquals();
+                                return;
+                              }
+
+                              // 新建记账强制选分类：未选直接拦下并提示（分类位
+                              // 已不再预填，用户忘选是高频路径）。编辑存量无分类
+                              // 交易时 requireCategory=false，不拦。
+                              if (widget.requireCategory && _category == null) {
+                                showToast(
+                                    context,
+                                    AppLocalizations.of(context)
+                                        .transactionSelectCategoryRequired);
                                 return;
                               }
 

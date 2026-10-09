@@ -207,11 +207,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       } else {
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (!mounted || _autoOpened) return;
-          // 显式传入的分类优先于记忆：小组件点分类格 / 深链带 category 走前者。
-          final categoryId = widget.initialCategoryId ??
-              ref
-                  .read(quickEntryLastCategoryProvider(widget.initialKind))
-                  .value;
+          // 不再读「记忆上次分类」：只有显式传入的分类（小组件点分类格 / 深链带
+          // category）才自动开窗，否则等用户自己点分类。
+          final categoryId = widget.initialCategoryId;
           if (categoryId == null) return;
           final c = await _resolveCategoryById(categoryId);
           if (!mounted || c == null) return;
@@ -237,17 +235,16 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     if (!_quickInitialsResolved.add(kind)) return; // 每类型只解析一次
     final ledgerId = ref.read(currentLedgerIdProvider);
 
-    // 分类：只有初始类型才认显式传入的 initialCategoryId（它是"这一笔"的，
-    // 用户后来切到另一类型时不该继承）。
+    // 分类**不预填**：只认显式传入的 initialCategoryId（小组件点分类格 / 深链带
+    // category / 编辑既有交易），**不再读「记忆上次分类」** —— 记账时分类必须由
+    // 用户自己选，打开时分类位是「选择分类」占位（口径见 AGENTS.md）。
+    // explicitId 只给初始类型：它是"这一笔"的，切到另一类型不该继承。
     final explicitId =
         kind == widget.initialKind ? widget.initialCategoryId : null;
-    final categoryId = explicitId ??
-        ref.read(quickEntryLastCategoryProvider(kind)).value;
     Category? category;
-    if (categoryId != null) {
-      final c = await _resolveCategoryById(categoryId);
-      // provider 侧已校验记忆分类的存在性与账本归属；这里再核一次 kind，
-      // 防止用户切换类型后把另一类型的分类带过来。
+    if (explicitId != null) {
+      final c = await _resolveCategoryById(explicitId);
+      // 再核一次 kind，防止用户切换类型后把另一类型的分类带过来。
       if (c != null && c.kind == kind) category = c;
     }
 
@@ -549,6 +546,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       ledgerId: ledgerId,
       editingTransactionId: widget.editingTransactionId,
       transactionKind: kind,
+      // 新建必须选分类（分类位已不预填）；编辑存量交易不强制 —— 历史数据可能
+      // 本来就没有分类，不能逼用户补一个才能保存。
+      requireCategory: widget.editingTransactionId == null,
       initialExcludeFromStats: widget.initialExcludeFromStats,
       initialExcludeFromBudget: widget.initialExcludeFromBudget,
       initialCurrencyCode: widget.initialCurrencyCode,

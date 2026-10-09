@@ -350,26 +350,73 @@ void main() {
   }
 
   group('AC-R2 落点（TransactionEditorPage.quickMode）', () {
-    testWidgets('#1 快捷模式 + 记忆命中 → 不做任何点击就落在金额表单', (tester) async {
+    testWidgets('#1 快捷模式 → 直接落在金额表单，分类位不预填', (tester) async {
       await db.customStatement(
           "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
       final food = await repo.createCategory(name: '餐饮', kind: 'expense');
 
       await tester.pumpWidget(await pageHost(
         quickMode: true,
+        // 抽屉形态 = 「记一笔」的真实形态（直落金额表单）
+        renderAsBottomSheet: true,
         rememberedCategoryId: food,
       ));
       await tester.pumpAndSettle();
 
       expect(find.byType(AmountEditorSheet), findsOneWidget,
           reason: '跳过分类网格，直接出金额表单（R2 的核心预期）');
-      // 分类网格在模态表单**下面**仍在树里，所以必须限定在表单子树内断言
+      // 分类**不预填**：即使存在「记忆上次分类」，分类位也必须是占位。
+      // 分类网格在模态表单**下面**仍在树里，所以必须限定在表单子树内断言。
       expect(
         find.descendant(
             of: find.byType(AmountEditorSheet), matching: find.text('餐饮')),
-        findsOneWidget,
-        reason: '表单里的分类位必须显示记忆到的那个分类',
+        findsNothing,
+        reason: '分类必须由用户自己选，不得用记忆分类预填',
       );
+      expect(
+        find.descendant(
+            of: find.byType(AmountEditorSheet), matching: find.text('选择分类')),
+        findsOneWidget,
+        reason: '未选分类时分类位显示「选择分类」占位',
+      );
+
+      await drainLoggerTimer(tester);
+    });
+
+    testWidgets('新建未选分类 → 点「完成」被拦下并提示，不落库', (tester) async {
+      // 默认 800×600 下金额键盘的「完成」键会落到屏幕外（tap 命中不到），
+      // 这里只加高窗口让整块键盘可见 —— **不能改窄**（窄宽会让键盘键位溢出）。
+      await tester.binding.setSurfaceSize(const Size(800, 1000));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+      await db.customStatement(
+          "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+      await repo.createCategory(name: '餐饮', kind: 'expense');
+
+      await tester.pumpWidget(await pageHost(
+        quickMode: true,
+        rememberedCategoryId: null,
+        renderAsBottomSheet: true,
+      ));
+      await tester.pumpAndSettle();
+
+      // 输入金额后再点完成：金额合法，但分类没选 → 必须被拦
+      expect(
+        tester
+            .widget<AmountEditorSheet>(find.byType(AmountEditorSheet))
+            .requireCategory,
+        isTrue,
+        reason: '新建记账必须开启「强制选分类」',
+      );
+      await tester.tap(find.text('1'));
+      await tester.pumpAndSettle();
+      final l10n = AppLocalizations.of(
+          tester.element(find.byType(TransactionEditorPage)));
+      await tester.tap(find.text(l10n.commonFinish));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.transactionSelectCategoryRequired), findsOneWidget,
+          reason: '新建记账必须选分类：未选点完成要给提示而不是静默保存');
 
       await drainLoggerTimer(tester);
     });
@@ -492,9 +539,9 @@ void main() {
           reason: '分类界面要点击分类位才作为**子界面**弹出，不再默认铺开');
       expect(
         find.descendant(
-            of: find.byType(AmountEditorSheet), matching: find.text('餐饮')),
+            of: find.byType(AmountEditorSheet), matching: find.text('选择分类')),
         findsOneWidget,
-        reason: '记忆分类异步补进已渲染的表单',
+        reason: '分类不预填：分类位给「选择分类」占位，由用户自己选',
       );
 
       await drainLoggerTimer(tester);
@@ -532,7 +579,8 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(CategoryIconWidget));
+      // 分类不预填 → 分类位是「选择分类」占位，点它同样应弹出分类子界面
+      await tester.tap(find.text('选择分类'));
       await tester.pumpAndSettle();
 
       expect(find.byType(CategorySelector), findsWidgets, reason: '分类子界面已弹出');
