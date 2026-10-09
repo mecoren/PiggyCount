@@ -836,77 +836,87 @@ class _HomePageState extends ConsumerState<HomePage> {
                             ],
                           ),
                         ),
-                        // 右侧操作按钮
-                        if (aiEnabled)
-                          IconButton(
-                            tooltip: AppLocalizations.of(context).aiChatTitle,
-                            padding: const EdgeInsets.all(8),
-                            style: IconButton.styleFrom(
-                              // UI-03：视觉保持紧凑，但命中区恢复 ≥48×48
-                              //（无障碍 / 单手操作，shrinkWrap 下由
-                              // minimumSize 兜底热区）
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              minimumSize: const Size(48, 48),
-                            ),
-                            onPressed: () {
-                              _transactionListKey.currentState
-                                  ?.switchToStreamMode();
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => const AIChatPage(),
+                        // 右侧操作按钮：三个按钮成组为一个子节点，
+                        // 否则会被外层 spaceBetween 当成三个兄弟节点、
+                        // 与中间 logo 一起平均分配空隙，导致彼此被拉开。
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (aiEnabled)
+                              IconButton(
+                                tooltip:
+                                    AppLocalizations.of(context).aiChatTitle,
+                                padding: const EdgeInsets.all(8),
+                                style: IconButton.styleFrom(
+                                  // UI-03：视觉保持紧凑，但命中区恢复 ≥48×48
+                                  //（无障碍 / 单手操作，shrinkWrap 下由
+                                  // minimumSize 兜底热区）
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  minimumSize: const Size(48, 48),
                                 ),
-                              );
-                            },
-                            icon: Icon(
-                              Icons.auto_awesome_outlined,
-                              size: 20,
-                              color: Theme.of(context).iconTheme.color,
+                                onPressed: () {
+                                  _transactionListKey.currentState
+                                      ?.switchToStreamMode();
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const AIChatPage(),
+                                    ),
+                                  );
+                                },
+                                icon: Icon(
+                                  Icons.auto_awesome_outlined,
+                                  size: 20,
+                                  color: Theme.of(context).iconTheme.color,
+                                ),
+                              ),
+                            IconButton(
+                              tooltip:
+                                  AppLocalizations.of(context).calendarTitle,
+                              padding: const EdgeInsets.all(6),
+                              style: IconButton.styleFrom(
+                                // UI-03：同上，热区 ≥48×48
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                minimumSize: const Size(48, 48),
+                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const CalendarPage(),
+                                  ),
+                                );
+                              },
+                              icon: Icon(
+                                Icons.calendar_month_outlined,
+                                size: 20,
+                                color: Theme.of(context).iconTheme.color,
+                              ),
                             ),
-                          ),
-                        IconButton(
-                          tooltip: AppLocalizations.of(context).calendarTitle,
-                          padding: const EdgeInsets.all(6),
-                          style: IconButton.styleFrom(
-                            // UI-03：同上，热区 ≥48×48
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            minimumSize: const Size(48, 48),
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const CalendarPage(),
+                            IconButton(
+                              tooltip: AppLocalizations.of(context).homeSearch,
+                              padding: const EdgeInsets.all(6),
+                              style: IconButton.styleFrom(
+                                // UI-03：同上，热区 ≥48×48
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                minimumSize: const Size(48, 48),
                               ),
-                            );
-                          },
-                          icon: Icon(
-                            Icons.calendar_month_outlined,
-                            size: 20,
-                            color: Theme.of(context).iconTheme.color,
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: AppLocalizations.of(context).homeSearch,
-                          padding: const EdgeInsets.all(6),
-                          style: IconButton.styleFrom(
-                            // UI-03：同上，热区 ≥48×48
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            minimumSize: const Size(48, 48),
-                          ),
-                          onPressed: () {
-                            _transactionListKey.currentState
-                                ?.switchToStreamMode();
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => const SearchPage(),
+                              onPressed: () {
+                                _transactionListKey.currentState
+                                    ?.switchToStreamMode();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const SearchPage(),
+                                  ),
+                                );
+                              },
+                              icon: Icon(
+                                Icons.search,
+                                size: 20,
+                                color: Theme.of(context).iconTheme.color,
                               ),
-                            );
-                          },
-                          icon: Icon(
-                            Icons.search,
-                            size: 20,
-                            color: Theme.of(context).iconTheme.color,
-                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
