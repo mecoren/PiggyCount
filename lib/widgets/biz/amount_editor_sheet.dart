@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -114,9 +115,23 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   // transaction_edit_utils 读取;新建为空。
   final Map<String, dynamic> initialCustomValues;
 
+  /// 是否**把数字键盘钉在卡片底部**（2026-10-09）。
+  ///
+  /// 默认 false = 整张表单（含键盘）作为一个整体，滚动与高度全交给调用方，
+  /// 三个既有调用方（转账表单、分类网格路径的金额表单、编辑交易）逐字不变。
+  ///
+  /// true 时本组件自己分两段：
+  ///   * 上半「属性区」（金额行 / 原始金额 / 备注 / 账户 / 标签 / 自定义字段）
+  ///     高度 = min(自然高, 可用高 − 键盘高)，超出时**只有它**滚动；
+  ///   * 下半键盘钉住不动。
+  /// 修的是「键盘被卷进滚动区」：屏幕一矮时整块一起滚，数字键位置会随内容高度
+  /// 漂移（肌肉记忆失效），「完成」键也会被滚出可视区。快捷记账抽屉传 true。
+  final bool pinKeypad;
+
   const AmountEditorSheet({
     super.key,
     required this.categoryName,
+    this.pinKeypad = false,
     this.categoryId,
     this.displayCategory,
     this.onPickCategory,
@@ -150,6 +165,41 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
 enum _AmountEditTarget { amount, original, customField }
 
 class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
+  /// 键盘上方与属性区之间的间距（[AmountEditorSheet.pinKeypad] 形态复用同一个值）。
+  static const double _keypadGap = 10;
+
+  /// 数字键盘的**固定高度**：4 行 × (键 60 + 键外 padding 6×2) + 3 个行间距 2。
+  ///
+  /// 「钉键盘」形态靠它给属性区算上限（属性区最多占「可用高 − 键盘高 − 间距」），
+  /// 并用 [SizedBox] 把键盘本身锁到这个高度 —— 否则 `showTime` 下日期键变成
+  /// 两行文案时，键盘高度会跳变、被钉住的属性区上限也跟着抖。
+  /// 改键高 / 键内 padding / 行数时**必须同步改这里**（`test/widgets/` 无对应
+  /// 守门，用 `flutter run` 看一眼面板总高即可）。
+  static const double _keypadHeight = 4 * (60 + 12) + 3 * 2;
+
+  // ——— 分类位几何：[_categorySlotWidth]（算槽位宽度）与 [_buildCategoryChip]
+  // （决定显示到哪一级）共用的**唯一口径**。两处各写一份魔法数字必然会漂移，
+  // 槽位算出来的宽度与 chip 实际渲染宽度一旦不等，就会在金额行里留下一道缝。
+  static const double _catIconSize = 16;
+  static const double _catGap = 5;
+  static const double _catArrowSize = 16;
+  static const double _catPad = 8;
+  static const double _catPadIconOnly = 4;
+  /// 分类名在 chip 里的宽度上限（宽屏也不许挤走金额）。
+  static const double _catNameMaxWidth = 96;
+  /// 「图标 + 箭头」的最小占用 = 内边距 16 + 图标 16 + 间距 5 + 箭头 16。
+  static const double _catArrowOnlyWidth =
+      _catPad * 2 + _catIconSize + _catGap + _catArrowSize;
+  /// 只剩图标时的极限宽度（内边距收到 4）= 8 + 16。
+  static const double _catIconOnlyWidth = _catPadIconOnly * 2 + _catIconSize;
+  /// 显示分类名所需的最小槽位宽（再窄名字只剩省略号，不如不给）。
+  static const double _catShowNameMinWidth = 72;
+  /// 分类位最多吃掉行宽的多少：0.4 让窄屏时金额位仍有一半以上宽度可写。
+  static const double _catSlotMaxWidthRatio = 0.4;
+
+  /// 合并属性行里账户区最多吃掉行宽的多少（超出由账户选择器内部横滑）。
+  static const double _accountAreaMaxWidthRatio = 0.55;
+
   late String _amountStr;
   late DateTime _date;
 
@@ -558,6 +608,11 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   ///   2. 宽 ≥ 53：去掉名字，图标 + 箭头（仍看得出「可点换分类」）；
   ///   3. 再窄：只剩图标（最小占用 24px）—— 图标是硬约束（分类必须可辨认）。
   ///
+  /// 三级让位只对**已选**分类生效（2026-10-09）：**未选态强制保留名字**
+  /// （哪怕槽位 < 72）。那时整个 chip 就是「选择分类」这个必选入口，退化成
+  /// 一个方块图标既认不出来历、也不知道能点，而「忘了选分类」正是最高频的卡住
+  /// 路径。名字放不下时由 FittedBox 等比缩小兜底，仍不越界。
+  ///
   /// 可换（[AmountEditorSheet.onPickCategory] 非 null）而尚未选分类时渲染
   /// 「选择分类」占位 —— 新流程（金额表单为主、分类为子界面）必须给未选态
   /// 留一个可点入口；两者都为空才真正零占位（转账等既有调用方逐字不变）。
@@ -569,13 +624,22 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     final placeholder = AppLocalizations.of(context).budgetCategoryLabel;
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 53 = 图标 16 + 间距 5 + 箭头 16 + 左右内边距 16，是「带箭头」的
-        // 最小占用；72 再给分类名留 19px，否则名字只剩省略号、不如不给。
-        final showName = constraints.maxWidth >= 72;
-        final showArrow = canPick && constraints.maxWidth >= 53;
-        // 只剩图标时把内边距收到 4：24px 总宽是分类位能缩到的极限。
-        final pad = showArrow || showName ? 8.0 : 4.0;
+        // 槽位宽度由 [_categorySlotWidth] 按**内容**给出（不再吃固定 flex 份额），
+        // 这里只按同一个口径决定显示到哪一级。
+        //
+        // **未选态破例保留名字**（2026-10-09）：此时整个 chip 就是「选择分类」
+        // 这个必选入口，退化成光秃秃的 `Icons.category_outlined` 用户根本认不出
+        // 这是什么、也不知道能点。宽度不够由下面的 FittedBox 等比缩小兜底 ——
+        // 名字小一点远好过只剩一个方块（那一档留给**已选**分类：名字此时是次要
+        // 信息，可以按三级让位收掉）。
+        final showName = category == null ||
+            constraints.maxWidth >= _catShowNameMinWidth;
+        final showArrow =
+            canPick && constraints.maxWidth >= _catArrowOnlyWidth;
+        final pad = showArrow || showName ? _catPad : _catPadIconOnly;
         return InkWell(
+          // 供 widget 测试量「分类位与币种标之间有没有缝」。
+          key: const ValueKey('amountEditorCategoryChip'),
           borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
           onTap: canPick ? _pickCategory : null,
           child: Container(
@@ -590,37 +654,45 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                 if (category != null)
                   CategoryIconWidget(
                     category: category,
-                    size: 16,
+                    size: _catIconSize,
                     color: PiggyTokens.iconSecondary(context),
                   )
                 else
                   Icon(Icons.category_outlined,
-                      size: 16, color: PiggyTokens.iconSecondary(context)),
+                      size: _catIconSize,
+                      color: PiggyTokens.iconSecondary(context)),
                 if (showName) ...[
-                  const SizedBox(width: 5),
-                  // 自定义分类名可能很长。三重收窄：Flexible（可被压缩）+
-                  // 96px 上限（宽屏也不让它挤走金额）+ 省略号。空间不够时
-                  // 优先让分类名让位，图标始终保留 —— 分类仍是可辨认的。
+                  const SizedBox(width: _catGap),
+                  // 自定义分类名可能很长、槽位也可能很窄（未选态强制显示名字）。
+                  // 三重收窄：Flexible（可被压缩）+ 96px 上限（宽屏也不让它挤走
+                  // 金额）+ FittedBox 等比缩小（放不下就整体缩，而不是溢出把
+                  // 金额行顶坏；仍放不下才由 Text 自己省略号）。
                   Flexible(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 96),
-                      child: Text(
-                        category?.name ?? placeholder,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        softWrap: false,
-                        style: text.bodySmall?.copyWith(
-                          color: PiggyTokens.textSecondary(context),
-                          fontWeight: FontWeight.w600,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                            maxWidth: _catNameMaxWidth),
+                        child: Text(
+                          category?.name ?? placeholder,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
+                          style: text.bodySmall?.copyWith(
+                            color: PiggyTokens.textSecondary(context),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ],
                 if (showArrow) ...[
-                  const SizedBox(width: 5),
+                  const SizedBox(width: _catGap),
                   Icon(Icons.arrow_drop_down,
-                      size: 16, color: PiggyTokens.iconSecondary(context)),
+                      size: _catArrowSize,
+                      color: PiggyTokens.iconSecondary(context)),
                 ],
               ],
             ),
@@ -630,12 +702,76 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     );
   }
 
+  /// 分类位在金额行里该占多宽 —— **按内容算**，不吃固定 flex 份额。
+  ///
+  /// 为什么不能给固定份额（曾用 `Expanded(flex: 2)`，2026-10-09 改）：槽位占半行
+  /// 而 chip 只占其中一小截，右半截空白就顶在币种标前面 —— 用户看到的是「分类和
+  /// 币种之间一道大缝」。改成「槽位宽 = chip 实际会渲染的宽度」后，富余空间全归
+  /// 金额位：缝消失，金额框仍贴住行尾（与下方「原始金额」框同一条竖线）。
+  ///
+  /// 取值与 [_buildCategoryChip] 的三级让位**同口径**（名字+箭头 / 只箭头 / 只
+  /// 图标），上界 [_catSlotMaxWidthRatio] × 行宽：窄屏时分类位自己让位，金额位
+  /// 不会被挤没。未选态例外 —— 「选择分类」必须看得见，宽度直接给到上限，放不下
+  /// 由 chip 内 FittedBox 整体等比缩。
+  double _categorySlotWidth(BuildContext context, double rowWidth) {
+    final category = _category;
+    final canPick = widget.onPickCategory != null;
+    if (category == null && !canPick) return 0; // 零占位（转账等既有调用方）
+
+    final cap = rowWidth * _catSlotMaxWidthRatio;
+    final nameWidth = _measureCategoryName(
+      context,
+      category?.name ?? AppLocalizations.of(context).budgetCategoryLabel,
+    );
+    final withName = _catPad * 2 +
+        _catIconSize +
+        _catGap +
+        nameWidth +
+        (canPick ? _catGap + _catArrowSize : 0);
+    // 名字要显示就得给够「名字 + 箭头」的门槛宽，否则 chip 内部会收掉名字
+    final withNameMin =
+        math.max(withName, _catShowNameMinWidth).toDouble();
+    if (withNameMin <= cap) return withNameMin;
+    // 名字放不下：未选态**强制保留**（宽度给到上限，chip 内 FittedBox 整体
+    // 等比缩）；已选态按三级让位把名字收掉。
+    if (category == null) return math.max(cap, _catIconOnlyWidth);
+    if (canPick && _catArrowOnlyWidth <= cap) return _catArrowOnlyWidth;
+    return math.min(_catIconOnlyWidth, cap);
+  }
+
+  /// 现量分类名宽度（随语言与系统字号变化，不写死常量）。上限 [_catNameMaxWidth]
+  /// 与 chip 内文本自身的 `ConstrainedBox` 保持一致。
+  double _measureCategoryName(BuildContext context, String name) {
+    final style = Theme.of(context)
+        .textTheme
+        .bodySmall!
+        .copyWith(fontWeight: FontWeight.w600);
+    final painter = TextPainter(
+      text: TextSpan(text: name, style: style),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    return math.min(painter.width, _catNameMaxWidth);
+  }
+
+  /// 币种标（点开选币种）。
+  ///
+  /// **单币种账本也照常显示**（2026-10-09 定档）：这个 chip 是**金额的单位标注**，
+  /// 不是「多币种功能」的装饰 —— 币种在记账里是金额语义的一部分（用户拿外币现金
+  /// 记账、收到境外退款、汇率与折算快照都挂在这个口径上），把「CNY」藏起来等于
+  /// 让这笔金额失去单位，也让币种从「可见事实」降级成「要去设置里查的配置」。
+  /// 空间问题改在宽度侧解决（分类位与金额位按 2:2 分，而不是砍掉单位标注）。
+  ///
+  /// 转账无币种选择语义（转出 / 转入账户各自定币），整块不显示。
   Widget _buildCurrencyChip(BuildContext context) {
     if (widget.transactionKind == 'transfer') return const SizedBox.shrink();
     final text = Theme.of(context).textTheme;
     ref.watch(currentLedgerCurrencyProvider); // 账本切换时重建
     final txCurrency = _txCurrency();
     return InkWell(
+      // 供 widget 测试量「分类位到币种标之间有没有缝」。
+      key: const ValueKey('amountEditorCurrencyChip'),
       borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
       onTap: _pickCurrency,
       child: Container(
@@ -990,33 +1126,33 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}:${d.second.toString().padLeft(2, '0')}';
     final showTime = ref.watch(showTransactionTimeProvider);
 
-    return SafeArea(
-      top: false,
-      // 底部**不**自己垫 padding：三个调用方（记账抽屉、分类网格路径的金额表单、
-      // 转账金额表单）都把本表单放进 [PiggySheetCard]，由卡片统一负责键盘避让
-      // （`MediaQuery.viewInsets.bottom`）与底部留距。这里再垫一份 extraPadding
-      // 只会双重顶高，把「完成」键挤出可视区。
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    // 属性区（金额行 → 自定义字段）。默认仍与数字键盘拼回一个 Column 交给调用方
+    // 决定滚动与高度（那条路径的布局与改动前逐字一致）；[pinKeypad] 形态才把它
+    // 单独拎出来滚，键盘钉在它下面，见 [_pinnedKeypadBody]。
+    final attributeBlocks = <Widget>[
             // 金额显示区域（表达式模式）
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 // 表达式行:金额表达式。左侧币种标,右侧运算显示。
-                Row(
+                LayoutBuilder(builder: (context, rowConstraints) {
+                  // P1-E 分类位：金额行最左。**槽位宽度按内容算**（[_categorySlotWidth]），
+                  // 不吃固定 flex 份额 —— 曾用 `Expanded(flex: 2)`，槽位占半行而
+                  // chip 只占一小截，右半截空白就横在币种标前面（用户看到的
+                  // 「分类和币种之间一道大缝」）。按内容给宽之后，富余空间全归
+                  // 金额位：缝没有，金额框仍贴住行尾。
+                  //
+                  // 仍用 `SizedBox` 而不是裸 chip：宽度必须由**外层**给（chip 自己
+                  // 是 `LayoutBuilder` + 自适应内容，放进 Row 非 flex 位置会拿到
+                  // 无界约束、长分类名直接顶破整行）。窄屏保护也在这个宽度里：
+                  // 上界 = 行宽 × 40%，超了 chip 自己三级让位（收名字 → 收箭头 →
+                  // 只剩图标，见 `_buildCategoryChip`）。
+                  final slot = _categorySlotWidth(
+                      context, rowConstraints.maxWidth);
+                  return Row(
                   children: [
-                    // P1-E 分类位：金额行最左，占住「币种标 + 算式」之外的全部剩余
-                    // 空间。**必须用 Expanded 而不是原来的 Spacer**：Spacer 只是
-                    // 空白、不承载内容，换成它占位后分类位在窄屏上无法被压缩 ——
-                    // 实测 320dp + 长分类名 + 6 位金额时把整行顶出 158px。
-                    // Expanded 同时满足两件事：宽屏时吃掉剩余空间（视觉与 Spacer
-                    // 等价），窄屏时缩到剩余的宽度、由分类位自己三级让位
-                    // （收名字 → 收箭头 → 只剩图标，见 `_buildCategoryChip`）。
-                    Expanded(
+                    SizedBox(
+                      width: slot,
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: _buildCategoryChip(context),
@@ -1059,14 +1195,14 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     // 可点击：把自定义小键盘的输入目标切回报账金额；选中态用
                     // 主色描边 + 淡底，与原始金额位形成"谁在接收输入"的对照。
                     //
-                    // Expanded(flex 3)：金额位必须**占满**自己的槽位，右边界才会
-                    // 与下方「原始金额」框、自定义字段金额位对齐到同一条竖线
-                    // （原来是 Flexible/loose：金额只包住文字、右侧空一大截，三个
-                    // 输入框长短不一）。与分类位按 1:3 分走剩余宽度，故窄屏不会
-                    // 因此新增溢出；空间不够时内层 FittedBox 等比缩放，金额始终
-                    // 完整可见、不被截断。
+                    // Expanded：金额位必须**占满**「分类位 + 币种标 + 算式」之外的
+                    // 全部剩余，右边界才会与下方「原始金额」框、自定义字段金额位
+                    // 对齐到同一条竖线（原来是 Flexible/loose：金额只包住文字、
+                    // 右侧空一大截，三个输入框长短不一）。分类位已按内容取宽
+                    // （见上方 `_categorySlotWidth`），所以这里的「剩余」几乎全归
+                    // 金额；空间不够时内层 FittedBox 等比缩放，金额始终完整可见、
+                    // 不被截断。
                     Expanded(
-                      flex: 3,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: () => setState(
@@ -1110,7 +1246,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                       ),
                     ),
                   ],
-                ),
+                );
+                }),
                 // 等号行：仅当记账金额位有运算符时显示
                 if (_amountOp != null) ...[
                   const SizedBox(height: 4),
@@ -1278,53 +1415,18 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                 ),
               ),
             ),
-            // 账户选择（仅在启用时显示）
-            if (widget.showAccountPicker) ...[
-              const SizedBox(height: 8),
-              Consumer(
-                builder: (context, ref, child) {
-                  // 检查账户功能是否启用
-                  final accountFeatureAsync =
-                      ref.watch(accountFeatureEnabledProvider);
-                  return accountFeatureAsync.when(
-                    data: (enabled) {
-                      if (!enabled) return const SizedBox.shrink();
-
-                      // 使用新的横滑账户选择器
-                      return AccountSelector(
-                        selectedAccountId: _selectedAccountId,
-                        ledgerId: widget.ledgerId,
-                        // 币种优先联动:账户列表只显示当前所选币种的账户
-                        filterCurrency: _txCurrency(),
-                        // 账户隐藏(#240)E1 钉住:该笔交易本来挂的账户(编辑
-                        // 态)若已被隐藏,选择器补回并打灰标,可原样保存。
-                        pinnedAccountId: widget.initialAccountId,
-                        onAccountSelected: (accountId) {
-                          setState(() {
-                            _selectedAccountId = accountId;
-                            _selectedAccountCurrency = null; // 异步刷新
-                            _accountPicked = true;
-                          });
-                          if (accountId != null) {
-                            _loadAccountCurrency(accountId);
-                          }
-                        },
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
-                  );
-                },
-              ),
-            ],
-            // 标签和附件选择区域（一行）
+            // 账户 / 标签 / 附件 / 旗标 —— 合并成**一条**属性行（2026-10-09）
             const SizedBox(height: 8),
-            _buildTagAndAttachmentRow(),
+            _buildAccountAndTagRow(),
             // v46 自定义字段录入分区（该账本无定义时整块隐藏）
             _buildCustomFieldsSection(),
-            const SizedBox(height: 10),
-            // 数字键盘
-            LayoutBuilder(builder: (ctx, c) {
+    ];
+
+    final column = <Widget>[
+      ...attributeBlocks,
+      const SizedBox(height: _keypadGap),
+      // 数字键盘
+      LayoutBuilder(builder: (ctx, c) {
               final w = (c.maxWidth) / 4;
               Widget dateKey() => Padding(
                     padding: const EdgeInsets.all(6),
@@ -1585,9 +1687,77 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                 ],
               );
             })
-          ],
-        ),
+    ];
+
+    final form = widget.pinKeypad
+        ? _pinnedKeypadBody(
+            attributeArea: attributeBlocks,
+            // 上面拼好的 column 末两项恒为 [间距, 键盘]（见其组装处）。
+            keypad: column[attributeBlocks.length + 1],
+          )
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: column,
+          );
+
+    return SafeArea(
+      top: false,
+      // 底部**不**自己垫 padding：三个调用方（记账抽屉、分类网格路径的金额表单、
+      // 转账金额表单）都把本表单放进 [PiggySheetCard]，由卡片统一负责键盘避让
+      // （`MediaQuery.viewInsets.bottom`）与底部留距。这里再垫一份 extraPadding
+      // 只会双重顶高，把「完成」键挤出可视区。
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: form,
       ),
+    );
+  }
+
+  /// 「键盘钉底」形态（[AmountEditorSheet.pinKeypad] = true）的整块表单：
+  /// 上半属性区可滚，数字键盘固定在卡片底部。
+  ///
+  /// 高度口径：属性区 = min(自然高, 可用高 − 键盘高 − 间距)，整体再 clamp 到
+  /// 可用高。所以**空间够时仍是自然高度**（不因为多了滚动容器就把面板顶到
+  /// 全屏），空间不够时优先保住键盘（数字键位置不漂移、「完成」键不被滚出
+  /// 可视区），属性区自己滚。整块刻意不使用 `Flexible`：`Column` 一旦有 flex
+  /// 子项就会按 `mainAxisSize.min` 也占满可用高，直接留下大片空白。
+  Widget _pinnedKeypadBody({
+    required List<Widget> attributeArea,
+    required Widget keypad,
+  }) {
+    return LayoutBuilder(
+      builder: (context, c) {
+        final avail = c.maxHeight;
+        final attrMax = (avail.isFinite
+                ? avail - _keypadHeight - _keypadGap
+                : double.infinity)
+            .clamp(0.0, double.infinity)
+            .toDouble();
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: avail),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: attrMax),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: attributeArea,
+                  ),
+                ),
+              ),
+              const SizedBox(height: _keypadGap),
+              // 锁死键盘高度：`showTime` 下日期键是「日期 + 时间」两行文案，
+              // 不锁的话键盘会自己长高、把上方属性区的上限顶掉一块。
+              SizedBox(height: _keypadHeight, child: keypad),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1657,7 +1827,65 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     return (16 + 6 + painter.width + 10).clamp(84.0, 220.0);
   }
 
-  /// 构建标签和附件选择行（一行显示）
+  /// 账户 / 标签 / 附件 / 旗标 —— **一条**属性行。
+  ///
+  /// 改前是两条：账户一行（横滑芯片，40 高）+ 标签一行（标签 + 附件 + 旗标，
+  /// 自带 `surfaceInput` 底、上下各 8 内边距，~36 高）+ 中间 8dp 间距，合计
+  /// ~84dp。但它们都是「这笔交易的附加属性」，谁也不比谁重要，合并后：
+  ///
+  ///     [账户芯片（按内容取宽，超出可横滑）] [标签区（吃剩余）] [图片] [旗标]
+  ///
+  /// 账户区是**非 flex 子项**：宽度由 [AccountSelector.shrinkWrapToContent]
+  /// 按内容给出、外层 `ConstrainedBox` 兜一个上界（[_accountAreaMaxWidthRatio] ×
+  /// 行宽）—— 账户少时只占内容宽（不留空洞），账户多时被压到上界并在内部横滑。
+  /// 这样标签区就是**唯一**的 flex 子项，能吃掉全部剩余；若账户区也写成
+  /// `Expanded`，两个 tight 份额之间会留一条谁都不用的缝（金额行刚踩过同一个坑，
+  /// 见 `_categorySlotWidth`）。
+  ///
+  /// 账户功能未启用（或仍在加载）时整行只剩标签区，高度随之收敛。
+  Widget _buildAccountAndTagRow() {
+    final accountEnabled = widget.showAccountPicker &&
+        (ref.watch(accountFeatureEnabledProvider).value ?? false);
+    if (!accountEnabled) return _buildTagAndAttachmentRow();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Row(
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: constraints.maxWidth * _accountAreaMaxWidthRatio,
+              ),
+              child: AccountSelector(
+                shrinkWrapToContent: true,
+                selectedAccountId: _selectedAccountId,
+                ledgerId: widget.ledgerId,
+                // 币种优先联动:账户列表只显示当前所选币种的账户
+                filterCurrency: _txCurrency(),
+                // 账户隐藏(#240)E1 钉住:该笔交易本来挂的账户(编辑态)若已被
+                // 隐藏,选择器补回并打灰标,可原样保存。
+                pinnedAccountId: widget.initialAccountId,
+                onAccountSelected: (accountId) {
+                  setState(() {
+                    _selectedAccountId = accountId;
+                    _selectedAccountCurrency = null; // 异步刷新
+                    _accountPicked = true;
+                  });
+                  if (accountId != null) {
+                    _loadAccountCurrency(accountId);
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: PiggyDimens.p12),
+            Expanded(child: _buildTagAndAttachmentRow()),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 构建标签和附件选择行（合并属性行里的右半段）
   Widget _buildTagAndAttachmentRow() {
     // 标签是 user-scoped,全部账本共用同一份。
     final allTagsAsync = ref.watch(tagsForCurrentLedgerProvider);
@@ -1785,12 +2013,12 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     final l10n = AppLocalizations.of(context);
     final hasAttachments = attachmentCount > 0;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: PiggyTokens.surfaceInput(context),
-        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-      ),
+    // 不再自带走 `surfaceInput` 底的圆角容器（2026-10-09）：这一段现在是合并
+    // 属性行里的右半段，不是独立输入框 —— 带底色会把它和左侧账户芯片割成两块，
+    // 视觉重量也超过账户 chips。上下 10 内边距让点击目标保持 ~40 高，与账户芯片
+    // 行高对齐（账户功能关闭时这一段单独成行，也不至于塌成一条细线）。
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
           // 标签部分（可点击展开）

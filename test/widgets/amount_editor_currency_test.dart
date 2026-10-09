@@ -1,7 +1,12 @@
 /// v30 记账录入的多币种交互(01 §四):
-///   - 单币种态(无账户,未选币种):只有轻量币种标(=本位币),无汇率行
+///   - 单币种态(无账户,未选币种):显示本位币币种标(=本位币),无汇率行
 ///   - 编辑外币交易:汇率行出现,初值=隐含汇率(nativeAmount/amount),
 ///     折算预览按隐含汇率(改备注不漂移)
+///
+/// 2026-10-09 定档:币种 chip **不按多币种态隐藏**（曾按
+/// `multiCurrencyActiveProvider` 隐藏过一轮，随即回退）—— 它是金额的**单位
+/// 标注**,币种在记账里是金额语义的一部分,藏起来等于让金额失去单位;宽度问题
+/// 在分类位 / 金额位的 2:2 分配上解决,不动单位标注。
 library;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -74,7 +79,8 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    expect(find.text('CNY'), findsOneWidget); // 轻量币种标
+    // 币种标恒显（2026-10-09 定档）：它是金额的单位标注，不是多币种功能的装饰
+    expect(find.text('CNY'), findsOneWidget);
     expect(find.textContaining('1 CNY ='), findsNothing); // 无汇率行
     expect(find.textContaining('≈'), findsNothing); // 无折算预览
   });

@@ -492,19 +492,21 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
               child: _buildKindChild(context, 'transfer'),
             )
           else
-            // 支出 / 收入：保持自然高度（不留白、不滚动），并顺手把高度报上去
+            // 支出 / 收入：保持自然高度（不留白），并顺手把高度报上去
             // 供转账对齐。只在非转账分支测量，所以切到转账后这个值就冻结了。
+            //
+            // 滚动职责已下沉给表单本身（`pinKeypad: true`）：上半属性区自己滚、
+            // 数字键盘钉在卡片底部。这里**不再**套 SingleChildScrollView ——
+            // 那样键盘会跟着一起滚，屏幕一矮数字键就漂、「完成」键滚出可视区。
             Flexible(
               child: _BodyHeightReporter(
                 onMeasured: _onQuickBodyMeasured,
-                child: SingleChildScrollView(
-                  child: IndexedStack(
-                    index: _selectedKind == 'income' ? 1 : 0,
-                    children: [
-                      _buildQuickAmountSheet(context, 'expense'),
-                      _buildQuickAmountSheet(context, 'income'),
-                    ],
-                  ),
+                child: IndexedStack(
+                  index: _selectedKind == 'income' ? 1 : 0,
+                  children: [
+                    _buildQuickAmountSheet(context, 'expense'),
+                    _buildQuickAmountSheet(context, 'income'),
+                  ],
                 ),
               ),
             ),
@@ -527,6 +529,8 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     final ledgerId = ref.watch(currentLedgerIdProvider);
     return AmountEditorSheet(
       key: ValueKey('quickAmount_$kind'),
+      // 抽屉形态：数字键盘钉在卡片底部，只有上半属性区滚动（2026-10-09）。
+      pinKeypad: true,
       // 历史字段：金额表单不再靠它展示/提交分类（改走 displayCategory 与提交
       // 结果里的 category），保留是为了不动其它调用方的签名。
       categoryName: _quickCategoryByKind[kind]?.name ?? '',
