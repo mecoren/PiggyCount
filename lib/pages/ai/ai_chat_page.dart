@@ -771,28 +771,19 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
     });
   }
 
-  void _showClearHistoryDialog() {
+  Future<void> _showClearHistoryDialog() async {
     final l10n = AppLocalizations.of(context);
-    showDialog(
-      context: context,
-      builder: (context) => AppDialogShell(
-        title: Text(l10n.aiChatClearHistoryDialogTitle),
-        content: Text(l10n.aiChatClearHistoryDialogContent),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () {
-              _clearHistory();
-              Navigator.pop(context);
-            },
-            child: Text(l10n.commonConfirm),
-          ),
-        ],
-      ),
+    // 批量清空且不可恢复 → 单次危险确认（3 秒时停），口径见 AGENTS.md
+    // 「破坏性操作确认分档」。
+    final confirmed = await showDangerConfirmDialog(
+      context,
+      title: l10n.aiChatClearHistoryDialogTitle,
+      message: l10n.aiChatClearHistoryDialogContent,
+      okLabel: l10n.commonConfirm,
+      countdownSeconds: 3,
     );
+    if (!confirmed || !mounted) return;
+    await _clearHistory();
   }
 
   Future<void> _clearHistory() async {

@@ -1022,15 +1022,17 @@ class _RecurringTransactionEditPageState
   }
 
   Future<void> _deleteRecurringTransaction() async {
-    final confirmed = await AppDialog.confirm<bool>(
+    // 不可恢复的实体删除 → 单次危险确认（3 秒时停），口径见 AGENTS.md
+    // 「破坏性操作确认分档」。
+    final confirmed = await showDangerConfirmDialog(
       context,
       title: AppLocalizations.of(context).commonDelete,
       message: AppLocalizations.of(context).recurringTransactionDeleteConfirm,
       okLabel: AppLocalizations.of(context).commonDelete,
-      destructive: true,
+      countdownSeconds: 3,
     );
 
-    if (confirmed == true) {
+    if (confirmed) {
       final repo = ref.read(repositoryProvider);
       await repo.deleteRecurringTransaction(widget.recurring!.id);
 

@@ -362,27 +362,16 @@ class _HoldingEditPageState extends ConsumerState<HoldingEditPage> {
 
   Future<void> _confirmDelete() async {
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AppDialogShell(
-        title: Text(l10n.holdingDeleteConfirmTitle),
-        content: Text(l10n.holdingDeleteConfirmBody(widget.holding!.name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.commonCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(
-              foregroundColor: PiggyTokens.error(context),
-            ),
-            child: Text(l10n.commonDelete),
-          ),
-        ],
-      ),
+    // 不可恢复的实体删除 → 单次危险确认（3 秒时停），口径见 AGENTS.md
+    // 「破坏性操作确认分档」。
+    final confirmed = await showDangerConfirmDialog(
+      context,
+      title: l10n.holdingDeleteConfirmTitle,
+      message: l10n.holdingDeleteConfirmBody(widget.holding!.name),
+      okLabel: l10n.commonDelete,
+      countdownSeconds: 3,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _saving = true);
     try {

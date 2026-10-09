@@ -445,16 +445,17 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
   Future<void> _deleteBudget() async {
     final l10n = AppLocalizations.of(context);
 
-    // 删除类确认走项目统一的 iOS 警示框（取消｜删除分栏，确认侧 error 色）
-    final confirmed = await AppDialog.confirm(
+    // 不可恢复的实体删除 → 单次危险确认（3 秒时停，取消｜删除分栏、确认侧
+    // error 色），口径见 AGENTS.md「破坏性操作确认分档」。
+    final confirmed = await showDangerConfirmDialog(
       context,
       title: l10n.commonDelete,
       message: l10n.budgetDeleteConfirm,
-      destructive: true,
       okLabel: l10n.commonDelete,
+      countdownSeconds: 3,
     );
 
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     try {
       final repo = ref.read(repositoryProvider);

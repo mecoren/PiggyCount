@@ -624,15 +624,17 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
             '${impacts.join('\n')}';
 
     if (!mounted) return;
-    final confirmed = await AppDialog.confirm<bool>(
-          context,
-          title: l10n.categoryDeleteConfirmTitle,
-          message: confirmMessage,
-          okLabel: l10n.commonDelete,
-          cancelLabel: l10n.commonCancel,
-          destructive: true,
-        ) ??
-        false;
+    // 分类删除会**级联移除子分类**（仓储 deleteCategory 连带删掉 parent_id 指向
+    // 它的行），还叠加预算 / 周期规则的引用影响 —— 影响面超过单行，按 AGENTS.md
+    // 「破坏性操作确认分档」走**双重**危险确认（各 3 秒时停）。
+    final confirmed = await showDoubleDangerConfirmDialog(
+      context,
+      title: l10n.categoryDeleteConfirmTitle,
+      firstMessage: confirmMessage,
+      secondMessage: l10n.categoryDeleteReconfirmMessage,
+      okLabel: l10n.commonDelete,
+      countdownSeconds: 3,
+    );
 
     if (!confirmed) return;
 

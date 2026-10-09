@@ -678,15 +678,17 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
   }
 
   void _confirmDelete(db.Tag tag, AppLocalizations l10n) async {
-    final confirmed = await AppDialog.confirm<bool>(
+    // 不可恢复的实体删除 → 单次危险确认（3 秒时停）；与「清理未使用标签」的
+    // 双重危险确认同族（批量档位更高）。口径见 AGENTS.md「破坏性操作确认分档」。
+    final confirmed = await showDangerConfirmDialog(
       context,
       title: l10n.tagDeleteConfirmTitle,
       message: l10n.tagDeleteConfirmMessage(tag.name),
       okLabel: l10n.commonDelete,
-      destructive: true,
+      countdownSeconds: 3,
     );
 
-    if (confirmed == true && mounted) {
+    if (confirmed && mounted) {
       final repo = ref.read(repositoryProvider);
       await repo.deleteTag(tag.id);
       ref.read(tagListRefreshProvider.notifier).state++;
