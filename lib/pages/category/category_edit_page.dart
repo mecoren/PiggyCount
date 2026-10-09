@@ -210,6 +210,11 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
       onCancel: () => Navigator.of(context).pop(),
       onConfirm: (_saving || _isDuplicateName) ? null : _saveCategory,
       confirmBusy: _saving,
+      // 删除（仅编辑态）：固定在「取消｜保存」之上的常驻层。分类表单的图标网格
+      // 很长，此前挂在字段区末尾（「危险操作」区）要滚到底才看得到。
+      deleteLabel: isEditing ? l10n.commonDelete : null,
+      onDelete: _deleteCategory,
+      deleteBusy: _saving,
       child: Form(
         key: _formKey,
         child: Column(
@@ -397,29 +402,6 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
               ),
             ),
 
-            if (isEditing) ...[
-              const SizedBox(height: 32),
-              const Divider(),
-              const SizedBox(height: 16),
-              Text(
-                AppLocalizations.of(context).categoryDangerousOperations,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: PiggyTokens.error(context),
-                    ),
-              ),
-              const SizedBox(height: 8),
-              SectionCard(
-                flat: true,
-                child: ListTile(
-                  leading:
-                      Icon(Icons.delete, color: PiggyTokens.error(context)),
-                  title: Text(AppLocalizations.of(context).categoryDeleteTitle),
-                  subtitle:
-                      Text(AppLocalizations.of(context).categoryDeleteSubtitle),
-                  onTap: _deleteCategory,
-                ),
-              ),
-            ],
           ],
         ),
       ),
