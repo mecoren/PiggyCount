@@ -117,7 +117,7 @@ class _BudgetEditPageState extends ConsumerState<BudgetEditPage> {
       onCancel: () => Navigator.of(context).pop(),
       onConfirm: _saveBudget,
       confirmBusy: _isLoading,
-      // 删除（仅编辑态）：固定在「取消｜保存」之上的常驻层，与其它编辑抽屉一致。
+      // 删除（仅编辑态）：标题栏右上角图标，与其它编辑抽屉一致。
       deleteLabel: _isEditing ? l10n.commonDelete : null,
       onDelete: _deleteBudget,
       deleteBusy: _isLoading,

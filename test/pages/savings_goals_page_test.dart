@@ -268,22 +268,21 @@ void main() {
     expect(find.byType(SavingsGoalEditPage), findsNothing);
     expect((await repo.getSavingsGoalsByLedger(1)).single.savedAmount, 1500);
 
-    // 再进编辑 → 删除（删除按钮在表单末尾，需先滚到可见）
+    // 再进编辑 → 删除（入口是标题栏右上角的垃圾桶图标，常驻可见、无需滚动）
     await tester.tap(find.text('应急金'));
     await tester.pumpAndSettle();
     final l10n2 = l10nOf(tester, find.byType(SavingsGoalEditPage));
     final sheetDelete = find.descendant(
         of: find.byType(SavingsGoalEditPage),
-        matching: find.text(l10n2.commonDelete));
-    await tester.ensureVisible(sheetDelete);
-    await tester.pumpAndSettle();
+        matching: find.byIcon(Icons.delete_outline));
+    expect(sheetDelete, findsOneWidget);
     await tester.tap(sheetDelete);
     await tester.pumpAndSettle();
     // 危险确认：确认按钮在 3 秒倒计时内禁用（pumpAndSettle 会把倒计时推完），
     // 这里再显式推进一次，保证归零后按钮可用。
     await tester.pump(const Duration(seconds: 3));
-    // 抽屉末尾也有一个「删除」按钮，取 overlay 里危险确认的那个（.last）
-    await tester.tap(find.text(l10n2.commonDelete).last);
+    // 抽屉侧的删除已改为图标，文字「删除」只剩危险确认框里那个。
+    await tester.tap(find.text(l10n2.commonDelete));
     await tester.pumpAndSettle();
 
     expect(await repo.getSavingsGoalsByLedger(1), isEmpty);

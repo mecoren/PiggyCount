@@ -11,12 +11,11 @@ import 'sheet_card.dart';
 ///
 /// ```
 /// 抓取条（下拉关闭的显式把手）
-/// 标题居中（strongTitle + fs17，固定）
+/// 标题居中（strongTitle + fs17，固定）〔编辑态可选：右上角垃圾桶图标，传 deleteLabel〕
 /// p16
 /// ┌ 字段区（限高 + 内部滚动，下拉到顶继续拉 = 关闭）┐
 /// └ Flexible(loose) → SingleChildScrollView ┘
 /// p20
-/// [可选]「删除」（PiggySheetDeleteButton，**固定层**，仅编辑态：传 deleteLabel）
 /// 「取消｜保存」（PiggySheetActions，**固定在卡片底部**）
 /// ```
 ///
@@ -68,17 +67,18 @@ class PiggyFormSheet extends StatelessWidget {
   /// 确认进行中：确认键转圈并与取消键一并禁用（防连点）。
   final bool confirmBusy;
 
-  /// 编辑态抽屉的底部「删除」按钮文案；`null` = 不渲染（新建态就该传 null）。
+  /// 编辑态抽屉的删除入口文案（**渲染为标题栏右上角的垃圾桶图标**，本值只作
+  /// tooltip）；`null` = 不渲染删除入口（新建态就该传 null）。
   ///
-  /// ⚠️ 删除按钮**不要**塞进 [child]（字段区）：字段区是滚动区，周期账单那种
-  /// 十几个字段的长表单会把删除入口推到屏幕外，用户以为「没有删除」。交给本参数
-  /// 渲染，它会固定在「取消｜保存」之上、不随滚动移动。
+  /// ⚠️ 删除入口**不要**塞进 [child]（字段区）：字段区是滚动区，周期账单那种
+  /// 十几个字段的长表单会把入口推到屏幕外，用户以为「没有删除」。交给本参数渲染，
+  /// 它固定在标题栏右上角、不随滚动移动，也不占底部动作行的空间。
   final String? deleteLabel;
 
   /// 删除回调；与 [deleteLabel] 成对使用。
   final VoidCallback? onDelete;
 
-  /// 删除进行中：删除键转圈并禁用。
+  /// 删除进行中：删除图标禁用（防连点）。
   final bool deleteBusy;
 
   @override
@@ -90,20 +90,34 @@ class PiggyFormSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const _SheetDragHandle(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              PiggyDimens.p20,
-              PiggyDimens.p4,
-              PiggyDimens.p20,
-              0,
-            ),
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: PiggyTextTokens.strongTitle(context).copyWith(
-                fontSize: PiggyTextTokens.fs17,
+          // 标题行：居中标题 + 右上角删除（仅编辑态传 deleteLabel）。
+          Row(
+            children: [
+              // 左侧等宽占位，保证标题在整卡宽度上真居中（不被右侧图标挤偏）。
+              const SizedBox(width: 48),
+              Expanded(
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: PiggyTextTokens.strongTitle(context).copyWith(
+                    fontSize: PiggyTextTokens.fs17,
+                  ),
+                ),
               ),
-            ),
+              SizedBox(
+                width: 48,
+                child: deleteLabel == null
+                    ? null
+                    : IconButton(
+                        onPressed: deleteBusy ? null : onDelete,
+                        icon: const Icon(Icons.delete_outline),
+                        color: PiggyTokens.error(context),
+                        // 只要图标：文案走 tooltip（长按可见 + 无障碍朗读）。
+                        tooltip: deleteLabel,
+                        iconSize: 22,
+                      ),
+              ),
+            ],
           ),
           const SizedBox(height: PiggyDimens.p16),
           // Flexible(loose)：拿到的剩余高度有界（模态抽屉本身有界），
@@ -124,20 +138,6 @@ class PiggyFormSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: PiggyDimens.p20),
-          // 删除（仅编辑态）：固定层，与下方「取消｜保存」同层不滚动。
-          if (deleteLabel != null) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: PiggyDimens.p20,
-              ),
-              child: PiggySheetDeleteButton(
-                label: deleteLabel,
-                onDelete: onDelete,
-                busy: deleteBusy,
-              ),
-            ),
-            const SizedBox(height: PiggyDimens.p12),
-          ],
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: PiggyDimens.p20,

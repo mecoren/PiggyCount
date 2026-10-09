@@ -129,7 +129,7 @@ class _HoldingEditPageState extends ConsumerState<HoldingEditPage> {
       onCancel: () => Navigator.of(context).pop(),
       onConfirm: _saving ? null : _save,
       confirmBusy: _saving,
-      // 删除（仅编辑态）：固定在「取消｜保存」之上的常驻层，与其它编辑抽屉一致。
+      // 删除（仅编辑态）：标题栏右上角图标，与其它编辑抽屉一致。
       deleteLabel: _isEdit ? l10n.commonDelete : null,
       onDelete: _confirmDelete,
       deleteBusy: _saving,

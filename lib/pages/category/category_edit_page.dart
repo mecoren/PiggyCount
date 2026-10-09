@@ -210,8 +210,8 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
       onCancel: () => Navigator.of(context).pop(),
       onConfirm: (_saving || _isDuplicateName) ? null : _saveCategory,
       confirmBusy: _saving,
-      // 删除（仅编辑态）：固定在「取消｜保存」之上的常驻层。分类表单的图标网格
-      // 很长，此前挂在字段区末尾（「危险操作」区）要滚到底才看得到。
+      // 删除（仅编辑态）：标题栏右上角图标。分类表单的图标网格很长，此前挂在
+      // 字段区末尾（「危险操作」区）要滚到底才看得到。
       deleteLabel: isEditing ? l10n.commonDelete : null,
       onDelete: _deleteCategory,
       deleteBusy: _saving,

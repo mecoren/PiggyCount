@@ -82,8 +82,8 @@ void main() {
     expect(find.text('添加周期账单'), findsOneWidget);
     expect(find.text('取消'), findsOneWidget);
     expect(find.text('保存'), findsOneWidget);
-    // 新建态不出现删除
-    expect(find.text('删除'), findsNothing);
+    // 新建态不出现删除入口（标题栏右上角没有垃圾桶图标）
+    expect(find.byIcon(Icons.delete_outline), findsNothing);
 
     // 取消即收起，回到列表。表单较长，按钮行在卡片内容末尾 —— 需先滚到可见
     // （PiggyFormSheet 的既定行为：标题与按钮行随卡片一起滚动）。
@@ -94,7 +94,7 @@ void main() {
     expect(find.byType(PiggyFormSheet), findsNothing);
   });
 
-  testWidgets('周期账单条目点击 → 编辑抽屉，删除落在表单主体内', (tester) async {
+  testWidgets('周期账单条目点击 → 编辑抽屉，删除入口在标题栏右上角', (tester) async {
     await seedTemplate();
     await pumpHost(tester, const RecurringTransactionPage());
 
@@ -104,9 +104,10 @@ void main() {
 
     expect(find.byType(PiggyFormSheet), findsOneWidget);
     expect(find.text('编辑周期账单'), findsOneWidget);
-    // 编辑态的删除按钮渲染在表单主体末尾（与预算 / 账户抽屉同款）
-    expect(find.text('删除'), findsOneWidget);
-    expect(find.widgetWithText(OutlinedButton, '删除'), findsOneWidget);
+    // 编辑态的删除入口是标题栏右上角的垃圾桶图标（只要图标，文案走 tooltip），
+    // 不再占用底部「取消｜保存」动作行。
+    expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+    expect(find.byTooltip('删除'), findsOneWidget);
   });
 
   testWidgets('订阅管理条目点击 → 同一个编辑抽屉', (tester) async {
