@@ -48,7 +48,6 @@ import 'package:piggycount/widgets/biz/ledger_card.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  SharedPreferences.setMockInitialValues({});
 
   late PiggyDatabase db;
   late _RecordingRepo repo;
@@ -56,6 +55,9 @@ void main() {
   late List<String> callLog;
 
   setUp(() async {
+    // 每个用例都重置 prefs：账本态自愈解析会写 `current_ledger_id`
+    //（删完账本 → 归零），留着上一轮的取值会让下一个用例的初始账本漂移。
+    SharedPreferences.setMockInitialValues({});
     callLog = <String>[];
     db = PiggyDatabase.forTesting(NativeDatabase.memory());
     repo = _RecordingRepo(db, callLog);
@@ -135,6 +137,11 @@ void main() {
     // 故显式建立保活订阅；不建它，这两个用例会挂到 10 分钟超时。
     final ledgerSub = container.listen(currentLedgerProvider, (_, __) {});
     addTearDown(ledgerSub.close);
+    // 真实 App 在 splash 阶段就会激活账本态自愈解析（appSplashInitProvider →
+    // appInitProvider → `_currentLedgerPersist`）：账本列表一变它就重算
+    // `currentLedgerId`。不激活它，本文件会断言一个线上根本不会出现的状态
+    // （删完账本后悬空 id 一直留着），接线与线上不一致。
+    await container.read(appInitProvider.future);
     // 预热本地列表：页面首帧就要渲染卡片，否则拿到 loading 态只剩骨架屏
     await container.read(localLedgersProvider.future);
 
@@ -340,10 +347,12 @@ void main() {
       await drainTimers(tester);
     });
 
-    testWidgets('删的是唯一账本 → id 保持原地，但 currentLedger 落空（首页回「+ 新建账本」）',
+    testWidgets('删的是唯一账本 → 立即归零（无账本态），currentLedger 落空（首页回「+ 新建账本」）',
         (tester) async {
-      // 允许删完所有账本的语义：`currentLedgerProvider` 查不到行必须推 null，
-      // 否则首页胶囊会显示一个幽灵账本。
+      // 允许删完所有账本的语义：页面没有别的账本可切，但它也**不该**把
+      // deleted id 悬空留着 —— 账本态自愈解析会把它归零，云同步页等
+      // 「无账本」守卫才生效（悬空值实测抛裸的「账本 N 不存在」）。
+      // `currentLedgerProvider` 还必须推 null，否则首页胶囊显示幽灵账本。
       await repo.deleteLedger(2);
       final container = await pumpPage(tester);
       // 同上：先订阅保活再读 .future（riverpod 3 的 paused 语义）。
@@ -356,9 +365,15 @@ void main() {
       await confirmTwice(tester,
           countdownSeconds: 3, confirmLabel: zh(tester).commonDelete);
       await pumpFrames(tester, frames: 10);
+      // 归零由账本列表流驱动、异步送达：有界等它落地再断言
+      for (var i = 0;
+          i < 10 && container.read(currentLedgerIdProvider) != 0;
+          i++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
 
-      expect(container.read(currentLedgerIdProvider), 1,
-          reason: '没有别的账本可切，id 只能留在原地');
+      expect(container.read(currentLedgerIdProvider), 0,
+          reason: '悬空 id 会绕过全部「无账本」守卫（云同步页抛「账本 1 不存在」）');
       expect(await container.read(currentLedgerProvider.future), isNull,
           reason: 'currentLedgerProvider 必须推送 null，首页胶囊才会回到「+ 新建账本」');
       expect(await ledgerExists(1), isFalse);
