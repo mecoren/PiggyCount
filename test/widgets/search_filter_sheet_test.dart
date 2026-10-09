@@ -14,6 +14,7 @@ import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/providers/database_providers.dart';
+import 'package:piggycount/styles/tokens.dart';
 import 'package:piggycount/widgets/biz/search_filter_sheet.dart';
 import 'package:piggycount/widgets/ui/form_sheet.dart';
 import 'package:piggycount/widgets/ui/picker_sheet.dart';
@@ -148,20 +149,39 @@ void main() {
     expect(values.tagIds, isEmpty);
   });
 
-  testWidgets('尾部箭头对齐：有无清除键都不改变 › 的水平位置', (tester) async {
-    // 币种维度有值 → 该行多一个 X；其余行「未设置」无 X，箭头仍要落在同一条竖线。
+  testWidgets('尾部槽位贴行右缘：无值是箭头，有值是清除键（取代箭头）', (tester) async {
+    // 币种维度有值 → 该行尾部换成清除键；其余行「未设置」仍是箭头。
     await pumpHost(
       tester,
       (_) {},
       initial: const SearchFilterValues(currency: 'CNY'),
     );
 
-    final arrows = find.byIcon(Icons.chevron_right);
-    expect(arrows, findsNWidgets(6));
-    final xs = <double>[
-      for (var i = 0; i < 6; i++) tester.getCenter(arrows.at(i)).dx,
-    ];
-    expect(xs.toSet().length, 1, reason: '六行箭头 x 应完全一致：$xs');
+    const labels = ['分类筛选', '账户筛选', '标签筛选', '币种筛选', '开始日期', '结束日期'];
+    expect(find.byIcon(Icons.chevron_right), findsNWidgets(labels.length - 1));
+    final closeIcon = find.byIcon(Icons.close);
+    expect(closeIcon, findsOneWidget);
+    // 清除键是「移除」动作：用警示色，与值的选中主色区分
+    expect(
+      tester.widget<Icon>(closeIcon).color,
+      PiggyTokens.error(tester.element(closeIcon)),
+    );
+
+    for (final label in labels) {
+      final row = find
+          .ancestor(of: find.text(label), matching: find.byType(Material))
+          .first;
+      final rowRect = tester.getRect(row);
+      // 每行尾部只有一个图标（前置图标之后的那个）：箭头或清除键
+      final tail = find.descendant(of: row, matching: find.byType(Icon)).last;
+      // 尾部图标右缘到行右缘只隔行内 padding（p12）：标签若参与 flex 均分，
+      // 它用不完的份额会被丢到 Row 末尾，把尾部图标推到行中间。
+      expect(
+        rowRect.right - tester.getRect(tail).right,
+        moreOrLessEquals(PiggyDimens.p12, epsilon: 0.5),
+        reason: '$label 行的尾部图标没有贴到行右缘',
+      );
+    }
   });
 
   testWidgets('分类筛选 → 底部抽屉（不再走居中弹窗）', (tester) async {

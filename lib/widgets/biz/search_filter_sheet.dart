@@ -441,17 +441,18 @@ class _FilterRow extends StatelessWidget {
             children: [
               Icon(icon, size: 20, color: PiggyTokens.iconSecondary(context)),
               const SizedBox(width: PiggyDimens.p12),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: PiggyTextTokens.body(context)
-                      .copyWith(color: PiggyTokens.textSecondary(context)),
-                ),
+              // 标签按自身宽度占位（**不参与 flex**）：若包 Flexible，它会与值区
+              // 各分一半剩余空间，而标签用不完自己那份 —— 多出来的空间会被 Row
+              // 丢到末尾（start 对齐），尾部箭头就被推到行中间、贴不到最右。
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: PiggyTextTokens.body(context)
+                    .copyWith(color: PiggyTokens.textSecondary(context)),
               ),
               const SizedBox(width: PiggyDimens.p8),
-              // Expanded 让值贴右：值本身不占满时右对齐，过长时省略号截断。
+              // Expanded 独享剩余空间：值右对齐到清除槽位左侧，箭头永远贴行右缘。
               Expanded(
                 child: Text(
                   hasValue ? value! : l10n.searchNotSet,
@@ -466,28 +467,39 @@ class _FilterRow extends StatelessWidget {
                   ),
                 ),
               ),
-              // 清除键占固定 32 槽位：没有值也留空位，否则箭头（与值的右边界）
-              // 会随「本维度是否可选清除」左右跳动，各行的 › 对不上一条竖线。
+              // 尾部只有一个固定槽位（贴行右缘）：未设置 = 进入选择的箭头；
+              // 已有值 = 就地清除键，**取代**箭头而不是与它并排 —— 并排会白白
+              // 吃掉一段宽度，把长值（如「退税退费」）挤到贴着图标。清除键取
+              // 警示色（error），与「值」的选中主色区分开：这是**移除**动作，
+              // 不是又一次「选择」。
               SizedBox(
                 width: 32,
                 height: 32,
-                child: onClear == null
-                    ? null
-                    : IconButton(
-                        onPressed: onClear,
-                        icon: const Icon(Icons.close, size: 18),
-                        tooltip: l10n.tooltipClear,
-                        color: PiggyTokens.iconTertiary(context),
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints:
-                            const BoxConstraints(minWidth: 32, minHeight: 32),
+                child: hasValue
+                    ? Semantics(
+                        button: true,
+                        label: l10n.tooltipClear,
+                        child: InkResponse(
+                          onTap: onClear,
+                          radius: 20,
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Icon(
+                              Icons.close,
+                              size: 20,
+                              color: PiggyTokens.error(context),
+                            ),
+                          ),
+                        ),
+                      )
+                    : Align(
+                        alignment: Alignment.centerRight,
+                        child: Icon(
+                          Icons.chevron_right,
+                          size: 20,
+                          color: PiggyTokens.iconTertiary(context),
+                        ),
                       ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                size: 20,
-                color: PiggyTokens.iconTertiary(context),
               ),
             ],
           ),
