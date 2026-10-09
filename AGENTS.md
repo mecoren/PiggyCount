@@ -29,6 +29,19 @@ PiggyCount（小猪记账）是开源、隐私可控、**离线优先**的个人
   - **单次危险确认** `showDangerConfirmDialog`（一次、3 秒）—— 不可恢复但**仅单行实体**：单条删标签 / 分类 / 预算 / 周期账单模板 / 投资持仓 / 储蓄目标、清空 AI 对话历史；危险开关（整库加密开关）与全量同步方向确认也归这一档。
   - **普通确认**（`AppDialog.confirm(destructive: true)` 或自绘）—— **只允许**两种情形：① 走软删除、可恢复（单条交易侧滑删除 → 回收站）；② 不删数据（退出登录 / 切换云服务）或纯编辑语义（清空输入框 = 更新字段）。
   - 要降档必须在 PR 或代码注释里写明理由。**已知待决项**：`lib/pages/auth/app_lock_screen.dart` 的「连续输错 → `wipeAllData`」目前仍是普通确认（安全路径，升级需产品确认，别顺手改）。
+- **编辑抽屉的删除按钮走 `PiggyFormSheet.deleteLabel`，不要塞进字段区（2026-10-09）**：表单抽屉中间的内容区是**滚动区**，把删除按钮写在 `child` 末尾时，长表单（周期账单有十几个字段）会把入口推到屏幕外 —— 用户以为「这个实体没有删除」。正确写法：
+
+  ```dart
+  PiggyFormSheet(
+    // ...title / cancelLabel / confirmLabel / onCancel / onConfirm
+    deleteLabel: _isEdit ? l10n.commonDelete : null, // 新建态传 null = 不渲染
+    onDelete: _confirmDelete,
+    deleteBusy: _saving,
+    child: ..., // 字段区里不要再出现删除按钮
+  )
+  ```
+
+  组件会把它渲染在「取消｜保存」之上的**固定层**（不随字段滚动）；按钮本体用 `PiggySheetDeleteButton`（全宽 error 描边、与 `PiggySheetActions` 同高 48）。此前四处曾各写一种变体（裸 `OutlinedButton` / `OutlinedButton.icon` / 居中 `TextButton.icon`）且全在字段区末尾，统一后只有一种外观。改完**实测一遍长表单抽屉**（打开即应看到删除键），别只看截图里的短表单。
 - **零告警门禁**：CI 用 `flutter analyze --fatal-infos`（基线 0 error / 0 warning / 0 info，2026-09-18 起）。本地提交前必须 `flutter analyze` 干净。
 - **`packages/` 子包不得反向引用 `lib/`**：子包要能独立复用；`lib/` 可引用子包。
 - **尊重并发会话**：同一仓库常有并行会话 WIP；收尾核对改动的归属，不回滚非本批改动。
