@@ -178,13 +178,20 @@ LazyDatabase _openConnection() {
 - **风险**：root 用户可手动写入 version 跳过对话框
 - **建议修复**：使用 flutter_secure_storage 存储同意状态
 
-### 4.3 截屏保护未实现
+### 4.3 截屏保护（原「未实现」，2026-10-10 已实现）
 
-- **现状**：全局 Grep `FLAG_SECURE|setWindowFlags|secureWindow` 在整个项目中**零匹配**
-- **风险**：
+> ⚠️ **2026-10-10 复核：本条已过期，功能已落地**。
+> [android/app/src/main/kotlin/.../MainActivity.kt](../android/app/src/main/kotlin/com/wait/piggycount/MainActivity.kt)
+> 的 `onCreate` 现调用 `applyScreenshotProtection(true)`（即 `window.addFlags(FLAG_SECURE)`）——
+> 系统截屏、录屏、投屏与多任务缩略图均无法采集本应用画面。原「建议修复」的第二条（设置中提供开关）
+> 也已补上：`lib/services/security/screenshot_protection_service.dart` + 设置页
+> 「应用锁 → 防截屏保护」（**默认开启**，关闭走单次危险确认）。以下为 2026-07-25 的原始审查结论，保留备查。
+
+- **现状（审查时）**：全局 Grep `FLAG_SECURE|setWindowFlags|secureWindow` 在整个项目中**零匹配**
+- **风险（当时）**：
   - Android 系统截屏、录屏、多任务缩略图未通过 `FLAG_SECURE` 阻止
   - 仅通过 `AppLifecycleState.inactive` 触发的模糊屏部分缓解（系统截屏快捷键可能不触发 inactive）
-- **建议修复**：在 [android/app/src/main/kotlin/.../MainActivity.kt](../android/app/src/main/kotlin/com/wait/piggycount/MainActivity.kt) `onCreate` 中添加：
+- **建议修复（已照此实施）**：在 [android/app/src/main/kotlin/.../MainActivity.kt](../android/app/src/main/kotlin/com/wait/piggycount/MainActivity.kt) `onCreate` 中添加：
   ```kotlin
   window.setFlags(
     LayoutParams.FLAG_SECURE,
@@ -455,7 +462,7 @@ lib/
 
 1. 🔴 修订 PRIVACY.md，删除"Android Keystore"与"MIT License"错误声明
 2. 🔴 引入 flutter_secure_storage，迁移所有敏感凭证
-3. 🟠 启用 Android FLAG_SECURE 截屏保护
+3. ~~🟠 启用 Android FLAG_SECURE 截屏保护~~ ✅ 已完成（2026-10-10，并在设置页提供开关）
 4. 🟠 PIN 码添加失败次数限制
 5. 🟠 用户自配置 URL 强制 HTTPS 校验
 

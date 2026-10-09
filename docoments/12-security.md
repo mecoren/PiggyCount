@@ -249,27 +249,47 @@ if (showPrivacyScreen) {
 
 **安全效果**：多任务切换时显示模糊屏，防止应用预览泄露 ✓
 
-#### 4.2.5 截屏保护（未实现）
+#### 4.2.5 截屏保护（原「未实现」，2026-10-10 已实现）
 
-**[未实现]**：全局 Grep `FLAG_SECURE|setWindowFlags|secureWindow` 在整个项目中 **零匹配**。
+> ⚠️ **2026-10-10 复核：本条已过期**。`android/app/src/main/kotlin/com/wait/piggycount/MainActivity.kt`
+> 的 `onCreate` 已调用 `applyScreenshotProtection(true)`（即 `FLAG_SECURE`），系统截屏 / 录屏 / 投屏 /
+> 多任务缩略图均无法采集本应用画面。用户可在设置页「应用锁 → 防截屏保护」关闭（**默认开启**，关闭走
+> 单次危险确认），实现见 `lib/services/security/screenshot_protection_service.dart`。
 
-**风险**：
+**[原审查结论，2026-07-25]** 全局 Grep `FLAG_SECURE|setWindowFlags|secureWindow` 在整个项目中 **零匹配**。
+
+**风险（当时）**：
 - Android 系统截屏、录屏、多任务缩略图**未通过 FLAG_SECURE 阻止** ✗
 - 仅通过 `AppLifecycleState.inactive` 触发的模糊屏部分缓解（系统截屏快捷键可能不触发 inactive）
 
-**建议**：在 `MainActivity.kt` 中添加 `window.setFlags(LayoutParams.FLAG_SECURE, LayoutParams.FLAG_SECURE)`
+**建议（已实施）**：在 `MainActivity.kt` 中添加 `window.setFlags(LayoutParams.FLAG_SECURE, LayoutParams.FLAG_SECURE)`
 
-#### 4.2.6 失败次数限制（未实现）
+#### 4.2.6 失败次数限制（原「未实现」，2026-10-10 已实现）
 
-**[未实现]**：[app_lock_screen.dart:75-91](../lib/pages/auth/app_lock_screen.dart) 中 `_verifyPin` 失败仅 500ms 抖动后清空，**无失败计数、无指数退避、无 wipe 选项**。PIN 可被无限次暴力尝试。
+> ⚠️ **2026-10-10 复核：本条已过期**。`lib/services/security/app_lock_service.dart` 现已实现**分档退避**：
+> 连续输错 5 次锁 30 秒、10 次锁 5 分钟，验证成功即清零；另可选开启「连续输错 20 次清除本机数据」
+> （设置页「应用锁 → 连续输错清除数据」，**默认关闭**）。`lib/pages/auth/app_lock_screen.dart` 的
+> `_verifyPin` 会先查退避状态，命中 wipe 条件时弹确认。
+> **注意两处与原建议不一致**：退避是**固定时长分档**（不是「指数退避」）；PIN 长度仍**硬编码 4 位**。
+
+**[原审查结论，2026-07-25]** [app_lock_screen.dart:75-91](../lib/pages/auth/app_lock_screen.dart) 中 `_verifyPin` 失败仅 500ms 抖动后清空，**无失败计数、无指数退避、无 wipe 选项**。PIN 可被无限次暴力尝试。
 
 ---
 
 ### 4.3 凭证存储
 
+> ⚠️ **2026-10-10 复核：本节（4.3.1~4.3.4）结论已大面积过期，明文存储不再成立**。
+> 云服务凭据（Supabase anonKey / WebDAV 密码 / S3 SecretKey / PiggyCount Cloud 密码与 session token）
+> 已随 P2-4 安全加固迁入 `flutter_secure_storage`
+> （`packages/flutter_cloud_sync/lib/src/config/cloud_service_store.dart`：SharedPreferences 只保留
+> 非敏感的「激活类型」标记，老明文数据首次读取时自动迁移并删除）；AI 服务商凭据同样已迁入安全存储
+> （`lib/ai/providers/ai_provider_manager.dart`）。**残留**：导入导出用的向后兼容键（如 `ai_glm_api_key`）
+> 仍在 `lib/services/export/config_export_service.dart` 走 SharedPreferences 明文读写。
+> 下列内容为 2026-07-25 的原始审查结论，保留备查。
+
 #### 4.3.1 SharedPreferences 中存储的敏感数据汇总
 
-**[未实现]**：全局 Grep `flutter_secure_storage|SecureStorage` 在 `lib/` 中 **零匹配**。
+**[原审查结论，2026-07-25]** 全局 Grep `flutter_secure_storage|SecureStorage` 在 `lib/` 中 **零匹配**。
 
 | SharedPreferences 键 | 内容 | 风险 |
 |---|---|---|
@@ -798,16 +818,16 @@ final rows = await db.customSelect(
 
 | # | 检查项 | 实现状态 | 说明 |
 |---|---|---|---|
-| 1 | SQLite 加密 | ❌ 未实现 | 明文存储，沙箱隔离 |
-| 2 | Keystore / Keychain | ❌ 未实现 | 与 PRIVACY.md 声明不符 |
-| 3 | PIN 加盐哈希 | ❌ 未实现 | SHA-256 无盐 |
-| 4 | PIN 失败次数限制 | ❌ 未实现 | 可无限次尝试 |
+| 1 | SQLite 加密 | ⚠️ 可开启（默认关闭） | 2026-10-10 复核：Android 自 2026-10-06 起具备 SQLCipher 整库加密能力（三 ABI 的 `libsqlcipher.so` 已入库 + `name_android: sqlcipher`），由用户在设置里开启；默认仍是明文 + 沙箱隔离 |
+| 2 | Keystore / Keychain | ⚠️ 基本实现 | 2026-10-10 复核：`flutter_secure_storage` 已用于 PIN 哈希、云服务凭据、AI 服务商凭据与 E2EE 密钥，「零匹配」不再成立 |
+| 3 | PIN 加盐哈希 | ✅ 已实现 | 2026-10-10 复核：Argon2id + 16 字节随机 salt，哈希入 `flutter_secure_storage`；旧无盐 SHA-256 验证成功后自动升级 |
+| 4 | PIN 失败次数限制 | ✅ 已实现 | 2026-10-10 复核：连续输错 5 次锁 30s、10 次锁 5min，成功清零；可选 20 次失败清除本机数据 |
 | 5 | PIN 长度可配置 | ❌ 未实现 | 硬编码 4 位 |
 | 6 | 生物识别 | ✅ 已实现 | local_auth + biometricOnly |
 | 7 | 自动锁定 | ✅ 已实现 | 0/60/300/900s 可配置 |
 | 8 | 隐私屏 | ✅ 已实现 | BackdropFilter blur 30 |
-| 9 | FLAG_SECURE | ❌ 未实现 | 截屏未保护 |
-| 10 | 凭证安全存储 | ❌ 未实现 | 全部明文 SharedPreferences |
+| 9 | FLAG_SECURE | ✅ 已实现 | 2026-10-10 起 `MainActivity` 开启；设置内可关闭 |
+| 10 | 凭证安全存储 | ⚠️ 基本实现 | 2026-10-10 复核：云凭据 / AI 服务商凭据已入 `flutter_secure_storage`；导入导出的向后兼容键仍为明文（详见 §4.3 复核注） |
 | 11 | HTTPS 强制 | ✅ 已实现 | 全部 https:// |
 | 12 | 证书锁定 | ❌ 未实现 | 无 pinning |
 | 13 | 请求超时 | ✅ 已实现 | 按服务差异化配置 |
@@ -830,13 +850,13 @@ final rows = await db.customSelect(
 
 | # | 风险项 | 严重程度 | 建议修复 |
 |---|---|---|---|
-| 1 | 凭证全部明文存 SharedPreferences（与 PRIVACY.md 声明矛盾） | 极高 | 引入 `flutter_secure_storage`（Android Keystore / iOS Keychain） |
+| 1 | ~~凭证全部明文存 SharedPreferences~~ ⚠️ 基本修复（2026-10-10） | — | 云凭据 / AI 服务商凭据已入 `flutter_secure_storage`；残留见 §4.3 复核注 |
 | 2 | PRIVACY.md 误称使用 Android Keystore & MIT License | 高 | 修正 PRIVACY.md 与代码/许可证一致 |
-| 3 | PIN 用无盐 SHA-256 + 4 位 + 无失败限流 | 高 | 改用 PBKDF2/bcrypt + 加盐 + 6 位以上 + 5 次失败后指数退避 |
+| 3 | ~~PIN 用无盐 SHA-256 + 4 位 + 无失败限流~~ ⚠️ 大部分修复（2026-10-10） | — | 已改 Argon2id + 随机 salt、5/10 次分档退避；**PIN 长度仍硬编码 4 位**（原建议「6 位以上」未采纳） |
 | 4 | AI 同意流程仅 1 处实际触发，无 AIProviderFactory 二道关 | 高 | 在 `AIProviderFactory.chat/vision/speechToText` 入口加 `isConsented` 检查 |
 | 5 | 配置导出含明文密码/API Key 且无加密 | 高 | 导出文件支持密码加密，或默认不导出凭证 |
-| 6 | 无 FLAG_SECURE 截屏保护 | 中 | MainActivity 中 `window.setFlags(FLAG_SECURE, FLAG_SECURE)` |
-| 7 | SQLite 数据库未加密 | 中 | 引入 `drift_sqlcipher` 或在备份导出时加密 |
+| 6 | ~~无 FLAG_SECURE 截屏保护~~ ✅ 已修复（2026-10-10） | — | `MainActivity` 已落实保护，并在设置页「应用锁 → 防截屏保护」提供开关 |
+| 7 | ~~SQLite 数据库未加密~~ ⚠️ 可开启（默认关闭，2026-10-10 复核） | — | 已具备 SQLCipher 整库加密（见 Checklist 第 1 行），由用户在设置里开启 |
 | 8 | 无证书锁定 | 中 | 对 PiggyCount Cloud 默认域名做证书锁定 |
 | 9 | AI 数据发送前无脱敏 | 中 | 对账户名/备注做可选脱敏（如掩码）后再发送 |
 | 10 | 路径遍历防护缺失 | 中 | 导入 `custom_icon_path` 等字段时规范化路径 |

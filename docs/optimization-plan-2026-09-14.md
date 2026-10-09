@@ -213,6 +213,7 @@
 ## 六、明确不做 / 缓做
 
 - **SQLCipher 全库加密**、PIN 加盐与失败锁定、FLAG_SECURE：属安全项，已在 `docoments/16-known-issues.md` 短期清单，优先级独立于本方案（且 PIN 是 P0 安全债，建议先于 B2 处理）
+  - ⚠️ **2026-10-10 复核，本条已过期**：PIN 加盐（Argon2id + 随机 salt，哈希入 `flutter_secure_storage`）与失败锁定（5 次锁 30s / 10 次锁 5min，成功清零；可选 20 次失败清除本机数据）均已落地；FLAG_SECURE 已启用并在设置页「应用锁 → 防截屏保护」提供开关；SQLCipher 整库加密能力已于 2026-10-06 在 Android 接入（三个 ABI 的 `libsqlcipher.so` 入库 + `hooks.user_defines.sqlite3` 的 `name_android: sqlcipher`，用户在设置里开启）。「缓做」的结论不再成立，详见 `docoments/12-security.md` 的 2026-10-10 复核注。
 - **Web 端 / Flutter SDK 升级**：known-issues P3，工具链锁 3.27.3 有因（pubspec.yaml:48-52 注释），不动
   - ⚠️ **2026-09-19 复核，本条已过期**：SDK 已升级到 **Flutter 3.44.3**（`pubspec.yaml:14`，且 version 单一来源注释已改写到 `pubspec.yaml:8-13`，原 `:48-52` 那段"锁 3.27.3"的注释不存在了）。"不动"结论仍然成立，但依据变成"已升到当前稳定线、无进一步升级需求"，不是"锁在旧版"。
 - **实时协同**：历史项目已下线，不复活
