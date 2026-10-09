@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../styles/tokens.dart';
 import '../../utils/ui_scale_extensions.dart';
+import '../../widgets/biz/biz.dart';
 import '../../widgets/currency/currency_picker_sheet.dart';
 import '../../widgets/ui/ui.dart';
 
@@ -249,22 +250,57 @@ class _SavingsGoalEditPageState extends ConsumerState<SavingsGoalEditPage> {
     }
   }
 
-  Widget _fieldLabel(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          text,
-          style: PiggyTextTokens.caption(context).copyWith(
-            fontWeight: FontWeight.w600,
-            color: PiggyTokens.textSecondary(context),
-          ),
+  /// 「存入 / 取出」按钮：与分段控件同高（40）同圆角（`radiusSm`），
+  /// 两个等宽动作键并排 —— 不用主色填充，避免与底部「保存」抢焦点。
+  ButtonStyle get _savedActionStyle => OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(40),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
         ),
       );
+
+  /// 币种选择（仅手动模式可改；账户模式锁定为账户币种）。
+  Future<void> _pickCurrency() async {
+    final l10n = AppLocalizations.of(context);
+    final picked = await showCurrencyPickerSheet(
+      context,
+      selected: _currency,
+      primaryColor: ref.read(primaryColorProvider),
+      title: l10n.savingsGoalCurrency,
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _currency = picked.toUpperCase());
+  }
+
+  /// 起算日（必填，默认今天）。
+  Future<void> _pickStartDate() async {
+    final picked = await showWheelDatePicker(
+      context,
+      initial: _startDate,
+      mode: WheelDatePickerMode.ymd,
+      minDate: DateTime(2000),
+      maxDate: DateTime(2100),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _startDate = picked);
+  }
+
+  /// 目标日期（可空；尾部清除键把它置回「未设置」）。
+  Future<void> _pickTargetDate() async {
+    final picked = await showWheelDatePicker(
+      context,
+      initial: _targetDate ?? DateTime.now(),
+      mode: WheelDatePickerMode.ymd,
+      minDate: DateTime(2000),
+      maxDate: DateTime(2100),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _targetDate = picked);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final primary = ref.watch(primaryColorProvider);
-    final dateStyle = PiggyTextTokens.body(context);
 
     String ymd(DateTime d) =>
         '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
@@ -299,150 +335,112 @@ class _SavingsGoalEditPageState extends ConsumerState<SavingsGoalEditPage> {
               label: l10n.savingsGoalTargetAmount,
             ),
           ),
-          SizedBox(height: PiggyDimens.p16.scaled(context, ref)),
+          SizedBox(height: PiggyDimens.p20.scaled(context, ref)),
 
           // ---- 进度来源 ----
-          _fieldLabel(l10n.savingsGoalSource),
-          Wrap(
-            spacing: 8,
-            children: [
-              ChoiceChip(
-                label: Text(l10n.savingsGoalSourceManual),
-                selected: !_useAccount,
-                onSelected: (_) => setState(() => _useAccount = false),
+          //
+          // 版式与搜索筛选抽屉同一套语言（PiggySectionLabel + 分段控件 +
+          // PiggyValueRow），不要退回两行堆叠的 ListTile 或并排 ChoiceChip：
+          // Chip 自带留白且各自成块，两三个并排就会显得零碎、高度也对不齐。
+          PiggySectionLabel(l10n.savingsGoalSource),
+          SizedBox(height: PiggyDimens.p8.scaled(context, ref)),
+          PiggySegmentedControl<bool>(
+            selected: _useAccount,
+            onChanged: (useAccount) => setState(() => _useAccount = useAccount),
+            options: [
+              PiggySegmentOption(
+                value: false,
+                label: l10n.savingsGoalSourceManual,
               ),
-              ChoiceChip(
-                label: Text(l10n.savingsGoalSourceAccount),
-                selected: _useAccount,
-                onSelected: (_) => setState(() => _useAccount = true),
+              PiggySegmentOption(
+                value: true,
+                label: l10n.savingsGoalSourceAccount,
               ),
             ],
           ),
           SizedBox(height: PiggyDimens.p8.scaled(context, ref)),
 
           if (_useAccount)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: Text(l10n.savingsGoalAccount),
-              subtitle: Text(
-                _accountName ??
-                    (_accountId != null
-                        ? l10n.savingsGoalAccountMissing
-                        : l10n.searchNotSet),
-              ),
+            PiggyValueRow(
+              icon: Icons.account_balance_wallet_outlined,
+              label: l10n.savingsGoalAccount,
+              placeholder: l10n.searchNotSet,
+              value: _accountName ??
+                  (_accountId != null ? l10n.savingsGoalAccountMissing : null),
               onTap: _pickAccount,
-              trailing: const Icon(Icons.chevron_right, size: 24),
             )
           else ...[
-            // 手动模式：币种可选 + 已存草稿（存入 / 取出）
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: Text(l10n.savingsGoalCurrency),
-              subtitle: Text(_currency),
-              onTap: () async {
-                final picked = await showCurrencyPickerSheet(
-                  context,
-                  selected: _currency,
-                  primaryColor: primary,
-                  title: l10n.savingsGoalCurrency,
-                );
-                if (picked != null && mounted) {
-                  setState(() => _currency = picked.toUpperCase());
-                }
-              },
-              trailing: const Icon(Icons.chevron_right, size: 24),
+            // 手动模式的进度是**表单草稿**（存入 / 取出只改草稿，保存才落库），
+            // 所以这里只读展示当前值，改值走下面两个动作键。
+            // 金额走 AmountText：跟随全局「隐藏金额」开关，别自己拼字符串。
+            PiggyValueRow(
+              icon: Icons.savings_outlined,
+              label: l10n.savingsGoalSaved,
+              valueWidget: AmountText(
+                value: _saved,
+                signed: false,
+                showCurrency: true,
+                currencyCode: _currency,
+                style: PiggyTextTokens.body(context).copyWith(
+                  color: PiggyTokens.primary(context),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
+            SizedBox(height: PiggyDimens.p8.scaled(context, ref)),
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    '${l10n.savingsGoalSaved}: ${_saved.toStringAsFixed(2)} $_currency',
-                    style: dateStyle,
+                  child: OutlinedButton(
+                    onPressed: () => _adjustSaved(deposit: false),
+                    style: _savedActionStyle,
+                    child: Text(l10n.savingsGoalWithdraw),
                   ),
                 ),
-                TextButton(
-                  onPressed: () => _adjustSaved(deposit: true),
-                  child: Text(l10n.savingsGoalDeposit),
-                ),
-                TextButton(
-                  onPressed: () => _adjustSaved(deposit: false),
-                  child: Text(l10n.savingsGoalWithdraw),
+                const SizedBox(width: PiggyDimens.p8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _adjustSaved(deposit: true),
+                    style: _savedActionStyle,
+                    child: Text(l10n.savingsGoalDeposit),
+                  ),
                 ),
               ],
             ),
           ],
-
-          // 账户模式：币种跟随账户，只读展示（不做视图期汇率折算）
-          if (_useAccount)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: Text(l10n.savingsGoalCurrency),
-              subtitle: Text(_currency),
-              trailing: Text(
-                l10n.savingsGoalCurrencyFollowsAccount,
-                style: PiggyTextTokens.caption(context),
-              ),
-            ),
-
           SizedBox(height: PiggyDimens.p8.scaled(context, ref)),
+          // 币种：手动模式可改；账户模式锁定为账户币种，只读 + 尾注说明出处。
+          PiggyValueRow(
+            icon: Icons.currency_exchange_outlined,
+            label: l10n.savingsGoalCurrency,
+            value: _currency,
+            onTap: _useAccount ? null : _pickCurrency,
+            trailingCaption:
+                _useAccount ? l10n.savingsGoalCurrencyFollowsAccount : null,
+          ),
 
           // ---- 日期 ----
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: Text(l10n.savingsGoalStartDate),
-            subtitle: Text(ymd(_startDate)),
-            onTap: () async {
-              final picked = await showWheelDatePicker(
-                context,
-                initial: _startDate,
-                mode: WheelDatePickerMode.ymd,
-                minDate: DateTime(2000),
-                maxDate: DateTime(2100),
-              );
-              if (picked != null && mounted) {
-                setState(() => _startDate = picked);
-              }
-            },
-            trailing: const Icon(Icons.calendar_today, size: 20),
+          SizedBox(height: PiggyDimens.p20.scaled(context, ref)),
+          PiggyValueRow(
+            icon: Icons.event_outlined,
+            label: l10n.savingsGoalStartDate,
+            value: ymd(_startDate),
+            onTap: _pickStartDate,
           ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: Text(l10n.savingsGoalTargetDate),
-            subtitle: Text(
-              _targetDate != null ? ymd(_targetDate!) : l10n.searchNotSet,
-            ),
-            onTap: () async {
-              final picked = await showWheelDatePicker(
-                context,
-                initial: _targetDate ?? DateTime.now(),
-                mode: WheelDatePickerMode.ymd,
-                minDate: DateTime(2000),
-                maxDate: DateTime(2100),
-              );
-              if (picked != null && mounted) {
-                setState(() => _targetDate = picked);
-              }
-            },
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_targetDate != null)
-                  IconButton(
-                    icon: const Icon(Icons.clear, size: 20),
-                    tooltip: l10n.tooltipClear,
-                    onPressed: () => setState(() => _targetDate = null),
-                  ),
-                const Icon(Icons.calendar_today, size: 20),
-              ],
-            ),
+          SizedBox(height: PiggyDimens.p8.scaled(context, ref)),
+          PiggyValueRow(
+            icon: Icons.event_available_outlined,
+            label: l10n.savingsGoalTargetDate,
+            placeholder: l10n.searchNotSet,
+            value: _targetDate == null ? null : ymd(_targetDate!),
+            onTap: _pickTargetDate,
+            // 有值 → 尾部是清除键（取代箭头，同搜索筛选抽屉口径）
+            onClear: _targetDate == null
+                ? null
+                : () => setState(() => _targetDate = null),
           ),
 
-          SizedBox(height: PiggyDimens.p8.scaled(context, ref)),
+          SizedBox(height: PiggyDimens.p20.scaled(context, ref)),
           TextField(
             controller: _note,
             maxLines: 2,

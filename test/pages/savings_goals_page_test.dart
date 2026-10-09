@@ -25,7 +25,9 @@ import 'package:piggycount/pages/budget/widgets/budget_progress_bar.dart';
 import 'package:piggycount/pages/savings_goal/savings_goal_edit_page.dart';
 import 'package:piggycount/pages/savings_goal/savings_goals_page.dart';
 import 'package:piggycount/providers/database_providers.dart';
+import 'package:piggycount/widgets/biz/biz.dart';
 import 'package:piggycount/widgets/savings_goal/savings_goal_card.dart';
+import 'package:piggycount/widgets/ui/ui.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -133,6 +135,37 @@ void main() {
       reason: '账户模式必须让用户看出进度来自哪个账户',
     );
     expect(find.text(l10n.savingsGoalSourceManual), findsNothing);
+
+    await settlePage(tester, container);
+  });
+
+  testWidgets('表单抽屉：分段来源 + 行式字段（不再用 ChoiceChip / ListTile）',
+      (tester) async {
+    final container = await pumpPage(tester);
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    final sheet = find.byType(SavingsGoalEditPage);
+    expect(find.byType(PiggyFormSheet), findsOneWidget);
+
+    // 版式语言与搜索筛选抽屉统一：分段控件 + 图标行；
+    // 旧版并排 ChoiceChip / 两行堆叠 ListTile 一律不许回来
+    // （Chip 各自成块、高度对不齐，见 AGENTS「表单字段用行式组件」）。
+    expect(find.byType(ChoiceChip), findsNothing);
+    expect(find.byType(ListTile), findsNothing);
+    expect(find.byType(PiggySegmentedControl<bool>), findsOneWidget);
+    // 手动模式：已存 / 币种 / 起算日 / 目标日期 四行
+    expect(find.byType(PiggyValueRow), findsNWidgets(4));
+    // 已存金额走 AmountText（跟随全局「隐藏金额」开关，不自己拼字符串）
+    expect(find.byType(AmountText), findsOneWidget);
+
+    // 切到账户模式：币种锁成账户币种，改为只读行 + 尾注说明出处
+    final l10n = l10nOf(tester, sheet);
+    await tester.tap(find.text(l10n.savingsGoalSourceAccount));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.savingsGoalCurrencyFollowsAccount), findsOneWidget);
+    expect(find.byType(AmountText), findsNothing,
+        reason: '手动草稿行在账户模式下应整行消失');
 
     await settlePage(tester, container);
   });
