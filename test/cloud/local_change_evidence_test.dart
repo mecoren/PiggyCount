@@ -14,6 +14,12 @@
 ///   没有地板时 c 在恢复后必然成立 → 误判 localNewer → 按 UI 指引上传即
 ///   静默回退云端较新副本（双端实测本地 5002 / 云端 5003 却报 localNewer）。
 ///   地板之前（含）的痕迹一律作废。
+/// - 2026-10-10 追加**整轮恢复地板**：上面的地板只管本账本，而
+///   accounts/categories/tags/exchange_rate_overrides 是全账本共享的
+///   user-global 段 —— 恢复**别的**账本同样会盖它们。逐账本串行恢复（备份恢复 /
+///   全量下载就是逐本循环）后，早恢复的账本会拿到「晚恢复账本盖的全局戳」→
+///   全 8 本齐报 localNewer（双端实测：备份恢复后无任何本机编辑却 8 本 localNewer）。
+///   user-global 证据改用「任意账本的上次恢复」作地板，ledger-scoped 仍用本账本地板。
 library;
 
 import 'package:drift/drift.dart' as d;
@@ -92,14 +98,41 @@ void main() {
   /// 登记一条「快照恢复成功」指标行 = 恢复地板
   /// （本机上次成功把外部快照整本写进本账本的时刻）。
   /// 备份恢复 / 云端下载恢复 / 新建导入三条路径都按逐账本单元记这一行。
+  /// [ledgerId] 用于构造「逐账本串行恢复」场景（2026-10-10 整轮地板）。
   Future<void> insertRestoreFloor(DateTime ts,
-      {SyncOpOutcome outcome = SyncOpOutcome.success}) async {
+      {SyncOpOutcome outcome = SyncOpOutcome.success, int ledgerId = 1}) async {
     await db.into(db.syncOpLog).insert(SyncOpLogCompanion.insert(
           ts: d.Value(ts),
           backend: 's3',
           scenario: SyncOpScenario.snapshotRestore.label,
           outcome: outcome.label,
-          ledgerId: const d.Value(1),
+          ledgerId: d.Value(ledgerId),
+        ));
+  }
+
+  /// 在 **user-global** 表（accounts）上留下一条指定时刻的持久痕迹，模拟
+  /// 「恢复账本 X 时云端值与本地不同 → 同行被 UPDATE → 触发器盖恢复时刻」。
+  /// 显式写 createdAt/updatedAt 绕过触发器守卫（`WHEN NEW.updated_at IS
+  /// OLD.updated_at` 在显式赋值时不成立），从而得到确定性的时刻。
+  Future<void> stampUserGlobal(DateTime at) async {
+    await db.into(db.accounts).insert(AccountsCompanion.insert(
+          ledgerId: 0,
+          name: '恢复盖戳账户',
+          createdAt: d.Value(at.subtract(const Duration(minutes: 1))),
+          updatedAt: d.Value(at),
+        ));
+  }
+
+  /// 在 **ledger-scoped** 表（transactions）上留下一条指定时刻的持久痕迹
+  /// （同上用显式 updatedAt 求确定性）。
+  Future<void> touchTransactionAt(DateTime at) async {
+    await db.into(db.transactions).insert(TransactionsCompanion.insert(
+          ledgerId: 1,
+          type: 'expense',
+          amount: 10.0,
+          happenedAt: d.Value(DateTime(2026, 8, 1)),
+          syncId: const d.Value('ev-tx-at'),
+          updatedAt: d.Value(at),
         ));
   }
 
@@ -233,6 +266,72 @@ void main() {
       expect((await evidence()).trusted, isTrue,
           reason: '恢复事务内已清空陈旧行（_purgeStaleLocalChanges），'
               '留下的行必是本机真实写入，b 不设地板');
+    });
+  });
+
+  group('整轮恢复地板（2026-10-10 修复）：恢复别的账本盖的全局痕迹不是本账本的编辑',
+      () {
+    test('逐账本串行恢复：晚恢复账本盖在 user-global 表上的痕迹必须作废', () async {
+      final now = DateTime.now();
+      await insertUploadAnchor(now.subtract(const Duration(minutes: 120)));
+      // 本账本（LD1）自己的恢复较早
+      await insertRestoreFloor(now.subtract(const Duration(minutes: 60)));
+      // 恢复另一本（LD2）时云端 user-global 值与本地不同 → 同行被 UPDATE →
+      // trg_accounts_touch_updated_at 盖成「LD2 的恢复时刻」（= 本机时钟）
+      await stampUserGlobal(now.subtract(const Duration(minutes: 1)));
+
+      // 对照（旧行为的成因）：此刻全局地板仍停在 LD1 的 60 分钟前，这条全局
+      // 痕迹晚于它 → 被当成「LD1 的本机编辑证据」→ wroteAfterLastUpload 成立
+      // → trusted=true → 方向仲裁判 localNewer，UI 指引「上传覆盖」。
+      expect((await evidence()).trusted, isTrue,
+          reason: '对照断言：这正是旧实现把「恢复别的账本」当成 LD1 本机编辑的那一步');
+
+      // LD2 的恢复行登记（真实顺序：先导数据、后记指标行，故其 ts 不早于
+      // 它盖的全局戳）
+      await insertRestoreFloor(now, ledgerId: 2);
+
+      final e = await evidence();
+      expect(e.trusted, isFalse,
+          reason: 'user-global 证据必须晚于「任意账本的上次恢复」才作数 → '
+              'LD1 没有任何本机编辑证据');
+      expect(e.at, isNull,
+          reason: '地板把全局候选滤空（LD1 也无 ledger-scoped 痕迹）→ at=null，'
+              '交 core 走 count 兜底 / unknown 让用户确认，不再指引「上传覆盖」');
+    });
+
+    test('整轮地板之后的全局编辑仍被承认（地板只作废恢复时刻的痕迹）', () async {
+      final now = DateTime.now();
+      await insertUploadAnchor(now.subtract(const Duration(minutes: 120)));
+      await insertRestoreFloor(now.subtract(const Duration(minutes: 30)),
+          ledgerId: 2);
+      // 恢复之后本机真去改了账户/分类（全局域）→ 晚于整轮地板
+      await stampUserGlobal(now.subtract(const Duration(minutes: 10)));
+
+      final e = await evidence();
+      expect(e.trusted, isTrue,
+          reason: '全局痕迹晚于任意账本的上次恢复 ⟹ 确实是本机编辑，不得过度作废');
+      expect(e.at, isNotNull);
+      expect(e.at!.isBefore(now.subtract(const Duration(minutes: 5))), isTrue,
+          reason: 'at 应取全局痕迹（10 分钟前），而非当下');
+    });
+
+    test('整轮地板不越过本账本地板去作废 ledger-scoped 证据（两域各自地板）',
+        () async {
+      final now = DateTime.now();
+      await insertUploadAnchor(now.subtract(const Duration(minutes: 120)));
+      await insertRestoreFloor(now.subtract(const Duration(minutes: 60)));
+      // 本账本域的真实编辑（恢复之后）
+      await touchTransactionAt(now.subtract(const Duration(minutes: 10)));
+      // 更晚的「别的账本」恢复：整轮地板晚于上面那条本账本痕迹
+      await insertRestoreFloor(now.subtract(const Duration(minutes: 1)),
+          ledgerId: 2);
+
+      final e = await evidence();
+      expect(e.trusted, isTrue,
+          reason: 'ledger-scoped 痕迹只受**本账本**地板约束，晚于它即成立；'
+              '整轮地板（更晚）不得越界作废它 —— 否则会把真实的本机编辑'
+              '一律降级，用户被迫反复人工确认');
+      expect(e.at, isNotNull);
     });
   });
 }

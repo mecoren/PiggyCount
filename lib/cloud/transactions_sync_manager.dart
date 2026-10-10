@@ -931,7 +931,9 @@ class TransactionsSyncManager implements SyncService {
   /// 4. `MAX(local_changes.created_at)`：**保留为叠加源**（测试装配 /
   ///    未来重新注入 tracker 时有效；它是一条真实写时刻，不会引入不实）。
   /// 作用域 = 本账本 + user-global（账户/分类/标签/汇率覆盖改动同样改变
-  /// 快照内容，故一并纳入）。
+  /// 快照内容，故一并纳入）。两类**分别**取最大值、分别过各自的地板
+  /// （见下方「恢复地板」/「整轮恢复地板」）：user-global 是全账本共享段，
+  /// 别的账本的恢复会盖它，故不能与 ledger-scoped 痕迹共用一块地板。
   ///
   /// 另读一个**锚点**（不参与 at，只判可信度）：`sync_op_log` 中本账本
   /// `snapshot_upload`+`success` 的 `MAX(ts)`（本机时钟；配合内存
@@ -956,6 +958,19 @@ class TransactionsSyncManager implements SyncService {
   /// （at=null、trusted=false），由 core 走 count 兜底或 unknown 让用户确认。
   /// 保守方向：地板只可能把 localNewer 降级为 unknown/count 判据，绝不会
   /// 制造出「本地较新」的放行。
+  ///
+  /// **整轮恢复地板**（2026-10-10 修复，「逐账本串行恢复 → 全 8 本误判
+  /// localNewer」）：上面的地板只覆盖**本账本**，而 `accounts` / `categories` /
+  /// `tags` / `exchange_rate_overrides` 是**全账本共享**的证据列 —— 恢复账本 B
+  /// 也会把它们盖成 B 的恢复时刻。逐账本循环恢复（备份恢复 / 全量下载就是
+  /// 逐本循环）后，早恢复的账本地板比晚恢复账本盖的全局戳更早，旧实现于是
+  /// **每一本**都拿到「晚于地板的持久痕迹」→ 8 本全部 localNewer（2026-10-10
+  /// 双端实测：备份恢复后无任何本机编辑，却 8 本齐报 localNewer）。
+  /// 故 user-global 组另设一个下限 = `sync_op_log` 中**任意账本**
+  /// `snapshot_restore`+`success` 的 `MAX(ts)`（rs_g，不加 ledger 过滤），
+  /// 只有晚于它才算本机编辑。与 rs_a 同向保守：只会把 localNewer 降级为
+  /// unknown/count，不会制造放行方向；代价是「恢复另一账本后再回头编辑全局表」
+  /// 这类交错会连带作废更早的全局痕迹 → 最坏多一次人工确认。
   ///
   /// `trusted` 门禁**不放松**，仍是「本地确有未上云内容」这一内容性断言
   /// （旧实现的 `unpushed > 0` 就是这个断言，只是生产恒 0 而失效）。三条
@@ -990,9 +1005,13 @@ class TransactionsSyncManager implements SyncService {
     // ① 本 session 内存墙钟（写路径已登记）——本机时钟，硬证据
     final recentChange = _recentLocalChangeAt[ledgerId];
 
-    DateTime? persistedAt; // 持久化写入痕迹的最大值（本机时钟）
+    DateTime? persistedAt; // ledger-scoped 持久痕迹最大值（本机时钟）
+    DateTime? persistedGlobalAt; // user-global 表持久痕迹最大值（本机时钟）
     DateTime? anchor; // 本机上次成功上传本账本的时刻（同机时钟锚点）
     DateTime? restoreFloor; // 本机上次成功整本恢复本账本的时刻（证据下限）
+    // 整轮恢复地板（2026-10-10）：本机**任意账本**上一次成功恢复的时刻。
+    // 只约束 user-global 证据，理由见 SQL 中 rs_g 的注释与下方 persistedAny 段。
+    DateTime? globalRestoreFloor;
     var unpushed = 0; // local_changes 未推送行数（叠加证据，生产恒 0）
 
     // ②③④⑤ 单条 SQL（避免 N 次往返）
@@ -1041,12 +1060,36 @@ class TransactionsSyncManager implements SyncService {
           (SELECT MAX(ts) FROM sync_op_log
             WHERE ledger_id = ?
               AND scenario = 'snapshot_restore'
-              AND outcome = 'success') AS rs_a
+              AND outcome = 'success') AS rs_a,
+          -- 整轮恢复地板（2026-10-10，「逐账本串行恢复 → 全账本误判
+          -- localNewer」修复）：本机**任意**账本上一次成功整本恢复的时刻。
+          --
+          -- 为什么全局证据需要另一块地板：账户 / 分类 / 标签 / 汇率覆盖在快照
+          -- 里是**全账本共享**的一段（user-global）。恢复账本 B 时，若云端值
+          -- 与本机不同，同一批 user-global 行会被 UPDATE，随即被
+          -- trg_*_touch_updated_at 盖成 **B 的**恢复时刻。于是「先恢复 A（较早）
+          -- → 再恢复 B（较晚）」这种逐账本串行恢复（备份恢复 / 全量下载就是
+          -- 逐本循环）结束后，A 的全局证据 = t_B，晚于 A 自己的地板 t_A →
+          -- 旧实现把它当成「A 的本机编辑痕迹」→ A~H **全 8 本都判 localNewer**。
+          -- 2026-10-10 双端实测正是如此：备份恢复（云恢复同理）后 8 本全部
+          -- 显示 localNewer，UI 指引「上传覆盖」，而本地恰恰是被外部内容替换的
+          -- 那一侧、没有任何本机编辑 —— 照指引上传即静默回退化云端副本。
+          --
+          -- 口径与取舍：全局证据的下限取「**任意**账本的上次恢复」（不加 ledger
+          -- 过滤；restore 行由 _recordMetrics 一律带具体 ledgerId 写入，不过滤
+          -- 即为全量覆盖）。地板只可能把 localNewer 降级为 unknown / count 判据，
+          -- 与 rs_a 同向（保守），不会制造「本地较新」的放行；代价是「恢复 B 之后
+          -- 再回头编辑全局表」这类交错会让更早的全局痕迹一并失效 → 最坏多一次
+          -- 人工确认，绝不静默覆盖。
+          (SELECT MAX(ts) FROM sync_op_log
+            WHERE scenario = 'snapshot_restore'
+              AND outcome = 'success') AS rs_g
         ''',
         // 占位符共 14 个（tx_u/bg_u/bg_c/rc_u/rc_c/lg_u/lg_c/cf_u/cf_c/
-        // att_c/lc_c/lc_n/up_a/rs_a），
-        // 必须与下面 variables 数量一致 —— 少给会整条语句抛错并被 catch 吞成
-        // 「无证据」，静默退化为恒 unknown（用测试正面断言钉住）。
+        // att_c/lc_c/lc_n/up_a/rs_a），必须与下面 variables 数量一致。
+        // rs_g 不带参数（全表 MAX，无 ledger 过滤），故不增占位符 ——
+        // 漏给参数会让整条语句抛错并被 catch 吞成「无证据」，静默退化为
+        // 恒 unknown（用测试正面断言钉住）。
         variables: [
           drift.Variable.withInt(ledgerId),
           drift.Variable.withInt(ledgerId),
@@ -1088,19 +1131,31 @@ class TransactionsSyncManager implements SyncService {
             : DateTime.fromMillisecondsSinceEpoch(secs * 1000, isUtc: false);
       }
 
-      final persisted = <DateTime>[
-        for (final key in const [
-          'tx_u', 'bg_u', 'bg_c', 'rc_u', 'rc_c', 'lg_u', 'lg_c',
-          'ac_u', 'ac_c', 'ca_u', 'tg_u', 'tg_c', 'ex_u', 'cf_u', 'cf_c',
-          'att_c', 'lc_c',
-        ])
-          if (readAt(key) != null) readAt(key)!,
-      ]..sort();
-      persistedAt = persisted.isEmpty ? null : persisted.last;
+      // 证据列分两组（2026-10-10）：两组各有自己的恢复地板，口径见 SQL 中
+      // rs_a / rs_g 的注释。
+      //   ① ledger-scoped（行归属本账本）→ 地板 = 本账本上次恢复（rs_a）；
+      //   ② user-global（全账本共享表，快照里是一段共享内容）→ 地板 =
+      //      任意账本上次恢复（rs_g）。
+      DateTime? maxOf(List<String> keys) {
+        final values = <DateTime>[
+          for (final key in keys)
+            if (readAt(key) != null) readAt(key)!,
+        ]..sort();
+        return values.isEmpty ? null : values.last;
+      }
+
+      persistedAt = maxOf(const [
+        'tx_u', 'bg_u', 'bg_c', 'rc_u', 'rc_c', 'lg_u', 'lg_c',
+        'cf_u', 'cf_c', 'att_c', 'lc_c',
+      ]);
+      persistedGlobalAt = maxOf(const [
+        'ac_u', 'ac_c', 'ca_u', 'tg_u', 'tg_c', 'ex_u',
+      ]);
 
       unpushed = row.read<int?>('lc_n') ?? 0;
       anchor = readAt('up_a');
       restoreFloor = readAt('rs_a');
+      globalRestoreFloor = readAt('rs_g');
     } catch (e) {
       // 读取失败：退回「无持久证据」——trust 门禁随之为 false，仲裁方按
       // unknown 处理（保守多弹窗，绝不凭缺失证据放行覆盖）
@@ -1127,10 +1182,27 @@ class TransactionsSyncManager implements SyncService {
           recentChange != null && recentChange.isAfter(restoreFloor);
       persistedValid = persistedAt != null && persistedAt.isAfter(restoreFloor);
     }
+    // user-global 组走**整轮**地板（rs_g）：见 SQL 注释 —— 「恢复别的账本」盖在
+    // 全局共享表上的时间戳不属于本账本的本机编辑，绝不能让本账本据此判 localNewer。
+    var persistedGlobalValid = persistedGlobalAt != null;
+    if (globalRestoreFloor != null) {
+      persistedGlobalValid = persistedGlobalAt != null &&
+          persistedGlobalAt.isAfter(globalRestoreFloor);
+    }
+    // 两组合并：只有各自过完地板仍成立的痕迹才参与 at / trusted。
+    // 地板缺失（本机从未恢复过任何账本）时两块地板均为 null → 两组全成立 →
+    // persistedEffectiveAt == 旧实现的 persistedAt，语义逐位不变。
+    final persistedEffective = <DateTime>[
+      if (persistedValid) persistedAt!,
+      if (persistedGlobalValid) persistedGlobalAt!,
+    ]..sort();
+    final persistedEffectiveAt =
+        persistedEffective.isEmpty ? null : persistedEffective.last;
+    final persistedEffectiveValid = persistedEffective.isNotEmpty;
 
     final candidates = <DateTime>[
       if (recentChangeValid) recentChange!,
-      if (persistedValid) persistedAt!,
+      if (persistedEffectiveValid) persistedEffectiveAt!,
     ]..sort();
 
     // b（local_changes 未推送行）在地板之下依然算数，故空候选不等于无证据：
@@ -1155,8 +1227,9 @@ class TransactionsSyncManager implements SyncService {
     //      反例边界：若该账本本机从未上传（无锚点），c 不成立 → 退回
     //      a/b；跨设备场景（对方快照 vs 我的本地）本就无法用同机时钟
     //      判定，保持 unknown 让用户确认才是正确取舍。
-    final wroteAfterLastUpload =
-        persistedValid && anchor != null && persistedAt!.isAfter(anchor);
+    final wroteAfterLastUpload = persistedEffectiveValid &&
+        anchor != null &&
+        persistedEffectiveAt!.isAfter(anchor);
     final trusted = recentChangeValid || unpushed > 0 || wroteAfterLastUpload;
     return (at: candidates.isEmpty ? null : candidates.last, trusted: trusted);
   }
@@ -2395,7 +2468,8 @@ class TransactionsSyncManager implements SyncService {
 
       // 调用包的 getStatus，传入时间戳用于方向判断。
       // 证据只取一次：_computeLocalUpdatedAt 与 _localUpdatedAtTrusted 同源，
-      // 分别调用会把同一条证据查询算两遍（CT-1 改造后该查询是 15 个子查询）。
+      // 分别调用会把同一条证据查询算两遍（CT-1 改造后该查询是 16 个子查询：
+      // 15 个带账本号的证据/锚点 + rs_g 全表 MAX）。
       final evidence = await _localChangeEvidence(ledgerId);
       final fcsStatus = await manager.getStatus(
           data: ledgerId,
