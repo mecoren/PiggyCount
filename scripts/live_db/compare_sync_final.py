@@ -52,8 +52,8 @@
     （同 `lib/cloud/sync_fingerprint.dart` 的指纹排除口径）。
   * `exchange_rate_overrides.rate` 存 TEXT，两端可能 '9.0' vs '9'；
     `sync_fingerprint.dart` 按 `toDouble()` 归一，故这里也按**数值**比对。
-  * `custom_values_json` / `tag_sync_ids_override` 为 JSON 文本，按**键序归一**后比对
-    （`_json_canon`；注意 `tag_sync_ids_override` 当前实现未搬运，故列**契约外**）。
+  * `custom_values_json` 为 JSON 文本，按**键序归一**后比对（`_json_canon`）。
+    （`tag_sync_ids_override` 已于 v51 DROP，SPEC 不再列出。）
 
 【已知覆盖面缺口（本脚本不覆盖的表）】
   * `custom_field_definitions`（v46 字段定义，属快照 `customFields` 段的数据本体、
@@ -365,18 +365,15 @@ SPEC = [
                  # v45/v46：均在云快照与指纹白名单内，必须比
                  ("original_amount", "t.original_amount", "round2"),
                  ("custom_values_json", "t.custom_values_json", "json"),
-                 # 共享账本 override：JSON 显式携带时参与 diff/合并
-                 ("category_sync_id_override", "t.category_sync_id_override", None),
-                 ("account_sync_id_override", "t.account_sync_id_override", None),
-                 ("to_account_sync_id_override", "t.to_account_sync_id_override", None),
+                 # 共享账本 override 四列（category/account/to_account/tag_sync_ids）
+                 # 已于 v51 DROP（2026-10-08）—— 快照契约同步收窄，SPEC 不再列出，
+                 # 否则 validate_spec 会因「库中无此列」直接退出 3（实测：2026-10-10
+                 # 本轮 R1_CMP 就因此报 [SPEC-ERROR]）。保留说明便于回溯。
                  # v8 G2：周期规则锚点在快照里以 recurringSyncId 传播，且已进指纹
                  ("recurring", "t.recurring_id", _fk("recurring_transactions"))],
-         local_fields=[("created_by_user_id", "t.created_by_user_id", None),
+                 local_fields=[("created_by_user_id", "t.created_by_user_id", None),
                        ("last_edited_by_user_id", "t.last_edited_by_user_id", None),
-                       ("updated_at", "t.updated_at", None),
-                       # lib/cloud/** 零引用：导出/指纹/导入三处都没有它
-                       # （比对脚本 v3 曾误列契约内，造数必然假失败）
-                       ("tag_sync_ids_override", "t.tag_sync_ids_override", "json")],
+                       ("updated_at", "t.updated_at", None)],
          line_tpl="transactions 逐字段 比对（{n}笔共同行） 仅A={only_a} 仅B={only_b} 字段差异={fdiff}"),
 
     Spec("budgets", "budgets b JOIN ledgers l ON b.ledger_id = l.id",

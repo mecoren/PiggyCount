@@ -80,6 +80,34 @@ def confirm_loop(port, tag, action, timeout=3000):
     return False, time.time() - t0
 
 
+def tap_fullsync(port, action):
+    """点「全量上传 / 全量下载」，返回命中节点（None = 没找到 / 不可点）。
+
+    ★ 不可点即「后端未连上」的快失败判据（2026-10-10 WebDAV 轮实测）：
+      当云服务配置不可用（例：WebDAV URL 填成垃圾值 `1` → provider 初始化失败）时，
+      同步页会把这两个按钮渲染成**禁用态**，uiautomator 里表现为**一个不可点的合并卡片
+      节点**：desc 同时含两个按钮文案（`全量上传&#10;以本地全部账本覆盖云端&#10;
+      全量下载&#10;以云端全部账本覆盖本地`）、bounds 覆盖两块（实测 `[43,1086][1157,1449]`）。
+      此时 `uidrv.find` 会命中该卡片并把 tap 落在两按钮之间的空隙上 —— 上传/下载**静默
+      不发起**，而 `confirm_loop` 会一直等确认弹窗直到 3000s 超时，现场看不出原因。
+      故这里**不再盲点**：节点不可点就直接判失败并打印诊断，让编排立刻停下。
+      正常态下两个按钮是各自可点的节点（实测 `[79,1154][1121,1282]`），走原路径。
+    """
+    key = "全量上传" if action == "upload" else "全量下载"
+    xml = uidrv.dump_xml(port)
+    n = uidrv.find(xml, key)
+    if not n:
+        return None
+    if not n["clickable"]:
+        flows.log(f"[FAIL] 命中的「{key}」节点不可点（bounds={n['bounds']}，"
+                  f"desc={n['desc'][:60]!r}）—— 通常是云服务配置不可用导致按钮禁用；"
+                  f"请先到「我的 → 云服务」确认后端连接正常")
+        return None
+    flows.log(f"点「{key}」@{n['cx']},{n['cy']} ({n['bounds']})")
+    uidrv.tap(port, n["cx"], n["cy"])
+    return n
+
+
 def main():
     action = sys.argv[1]
     tag = sys.argv[2]
@@ -91,12 +119,9 @@ def main():
     # 这样 <action>_logcat.txt 恰好只覆盖本轮动作，无需事后按挂钟时间猜窗口。
     evidence.capture_logcat(port, tag, f"{action}_pre", clear=False)
     uidrv.shell(port, "logcat -c")
-    key = "全量上传" if action == "upload" else "全量下载"
-    n = uidrv.find(uidrv.dump_xml(port), key)
-    if not n:
-        flows.log(f"[FAIL] 未找到「{key}」，请确认已停在同步页")
+    if tap_fullsync(port, action) is None:
+        flows.log(f"[FAIL] 未找到「全量上传/全量下载」，请确认已停在同步页")
         return 2
-    uidrv.tap(port, n["cx"], n["cy"])
     time.sleep(3)
     ok, el = confirm_loop(port, tag, action)
     # ★ 证据当场落盘（⑦）：app_logs 环只有 2000 条且跨重启存活，R1 的条目
