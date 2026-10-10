@@ -40,6 +40,22 @@ class ChangelogVersion {
 /// 全部版本，最新在前
 const kChangelogVersions = <ChangelogVersion>[
   ChangelogVersion(
+    version: '0.1.4',
+    date: '2026-10-10',
+    summary: '修复多账本云端恢复被误判为「本地较新」，以及下载 / 合并时自定义字段被清空、持仓与储蓄目标删除不生效的问题。',
+    sections: [
+      ChangelogSection(
+        icon: Icons.cloud_sync_outlined,
+        title: '云同步与恢复修复',
+        items: [
+          '修复多账本备份恢复 / 云端全量下载后被误判为「本地较新」、并误导你「上传覆盖」而可能把本地内容回退的问题',
+          '修复全量下载 / 合并后自定义字段被清空、编辑表单里字段消失的问题（不同设备各自建的同名字段现在会自动合并）',
+          '修复全量下载后对端已删的投资持仓 / 储蓄目标清不掉、账本一直停在「本地较新」的问题',
+        ],
+      ),
+    ],
+  ),
+  ChangelogVersion(
     version: '0.1.3',
     date: '2026-10-10',
     summary: '修复旧格式云端快照卡死「下载 / 对比合并」与账本切换不生效，新增可关闭的防截屏保护。',
