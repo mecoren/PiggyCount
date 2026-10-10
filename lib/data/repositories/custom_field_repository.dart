@@ -56,6 +56,22 @@ abstract class CustomFieldRepository {
   /// 不记 change —— 纯补全远端已有标识，push 时同 syncId 幂等。
   Future<void> updateDefinitionSyncId(int id, String syncId);
 
+  /// 把本账本交易里 `custom_values_json` 的 [oldSyncId] 键改名为 [newSyncId]。
+  ///
+  /// 用途（2026-10-10）：**同名不同 syncId** 的定义归并时，定义行采纳云端的
+  /// syncId 后，本机既有值的键必须跟着改名，否则值成孤儿（定义在、值看不见）。
+  /// 不记 change：纯身份迁移，调用方（导入/合并路径）自身已在
+  /// `withRecordingSuppressed` 包裹内，再记会产生幻影变更。
+  ///
+  /// 键冲突时**保留已存在的 [newSyncId] 值、丢弃 [oldSyncId] 值**：两行同名定义
+  /// 属各自独立创建，云端那份被视为权威（与导入侧「远端为准」一致）。
+  /// 返回实际改名的交易数。
+  Future<int> renameFieldValueKey({
+    required int ledgerId,
+    required String oldSyncId,
+    required String newSyncId,
+  });
+
   Future<CustomFieldDefinition?> getDefinitionById(int id);
 
   Future<CustomFieldDefinition?> getDefinitionBySyncId(String syncId);

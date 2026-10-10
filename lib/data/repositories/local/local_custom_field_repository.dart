@@ -188,6 +188,37 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
   }
 
   @override
+  Future<int> renameFieldValueKey({
+    required int ledgerId,
+    required String oldSyncId,
+    required String newSyncId,
+  }) async {
+    final from = oldSyncId.trim();
+    final to = newSyncId.trim();
+    if (from.isEmpty || to.isEmpty || from == to) return 0;
+    final rows = await (db.select(db.transactions)
+          ..where((t) =>
+              t.ledgerId.equals(ledgerId) & t.customValuesJson.isNotNull()))
+        .get();
+    var changed = 0;
+    await db.transaction(() async {
+      for (final tx in rows) {
+        final values = CustomFieldValueCodec.decode(tx.customValuesJson);
+        if (!values.containsKey(from)) continue;
+        // 键冲突：保留已存在的目标键（云端权威），只丢弃旧键。
+        if (!values.containsKey(to)) values[to] = values[from];
+        values.remove(from);
+        await (db.update(db.transactions)..where((t) => t.id.equals(tx.id)))
+            .write(TransactionsCompanion(
+          customValuesJson: d.Value(CustomFieldValueCodec.encode(values)),
+        ));
+        changed++;
+      }
+    });
+    return changed;
+  }
+
+  @override
   Future<CustomFieldDefinition?> getDefinitionById(int id) {
     return (db.select(db.customFieldDefinitions)..where((t) => t.id.equals(id)))
         .getSingleOrNull();

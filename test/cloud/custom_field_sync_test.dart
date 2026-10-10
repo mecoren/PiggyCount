@@ -408,5 +408,93 @@ void main() {
       expect(rows, hasLength(1));
       expect(rows.single.name, '本地新建未上传');
     });
+
+    // ── 2026-10-10 双端实测发现并修复（F-1）─────────────────────────────
+    // 场景：两台设备**各自新建同名自定义字段**（syncId 互不相同）。
+    // 修复前的覆盖下载链路：importCustomFields 的匹配顺序是
+    // `bySyncId[sid] ?? byName[name]` —— 按名命中后只对齐 name/fieldType/
+    // sortOrder，**不采纳云端 syncId**；紧接着的 _mirrorDeleteAbsentEntities
+    // 按 **syncId** 判「云端已删」→ 把这一行删掉，而云端那份又因「同名已存在」
+    // 走不到新建分支 ⇒ 本地定义 3 → 0（字段从 UI 消失、值成孤儿），
+    // 且 syncId 进指纹白名单（customFieldCanon 含 syncId）⇒ 该账本永久 different。
+    test('同名不同 syncId（覆盖下载）：定义保留、syncId 收敛到云端、值键跟着迁移',
+        () async {
+      await seedLedger();
+      await db.into(db.customFieldDefinitions).insert(
+            CustomFieldDefinitionsCompanion.insert(
+              ledgerId: 1,
+              name: '报销金额',
+              fieldType: 'text',
+              syncId: const Value('cf-local'),
+            ),
+          );
+      await seedTx(
+          id: 100, syncId: 'tx-1', valuesJson: jsonEncode({'cf-local': '本机值'}));
+
+      // 云端：同名、syncId 不同（另一台设备独立建的同一字段）
+      final snapshot = payloadOf((await exportTransactionsJson(db, 1)).jsonStr);
+      snapshot['customFields'] = <Map<String, dynamic>>[
+        {
+          'syncId': 'cf-cloud',
+          'name': '报销金额',
+          'fieldType': 'text',
+          'sortOrder': 0,
+        },
+      ];
+      for (final it in (snapshot['items'] as List).cast<Map<String, dynamic>>()) {
+        it['customValues'] = <String, dynamic>{'cf-cloud': '云端值'};
+      }
+
+      await restoreLedgerFromJson(
+        db: db,
+        repo: LocalRepository(db),
+        ledgerId: 1,
+        jsonStr: jsonEncode(snapshot),
+      );
+
+      final defs = await db.select(db.customFieldDefinitions).get();
+      expect(defs, hasLength(1),
+          reason: '修复前：定义会被镜像删除删空（本地有、云端"同名"那份又没新建）→ '
+              '字段从 UI 消失、值成孤儿');
+      expect(defs.single.syncId, 'cf-cloud',
+          reason: '身份必须收敛到云端：syncId 进指纹白名单，不收敛则账本永久 different');
+      // 注意：覆盖下载会**清空后重导**交易，行 id 已换（不是 100）；按账本取唯一行。
+      final tx = await (db.select(db.transactions)
+            ..where((t) => t.ledgerId.equals(1)))
+          .getSingle();
+      final values = CustomFieldValueCodec.decode(tx.customValuesJson);
+      expect(values['cf-cloud'], '云端值');
+      expect(values.containsKey('cf-local'), isFalse,
+          reason: '值键必须与定义身份一致，不能留孤儿键');
+    });
+
+    test('同名不同 syncId（合并路径 importCustomFields）：采纳云端 syncId 并迁移值键',
+        () async {
+      await seedLedger();
+      await db.into(db.customFieldDefinitions).insert(
+            CustomFieldDefinitionsCompanion.insert(
+              ledgerId: 1,
+              name: '报销金额',
+              fieldType: 'text',
+              syncId: const Value('cf-local'),
+            ),
+          );
+      await seedTx(
+          id: 100, syncId: 'tx-1', valuesJson: jsonEncode({'cf-local': '本机值'}));
+      final repo = LocalRepository(db);
+
+      await DataImportService().importCustomFields(repo, 1, const [
+        ImportCustomField(
+            name: '报销金额', fieldType: 'text', syncId: 'cf-cloud'),
+      ]);
+
+      final defs = await db.select(db.customFieldDefinitions).get();
+      expect(defs, hasLength(1));
+      expect(defs.single.syncId, 'cf-cloud');
+      final values = await repo.getValuesForTransaction(100);
+      expect(values['cf-cloud'], '本机值',
+          reason: '合并路径的交易行是**保留**的，值键必须跟着改名，否则用户录的值看不见');
+      expect(values.containsKey('cf-local'), isFalse);
+    });
   });
 }

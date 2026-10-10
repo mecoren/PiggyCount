@@ -238,6 +238,116 @@ void main() {
         reason: '引用守卫：仍有交易引用的账户不得被镜像删除');
   });
 
+  // ── 2026-10-10 双端实测发现并修复：恢复（覆盖下载）路径的
+  //    `_mirrorDeleteAbsentEntities` 漏了 v52 持仓 / v53 储蓄目标两个分支 ——
+  //    合并路径早已用 SyncEntityKind.holding / savingsGoal 认得它们（v11/v12
+  //    同批补齐），恢复路径不认 ⇒ 本地独有的目标/持仓在多次「全量下载」后
+  //    **依然残留** ⇒ 该账本永久 `SyncDiff.localNewer`，用户照状态卡提示
+  //    「上传覆盖」就会把对端已删的实体推回云端复活。
+  //    段门控与 sync_fingerprint / transactions_json 的
+  //    `sectionAbsent('savingsGoals', 12)` / `'holdings', 11` 同口径：
+  //    旧快照整段缺失 ≠ 云端全删，不过门控会把本地目标/持仓全删。
+  group('H3 镜像删除：v11 持仓 / v12 储蓄目标（2026-10-10 补）', () {
+    test('v12 快照：云端已删的储蓄目标被镜像删除', () async {
+      final id = await addLedger('Main');
+      await db.into(db.savingsGoals).insert(SavingsGoalsCompanion.insert(
+            syncId: const drift.Value('goal-orphan'),
+            ledgerId: id,
+            name: '应急基金',
+            targetAmount: 8000,
+          ));
+      final snapshot = jsonEncode({
+        'version': 12,
+        'ledgerName': 'Main',
+        'currency': 'CNY',
+        'items': const <Object>[],
+        'savingsGoals': [
+          {'syncId': 'goal-kept', 'name': '新手机基金', 'targetAmount': 5000},
+        ],
+      });
+
+      await restoreLedgerFromJson(
+          db: db, repo: repo, ledgerId: id, jsonStr: snapshot);
+
+      final goals = await db.select(db.savingsGoals).get();
+      expect(goals.map((g) => g.syncId), ['goal-kept'],
+          reason: '云端已删的储蓄目标必须镜像删除：残留会让该账本永久 localNewer'
+              '（本地有、云端没有），用户只能靠上传覆盖把它推回云端复活');
+    });
+
+    test('v11 快照不删储蓄目标（段门控：该段 v12 才有）', () async {
+      final id = await addLedger('Main');
+      await db.into(db.savingsGoals).insert(SavingsGoalsCompanion.insert(
+            syncId: const drift.Value('goal-local'),
+            ledgerId: id,
+            name: '本地目标',
+            targetAmount: 100,
+          ));
+      // v11 快照根本没有 savingsGoals 段 → 缺席 ≠ 云端全删
+      final snapshot = jsonEncode({
+        'version': 11,
+        'ledgerName': 'Main',
+        'currency': 'CNY',
+        'items': const <Object>[],
+      });
+
+      await restoreLedgerFromJson(
+          db: db, repo: repo, ledgerId: id, jsonStr: snapshot);
+
+      final goals = await db.select(db.savingsGoals).get();
+      expect(goals.map((g) => g.syncId), ['goal-local'],
+          reason: '旧快照整段缺失不得判成本地目标全删（与 sectionAbsent 同口径）');
+    });
+
+    test('v11 快照：云端已删的持仓被镜像删除', () async {
+      final id = await addLedger('Main');
+      await db.into(db.holdings).insert(HoldingsCompanion.insert(
+            accountId: 1,
+            name: '宁德时代',
+            syncId: const drift.Value('hold-orphan'),
+          ));
+      final snapshot = jsonEncode({
+        'version': 11,
+        'ledgerName': 'Main',
+        'currency': 'CNY',
+        'items': const <Object>[],
+        'holdings': [
+          {'syncId': 'hold-kept', 'name': '贵州茅台', 'accountName': '投资账户'},
+        ],
+      });
+
+      await restoreLedgerFromJson(
+          db: db, repo: repo, ledgerId: id, jsonStr: snapshot);
+
+      final rows = await db.select(db.holdings).get();
+      expect(rows.map((h) => h.syncId), isNot(contains('hold-orphan')),
+          reason: '持仓是 user-global（随每本快照携带全量），云端已删的必须镜像删除，'
+              '否则本地多出持仓 ⇒ 永久 localNewer');
+    });
+
+    test('v10 快照不删持仓（段门控：该段 v11 才有）', () async {
+      final id = await addLedger('Main');
+      await db.into(db.holdings).insert(HoldingsCompanion.insert(
+            accountId: 1,
+            name: '本地持仓',
+            syncId: const drift.Value('hold-local'),
+          ));
+      final snapshot = jsonEncode({
+        'version': 10,
+        'ledgerName': 'Main',
+        'currency': 'CNY',
+        'items': const <Object>[],
+      });
+
+      await restoreLedgerFromJson(
+          db: db, repo: repo, ledgerId: id, jsonStr: snapshot);
+
+      final rows = await db.select(db.holdings).get();
+      expect(rows.map((h) => h.syncId), ['hold-local'],
+          reason: '旧快照整段缺失不得判成本地持仓全删');
+    });
+  });
+
   test('v9 回填：快照带 ledgerSyncId 且本地行缺失时补写 sync_id', () async {
     final id = await addLedger('Main'); // 无 syncId（legacy 行）
     final map = jsonDecodeMap(await exportTransactionsJson(db, id).then((e) => e.jsonStr));

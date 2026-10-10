@@ -1109,6 +1109,35 @@ class DataImportService {
         continue;
       }
 
+      // ★ 2026-10-10 修复（F-1）：按**名**匹配到、且本地 syncId 与云端不同 →
+      //   采纳云端 syncId，先把身份统一，再谈其它字段对齐。
+      //
+      // 不这么做的后果（本轮双端实测）：`_mirrorDeleteAbsentEntities` /
+      // `mirrorDeleteAbsentCustomFields` 都按 **syncId** 判「云端已删」，而本行
+      // 仍持本地旧 syncId → 被删掉；云端那份又因「同名已存在」走不到新建分支
+      // → 本地该字段彻底消失（值成孤儿，UI 里字段不见）。且 syncId 进快照指纹
+      // 白名单（sync_fingerprint `customFieldCanon` 含 syncId），身份不统一时该
+      // 账本永久 `SyncDiff.different`。
+      //
+      // 值键一起改名（renameFieldValueKey）：值以 fieldSyncId 为键散落在交易行上，
+      // 不改名则值看不见。合并路径的行是保留的（恢复路径行会被清空重导，键本来
+      // 就是云端的），故这一步两者都需要。
+      if (sid != null && (current.syncId ?? '').trim() != sid) {
+        final oldSid = (current.syncId ?? '').trim();
+        await repo.updateDefinitionSyncId(current.id, sid);
+        if (oldSid.isNotEmpty) {
+          final moved = await repo.renameFieldValueKey(
+            ledgerId: ledgerId,
+            oldSyncId: oldSid,
+            newSyncId: sid,
+          );
+          logger.info('DataImport',
+              '自定义字段定义归并(同名不同 syncId): id=${current.id} '
+              '「${current.name}」$oldSid → $sid，迁移值键 $moved 笔');
+        }
+        bySyncId[sid] = current;
+      }
+
       final renaming = field.name != current.name;
       final needType = current.fieldType != field.fieldType;
       final needSort =
@@ -2613,6 +2642,49 @@ Future<int> _mirrorDeleteAbsentEntities(
       .go();
   total += delCustomFields;
 
+  // v12 储蓄目标（ledger-scoped）：与预算同为「按账本范围镜像」。
+  //
+  // 【2026-10-10 补】此前本函数漏了 v52 holdings / v53 savings_goals 两个分支 ——
+  // 合并路径早已用 SyncEntityKind.holding / savingsGoal 认得这两个实体（v11/v12
+  // 同批补齐），恢复/覆盖下载路径却不认得，两侧口径不对称。后果实测（双端）：
+  // 本地多出的储蓄目标在多次「全量下载」后**依然残留** → 该账本永久
+  // `SyncDiff.localNewer`（本地有、云端没有），用户照状态卡提示「上传覆盖」
+  // 就会把对端已删的实体推回云端复活；反复下载则永远修不好。
+  //
+  // 【段门控】savingsGoals 段自快照 **v12** 起才有、holdings 段自 **v11** 起才有。
+  // 不过门控时，旧快照整段缺失 → `cloudXxxSyncIds.isEmpty` 命中「删光本账本所有
+  // 带 syncId 的行」分支 → 把本地目标/持仓全删。这与 sync_fingerprint /
+  // transactions_json 的 `sectionAbsent('savingsGoals', 12)` 是同一条口径。
+  var delGoals = 0;
+  if ((cloud.version ?? 0) >= 12) {
+    final cloudGoalSyncIds =
+        cloud.savingsGoals.map((s) => s.syncId).whereType<String>().toSet();
+    delGoals = await (db.delete(db.savingsGoals)
+          ..where((s) => s.ledgerId.equals(ledgerId) &
+                s.syncId.isNotNull() &
+                (cloudGoalSyncIds.isEmpty
+                    ? const d.Constant(true)
+                    : s.syncId.isNotIn(cloudGoalSyncIds.toList()))))
+        .go();
+    total += delGoals;
+  }
+
+  // v11 投资持仓（**user-global**：与账户/分类/标签同为全账本共享段，
+  // 每个账本快照都携带全量持仓）→ 同 accounts 口径：不加 ledger 过滤。
+  // 无引用守卫：持仓不被任何业务行引用（自身只引用 accountId，删它不留悬空外键）。
+  var delHoldings = 0;
+  if ((cloud.version ?? 0) >= 11) {
+    final cloudHoldingSyncIds =
+        cloud.holdings.map((h) => h.syncId).whereType<String>().toSet();
+    delHoldings = await (db.delete(db.holdings)
+          ..where((h) => h.syncId.isNotNull() &
+                (cloudHoldingSyncIds.isEmpty
+                    ? const d.Constant(true)
+                    : h.syncId.isNotIn(cloudHoldingSyncIds.toList()))))
+        .go();
+    total += delHoldings;
+  }
+
   // 分类：全局表，仅删「不在云端且无任何引用」的
   // （引用来源：交易 categoryId、预算 categoryId、周期 categoryId、子分类 parentId）
   final cloudCatSyncIds =
@@ -2711,7 +2783,8 @@ Future<int> _mirrorDeleteAbsentEntities(
   if (total > 0) {
     logger.info('DataImport',
         'H3 镜像删除(ledgerId=$ledgerId): 预算=$delBudgets 周期=$delRecs '
-        '自定义字段=$delCustomFields 分类=$delCats 标签=$delTags 账户=$delAccounts');
+        '自定义字段=$delCustomFields 储蓄目标=$delGoals 持仓=$delHoldings '
+        '分类=$delCats 标签=$delTags 账户=$delAccounts');
   }
   return total;
 }

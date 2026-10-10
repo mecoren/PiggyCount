@@ -4434,6 +4434,18 @@ class LocalRepository extends BaseRepository {
       _customFieldRepo.updateDefinitionSyncId(id, syncId);
 
   @override
+  Future<int> renameFieldValueKey({
+    required int ledgerId,
+    required String oldSyncId,
+    required String newSyncId,
+  }) =>
+      _customFieldRepo.renameFieldValueKey(
+        ledgerId: ledgerId,
+        oldSyncId: oldSyncId,
+        newSyncId: newSyncId,
+      );
+
+  @override
   Future<CustomFieldDefinition?> getDefinitionById(int id) =>
       _customFieldRepo.getDefinitionById(id);
 
