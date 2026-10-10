@@ -43,12 +43,29 @@ def shell(port, cmd, timeout=180):
 
 
 def dump_xml(port, name=None, shot=True):
-    shell(port, "rm -f /sdcard/d.xml")
-    shell(port, "uiautomator dump /sdcard/d.xml")
-    xml = adb(port, "exec-out", "cat", "/sdcard/d.xml", timeout=180)
-    if "<hierarchy" not in xml:
+    """dump 当前界面 XML（带**自愈重试**）。
+
+    ★ 2026-10-10 踩坑：设备侧的 uiautomator 进程会**偶发卡死** —— 表现为
+      `uiautomator dump` 既不输出也不写文件（`cat /sdcard/d.xml` 得到
+      "No such file or directory"），随后每一次 dump 都失败。旧实现只重试一次
+      同样的命令，于是「重试」同样失败，调用方（如 wait_upload_done 的轮询）
+      会一直空转：本轮实测编排在「上传已完成」的状态下空转 5 分钟以上，
+      现场只看到「什么都没发生」。
+      自愈做法：失败后 `pkill -f uiautomator` 杀掉卡死实例（uiautomator 由
+      `uiautomator dump` 命令自身拉起，杀掉后下一次调用会重新起一个干净的），
+      再重试。实测一次 pkill 即恢复。
+    """
+    last = ""
+    for attempt in range(3):
+        shell(port, "rm -f /sdcard/d.xml")
         shell(port, "uiautomator dump /sdcard/d.xml")
         xml = adb(port, "exec-out", "cat", "/sdcard/d.xml", timeout=180)
+        if "<hierarchy" in xml:
+            break
+        last = xml
+        if attempt < 2:
+            shell(port, "pkill -f uiautomator")
+            time.sleep(3)
     if name:
         # newline="" —— 禁止 Windows 文本模式把 \n 翻成 \r\n（否则 sha256 比对会假性 DIFF）
         with open(os.path.join(RW, name + ".xml"), "w", encoding="utf-8",
