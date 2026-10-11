@@ -6030,6 +6030,55 @@ class AppLocalizationsKo extends AppLocalizations {
   String get customFieldTypeDate => '날짜';
 
   @override
+  String get customFieldTypeSingleSelect => '단일 선택';
+
+  @override
+  String get customFieldTypeMultiSelect => '다중 선택';
+
+  @override
+  String get customFieldOptionsLabel => '옵션';
+
+  @override
+  String get customFieldOptionHint => '옵션 내용';
+
+  @override
+  String get customFieldAddOption => '옵션 추가';
+
+  @override
+  String get customFieldOptionRequired => '옵션을 하나 이상 추가하세요';
+
+  @override
+  String get customFieldOptionDuplicate => '옵션은 중복될 수 없습니다';
+
+  @override
+  String get customFieldSelectHint => '선택하세요';
+
+  @override
+  String get customFieldTypeChangeConfirmTitle => '필드 유형 변경';
+
+  @override
+  String customFieldTypeChangeConfirmMessage(
+      String name, String from, String to) {
+    return '「$name」의 유형을 「$from」에서 「$to」로 변경하시겠습니까? 이 장부에 기록된 값은 새 유형으로 해석되며 기존 옵션은 지워집니다.';
+  }
+
+  @override
+  String get customFieldTypeChangeReconfirmMessage =>
+      '다시 확인: 유형 변경은 자동으로 되돌릴 수 없습니다. 계속하시겠습니까?';
+
+  @override
+  String get customFieldOptionDeleteConfirmTitle => '옵션 삭제';
+
+  @override
+  String customFieldOptionDeleteConfirmMessage(String option) {
+    return '옵션 「$option」을(를) 삭제하시겠습니까? 해당 옵션을 사용한 내역은 고아 값으로 유지되며 더 이상 선택 항목에 나타나지 않습니다.';
+  }
+
+  @override
+  String get customFieldOptionDeleteReconfirmMessage =>
+      '다시 확인: 옵션을 복원하려면 수동으로 다시 추가해야 합니다. 계속하시겠습니까?';
+
+  @override
   String get customFieldCreateSuccess => '필드가 추가되었습니다';
 
   @override

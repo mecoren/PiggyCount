@@ -104,6 +104,28 @@ void main() {
       final textField = stats.firstWhere((f) => f.fieldSyncId == 't');
       expect(textField.buckets.keys.toSet(), {'2026', '2026-09-02'});
     });
+
+    test('v54 多选：同一笔按每个选中值分别归桶（金额在多桶重复计）', () {
+      final defs = [_def(1, 'tag', '标签', 'multiSelect')];
+      final stats = CustomFieldStatsService.aggregate(defs: defs, rows: [
+        (
+          type: 'expense',
+          nativeAmount: 100.0,
+          customValuesJson: '{"tag":["a","b"]}',
+        ),
+        (
+          type: 'income',
+          nativeAmount: 30.0,
+          customValuesJson: '{"tag":["a"]}',
+        ),
+      ]);
+
+      expect(stats, hasLength(1));
+      final f = stats.single;
+      // a：支出 100 + 收入 30 计 2 笔；b：支出 100 计 1 笔。
+      expect(f.buckets['a'], (income: 30.0, expense: 100.0, count: 2));
+      expect(f.buckets['b'], (income: 0.0, expense: 100.0, count: 1));
+    });
   });
 
   group('aggregate：输入防御', () {

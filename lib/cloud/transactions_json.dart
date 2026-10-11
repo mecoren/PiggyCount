@@ -33,6 +33,12 @@ import 'sync_fingerprint.dart';
 ///   被误判成「仅格式升级」；两端都没有目标时指纹仍相等，升级门控照常一次性收敛。
 ///   ⚠️ 该段必须带**段引入版本 12**（`sectionAbsent('savingsGoals', 12)`）——
 ///   登错会让旧快照（压根没这个段）被 diff 判成「本地目标全删」。
+/// - v13：自定义字段「单选/多选」选项（2026-10-11）—— `customFields` 段每项
+///   新增 `options` 键（字符串数组，恒写、含空数组），`sync_fingerprint` 的
+///   `customFieldCanon` 同批纳入 `options`。同样是**指纹算法值变化**：无选项
+///   字段的账本两端仍相等（空数组/缺键都规范成 `''`）→ 升级门控一次性收敛；
+///   有选项字段且云端仍是 v12 快照时指纹必然不等 → 走正常 diff / 合并，不会被
+///   误判成「仅格式升级」而自动覆盖。
 ///
 /// 消费方契约：凡是读到「云端快照 version < 本常量」的路径，都**不得**把
 /// 「指纹不相等」当作「内容不同」的证据（那是算法口径差异，不是数据差异）。
@@ -40,7 +46,7 @@ import 'sync_fingerprint.dart';
 /// 正常收敛 —— 判定见
 /// `TransactionsSyncManager.shouldRepublishSnapshotForFormatUpgrade`，
 /// 执行见 `StartupSyncChecker` 的状态检查循环。
-const int kSnapshotFormatVersion = 12;
+const int kSnapshotFormatVersion = 13;
 
 /// 账本交易数据的 JSON 导入导出工具
 ///
@@ -485,6 +491,10 @@ Future<ExportedLedgerJson> exportTransactionsJson(
       if (f.syncId != null && f.syncId!.isNotEmpty) 'syncId': f.syncId,
       'name': _sanitizeString(f.name),
       'fieldType': f.fieldType,
+      // v13 选项：**恒写键**（含空数组），照 customValues 的 D-3 口径 ——
+      // 否则「清空选项」无法被快照表达，且类型由 select 改为 text 时两端
+      // 永不收敛。缺键仅出现在真·旧快照（见解析侧键存在语义）。
+      'options': CustomFieldOptionsCodec.decode(f.optionsJson),
       'sortOrder': f.sortOrder,
     };
   }).toList();
@@ -1119,6 +1129,16 @@ ImportData parseJsonToImportData(String jsonStr) {
         continue;
       }
       final rawType = _readString(m, 'fieldType');
+      // v13 选项：**键存在语义** —— 键在（含空数组）= 云端权威，交给导入侧
+      // 覆盖本地；键缺失 = 真·旧快照（v12 及以前不携带该键），options 传 null
+      // → 导入侧保留本地选项、不覆盖（旧快照不能清空本地的选项配置）。
+      List<String>? options;
+      if (m.containsKey('options')) {
+        final rawOpts = m['options'];
+        options = rawOpts is List
+            ? CustomFieldOptionsCodec.normalize(rawOpts)
+            : const <String>[];
+      }
       customFields.add(ImportCustomField(
         name: name,
         fieldType: (rawType != null && CustomFieldType.isValid(rawType))
@@ -1126,6 +1146,7 @@ ImportData parseJsonToImportData(String jsonStr) {
             : CustomFieldType.text,
         syncId: _readString(m, 'syncId'),
         sortOrder: _readInt(m, 'sortOrder'),
+        options: options,
       ));
     }
   }

@@ -5886,6 +5886,12 @@ class $CustomFieldDefinitionsTable extends CustomFieldDefinitions
   late final GeneratedColumn<String> fieldType = GeneratedColumn<String>(
       'field_type', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _optionsJsonMeta =
+      const VerificationMeta('optionsJson');
+  @override
+  late final GeneratedColumn<String> optionsJson = GeneratedColumn<String>(
+      'options_json', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _sortOrderMeta =
       const VerificationMeta('sortOrder');
   @override
@@ -5914,8 +5920,17 @@ class $CustomFieldDefinitionsTable extends CustomFieldDefinitions
       'updated_at', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, ledgerId, name, fieldType, sortOrder, createdAt, syncId, updatedAt];
+  List<GeneratedColumn> get $columns => [
+        id,
+        ledgerId,
+        name,
+        fieldType,
+        optionsJson,
+        sortOrder,
+        createdAt,
+        syncId,
+        updatedAt
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -5947,6 +5962,12 @@ class $CustomFieldDefinitionsTable extends CustomFieldDefinitions
           fieldType.isAcceptableOrUnknown(data['field_type']!, _fieldTypeMeta));
     } else if (isInserting) {
       context.missing(_fieldTypeMeta);
+    }
+    if (data.containsKey('options_json')) {
+      context.handle(
+          _optionsJsonMeta,
+          optionsJson.isAcceptableOrUnknown(
+              data['options_json']!, _optionsJsonMeta));
     }
     if (data.containsKey('sort_order')) {
       context.handle(_sortOrderMeta,
@@ -5981,6 +6002,8 @@ class $CustomFieldDefinitionsTable extends CustomFieldDefinitions
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       fieldType: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}field_type'])!,
+      optionsJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}options_json']),
       sortOrder: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}sort_order'])!,
       createdAt: attachedDatabase.typeMapping
@@ -6008,8 +6031,15 @@ class CustomFieldDefinition extends DataClass
   /// 用户自定义字段名(同账本内不重名,由应用层校验)。
   final String name;
 
-  /// amount / text / date。字符串存储以便后续扩展新类型。
+  /// amount / text / date / singleSelect / multiSelect。字符串存储以便后续
+  /// 扩展新类型。
   final String fieldType;
+
+  /// v54: 选项列表（JSON 字符串数组，仅 [CustomFieldType.singleSelect] /
+  /// [CustomFieldType.multiSelect] 使用）。NULL = 无选项（amount / text / date
+  /// 恒为 NULL）。每个选项只有一个字符串 —— 它既是存储值也是显示名；数组
+  /// 顺序即录入/展示顺序。经 [CustomFieldOptionsCodec] 统一编解码。
+  final String? optionsJson;
 
   /// 展示与录入门槛顺序,数字越小越靠前(与 Categories/Tags.sortOrder 同义)。
   final int sortOrder;
@@ -6026,6 +6056,7 @@ class CustomFieldDefinition extends DataClass
       required this.ledgerId,
       required this.name,
       required this.fieldType,
+      this.optionsJson,
       required this.sortOrder,
       required this.createdAt,
       this.syncId,
@@ -6037,6 +6068,9 @@ class CustomFieldDefinition extends DataClass
     map['ledger_id'] = Variable<int>(ledgerId);
     map['name'] = Variable<String>(name);
     map['field_type'] = Variable<String>(fieldType);
+    if (!nullToAbsent || optionsJson != null) {
+      map['options_json'] = Variable<String>(optionsJson);
+    }
     map['sort_order'] = Variable<int>(sortOrder);
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || syncId != null) {
@@ -6054,6 +6088,9 @@ class CustomFieldDefinition extends DataClass
       ledgerId: Value(ledgerId),
       name: Value(name),
       fieldType: Value(fieldType),
+      optionsJson: optionsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(optionsJson),
       sortOrder: Value(sortOrder),
       createdAt: Value(createdAt),
       syncId:
@@ -6072,6 +6109,7 @@ class CustomFieldDefinition extends DataClass
       ledgerId: serializer.fromJson<int>(json['ledgerId']),
       name: serializer.fromJson<String>(json['name']),
       fieldType: serializer.fromJson<String>(json['fieldType']),
+      optionsJson: serializer.fromJson<String?>(json['optionsJson']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       syncId: serializer.fromJson<String?>(json['syncId']),
@@ -6086,6 +6124,7 @@ class CustomFieldDefinition extends DataClass
       'ledgerId': serializer.toJson<int>(ledgerId),
       'name': serializer.toJson<String>(name),
       'fieldType': serializer.toJson<String>(fieldType),
+      'optionsJson': serializer.toJson<String?>(optionsJson),
       'sortOrder': serializer.toJson<int>(sortOrder),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'syncId': serializer.toJson<String?>(syncId),
@@ -6098,6 +6137,7 @@ class CustomFieldDefinition extends DataClass
           int? ledgerId,
           String? name,
           String? fieldType,
+          Value<String?> optionsJson = const Value.absent(),
           int? sortOrder,
           DateTime? createdAt,
           Value<String?> syncId = const Value.absent(),
@@ -6107,6 +6147,7 @@ class CustomFieldDefinition extends DataClass
         ledgerId: ledgerId ?? this.ledgerId,
         name: name ?? this.name,
         fieldType: fieldType ?? this.fieldType,
+        optionsJson: optionsJson.present ? optionsJson.value : this.optionsJson,
         sortOrder: sortOrder ?? this.sortOrder,
         createdAt: createdAt ?? this.createdAt,
         syncId: syncId.present ? syncId.value : this.syncId,
@@ -6119,6 +6160,8 @@ class CustomFieldDefinition extends DataClass
       ledgerId: data.ledgerId.present ? data.ledgerId.value : this.ledgerId,
       name: data.name.present ? data.name.value : this.name,
       fieldType: data.fieldType.present ? data.fieldType.value : this.fieldType,
+      optionsJson:
+          data.optionsJson.present ? data.optionsJson.value : this.optionsJson,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       syncId: data.syncId.present ? data.syncId.value : this.syncId,
@@ -6133,6 +6176,7 @@ class CustomFieldDefinition extends DataClass
           ..write('ledgerId: $ledgerId, ')
           ..write('name: $name, ')
           ..write('fieldType: $fieldType, ')
+          ..write('optionsJson: $optionsJson, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('syncId: $syncId, ')
@@ -6142,8 +6186,8 @@ class CustomFieldDefinition extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
-      id, ledgerId, name, fieldType, sortOrder, createdAt, syncId, updatedAt);
+  int get hashCode => Object.hash(id, ledgerId, name, fieldType, optionsJson,
+      sortOrder, createdAt, syncId, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -6152,6 +6196,7 @@ class CustomFieldDefinition extends DataClass
           other.ledgerId == this.ledgerId &&
           other.name == this.name &&
           other.fieldType == this.fieldType &&
+          other.optionsJson == this.optionsJson &&
           other.sortOrder == this.sortOrder &&
           other.createdAt == this.createdAt &&
           other.syncId == this.syncId &&
@@ -6164,6 +6209,7 @@ class CustomFieldDefinitionsCompanion
   final Value<int> ledgerId;
   final Value<String> name;
   final Value<String> fieldType;
+  final Value<String?> optionsJson;
   final Value<int> sortOrder;
   final Value<DateTime> createdAt;
   final Value<String?> syncId;
@@ -6173,6 +6219,7 @@ class CustomFieldDefinitionsCompanion
     this.ledgerId = const Value.absent(),
     this.name = const Value.absent(),
     this.fieldType = const Value.absent(),
+    this.optionsJson = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.syncId = const Value.absent(),
@@ -6183,6 +6230,7 @@ class CustomFieldDefinitionsCompanion
     required int ledgerId,
     required String name,
     required String fieldType,
+    this.optionsJson = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.syncId = const Value.absent(),
@@ -6195,6 +6243,7 @@ class CustomFieldDefinitionsCompanion
     Expression<int>? ledgerId,
     Expression<String>? name,
     Expression<String>? fieldType,
+    Expression<String>? optionsJson,
     Expression<int>? sortOrder,
     Expression<DateTime>? createdAt,
     Expression<String>? syncId,
@@ -6205,6 +6254,7 @@ class CustomFieldDefinitionsCompanion
       if (ledgerId != null) 'ledger_id': ledgerId,
       if (name != null) 'name': name,
       if (fieldType != null) 'field_type': fieldType,
+      if (optionsJson != null) 'options_json': optionsJson,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (createdAt != null) 'created_at': createdAt,
       if (syncId != null) 'sync_id': syncId,
@@ -6217,6 +6267,7 @@ class CustomFieldDefinitionsCompanion
       Value<int>? ledgerId,
       Value<String>? name,
       Value<String>? fieldType,
+      Value<String?>? optionsJson,
       Value<int>? sortOrder,
       Value<DateTime>? createdAt,
       Value<String?>? syncId,
@@ -6226,6 +6277,7 @@ class CustomFieldDefinitionsCompanion
       ledgerId: ledgerId ?? this.ledgerId,
       name: name ?? this.name,
       fieldType: fieldType ?? this.fieldType,
+      optionsJson: optionsJson ?? this.optionsJson,
       sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt ?? this.createdAt,
       syncId: syncId ?? this.syncId,
@@ -6247,6 +6299,9 @@ class CustomFieldDefinitionsCompanion
     }
     if (fieldType.present) {
       map['field_type'] = Variable<String>(fieldType.value);
+    }
+    if (optionsJson.present) {
+      map['options_json'] = Variable<String>(optionsJson.value);
     }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
@@ -6270,6 +6325,7 @@ class CustomFieldDefinitionsCompanion
           ..write('ledgerId: $ledgerId, ')
           ..write('name: $name, ')
           ..write('fieldType: $fieldType, ')
+          ..write('optionsJson: $optionsJson, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt, ')
           ..write('syncId: $syncId, ')
@@ -14853,6 +14909,7 @@ typedef $$CustomFieldDefinitionsTableCreateCompanionBuilder
   required int ledgerId,
   required String name,
   required String fieldType,
+  Value<String?> optionsJson,
   Value<int> sortOrder,
   Value<DateTime> createdAt,
   Value<String?> syncId,
@@ -14864,6 +14921,7 @@ typedef $$CustomFieldDefinitionsTableUpdateCompanionBuilder
   Value<int> ledgerId,
   Value<String> name,
   Value<String> fieldType,
+  Value<String?> optionsJson,
   Value<int> sortOrder,
   Value<DateTime> createdAt,
   Value<String?> syncId,
@@ -14890,6 +14948,9 @@ class $$CustomFieldDefinitionsTableFilterComposer
 
   ColumnFilters<String> get fieldType => $composableBuilder(
       column: $table.fieldType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get optionsJson => $composableBuilder(
+      column: $table.optionsJson, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get sortOrder => $composableBuilder(
       column: $table.sortOrder, builder: (column) => ColumnFilters(column));
@@ -14925,6 +14986,9 @@ class $$CustomFieldDefinitionsTableOrderingComposer
   ColumnOrderings<String> get fieldType => $composableBuilder(
       column: $table.fieldType, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get optionsJson => $composableBuilder(
+      column: $table.optionsJson, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get sortOrder => $composableBuilder(
       column: $table.sortOrder, builder: (column) => ColumnOrderings(column));
 
@@ -14958,6 +15022,9 @@ class $$CustomFieldDefinitionsTableAnnotationComposer
 
   GeneratedColumn<String> get fieldType =>
       $composableBuilder(column: $table.fieldType, builder: (column) => column);
+
+  GeneratedColumn<String> get optionsJson => $composableBuilder(
+      column: $table.optionsJson, builder: (column) => column);
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
@@ -15007,6 +15074,7 @@ class $$CustomFieldDefinitionsTableTableManager extends RootTableManager<
             Value<int> ledgerId = const Value.absent(),
             Value<String> name = const Value.absent(),
             Value<String> fieldType = const Value.absent(),
+            Value<String?> optionsJson = const Value.absent(),
             Value<int> sortOrder = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<String?> syncId = const Value.absent(),
@@ -15017,6 +15085,7 @@ class $$CustomFieldDefinitionsTableTableManager extends RootTableManager<
             ledgerId: ledgerId,
             name: name,
             fieldType: fieldType,
+            optionsJson: optionsJson,
             sortOrder: sortOrder,
             createdAt: createdAt,
             syncId: syncId,
@@ -15027,6 +15096,7 @@ class $$CustomFieldDefinitionsTableTableManager extends RootTableManager<
             required int ledgerId,
             required String name,
             required String fieldType,
+            Value<String?> optionsJson = const Value.absent(),
             Value<int> sortOrder = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<String?> syncId = const Value.absent(),
@@ -15037,6 +15107,7 @@ class $$CustomFieldDefinitionsTableTableManager extends RootTableManager<
             ledgerId: ledgerId,
             name: name,
             fieldType: fieldType,
+            optionsJson: optionsJson,
             sortOrder: sortOrder,
             createdAt: createdAt,
             syncId: syncId,

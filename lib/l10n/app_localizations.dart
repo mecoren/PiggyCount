@@ -11201,6 +11201,91 @@ abstract class AppLocalizations {
   /// **'Date'**
   String get customFieldTypeDate;
 
+  /// No description provided for @customFieldTypeSingleSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Single choice'**
+  String get customFieldTypeSingleSelect;
+
+  /// No description provided for @customFieldTypeMultiSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Multiple choice'**
+  String get customFieldTypeMultiSelect;
+
+  /// No description provided for @customFieldOptionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Options'**
+  String get customFieldOptionsLabel;
+
+  /// No description provided for @customFieldOptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Option text'**
+  String get customFieldOptionHint;
+
+  /// No description provided for @customFieldAddOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Add option'**
+  String get customFieldAddOption;
+
+  /// No description provided for @customFieldOptionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one option'**
+  String get customFieldOptionRequired;
+
+  /// No description provided for @customFieldOptionDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Options cannot be duplicated'**
+  String get customFieldOptionDuplicate;
+
+  /// No description provided for @customFieldSelectHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get customFieldSelectHint;
+
+  /// No description provided for @customFieldTypeChangeConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Field Type'**
+  String get customFieldTypeChangeConfirmTitle;
+
+  /// No description provided for @customFieldTypeChangeConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Change the type of {name} from {from} to {to}? Values already recorded in this ledger will be re-interpreted under the new type, and the existing options will be cleared.'**
+  String customFieldTypeChangeConfirmMessage(
+      String name, String from, String to);
+
+  /// No description provided for @customFieldTypeChangeReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm again: a field type change cannot be reverted automatically. Continue?'**
+  String get customFieldTypeChangeReconfirmMessage;
+
+  /// No description provided for @customFieldOptionDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Option'**
+  String get customFieldOptionDeleteConfirmTitle;
+
+  /// No description provided for @customFieldOptionDeleteConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete option {option}? Entries that used it will keep the value as an orphan option, and it will no longer appear as a choice.'**
+  String customFieldOptionDeleteConfirmMessage(String option);
+
+  /// No description provided for @customFieldOptionDeleteReconfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm again: the option must be added back manually to restore. Continue?'**
+  String get customFieldOptionDeleteReconfirmMessage;
+
   /// No description provided for @customFieldCreateSuccess.
   ///
   /// In en, this message translates to:

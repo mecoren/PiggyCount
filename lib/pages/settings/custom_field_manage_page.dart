@@ -125,70 +125,78 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
   Widget _buildTile(
       CustomFieldDefinition def, int index, AppLocalizations l10n) {
     final typeColor = _typeColor(context, def.fieldType);
+    // 背景 / 描边 / 圆角交给 Material（而不是外层带背景色的 DecoratedBox）：
+    // ListTile 的背景与水波纹绘制在**最近的 Material** 上，套一层带背景色的
+    // DecoratedBox 会把它们盖住 —— Flutter 在 debug 下抛
+    // 「ListTile background color or ink splashes may be invisible」断言
+    // （widget 测试里直接失败）。
     return Container(
       key: ValueKey<int>(def.id),
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
+      child: Material(
         color: PiggyTokens.surface(context),
-        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-        border: Border.all(color: PiggyTokens.border(context)),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
-        onTap: _busy ? null : () => _openEditor(def),
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: typeColor.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(PiggyDimens.radiusMd),
-          ),
-          alignment: Alignment.center,
-          child: Icon(_typeIcon(def.fieldType), color: typeColor, size: 20),
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+          side: BorderSide(color: PiggyTokens.border(context)),
         ),
-        title: Text(
-          def.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: PiggyTextTokens.fs15,
-            fontWeight: FontWeight.w600,
-            color: PiggyTokens.textPrimary(context),
+        child: ListTile(
+          contentPadding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+          onTap: _busy ? null : () => _openEditor(def),
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: typeColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(PiggyDimens.radiusMd),
+            ),
+            alignment: Alignment.center,
+            child: Icon(_typeIcon(def.fieldType), color: typeColor, size: 20),
           ),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 2),
-          child: Text(
-            _typeLabel(l10n, def.fieldType),
+          title: Text(
+            def.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: PiggyTextTokens.fs12,
-              color: typeColor,
-              fontWeight: FontWeight.w500,
+              fontSize: PiggyTextTokens.fs15,
+              fontWeight: FontWeight.w600,
+              color: PiggyTokens.textPrimary(context),
             ),
           ),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              onPressed: _busy ? null : () => _delete(def, l10n),
-              icon: Icon(
-                Icons.delete_outline,
-                color: PiggyTokens.textTertiary(context),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              _typeLabel(l10n, def.fieldType),
+              style: TextStyle(
+                fontSize: PiggyTextTokens.fs12,
+                color: typeColor,
+                fontWeight: FontWeight.w500,
               ),
-              tooltip: l10n.commonDelete,
             ),
-            ReorderableDragStartListener(
-              index: index,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 8, left: 2),
-                child: Icon(
-                  Icons.drag_handle,
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: _busy ? null : () => _delete(def, l10n),
+                icon: Icon(
+                  Icons.delete_outline,
                   color: PiggyTokens.textTertiary(context),
                 ),
+                tooltip: l10n.commonDelete,
               ),
-            ),
-          ],
+              ReorderableDragStartListener(
+                index: index,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8, left: 2),
+                  child: Icon(
+                    Icons.drag_handle,
+                    color: PiggyTokens.textTertiary(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -291,6 +299,10 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
         return l10n.customFieldTypeAmount;
       case CustomFieldType.date:
         return l10n.customFieldTypeDate;
+      case CustomFieldType.singleSelect:
+        return l10n.customFieldTypeSingleSelect;
+      case CustomFieldType.multiSelect:
+        return l10n.customFieldTypeMultiSelect;
       case CustomFieldType.text:
       default:
         return l10n.customFieldTypeText;
@@ -303,6 +315,10 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
         return Icons.payments_outlined;
       case CustomFieldType.date:
         return Icons.event_outlined;
+      case CustomFieldType.singleSelect:
+        return Icons.radio_button_checked_outlined;
+      case CustomFieldType.multiSelect:
+        return Icons.checklist_outlined;
       case CustomFieldType.text:
       default:
         return Icons.notes_outlined;
@@ -315,6 +331,10 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
         return PiggyTokens.primary(context);
       case CustomFieldType.date:
         return const Color(0xFFFF9F43);
+      case CustomFieldType.singleSelect:
+        return const Color(0xFF4DABF7);
+      case CustomFieldType.multiSelect:
+        return const Color(0xFF845EF7);
       case CustomFieldType.text:
       default:
         return const Color(0xFF51CF66);
@@ -339,6 +359,13 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
   bool _submitting = false;
   String? _error;
 
+  /// v54 选项行：单选/多选字段的选项编辑。每行保留原始值（'' = 本次新增），
+  /// 保存时据「文本被改过」判定为改名并级联更新历史已记录的值。
+  late final List<_OptionRow> _optionRows;
+
+  /// 本次编辑里被删除的**已保存**选项原文（用于保存前判定是否需要危险确认）。
+  final Set<String> _removedPersisted = <String>{};
+
   bool get _isEditing => widget.existing != null;
 
   @override
@@ -346,13 +373,36 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
     super.initState();
     _nameController = TextEditingController(text: widget.existing?.name ?? '');
     _type = widget.existing?.fieldType ?? CustomFieldType.amount;
+    final existing = widget.existing;
+    _optionRows = [
+      for (final o in existing == null
+          ? const <String>[]
+          : CustomFieldOptionsCodec.decode(existing.optionsJson))
+        _OptionRow(o),
+    ];
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    for (final r in _optionRows) {
+      r.dispose();
+    }
     super.dispose();
   }
+
+  void _addOption() => setState(() {
+        _error = null;
+        _optionRows.add(_OptionRow(''));
+      });
+
+  void _removeOption(int index) => setState(() {
+        _error = null;
+        final row = _optionRows.removeAt(index);
+        // 仅**已保存**的选项被删才构成破坏性变更（新增行删掉无副作用）。
+        if (row.original.isNotEmpty) _removedPersisted.add(row.original);
+        row.dispose();
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -392,6 +442,56 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
           _label(l10n.customFieldTypeLabel),
           const SizedBox(height: PiggyDimens.p8),
           _buildTypeSelector(l10n),
+          // v54 选项编辑区（仅单选/多选类型展开）。
+          if (CustomFieldType.hasOptions(_type)) ...[
+            const SizedBox(height: PiggyDimens.p16),
+            _label(l10n.customFieldOptionsLabel),
+            const SizedBox(height: PiggyDimens.p8),
+            for (var i = 0; i < _optionRows.length; i++)
+              _buildOptionRow(i, l10n),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _submitting ? null : _addOption,
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(l10n.customFieldAddOption),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 单个选项行：文本输入 + 删除。删除仅把该行移出本列表（历史已记录值
+  /// 作为「游离值」保留，不静默清空）。
+  Widget _buildOptionRow(int index, AppLocalizations l10n) {
+    final row = _optionRows[index];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: PiggyDimens.p8),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: row.controller,
+              enabled: !_submitting,
+              maxLength: 30,
+              decoration: piggyOutlinedDecoration(
+                context,
+                hint: l10n.customFieldOptionHint,
+              ).copyWith(counterText: ''),
+              onChanged: (_) => setState(() => _error = null),
+            ),
+          ),
+          const SizedBox(width: PiggyDimens.p4),
+          IconButton(
+            onPressed: _submitting ? null : () => _removeOption(index),
+            icon: Icon(
+              Icons.remove_circle_outline,
+              color: PiggyTokens.textTertiary(context),
+            ),
+            tooltip: l10n.commonDelete,
+          ),
         ],
       ),
     );
@@ -426,62 +526,135 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
         label: l10n.customFieldTypeDate,
         icon: Icons.event_outlined
       ),
+      (
+        value: CustomFieldType.singleSelect,
+        label: l10n.customFieldTypeSingleSelect,
+        icon: Icons.radio_button_checked_outlined
+      ),
+      (
+        value: CustomFieldType.multiSelect,
+        label: l10n.customFieldTypeMultiSelect,
+        icon: Icons.checklist_outlined
+      ),
     ];
 
-    return Row(
-      children: [
-        for (final opt in options)
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(
-                right: opt.value == CustomFieldType.date ? 0 : 8,
-              ),
-              child: GestureDetector(
-                onTap: _submitting
-                    ? null
-                    : () => setState(() => _type = opt.value),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: _type == opt.value
-                        ? primary.withValues(alpha: 0.12)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                    border: Border.all(
+    // 5 项一行放不下（每项含图标 + 文字）→ 3 列网格自动换行（3 + 2）。
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const cols = 3;
+        const gap = 8.0;
+        final itemWidth = (constraints.maxWidth - gap * (cols - 1)) / cols;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final opt in options)
+              SizedBox(
+                width: itemWidth,
+                child: GestureDetector(
+                  onTap: _submitting
+                      ? null
+                      : () => setState(() {
+                            _type = opt.value;
+                            // 切到选择类型且尚无选项行 → 先给一行空输入。
+                            if (CustomFieldType.hasOptions(opt.value) &&
+                                _optionRows.isEmpty) {
+                              _optionRows.add(_OptionRow(''));
+                            }
+                          }),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
                       color: _type == opt.value
-                          ? primary
-                          : PiggyTokens.border(context),
-                      width: _type == opt.value ? 1.5 : 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        opt.icon,
-                        size: 18,
+                          ? primary.withValues(alpha: 0.12)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                      border: Border.all(
                         color: _type == opt.value
                             ? primary
-                            : PiggyTokens.textTertiary(context),
+                            : PiggyTokens.border(context),
+                        width: _type == opt.value ? 1.5 : 1,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        opt.label,
-                        style: TextStyle(
-                          fontSize: PiggyTextTokens.fs12,
-                          fontWeight: FontWeight.w600,
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          opt.icon,
+                          size: 18,
                           color: _type == opt.value
                               ? primary
-                              : PiggyTokens.textSecondary(context),
+                              : PiggyTokens.textTertiary(context),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(
+                          opt.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: PiggyTextTokens.fs12,
+                            fontWeight: FontWeight.w600,
+                            color: _type == opt.value
+                                ? primary
+                                : PiggyTokens.textSecondary(context),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 保存前的破坏性变更判定 + 双重危险确认。
+  ///
+  /// 返回 false = 用户取消（抽屉保持打开，不做任何落库）。判定三类破坏性变更：
+  /// ① **改字段类型**（既有字段）—— 会清空选项、历史值按新类型解读；
+  /// ② **删除已保存的选项**（抽屉垃圾桶）；
+  /// ③ **把选项文本清空**（保存时被剔空，等同于删除）。
+  /// 新建字段无既有数据，一律不弹。
+  Future<bool> _confirmDestructiveChange(AppLocalizations l10n) async {
+    final existing = widget.existing;
+    final hazard = detectCustomFieldEditHazard(
+      isEditing: existing != null,
+      originalType: existing?.fieldType ?? _type,
+      newType: _type,
+      removedPersistedOptions: _removedPersisted,
+      clearedPersistedOptions: [
+        for (final r in _optionRows)
+          if (r.original.isNotEmpty && r.controller.text.trim().isEmpty)
+            r.original,
       ],
+    );
+
+    // ① 改类型：影响该字段全部历史值的解读口径 + 清空选项，优先提示。
+    if (hazard.typeChanged) {
+      return showDoubleDangerConfirmDialog(
+        context,
+        title: l10n.customFieldTypeChangeConfirmTitle,
+        firstMessage: l10n.customFieldTypeChangeConfirmMessage(
+          existing!.name,
+          _CustomFieldManagePageState._typeLabel(l10n, existing.fieldType),
+          _CustomFieldManagePageState._typeLabel(l10n, _type),
+        ),
+        secondMessage: l10n.customFieldTypeChangeReconfirmMessage,
+        countdownSeconds: 3,
+      );
+    }
+
+    // ② / ③ 删除或清空已保存的选项：历史值会保留为游离值。
+    if (hazard.removedOptions.isEmpty) return true;
+    return showDoubleDangerConfirmDialog(
+      context,
+      title: l10n.customFieldOptionDeleteConfirmTitle,
+      firstMessage: l10n.customFieldOptionDeleteConfirmMessage(
+          hazard.removedOptions.join('、')),
+      secondMessage: l10n.customFieldOptionDeleteReconfirmMessage,
+      countdownSeconds: 3,
     );
   }
 
@@ -493,6 +666,31 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
       return;
     }
 
+    // v54 选项校验与收集：选择类型至少 1 项、不重复（保序）；其余类型清空。
+    final List<String> options;
+    if (CustomFieldType.hasOptions(_type)) {
+      final vals = [
+        for (final r in _optionRows) r.controller.text.trim(),
+      ].where((v) => v.isNotEmpty).toList();
+      if (vals.isEmpty) {
+        setState(() => _error = l10n.customFieldOptionRequired);
+        return;
+      }
+      if (vals.toSet().length != vals.length) {
+        setState(() => _error = l10n.customFieldOptionDuplicate);
+        return;
+      }
+      options = vals;
+    } else {
+      options = const [];
+    }
+
+    // 破坏性修改需**双重危险确认**（否则用户点一下保存就改了、没有感知）：
+    // 改字段类型会清空选项并让历史值按新类型解读；删除/清空已保存的选项会让
+    // 历史值变游离值。纯改名 / 新增选项 / 排序不弹（纯编辑语义）。
+    if (!await _confirmDestructiveChange(l10n)) return;
+    if (!mounted) return;
+
     setState(() {
       _submitting = true;
       _error = null;
@@ -501,11 +699,30 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
     final repo = ref.read(repositoryProvider);
     try {
       if (_isEditing) {
+        final existing = widget.existing!;
         await repo.updateDefinition(
-          widget.existing!.id,
+          existing.id,
           name: name,
           fieldType: _type,
+          options: options,
         );
+        // 选项改名 → 级联更新历史已记录的值（仅选择类型；新增/删除行不动）。
+        final fieldSyncId = existing.syncId;
+        if (CustomFieldType.hasOptions(_type) &&
+            fieldSyncId != null &&
+            fieldSyncId.isNotEmpty) {
+          for (final row in _optionRows) {
+            final from = row.original;
+            final to = row.controller.text.trim();
+            if (from.isEmpty || to.isEmpty || from == to) continue;
+            await repo.renameOptionValue(
+              ledgerId: existing.ledgerId,
+              fieldSyncId: fieldSyncId,
+              oldValue: from,
+              newValue: to,
+            );
+          }
+        }
       } else {
         final ledgerId = ref.read(currentLedgerIdProvider);
         final existing = await repo.getDefinitionsForLedger(ledgerId);
@@ -514,6 +731,7 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
           name: name,
           fieldType: _type,
           sortOrder: existing.length,
+          options: options,
         );
       }
       if (mounted) Navigator.of(context).pop(true);
@@ -528,4 +746,44 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
       if (mounted) setState(() => _submitting = false);
     }
   }
+}
+
+/// v54 选项编辑行：一个可编辑文本框 + 原始值（保存时判改名）。
+class _OptionRow {
+  _OptionRow(this.original) : controller = TextEditingController(text: original);
+
+  /// 编辑开始时的选项文本（'' = 本次新增，不参与改名级联）。
+  final String original;
+  final TextEditingController controller;
+
+  void dispose() => controller.dispose();
+}
+
+/// 判定自定义字段编辑抽屉里的**破坏性变更**（纯函数，便于单测）。
+///
+/// 破坏性 = 点「保存」会让用户**没有感知**地丢配置 / 改历史值语义，需要双重危险确认：
+/// - **改字段类型**（[newType] != [originalType]）：会清空选项，历史值按新类型解读，
+///   优先级最高；
+/// - **删除或清空已保存的选项**（[removedPersistedOptions] / [clearedPersistedOptions]
+///   非空）：历史值会保留为游离值。
+///
+/// **不命中**：新建字段（[isEditing] == false，无既有数据）、纯改名、新增选项、排序。
+({bool typeChanged, List<String> removedOptions}) detectCustomFieldEditHazard({
+  required bool isEditing,
+  required String originalType,
+  required String newType,
+  required Iterable<String> removedPersistedOptions,
+  required Iterable<String> clearedPersistedOptions,
+}) {
+  if (!isEditing) return (typeChanged: false, removedOptions: const []);
+  if (newType != originalType) {
+    return (typeChanged: true, removedOptions: const []);
+  }
+  return (
+    typeChanged: false,
+    removedOptions: <String>{
+      ...removedPersistedOptions,
+      ...clearedPersistedOptions,
+    }.toList(),
+  );
 }

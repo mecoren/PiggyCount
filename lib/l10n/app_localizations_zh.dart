@@ -5965,6 +5965,54 @@ class AppLocalizationsZh extends AppLocalizations {
   String get customFieldTypeDate => '日期';
 
   @override
+  String get customFieldTypeSingleSelect => '单选';
+
+  @override
+  String get customFieldTypeMultiSelect => '多选';
+
+  @override
+  String get customFieldOptionsLabel => '选项';
+
+  @override
+  String get customFieldOptionHint => '选项内容';
+
+  @override
+  String get customFieldAddOption => '添加选项';
+
+  @override
+  String get customFieldOptionRequired => '请至少添加一个选项';
+
+  @override
+  String get customFieldOptionDuplicate => '选项不能重复';
+
+  @override
+  String get customFieldSelectHint => '请选择';
+
+  @override
+  String get customFieldTypeChangeConfirmTitle => '修改字段类型';
+
+  @override
+  String customFieldTypeChangeConfirmMessage(
+      String name, String from, String to) {
+    return '将「$name」的类型从「$from」改为「$to」？本账本已记录的值会按新类型解读，原有选项配置会被清空。';
+  }
+
+  @override
+  String get customFieldTypeChangeReconfirmMessage => '再次确认：类型修改后无法自动还原，确定继续？';
+
+  @override
+  String get customFieldOptionDeleteConfirmTitle => '删除选项';
+
+  @override
+  String customFieldOptionDeleteConfirmMessage(String option) {
+    return '删除选项「$option」？已记录该选项的明细会保留为游离值，不再出现在录入候选中。';
+  }
+
+  @override
+  String get customFieldOptionDeleteReconfirmMessage =>
+      '再次确认：删除选项后需手动重新添加才能恢复，确定继续？';
+
+  @override
   String get customFieldCreateSuccess => '字段已添加';
 
   @override
@@ -14785,6 +14833,54 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get customFieldTypeDate => '日期';
+
+  @override
+  String get customFieldTypeSingleSelect => '單選';
+
+  @override
+  String get customFieldTypeMultiSelect => '多選';
+
+  @override
+  String get customFieldOptionsLabel => '選項';
+
+  @override
+  String get customFieldOptionHint => '選項內容';
+
+  @override
+  String get customFieldAddOption => '新增選項';
+
+  @override
+  String get customFieldOptionRequired => '請至少新增一個選項';
+
+  @override
+  String get customFieldOptionDuplicate => '選項不能重複';
+
+  @override
+  String get customFieldSelectHint => '請選擇';
+
+  @override
+  String get customFieldTypeChangeConfirmTitle => '修改欄位類型';
+
+  @override
+  String customFieldTypeChangeConfirmMessage(
+      String name, String from, String to) {
+    return '將「$name」的類型從「$from」改為「$to」？本帳本已記錄的值會依新類型解讀，原有選項設定會被清空。';
+  }
+
+  @override
+  String get customFieldTypeChangeReconfirmMessage => '再次確認：類型修改後無法自動還原，確定繼續？';
+
+  @override
+  String get customFieldOptionDeleteConfirmTitle => '刪除選項';
+
+  @override
+  String customFieldOptionDeleteConfirmMessage(String option) {
+    return '刪除選項「$option」？已記錄該選項的明細會保留為游離值，不再出現在錄入候選中。';
+  }
+
+  @override
+  String get customFieldOptionDeleteReconfirmMessage =>
+      '再次確認：刪除選項後需手動重新新增才能恢復，確定繼續？';
 
   @override
   String get customFieldCreateSuccess => '欄位已新增';

@@ -4387,6 +4387,7 @@ class LocalRepository extends BaseRepository {
     required String fieldType,
     int sortOrder = 0,
     String? syncId,
+    List<String>? options,
   }) =>
       _customFieldRepo.createDefinition(
         ledgerId: ledgerId,
@@ -4394,6 +4395,7 @@ class LocalRepository extends BaseRepository {
         fieldType: fieldType,
         sortOrder: sortOrder,
         syncId: syncId,
+        options: options,
       );
 
   @override
@@ -4403,6 +4405,7 @@ class LocalRepository extends BaseRepository {
     required String fieldType,
     int? sortOrder,
     String? syncId,
+    List<String>? options,
   }) =>
       _customFieldRepo.upsertDefinition(
         ledgerId: ledgerId,
@@ -4410,6 +4413,7 @@ class LocalRepository extends BaseRepository {
         fieldType: fieldType,
         sortOrder: sortOrder,
         syncId: syncId,
+        options: options,
       );
 
   @override
@@ -4418,12 +4422,14 @@ class LocalRepository extends BaseRepository {
     String? name,
     String? fieldType,
     int? sortOrder,
+    List<String>? options,
   }) =>
       _customFieldRepo.updateDefinition(
         id,
         name: name,
         fieldType: fieldType,
         sortOrder: sortOrder,
+        options: options,
       );
 
   @override
@@ -4443,6 +4449,20 @@ class LocalRepository extends BaseRepository {
         ledgerId: ledgerId,
         oldSyncId: oldSyncId,
         newSyncId: newSyncId,
+      );
+
+  @override
+  Future<int> renameOptionValue({
+    required int ledgerId,
+    required String fieldSyncId,
+    required String oldValue,
+    required String newValue,
+  }) =>
+      _customFieldRepo.renameOptionValue(
+        ledgerId: ledgerId,
+        fieldSyncId: fieldSyncId,
+        oldValue: oldValue,
+        newValue: newValue,
       );
 
   @override

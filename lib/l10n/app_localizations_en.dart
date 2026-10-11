@@ -6215,6 +6215,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customFieldTypeDate => 'Date';
 
   @override
+  String get customFieldTypeSingleSelect => 'Single choice';
+
+  @override
+  String get customFieldTypeMultiSelect => 'Multiple choice';
+
+  @override
+  String get customFieldOptionsLabel => 'Options';
+
+  @override
+  String get customFieldOptionHint => 'Option text';
+
+  @override
+  String get customFieldAddOption => 'Add option';
+
+  @override
+  String get customFieldOptionRequired => 'Add at least one option';
+
+  @override
+  String get customFieldOptionDuplicate => 'Options cannot be duplicated';
+
+  @override
+  String get customFieldSelectHint => 'Select';
+
+  @override
+  String get customFieldTypeChangeConfirmTitle => 'Change Field Type';
+
+  @override
+  String customFieldTypeChangeConfirmMessage(
+      String name, String from, String to) {
+    return 'Change the type of $name from $from to $to? Values already recorded in this ledger will be re-interpreted under the new type, and the existing options will be cleared.';
+  }
+
+  @override
+  String get customFieldTypeChangeReconfirmMessage =>
+      'Confirm again: a field type change cannot be reverted automatically. Continue?';
+
+  @override
+  String get customFieldOptionDeleteConfirmTitle => 'Delete Option';
+
+  @override
+  String customFieldOptionDeleteConfirmMessage(String option) {
+    return 'Delete option $option? Entries that used it will keep the value as an orphan option, and it will no longer appear as a choice.';
+  }
+
+  @override
+  String get customFieldOptionDeleteReconfirmMessage =>
+      'Confirm again: the option must be added back manually to restore. Continue?';
+
+  @override
   String get customFieldCreateSuccess => 'Custom field added';
 
   @override

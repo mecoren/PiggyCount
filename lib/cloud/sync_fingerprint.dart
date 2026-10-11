@@ -323,6 +323,12 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
             'syncId': f['syncId'] as String? ?? '',
             'name': f['name'] as String? ?? '',
             'fieldType': f['fieldType'] as String? ?? '',
+            // v13 选项：必须进白名单，否则「只改选项」两端指纹相同 → 判
+            // inSync → 选项改动永不跨设备传播。customFieldValueCanon 的
+            // 规范化把缺键/空数组都归成 ''（空即缺失），故旧快照（无该键）
+            // 与「无选项」等价，不产生一轮永久 outOfSync。
+            'options': CustomFieldOptionsCodec.canonical(
+                f['options'] is List ? f['options'] as List : null),
             'sortOrder': (f['sortOrder'] as num?)?.toInt() ?? 0,
           })
       .toList()

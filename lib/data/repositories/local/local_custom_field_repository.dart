@@ -34,6 +34,7 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
     required String fieldType,
     int sortOrder = 0,
     String? syncId,
+    List<String>? options,
   }) async {
     final trimmed = name.trim();
     final dup = await (db.select(db.customFieldDefinitions)
@@ -57,6 +58,8 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
               fieldType: fieldType,
               sortOrder: d.Value(sortOrder),
               syncId: d.Value(effectiveSyncId),
+              // 空/未传 → NULL（无选项）。
+              optionsJson: d.Value(CustomFieldOptionsCodec.encode(options)),
             ),
           );
       await _recordDefinitionChange(
@@ -76,6 +79,7 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
     required String fieldType,
     int? sortOrder,
     String? syncId,
+    List<String>? options,
   }) async {
     final trimmed = name.trim();
     // 先按 syncId 锚定（导入/恢复路径的稳定身份优先）。
@@ -102,6 +106,7 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
       fieldType: fieldType,
       sortOrder: sortOrder ?? 0,
       syncId: syncId,
+      options: options,
     );
   }
 
@@ -111,6 +116,7 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
     String? name,
     String? fieldType,
     int? sortOrder,
+    List<String>? options,
   }) async {
     final row = await getDefinitionById(id);
     if (row == null) return;
@@ -136,6 +142,10 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
             : const d.Value.absent(),
         fieldType: fieldType != null ? d.Value(fieldType) : const d.Value.absent(),
         sortOrder: sortOrder != null ? d.Value(sortOrder) : const d.Value.absent(),
+        // 非 null = 覆盖（空列表 → encode 返回 null → 列写 NULL = 清空选项）。
+        optionsJson: options != null
+            ? d.Value(CustomFieldOptionsCodec.encode(options))
+            : const d.Value.absent(),
       ));
       if (row.syncId != null && row.syncId!.isNotEmpty) {
         await _recordDefinitionChange(
@@ -216,6 +226,96 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
       }
     });
     return changed;
+  }
+
+  @override
+  Future<int> renameOptionValue({
+    required int ledgerId,
+    required String fieldSyncId,
+    required String oldValue,
+    required String newValue,
+  }) async {
+    final key = fieldSyncId.trim();
+    final from = oldValue.trim();
+    final to = newValue.trim();
+    if (key.isEmpty || from.isEmpty || to.isEmpty || from == to) return 0;
+
+    var changed = 0;
+    await db.transaction(() async {
+      // 交易行：LIKE 粗筛 + Dart 精判，逐笔替换并记 change（同 strip 策略）。
+      final txRows = await (db.select(db.transactions)
+            ..where((t) =>
+                t.ledgerId.equals(ledgerId) &
+                t.customValuesJson.isNotNull() &
+                t.customValuesJson.like('%$key%')))
+          .get();
+      for (final tx in txRows) {
+        final values = Map<String, dynamic>.from(
+            CustomFieldValueCodec.decode(tx.customValuesJson));
+        if (!values.containsKey(key)) continue;
+        final replaced = _replaceOptionInValue(values[key], from, to);
+        if (replaced == null) continue;
+        values[key] = replaced;
+        await (db.update(db.transactions)..where((t) => t.id.equals(tx.id)))
+            .write(TransactionsCompanion(
+          customValuesJson: d.Value(CustomFieldValueCodec.encode(values)),
+        ));
+        if (tx.syncId != null && tx.syncId!.isNotEmpty) {
+          await _recordTransactionChange(
+            entityId: tx.id,
+            entitySyncId: tx.syncId!,
+            ledgerId: tx.ledgerId,
+          );
+        }
+        changed++;
+      }
+      // 周期模板：同 strip 策略，不逐行记账（模板整行以快照为准传播）。
+      final recRows = await (db.select(db.recurringTransactions)
+            ..where((t) =>
+                t.ledgerId.equals(ledgerId) &
+                t.templateFieldValues.isNotNull() &
+                t.templateFieldValues.like('%$key%')))
+          .get();
+      for (final r in recRows) {
+        final values = Map<String, dynamic>.from(
+            CustomFieldValueCodec.decode(r.templateFieldValues));
+        if (!values.containsKey(key)) continue;
+        final replaced = _replaceOptionInValue(values[key], from, to);
+        if (replaced == null) continue;
+        values[key] = replaced;
+        await (db.update(db.recurringTransactions)
+              ..where((t) => t.id.equals(r.id)))
+            .write(RecurringTransactionsCompanion(
+          templateFieldValues:
+              d.Value(CustomFieldValueCodec.encode(values)),
+        ));
+      }
+    });
+    return changed;
+  }
+
+  /// 把值里的 [from] 选项值替换为 [to]（单选=字符串；多选=列表元素）。
+  /// 值不含 [from] → 返回 null（无需改写）；否则返回替换后的值。
+  static dynamic _replaceOptionInValue(dynamic value, String from, String to) {
+    if (value is String) {
+      return value.trim() == from ? to : null;
+    }
+    if (value is List) {
+      var hit = false;
+      final out = <String>[];
+      for (final e in value) {
+        final s = e?.toString().trim() ?? '';
+        if (s.isEmpty) continue;
+        if (s == from) {
+          hit = true;
+          out.add(to);
+        } else {
+          out.add(s);
+        }
+      }
+      return hit ? out : null;
+    }
+    return null;
   }
 
   @override

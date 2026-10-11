@@ -195,15 +195,21 @@ class ImportTag {
 /// 否则交易上已存的值会因为键对不上而全部变成"野键"（定义看不见 → 不渲染）。
 class ImportCustomField {
   final String name;
-  final String fieldType; // amount / text / date
+  final String fieldType; // amount / text / date / singleSelect / multiSelect
   final String? syncId;
   final int? sortOrder;
+
+  /// v13 选项列表（仅单选/多选）。**三态**：
+  /// - `null` = 键缺失（真·旧快照）→ 导入侧保留本地选项、不覆盖；
+  /// - 非 null（含空列表）= 云端权威 → 覆盖本地（空列表 → 清空为 NULL）。
+  final List<String>? options;
 
   const ImportCustomField({
     required this.name,
     this.fieldType = 'text',
     this.syncId,
     this.sortOrder,
+    this.options,
   });
 }
 
@@ -1098,6 +1104,7 @@ class DataImportService {
           fieldType: field.fieldType,
           sortOrder: field.sortOrder,
           syncId: field.syncId,
+          options: field.options,
         );
         final created = await repo.getDefinitionById(id);
         if (created != null) {
@@ -1142,7 +1149,14 @@ class DataImportService {
       final needType = current.fieldType != field.fieldType;
       final needSort =
           field.sortOrder != null && field.sortOrder != current.sortOrder;
-      if (!renaming && !needType && !needSort) continue;
+      // v13 选项对齐：仅当云端**显式携带** options 键（非 null）且与本地
+      // 规范化后不等时才需要写。null（旧快照缺键）→ 保留本地选项、不覆盖。
+      final cloudOptions = field.options;
+      final needOptions = cloudOptions != null &&
+          CustomFieldOptionsCodec.canonical(cloudOptions) !=
+              CustomFieldOptionsCodec.canonical(
+                  CustomFieldOptionsCodec.decode(current.optionsJson));
+      if (!renaming && !needType && !needSort && !needOptions) continue;
 
       // 改名撞车：目标名已被同账本另一字段占用 → 只对齐类型/排序。
       final renameBlocked = renaming && byName.containsKey(field.name);
@@ -1152,6 +1166,8 @@ class DataImportService {
         name: renameBlocked ? null : (renaming ? field.name : null),
         fieldType: field.fieldType,
         sortOrder: field.sortOrder,
+        // null → 不改动（旧快照）；非 null → 覆盖（含空列表 = 清空选项）。
+        options: cloudOptions,
       );
 
       final updated = await repo.getDefinitionById(current.id);

@@ -79,22 +79,24 @@ class CustomFieldStatsService {
       for (final d in usableDefs) {
         final v = values[d.syncId!];
         if (v == null) continue;
-        final label = _displayLabel(v, d.fieldType);
-        if (label == null) continue;
-        final bucket = acc[d.syncId!]!.update(
-              label,
-              (b) => (
-                income: b.income + (isIncome ? row.nativeAmount : 0),
-                expense: b.expense + (isIncome ? 0 : row.nativeAmount),
-                count: b.count + 1,
-              ),
-              ifAbsent: () => (
-                income: isIncome ? row.nativeAmount : 0,
-                expense: isIncome ? 0 : row.nativeAmount,
-                count: 1,
-              ),
-            );
-        acc[d.syncId!]![label] = bucket;
+        // v54 多选：同一笔按每个被选中的值**分别归桶**（接受同一笔在多桶
+        // 重复计金额，与单选口径一致）。
+        for (final label in _displayLabels(v, d.fieldType)) {
+          final bucket = acc[d.syncId!]!.update(
+                label,
+                (b) => (
+                  income: b.income + (isIncome ? row.nativeAmount : 0),
+                  expense: b.expense + (isIncome ? 0 : row.nativeAmount),
+                  count: b.count + 1,
+                ),
+                ifAbsent: () => (
+                  income: isIncome ? row.nativeAmount : 0,
+                  expense: isIncome ? 0 : row.nativeAmount,
+                  count: 1,
+                ),
+              );
+          acc[d.syncId!]![label] = bucket;
+        }
       }
     }
 
@@ -129,5 +131,20 @@ class CustomFieldStatsService {
       }
     }
     return s;
+  }
+
+  /// 值 → 稳定展示标签列表：标量出一个标签；列表值（v54 多选）按每个元素
+  /// 各出一个标签（空/全空 → 空列表）。
+  static List<String> _displayLabels(dynamic value, String fieldType) {
+    if (value is List) {
+      final out = <String>[];
+      for (final e in value) {
+        final l = _displayLabel(e, fieldType);
+        if (l != null) out.add(l);
+      }
+      return out;
+    }
+    final l = _displayLabel(value, fieldType);
+    return l == null ? const [] : [l];
   }
 }

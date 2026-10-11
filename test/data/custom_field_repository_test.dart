@@ -246,4 +246,58 @@ void main() {
       expect(second.first.name, 'A');
     });
   });
+
+  group('v54 选项与改名级联', () {
+    test('create/update 选项读写；空列表 → 清空为 NULL', () async {
+      await seedLedgers();
+      final id = await repo.createDefinition(
+          ledgerId: 1,
+          name: '状态',
+          fieldType: 'singleSelect',
+          options: ['已报销', '未报销']);
+      var row = await repo.getDefinitionById(id);
+      expect(row!.optionsJson, '["已报销","未报销"]');
+
+      await repo.updateDefinition(id, options: ['A', 'B', 'C']);
+      row = await repo.getDefinitionById(id);
+      expect(row!.optionsJson, '["A","B","C"]');
+
+      await repo.updateDefinition(id, options: const []);
+      row = await repo.getDefinitionById(id);
+      expect(row!.optionsJson, isNull);
+    });
+
+    test('renameOptionValue：单选字符串就地替换，其他账本不受影响', () async {
+      await seedLedgers();
+      await seedTx(100, 1, valuesJson: '{"cf-1":"旧报销"}');
+      await seedTx(101, 1, valuesJson: '{"cf-1":"未报销"}');
+      await seedTx(200, 2, valuesJson: '{"cf-1":"旧报销"}');
+
+      final changed = await repo.renameOptionValue(
+          ledgerId: 1,
+          fieldSyncId: 'cf-1',
+          oldValue: '旧报销',
+          newValue: '已报销');
+
+      expect(changed, 1);
+      expect((await repo.getValuesForTransaction(100))['cf-1'], '已报销');
+      expect((await repo.getValuesForTransaction(101))['cf-1'], '未报销');
+      // 账本 2 的同名 syncId 值不受影响
+      expect((await repo.getValuesForTransaction(200))['cf-1'], '旧报销');
+    });
+
+    test('renameOptionValue：多选列表元素替换后去重（canonical 稳定）', () async {
+      await seedLedgers();
+      await seedTx(100, 1, valuesJson: '{"cf-1":["a","b"]}');
+      await seedTx(101, 1, valuesJson: '{"cf-1":["c"]}');
+
+      final changed = await repo.renameOptionValue(
+          ledgerId: 1, fieldSyncId: 'cf-1', oldValue: 'b', newValue: 'a');
+
+      expect(changed, 1);
+      // a←b 合并后去重 → ['a']
+      expect((await repo.getValuesForTransaction(100))['cf-1'], ['a']);
+      expect((await repo.getValuesForTransaction(101))['cf-1'], ['c']);
+    });
+  });
 }

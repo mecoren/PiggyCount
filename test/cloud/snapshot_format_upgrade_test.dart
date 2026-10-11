@@ -257,12 +257,42 @@ void main() {
   });
 
   group('导出格式版本', () {
-    test('快照 version 常量与写入一致（v12）', () async {
+    test('快照 version 常量与写入一致（v13）', () async {
       final payload = await localPayload();
       expect(payload['version'], kSnapshotFormatVersion);
-      expect(kSnapshotFormatVersion, 12,
+      expect(kSnapshotFormatVersion, 13,
           reason: '格式版本变更必须同步审查消费端的升级门控语义；'
-              'v12 = 新增 savingsGoals 段（指纹白名单同步加 savingsGoalCanon）');
+              'v13 = customFields 段新增 options 键（指纹白名单同步纳入 options）');
+    });
+
+    test('v13：云端 v12 快照缺 options 键、本地选项非空 → 不误判为「仅格式升级」',
+        () async {
+      // 本地：一个带选项的单选字段（其 options 进指纹）。
+      await db.customStatement(
+          "INSERT INTO custom_field_definitions "
+          "(ledger_id, name, field_type, options_json, sync_id, sort_order) "
+          "VALUES (1, '状态', 'singleSelect', '[\"A\"]', 'cf-1', 0)");
+      final v12Payload = await localPayload();
+      // 拆成 v12 形态：customFields 项去掉 options 键，version 声明为 12。
+      for (final f in (v12Payload['customFields'] as List)
+          .cast<Map<String, dynamic>>()) {
+        f.remove('options');
+      }
+      v12Payload['version'] = 12;
+      v12Payload['contentFingerprint'] = 'legacy-algorithm-fingerprint';
+
+      final storage = _UpgradeStorage(
+        metadata: const {'fingerprint': 'legacy-algorithm-fingerprint'},
+        snapshot: jsonEncode(v12Payload),
+      );
+      final manager = buildManager(storage);
+
+      expect(
+        await manager.shouldRepublishSnapshotForFormatUpgrade(ledgerId: 1),
+        isFalse,
+        reason: '选项进指纹 → 按 v13 重算云端（无选项）≠ 本地（选项 A）→ 内容确实不同，'
+            '必须交回既有的冲突 / 合并流程，绝不借「格式升级」名义自动覆盖',
+      );
     });
 
     test('v11：本地有持仓时，云端 v10 快照（无持仓段）不会被误判为「仅格式升级」', () async {

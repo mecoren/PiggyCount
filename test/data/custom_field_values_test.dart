@@ -150,12 +150,67 @@ void main() {
 
   group('类型枚举', () {
     test('合法类型集合与校验', () {
-      expect(CustomFieldType.all, ['amount', 'text', 'date']);
+      expect(CustomFieldType.all, [
+        'amount',
+        'text',
+        'date',
+        'singleSelect',
+        'multiSelect',
+      ]);
       expect(CustomFieldType.isValid('amount'), isTrue);
       expect(CustomFieldType.isValid('date'), isTrue);
       expect(CustomFieldType.isValid('text'), isTrue);
+      expect(CustomFieldType.isValid('singleSelect'), isTrue);
+      expect(CustomFieldType.isValid('multiSelect'), isTrue);
       expect(CustomFieldType.isValid('number'), isFalse);
       expect(CustomFieldType.isValid(''), isFalse);
+      expect(CustomFieldType.hasOptions('singleSelect'), isTrue);
+      expect(CustomFieldType.hasOptions('multiSelect'), isTrue);
+      expect(CustomFieldType.hasOptions('text'), isFalse);
+    });
+  });
+
+  group('v54 多选列表值与选项编解码', () {
+    test('列表值：去重 + 字典序排序，空集合按缺失处理', () {
+      expect(CustomFieldValueCodec.normalizeValue(['b', 'a', 'a', ' ']),
+          ['a', 'b']);
+      expect(CustomFieldValueCodec.normalizeValue([]), isNull);
+      expect(CustomFieldValueCodec.normalizeValue(['', '  ']), isNull);
+      // 非字符串元素剔除（值域是选项值字符串）。
+      expect(CustomFieldValueCodec.normalizeValue([1, 'a', null]), ['a']);
+    });
+
+    test('列表值 canonical：顺序无关，缺键/空等价', () {
+      expect(CustomFieldValueCodec.canonical({'f': ['b', 'a']}),
+          CustomFieldValueCodec.canonical({'f': ['a', 'b']}));
+      expect(CustomFieldValueCodec.canonical({'f': <String>[]}), '');
+      expect(CustomFieldValueCodec.canonical({'f': <String>[]}),
+          CustomFieldValueCodec.canonical(null));
+    });
+
+    test('列表值 encode 落 JSON 数组且确定性', () {
+      expect(CustomFieldValueCodec.encode({'f': ['b', 'a']}), '{"f":["a","b"]}');
+      expect(CustomFieldValueCodec.encode({'f': <String>[]}), isNull);
+    });
+
+    test('toDisplayString 列表以逗号连接', () {
+      expect(CustomFieldValueCodec.toDisplayString(['a', 'b']), 'a, b');
+      expect(CustomFieldValueCodec.toDisplayString(<String>[]), isNull);
+    });
+
+    test('选项编解码：trim、去重保序、空即缺失', () {
+      expect(
+          CustomFieldOptionsCodec.normalize([' 已报销 ', '未报销', '已报销', '']),
+          ['已报销', '未报销']);
+      expect(CustomFieldOptionsCodec.encode([]), isNull);
+      expect(CustomFieldOptionsCodec.encode(['a', 'b']), '["a","b"]');
+      expect(CustomFieldOptionsCodec.decode('["a","b"]'), ['a', 'b']);
+      expect(CustomFieldOptionsCodec.decode('bad'), isEmpty);
+      expect(CustomFieldOptionsCodec.canonical(null), '');
+      expect(CustomFieldOptionsCodec.canonical(<String>[]), '');
+      // 保序：不同顺序 → 不同规范串（顺序即展示顺序）。
+      expect(CustomFieldOptionsCodec.canonical(['a', 'b']),
+          isNot(CustomFieldOptionsCodec.canonical(['b', 'a'])));
     });
   });
 }

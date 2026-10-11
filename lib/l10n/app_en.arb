@@ -2707,6 +2707,32 @@
   "customFieldTypeAmount": "Amount",
   "customFieldTypeText": "Text",
   "customFieldTypeDate": "Date",
+  "customFieldTypeSingleSelect": "Single choice",
+  "customFieldTypeMultiSelect": "Multiple choice",
+  "customFieldOptionsLabel": "Options",
+  "customFieldOptionHint": "Option text",
+  "customFieldAddOption": "Add option",
+  "customFieldOptionRequired": "Add at least one option",
+  "customFieldOptionDuplicate": "Options cannot be duplicated",
+  "customFieldSelectHint": "Select",
+  "customFieldTypeChangeConfirmTitle": "Change Field Type",
+  "customFieldTypeChangeConfirmMessage": "Change the type of {name} from {from} to {to}? Values already recorded in this ledger will be re-interpreted under the new type, and the existing options will be cleared.",
+  "@customFieldTypeChangeConfirmMessage": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "from": { "type": "String" },
+      "to": { "type": "String" }
+    }
+  },
+  "customFieldTypeChangeReconfirmMessage": "Confirm again: a field type change cannot be reverted automatically. Continue?",
+  "customFieldOptionDeleteConfirmTitle": "Delete Option",
+  "customFieldOptionDeleteConfirmMessage": "Delete option {option}? Entries that used it will keep the value as an orphan option, and it will no longer appear as a choice.",
+  "@customFieldOptionDeleteConfirmMessage": {
+    "placeholders": {
+      "option": { "type": "String" }
+    }
+  },
+  "customFieldOptionDeleteReconfirmMessage": "Confirm again: the option must be added back manually to restore. Continue?",
   "customFieldCreateSuccess": "Custom field added",
   "customFieldUpdateSuccess": "Custom field updated",
   "customFieldDeleteSuccess": "Custom field deleted",

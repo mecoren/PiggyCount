@@ -29,6 +29,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/models/custom_field_values.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/providers/database_providers.dart';
@@ -87,6 +88,7 @@ void main() {
     required String name,
     required String type,
     int sortOrder = 0,
+    List<String>? options,
   }) async {
     await db.into(db.customFieldDefinitions).insert(
           CustomFieldDefinitionsCompanion.insert(
@@ -95,6 +97,7 @@ void main() {
             fieldType: type,
             syncId: Value(syncId),
             sortOrder: Value(sortOrder),
+            optionsJson: Value(CustomFieldOptionsCodec.encode(options)),
           ),
         );
   }
@@ -413,5 +416,100 @@ void main() {
     expect(captured!.customValues!['cf-a'], 12.5,
         reason: '未改动的已有值必须原样带回');
     expect(captured!.customValues!['cf-b'], 'hello');
+  });
+
+  /// 点某个选项 chip（先确保在视口内 —— 录入分区限高可滚动）。
+  Future<void> tapOption(
+      WidgetTester tester, String syncId, String option) async {
+    final finder = find.byKey(ValueKey('custom_field_option_${syncId}_$option'));
+    await tester.ensureVisible(finder);
+    await tester.pump();
+    await tester.tap(finder);
+    await tester.pump();
+  }
+
+  testWidgets('v54 单选：点选项即选中，提交单个字符串', (tester) async {
+    prepareTest(tester);
+    await seedField(
+        syncId: 'cf-s',
+        name: '状态',
+        type: 'singleSelect',
+        options: ['已报销', '未报销']);
+    AmountEditorResult? captured;
+
+    await tester.pumpWidget(host(onSubmit: (r) => captured = r));
+    await tester.pumpAndSettle();
+
+    await tapOption(tester, 'cf-s', '已报销');
+    await submit(tester);
+
+    expect(captured!.customValues!['cf-s'], '已报销');
+  });
+
+  testWidgets('v54 单选：再次点已选中项 = 清除', (tester) async {
+    prepareTest(tester);
+    await seedField(
+        syncId: 'cf-s',
+        name: '状态',
+        type: 'singleSelect',
+        options: ['已报销', '未报销']);
+    AmountEditorResult? captured;
+
+    await tester.pumpWidget(host(
+      initialCustomValues: const {'cf-s': '已报销'},
+      onSubmit: (r) => captured = r,
+    ));
+    await tester.pumpAndSettle();
+
+    await tapOption(tester, 'cf-s', '已报销');
+    await submit(tester);
+
+    expect(captured!.customValues, isEmpty,
+        reason: '点已选中项 = 清空（显式清空提交空 map，而不是 null）');
+  });
+
+  testWidgets('v54 多选：逐项切换，提交字符串列表', (tester) async {
+    prepareTest(tester);
+    await seedField(
+        syncId: 'cf-m',
+        name: '标签',
+        type: 'multiSelect',
+        options: ['A', 'B', 'C']);
+    AmountEditorResult? captured;
+
+    await tester.pumpWidget(host(onSubmit: (r) => captured = r));
+    await tester.pumpAndSettle();
+
+    await tapOption(tester, 'cf-m', 'A');
+    await tapOption(tester, 'cf-m', 'C');
+    await submit(tester);
+
+    expect(captured!.customValues!['cf-m'], ['A', 'C']);
+  });
+
+  testWidgets('v54 单选：游离值（不在定义选项里）也显示且可清除', (tester) async {
+    prepareTest(tester);
+    await seedField(
+        syncId: 'cf-s',
+        name: '状态',
+        type: 'singleSelect',
+        options: ['已报销', '未报销']);
+    AmountEditorResult? captured;
+
+    await tester.pumpWidget(host(
+      initialCustomValues: const {'cf-s': '旧选项'},
+      onSubmit: (r) => captured = r,
+    ));
+    await tester.pumpAndSettle();
+
+    // 游离值渲染成 chip（选项被改名/云端未同步的历史值不能静默丢失）。
+    expect(
+        find.byKey(const ValueKey('custom_field_option_cf-s_旧选项')),
+        findsOneWidget);
+
+    await tapOption(tester, 'cf-s', '旧选项');
+    await submit(tester);
+
+    expect(captured!.customValues, isEmpty, reason: '游离值可被看见并清除');
   });
 }

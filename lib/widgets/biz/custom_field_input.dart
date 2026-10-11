@@ -199,6 +199,10 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
     switch (def.fieldType) {
       case CustomFieldType.date:
         return _buildDateInput(syncId, l10n);
+      case CustomFieldType.singleSelect:
+        return _buildSelectInput(def, syncId, l10n, multi: false);
+      case CustomFieldType.multiSelect:
+        return _buildSelectInput(def, syncId, l10n, multi: true);
       case CustomFieldType.amount:
         // 宿主接管（记账金额表单）→ 与「原始金额」位同款的只读输入位；
         // 其余调用方（模板编辑页）仍是能弹系统键盘的 TextField。
@@ -396,6 +400,72 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
     );
   }
 
+  /// 单选/多选录入位：以「可点选 chip」呈现定义选项。
+  ///
+  /// - 单选：点已选中项 = 清除；点其它项 = 切换。
+  /// - 多选：逐项切换，选中集合为字符串列表（空集合 = 清除）。
+  /// - **游离值**：当前值不在定义选项里（选项被改名的历史值、云端未同步的
+  ///   选项）也一并渲染成选中态，用户可看见并可清除 —— 不静默丢失。
+  Widget _buildSelectInput(
+      CustomFieldDefinition def, String syncId, AppLocalizations l10n,
+      {required bool multi}) {
+    final raw = _values[syncId];
+    final selected = multi
+        ? (raw is List ? raw.map((e) => e.toString()).toSet() : <String>{})
+        : <String>{if (raw is String) raw};
+    // 选项 = 定义选项（去重保序）+ 游离值（补到后面，保持可见）。
+    final options = <String>[
+      ...CustomFieldOptionsCodec.decode(def.optionsJson),
+    ];
+    for (final v in selected) {
+      if (!options.contains(v)) options.add(v);
+    }
+    if (options.isEmpty) {
+      return SizedBox(
+        height: 40,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            l10n.customFieldSelectHint,
+            style: TextStyle(
+              fontSize: PiggyTextTokens.fs14,
+              color: PiggyTokens.textTertiary(context),
+            ),
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Wrap(
+        key: ValueKey('custom_field_input_$syncId'),
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final opt in options)
+            _SelectChip(
+              key: ValueKey('custom_field_option_${syncId}_$opt'),
+              label: opt,
+              selected: selected.contains(opt),
+              onTap: () {
+                if (multi) {
+                  final list = selected.toList();
+                  if (list.contains(opt)) {
+                    list.remove(opt);
+                  } else {
+                    list.add(opt);
+                  }
+                  _setValue(syncId, list.isEmpty ? null : list);
+                } else {
+                  _setValue(syncId, selected.contains(opt) ? null : opt);
+                }
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
   /// 时刻是否非零点（与明细行「要不要显示时间」同一判定口径）。
   static bool _hasTimeOfDay(DateTime d) =>
       d.hour != 0 || d.minute != 0 || d.second != 0;
@@ -408,4 +478,49 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
       '${d.hour.toString().padLeft(2, '0')}:'
       '${d.minute.toString().padLeft(2, '0')}:'
       '${d.second.toString().padLeft(2, '0')}';
+}
+
+/// v54 单选/多选的选项 chip（自绘以复用设计令牌与既有圆角/配色）。
+class _SelectChip extends StatelessWidget {
+  const _SelectChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? primary.withValues(alpha: 0.12)
+              : PiggyTokens.surface(context),
+          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+          border: Border.all(
+            color: selected ? primary : PiggyTokens.border(context),
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: PiggyTextTokens.fs14,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            color: selected ? primary : PiggyTokens.textPrimary(context),
+          ),
+        ),
+      ),
+    );
+  }
 }

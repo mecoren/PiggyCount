@@ -19,13 +19,16 @@ abstract class CustomFieldRepository {
 
   /// 创建字段定义。同账本内撞同名抛 [DuplicateNameException]。
   /// [syncId] 可选：导入/恢复等需要锚定的路径显式传入，UI 不传走 auto v4。
-  /// [fieldType] 取 `amount | text | date`（见 `CustomFieldType`）。
+  /// [fieldType] 取 `amount | text | date | singleSelect | multiSelect`
+  /// （见 `CustomFieldType`）。
+  /// [options] 仅单选/多选使用；空/未传 → 列写 NULL（无选项）。
   Future<int> createDefinition({
     required int ledgerId,
     required String name,
     required String fieldType,
     int sortOrder = 0,
     String? syncId,
+    List<String>? options,
   });
 
   /// 按 name 取定义，不存在则建一条（get-or-create 语义，给导入/恢复用，
@@ -36,14 +39,17 @@ abstract class CustomFieldRepository {
     required String fieldType,
     int? sortOrder,
     String? syncId,
+    List<String>? options,
   });
 
   /// 更新定义。null 表示不改动该字段。
+  /// [options] 非 null = 覆盖选项（空列表 → 清空为 NULL）；null = 不改动。
   Future<void> updateDefinition(
     int id, {
     String? name,
     String? fieldType,
     int? sortOrder,
+    List<String>? options,
   });
 
   /// 删除定义，并**同时清理该账本下所有交易里对应该字段的值**。
@@ -70,6 +76,20 @@ abstract class CustomFieldRepository {
     required int ledgerId,
     required String oldSyncId,
     required String newSyncId,
+  });
+
+  /// v54：把某账本里 [fieldSyncId] 字段已记录的 [oldValue] 选项值**就地替换**
+  /// 为 [newValue]（单选替换字符串；多选替换列表里的该项）。
+  ///
+  /// 用途：单选/多选字段的某个选项被用户重命名时，级联更新历史值，避免
+  /// 统计裂成新旧两桶。交易行逐笔记 `transaction` update change；周期模板
+  /// 同 strip 策略不逐行记账（模板整行以快照为准传播）。
+  /// 返回实际改动的交易笔数。
+  Future<int> renameOptionValue({
+    required int ledgerId,
+    required String fieldSyncId,
+    required String oldValue,
+    required String newValue,
   });
 
   Future<CustomFieldDefinition?> getDefinitionById(int id);
