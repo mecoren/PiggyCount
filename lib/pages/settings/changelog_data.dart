@@ -40,6 +40,31 @@ class ChangelogVersion {
 /// 全部版本，最新在前
 const kChangelogVersions = <ChangelogVersion>[
   ChangelogVersion(
+    version: '0.1.5',
+    date: '2026-10-11',
+    summary: '自定义字段新增单选 / 多选类型；「我的」页新增「账本设置」分区，账本相关功能集中管理。',
+    sections: [
+      ChangelogSection(
+        icon: Icons.playlist_add_outlined,
+        title: '自定义字段',
+        items: [
+          '新增「单选 / 多选」两种字段类型，记账时可直接勾选预设选项',
+          '修改字段类型、删除字段或选项等破坏性操作增加双重确认，避免误改丢数据',
+          '单选 / 多选字段已适配云同步合并（S3 与 WebDAV 双端实测通过）',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.menu_book_outlined,
+        title: '账本设置',
+        items: [
+          '「我的」页新增「账本设置」分区：账本信息（名称 / 本位币 / 每月起始日）、预算管理、自定义字段、周期账单、订阅管理、储蓄目标集中入口',
+          '分区标题显示当前账本名，切换账本或改名后实时刷新',
+          '清理分散的旧入口：账本页长按菜单不再含预算管理、数据管理不再含自定义字段、储蓄目标与周期账单归入账本设置',
+        ],
+      ),
+    ],
+  ),
+  ChangelogVersion(
     version: '0.1.4',
     date: '2026-10-10',
     summary: '修复多账本云端恢复被误判为「本地较新」，以及下载 / 合并时自定义字段被清空、持仓与储蓄目标删除不生效的问题。',
