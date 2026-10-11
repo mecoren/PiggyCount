@@ -586,7 +586,7 @@
   "shareBillingActionHint": "分享後會在背景自動識別記帳，無需手動開啟小豬記帳",
   "autoScreenshotBillingTitle": "截圖自動記帳",
   "automation": "自動化",
-  "automationDesc": "週期記帳、記帳提醒",
+  "automationDesc": "記帳提醒",
   "automationPageTitle": "自動化功能",
   "availableShortcuts": "可用快捷指令",
   "billCardAccount": "💳 帳戶",
@@ -1796,6 +1796,16 @@
   "mineSyncChecking": "同步中…",
   "mineCloudBackupSection": "雲端同步與備份",
   "mineFunctionSection": "功能管理",
+  "ledgerSettingsSectionTitle": "帳本設定 · {ledgerName}",
+  "@ledgerSettingsSectionTitle": {
+    "placeholders": {
+      "ledgerName": {
+        "type": "String"
+      }
+    }
+  },
+  "ledgerInfoItemTitle": "帳本資訊",
+  "ledgerInfoItemSubtitle": "名稱、主幣種與每月起始日",
   "mineHelpSection": "說明與資訊",
   "mineSupportSection": "支持我們",
   "mineTotalRecords": "總筆數",

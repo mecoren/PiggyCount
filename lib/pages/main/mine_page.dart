@@ -20,6 +20,10 @@ import '../settings/investment_settings_page.dart';
 import '../settings/smart_billing_page.dart';
 import '../settings/automation_page.dart';
 import '../settings/about_page.dart';
+import '../settings/custom_field_manage_page.dart';
+import '../budget/budget_page.dart';
+import '../transaction/recurring_transaction_page.dart';
+import '../transaction/subscription_page.dart';
 import '../report/amount_deviation_page.dart';
 import '../report/annual_report_page.dart';
 import '../report/range_report_page.dart';
@@ -44,6 +48,8 @@ class MinePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authAsync = ref.watch(authServiceProvider);
     final ledgerId = ref.watch(currentLedgerIdProvider);
+    // 账本设置分区:watch 当前账本行,标题中的账本名随切换/改名实时刷新
+    final currentLedger = ref.watch(currentLedgerProvider).value;
     final l10n = AppLocalizations.of(context);
 
     // 头部背景与页面背景一致(亮色淡蓝 / 暗色深蓝灰)，
@@ -277,6 +283,92 @@ class MinePage extends ConsumerWidget {
                 }),
                 SizedBox(height: 24.0.scaled(context, ref)),
 
+                // ── 账本设置（操作对象 = 当前账本，随账本切换；
+                //    收敛原账本长按预算/数据管理自定义字段/自动化周期与订阅/
+                //    功能管理储蓄目标等分散入口，见 prd/ledger_settings_section）──
+                if (currentLedger != null) ...[
+                  SettingsSectionLabel(
+                      l10n.ledgerSettingsSectionTitle(currentLedger.name)),
+                  SizedBox(height: 8.0.scaled(context, ref)),
+                  SettingsCard(
+                    children: [
+                      // 账本信息 — 与账本页长按「编辑」共用 editLedgerInfo
+                      // 全流程（本位币变更确认 + nativeAmount 重算 + 同步）。
+                      SettingsNavItem(
+                        icon: Icons.info_outline,
+                        title: l10n.ledgerInfoItemTitle,
+                        subtitle: l10n.ledgerInfoItemSubtitle,
+                        onTap: () => editLedgerInfo(context, ref,
+                            ledgerId: currentLedger.id),
+                      ),
+                      // 预算管理（每个账本独立预算，页面隐式当前账本）
+                      SettingsNavItem(
+                        icon: Icons.pie_chart_outline_rounded,
+                        title: l10n.budgetManagement,
+                        subtitle: l10n.budgetSetupHint,
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const BudgetPage()),
+                          );
+                        },
+                      ),
+                      // 自定义字段（账本级：字段定义按 ledgerId 隔离）
+                      SettingsNavItem(
+                        icon: Icons.playlist_add_outlined,
+                        title: l10n.customFieldManageTitle,
+                        subtitle: l10n.customFieldManageSubtitle,
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    const CustomFieldManagePage()),
+                          );
+                        },
+                      ),
+                      // 周期记账（页面为跨账本列表、行上标注账本名 — 需求 R1，
+                      // 新建默认落在当前账本）
+                      SettingsNavItem(
+                        icon: Icons.repeat,
+                        title: l10n.mineRecurringTransactions,
+                        subtitle: l10n.mineRecurringTransactionsSubtitle,
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    const RecurringTransactionPage()),
+                          );
+                        },
+                      ),
+                      // 订阅管理（当前账本周期账单的派生视图）
+                      SettingsNavItem(
+                        icon: Icons.subscriptions_outlined,
+                        title: l10n.mineSubscriptionManagement,
+                        subtitle: l10n.mineSubscriptionManagementSubtitle,
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const SubscriptionPage()),
+                          );
+                        },
+                      ),
+                      // 储蓄目标（v53：目标的激励层，与预算的约束层互为镜像）
+                      SettingsNavItem(
+                        icon: Icons.savings_outlined,
+                        title: l10n.savingsGoalPageTitle,
+                        subtitle: l10n.savingsGoalEmptyHint,
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) => const SavingsGoalsPage()),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 24.0.scaled(context, ref)),
+                ],
+
                 // ── 功能管理 ──
                 SettingsSectionLabel(l10n.mineFunctionSection),
                 SizedBox(height: 8.0.scaled(context, ref)),
@@ -360,19 +452,7 @@ class MinePage extends ConsumerWidget {
                         );
                       },
                     ),
-                    // 储蓄目标（v53：目标的激励层，与预算的约束层互为镜像）
-                    SettingsNavItem(
-                      icon: Icons.savings_outlined,
-                      title: AppLocalizations.of(context).savingsGoalPageTitle,
-                      subtitle:
-                          AppLocalizations.of(context).savingsGoalEmptyHint,
-                      onTap: () async {
-                        await Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => const SavingsGoalsPage()),
-                        );
-                      },
-                    ),
+                    // 储蓄目标已移至「账本设置」分区（按账本隔离的数据）
                   ],
                 ),
                 SizedBox(height: 24.0.scaled(context, ref)),

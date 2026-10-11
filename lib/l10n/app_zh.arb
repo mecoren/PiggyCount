@@ -561,6 +561,16 @@
   "importFileOpenError": "无法打开文件选择器：{error}",
   "mineCloudBackupSection": "云同步与备份",
   "mineFunctionSection": "功能管理",
+  "ledgerSettingsSectionTitle": "账本设置 · {ledgerName}",
+  "@ledgerSettingsSectionTitle": {
+    "placeholders": {
+      "ledgerName": {
+        "type": "String"
+      }
+    }
+  },
+  "ledgerInfoItemTitle": "账本信息",
+  "ledgerInfoItemSubtitle": "名称、主币种与每月起始日",
   "mineHelpSection": "帮助与信息",
   "mineSupportSection": "支持我们",
   "mineImport": "导入数据",
@@ -2087,7 +2097,7 @@
   "shareBillingGuide": "在支付宝、微信、相册等应用中看到支付截图时，点击「分享」并选择「小猪记账」，即可自动识别金额、商家、时间等信息并记账，无需先保存截图。",
   "shareBillingActionHint": "分享后会在后台自动识别记账，无需手动打开小猪记账",
   "automation": "自动化",
-  "automationDesc": "周期记账、记账提醒",
+  "automationDesc": "记账提醒",
   "automationPageTitle": "自动化功能",
   "appearanceSettings": "个性化设置",
   "appearanceSettingsDesc": "主题、字体、语言、应用锁等",

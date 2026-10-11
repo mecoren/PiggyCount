@@ -836,6 +836,16 @@
   },
   "mineCloudBackupSection": "Cloud & Backup",
   "mineFunctionSection": "Features",
+  "ledgerSettingsSectionTitle": "Ledger Settings · {ledgerName}",
+  "@ledgerSettingsSectionTitle": {
+    "placeholders": {
+      "ledgerName": {
+        "type": "String"
+      }
+    }
+  },
+  "ledgerInfoItemTitle": "Ledger Info",
+  "ledgerInfoItemSubtitle": "Name, primary currency & month start day",
   "mineHelpSection": "Help & Info",
   "mineSupportSection": "Support Us",
   "mineImport": "Import Data",
@@ -2344,7 +2354,7 @@
   "shareBillingGuide": "When you see a payment screenshot in Alipay, WeChat, Photos, etc., tap \"Share\" and choose \"PiggyCount\" to auto-recognize the amount, merchant, and time and create a transaction — no need to save the screenshot first.",
   "shareBillingActionHint": "Recognized automatically in the background after sharing — no need to open PiggyCount",
   "automation": "Automation",
-  "automationDesc": "Recurring transactions and reminders",
+  "automationDesc": "Recording reminder",
   "automationPageTitle": "Automation",
   "appearanceSettings": "Personalization",
   "appearanceSettingsDesc": "Theme, font, language, app lock, etc.",

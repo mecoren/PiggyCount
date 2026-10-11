@@ -1651,6 +1651,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mineFunctionSection => '기능 관리';
 
   @override
+  String ledgerSettingsSectionTitle(String ledgerName) {
+    return '장부 설정 · $ledgerName';
+  }
+
+  @override
+  String get ledgerInfoItemTitle => '장부 정보';
+
+  @override
+  String get ledgerInfoItemSubtitle => '이름, 기준 통화 및 월 시작일';
+
+  @override
   String get mineHelpSection => '도움말 및 정보';
 
   @override
@@ -5203,7 +5214,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get automation => '자동화';
 
   @override
-  String get automationDesc => '정기 결제와 알림';
+  String get automationDesc => '기록 알림';
 
   @override
   String get automationPageTitle => '자동화';

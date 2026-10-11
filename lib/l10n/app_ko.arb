@@ -551,6 +551,16 @@
   "importFileOpenError": "파일 선택기를 열 수 없습니다: {error}",
   "mineCloudBackupSection": "클라우드 동기화 및 백업",
   "mineFunctionSection": "기능 관리",
+  "ledgerSettingsSectionTitle": "장부 설정 · {ledgerName}",
+  "@ledgerSettingsSectionTitle": {
+    "placeholders": {
+      "ledgerName": {
+        "type": "String"
+      }
+    }
+  },
+  "ledgerInfoItemTitle": "장부 정보",
+  "ledgerInfoItemSubtitle": "이름, 기준 통화 및 월 시작일",
   "mineHelpSection": "도움말 및 정보",
   "mineSupportSection": "저희를 지원해주세요",
   "mineImport": "데이터 가져오기",
@@ -1648,7 +1658,7 @@
   "shareBillingGuide": "알리페이, 위챗, 사진 앱 등에서 결제 스크린샷을 보면 \"공유\"를 누르고 \"PiggyCount\"를 선택하세요. 금액, 가맹점, 시간을 자동으로 인식해 거래를 생성합니다 — 스크린샷을 먼저 저장할 필요가 없습니다.",
   "shareBillingActionHint": "공유 후 백그라운드에서 자동으로 인식됩니다 — PiggyCount를 열 필요가 없습니다",
   "automation": "자동화",
-  "automationDesc": "정기 결제와 알림",
+  "automationDesc": "기록 알림",
   "automationPageTitle": "자동화",
   "appearanceSettings": "개인화",
   "appearanceSettingsDesc": "테마, 글꼴, 언어, 앱 잠금 등",

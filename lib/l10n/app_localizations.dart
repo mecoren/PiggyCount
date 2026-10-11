@@ -3055,6 +3055,24 @@ abstract class AppLocalizations {
   /// **'Features'**
   String get mineFunctionSection;
 
+  /// No description provided for @ledgerSettingsSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ledger Settings · {ledgerName}'**
+  String ledgerSettingsSectionTitle(String ledgerName);
+
+  /// No description provided for @ledgerInfoItemTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ledger Info'**
+  String get ledgerInfoItemTitle;
+
+  /// No description provided for @ledgerInfoItemSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Name, primary currency & month start day'**
+  String get ledgerInfoItemSubtitle;
+
   /// No description provided for @mineHelpSection.
   ///
   /// In en, this message translates to:
@@ -9656,7 +9674,7 @@ abstract class AppLocalizations {
   /// No description provided for @automationDesc.
   ///
   /// In en, this message translates to:
-  /// **'Recurring transactions and reminders'**
+  /// **'Recording reminder'**
   String get automationDesc;
 
   /// No description provided for @automationPageTitle.

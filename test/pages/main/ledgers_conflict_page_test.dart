@@ -221,10 +221,10 @@ void main() {
           reason: '不得回退成居中弹窗（那会遮住账本列表且与全站漂移）');
 
       final l10n = zh(tester);
-      // myRole 默认 owner + 快照同步后端 → 六档全在
+      // myRole 默认 owner + 快照同步后端 → 五档全在
+      // （「预算管理」已移至「我的 → 账本设置」分区，见 prd/ledger_settings_section）
       for (final label in [
         l10n.ledgersEdit,
-        l10n.budgetManagement,
         l10n.ledgersUploadThis,
         l10n.ledgersClear,
         l10n.ledgersDeleteLocal,

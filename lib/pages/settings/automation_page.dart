@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
-import '../transaction/recurring_transaction_page.dart';
-import '../transaction/subscription_page.dart';
 import '../settings/reminder_settings_page.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -33,30 +31,7 @@ class AutomationPage extends ConsumerWidget {
         children: [
           SettingsCard(
             children: [
-              // 周期记账
-              SettingsNavItem(
-                icon: Icons.repeat,
-                title: l10n.mineRecurringTransactions,
-                subtitle: l10n.mineRecurringTransactionsSubtitle,
-
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const RecurringTransactionPage()),
-                  );
-                },
-              ),
-              // 订阅管理（周期账单派生视图）
-              SettingsNavItem(
-                icon: Icons.subscriptions_outlined,
-                title: l10n.mineSubscriptionManagement,
-                subtitle: l10n.mineSubscriptionManagementSubtitle,
-
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SubscriptionPage()),
-                  );
-                },
-              ),
+              // 周期记账/订阅管理已移至「我的 → 账本设置」分区（账本级数据）
               // 记账提醒
               SettingsNavItem(
                 icon: Icons.notifications_outlined,

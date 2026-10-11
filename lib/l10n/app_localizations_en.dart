@@ -1668,6 +1668,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineFunctionSection => 'Features';
 
   @override
+  String ledgerSettingsSectionTitle(String ledgerName) {
+    return 'Ledger Settings · $ledgerName';
+  }
+
+  @override
+  String get ledgerInfoItemTitle => 'Ledger Info';
+
+  @override
+  String get ledgerInfoItemSubtitle =>
+      'Name, primary currency & month start day';
+
+  @override
   String get mineHelpSection => 'Help & Info';
 
   @override
@@ -5358,7 +5370,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get automation => 'Automation';
 
   @override
-  String get automationDesc => 'Recurring transactions and reminders';
+  String get automationDesc => 'Recording reminder';
 
   @override
   String get automationPageTitle => 'Automation';

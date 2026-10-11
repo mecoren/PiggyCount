@@ -17,5 +17,6 @@ export 'settings_widgets.dart';
 export 'profile_card.dart';
 export 'database_recovery_overlay.dart';
 export 'day_of_month_picker.dart';
+export 'ledger_editor_dialog.dart';
 export 'calendar_date_cell.dart';
 export 'range_picker_sheet.dart';

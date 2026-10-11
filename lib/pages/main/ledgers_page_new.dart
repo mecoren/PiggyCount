@@ -15,20 +15,15 @@ import '../../cloud/sync_diff_service.dart' show SyncChange;
 import '../../cloud/startup_sync_checker.dart' show StartupSyncChecker;
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
-import '../../widgets/currency/currency_picker_sheet.dart';
 import '../cloud/upload_conflict_helper.dart';
-import '../budget/budget_page.dart';
 import '../cloud/sync_preview_dialog.dart' show showSyncPreviewDialog;
 import '../../styles/tokens.dart';
-import '../../utils/currencies.dart';
 import '../../services/attachment_service.dart';
 import '../../services/system/logger_service.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../utils/format_utils.dart';
 import '../../services/billing/post_processor.dart';
 import '../../l10n/app_localizations.dart';
-import '../../providers/budget_providers.dart';
-import '../../widget/widget_manager.dart';
 
 /// 批量恢复确认文案中的同名多槽位明细（两次实测 §4.2 遗留缺口）。
 ///
@@ -456,12 +451,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         icon: Icons.edit,
         label: l10n.ledgersEdit,
       ),
-      // 预算管理入口 — 每个账本独立预算。
-      PiggyMenuItem.action(
-        value: 'budget',
-        icon: Icons.pie_chart_outline_rounded,
-        label: l10n.budgetManagement,
-      ),
+      // 预算管理入口已移至「我的 → 账本设置」分区（每个账本独立预算，
+      // 统一收敛到账本设置菜单，见 prd/ledger_settings_section）。
       // 单账本上传 — 放在破坏性操作（清空/删除）之前，与编辑类操作分组。
       if (canUpload)
         PiggyMenuItem.action(
@@ -484,18 +475,6 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
 
     if (action == 'edit') {
       await _handleEditLedger(context, ledger);
-    } else if (action == 'budget') {
-      // 切到长按的账本(BudgetPage 内部 watch currentLedger,不接 ledgerId 参
-      // 数),再 push。语义上"从账本列表 → 长按 A → 预算管理"自然就是切到 A。
-      if (ref.read(currentLedgerIdProvider) != ledger.id) {
-        ref.read(currentLedgerIdProvider.notifier).state = ledger.id;
-        ref.invalidate(currentLedgerProvider);
-      }
-      if (mounted && context.mounted) {
-        await Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const BudgetPage()),
-        );
-      }
     } else if (action == 'upload') {
       await _handleUploadLedger(context, ledger);
     } else if (action == 'clear') {
@@ -539,119 +518,12 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     }
   }
 
-  /// 编辑账本
+  /// 编辑账本 — 保存全流程（本位币重算 / 刷新 / 同步 / 小组件）已提取到
+  /// [editLedgerInfo]，与我的页「账本设置 → 账本信息」共用一份实现。
+  /// 传 `this.context`：长按菜单携带的 context 可能随弹层销毁吞掉后续流程。
   Future<void> _handleEditLedger(
       BuildContext context, LedgerDisplayItem ledger) async {
-    final repo = ref.read(repositoryProvider);
-    final ledgerData = await repo.getLedgerById(ledger.id);
-
-    if (ledgerData == null || !mounted || !context.mounted) return;
-
-    final result = await _showLedgerEditorDialog(
-      context,
-      title: AppLocalizations.of(context).ledgersEdit,
-      initialName: ledgerData.name,
-      initialCurrency: ledgerData.currency,
-      initialMonthStartDay: ledgerData.monthStartDay,
-    );
-
-    if (result == null || !mounted) return;
-
-    // v30 本位币变更:存量交易的 nativeAmount 快照是按旧本位币算的,需按新
-    // 本位币全量重算(边界 5,.docs/multi-currency-ledger 02 §八)。先确认再改。
-    final currencyChanged =
-        result.currency.toUpperCase() != ledgerData.currency.toUpperCase();
-    if (currencyChanged) {
-      final stats = await repo.getLedgerStats(ledgerId: ledger.id);
-      final txCount = stats.transactionCount;
-      // 用 State 的 mounted/this.context:传入的参数 context 可能随编辑入口
-      // 弹层一起销毁(mounted=false → 静默 return 会把整个保存吞掉)。
-      if (!mounted) return;
-      final l10n = AppLocalizations.of(this.context);
-      final confirmed = await showDialog<bool>(
-        context: this.context,
-        builder: (dctx) => AppDialogShell(
-          title: Text(l10n.ledgerBaseCurrencyLabel),
-          content: Text(
-            '${l10n.ledgerCurrencyChangeRecalcHint}\n'
-            '${l10n.recalcSyncCountHint(txCount)}',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dctx, false),
-              child: Text(AppLocalizations.of(dctx).commonCancel),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dctx, true),
-              child: Text(AppLocalizations.of(dctx).commonConfirm),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true) return;
-    }
-
-    await repo.updateLedger(
-      id: ledger.id,
-      name: result.name.trim(),
-      currency: result.currency,
-      monthStartDay: result.monthStartDay,
-    );
-
-    if (currencyChanged) {
-      // 先强制拉一次「以新主币种为 base」的汇率:改币种瞬间本地通常还没有
-      // 这一组(汇率按本位币基准存),不拉的话重算会因缺汇率整体跳过
-      // (反馈17:CNY→JPY 后旧交易折算不动)。extraQuotes 带上账本实际涉及
-      // 的全部外币(无账户币种不在 usedCurrencies 里)。拉取失败也继续——
-      // 缺汇率的笔退化 =amount,由 L11 横幅兜底,绝不保留旧口径错值。
-      final foreign = await repo.getLedgerForeignCurrencies(ledger.id);
-      await refreshExchangeRatesFromUi(ref,
-          force: true,
-          extraQuotes: {...foreign, ledgerData.currency.toUpperCase()});
-      // 全量重算(逐笔记 change,L13);缺汇率的笔留待 L11 横幅
-      final n =
-          await repo.recalcNativeAmountsForLedger(ledger.id, result.currency);
-      if (mounted && n > 0) {
-        showToast(this.context,
-            AppLocalizations.of(this.context).recalcForeignTxDone(n));
-      }
-    }
-
-    // 刷新信号必须在 sync 之前发(反馈19):改主币种重算产生几百条 change,
-    // push 可能耗时数十秒甚至失败,原先信号排在 await sync 之后导致首页/
-    // 账本页统计长时间(或永远)显示旧数据。本地数据此刻已就绪,立即刷新。
-    ref.read(ledgerListRefreshProvider.notifier).state++;
-    // currentLedgerProvider 已是 StreamProvider(Drift watch 自动推送),
-    // 此 invalidate 仅作防御性重订阅(如流曾进入 error 态),正常路径冗余无害。
-    ref.invalidate(currentLedgerProvider);
-    ref.read(statsRefreshProvider.notifier).state++;
-    ref.read(budgetRefreshProvider.notifier).state++;
-
-    // 修改账本元数据后,触发同步以更新云端(本地非 tx 写入不会自动 push)。
-    // 放刷新信号之后:UI 不等 push 完成;失败也不影响本地展示(下次同步兜底)。
-    try {
-      await PostProcessor.sync(ref, ledgerId: ledger.id);
-    } catch (e) {
-      logger.warning('LedgersPage', '改账本元数据后同步失败(本地已生效,下次同步重试): $e');
-    }
-
-    // 起始日影响小部件「本月」口径,立即刷新
-    try {
-      final repository = ref.read(repositoryProvider);
-      final colorScheme = ref.read(incomeExpenseColorSchemeProvider);
-      // 没有 BuildContext,靠 languageProvider 还原当前 App 语言(见
-      // widget_manager.dart resolveWidgetLocalizations 文档)。
-      await WidgetManager().updateAllWidgetsLocalized(
-        repository,
-        ledger.id,
-        ref.read(primaryColorProvider),
-        explicitLocale: ref.read(languageProvider),
-        colorScheme: colorScheme,
-        baseCurrency: ref.read(baseCurrencyProvider),
-      );
-    } catch (e) {
-      logger.warning('LedgersPage', '改账本起始日后刷新小组件失败', e);
-    }
+    await editLedgerInfo(this.context, ref, ledgerId: ledger.id);
   }
 
   /// 清空 / 删除账本后,精准清理该账本关联的附件物理文件(best-effort)。
@@ -1196,8 +1068,9 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
 
   /// 显示创建账本对话框
   Future<void> _showCreateLedgerDialog(BuildContext context) async {
-    final result = await _showLedgerEditorDialog(
+    final result = await showLedgerEditorDialog(
       context,
+      primaryColor: ref.read(primaryColorProvider),
       title: AppLocalizations.of(context).ledgersNew,
     );
 
@@ -1256,126 +1129,6 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       showToast(context,
           AppLocalizations.of(context).ledgersCreateFailed(e.toString()));
     }
-  }
-
-  /// 账本编辑对话框
-  Future<({String name, String currency, int monthStartDay})?>
-      _showLedgerEditorDialog(
-    BuildContext context, {
-    String? title,
-    String? initialName,
-    String? initialCurrency,
-    int? initialMonthStartDay,
-  }) async {
-    String name = initialName ?? '';
-    String currency = initialCurrency ?? 'CNY';
-    int monthStartDay = initialMonthStartDay ?? 1;
-    final nameCtrl = TextEditingController(text: name);
-
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(builder: (ctx, setState) {
-          // 外壳走项目弹窗语言（[AppDialogShell]）：居中标题 + 表单内容 +
-          // 底部分栏动作区；不再自绘 Dialog(surfaceElevated + radiusXl) + Padding。
-          return AppDialogShell(
-            title: Text(title ?? AppLocalizations.of(ctx).ledgersEdit),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: nameCtrl,
-                  decoration: piggyOutlinedDecoration(
-                    ctx,
-                    label: AppLocalizations.of(ctx).ledgersName,
-                  ),
-                ),
-                const SizedBox(height: PiggyDimens.p12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  // v30 语义升级:账本 currency = 「账本本位币」(统计折算目标),
-                  // 与资产页的用户级「主币种」是两个概念,label 用本位币避免混淆。
-                  title: Text(AppLocalizations.of(ctx).ledgerBaseCurrencyLabel),
-                  subtitle: Text(displayCurrency(currency, context)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () async {
-                    final picked =
-                        await _showCurrencyPicker(ctx, initial: currency);
-                    if (picked != null) {
-                      setState(() => currency = picked);
-                    }
-                  },
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(AppLocalizations.of(ctx).ledgersMonthStartDay),
-                  subtitle: Text(monthStartDay <= 1
-                      ? AppLocalizations.of(ctx).ledgersMonthStartDayNatural
-                      : AppLocalizations.of(ctx)
-                          .ledgersMonthStartDayValue(monthStartDay)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () async {
-                    final picked = await _showMonthStartDayPicker(ctx,
-                        initial: monthStartDay);
-                    if (picked != null) {
-                      setState(() => monthStartDay = picked);
-                    }
-                  },
-                ),
-              ],
-            ),
-            // 底部按钮与确认框同一语言：取消｜保存分栏（保存=主题色）。
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(AppLocalizations.of(ctx).commonCancel),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(
-                  title == AppLocalizations.of(ctx).ledgersNew
-                      ? AppLocalizations.of(ctx).ledgersCreate
-                      : AppLocalizations.of(ctx).commonSave,
-                ),
-              ),
-            ],
-          );
-        });
-      },
-    );
-
-    if (ok == true && nameCtrl.text.trim().isNotEmpty) {
-      return (
-        name: nameCtrl.text.trim(),
-        currency: currency,
-        monthStartDay: monthStartDay
-      );
-    }
-
-    return null;
-  }
-
-  /// 28 宫格月起始日选择器（复用共用 1~N 日网格抽屉）
-  Future<int?> _showMonthStartDayPicker(BuildContext context,
-      {required int initial}) {
-    final l10n = AppLocalizations.of(context);
-    return showDayOfMonthPickerSheet(
-      context,
-      title: l10n.ledgersMonthStartDay,
-      hint: l10n.ledgersMonthStartDayHint,
-      selected: initial,
-    );
-  }
-
-  /// 货币选择器（统一走共用币种抽屉：国旗 + 选中高亮 + 搜索）
-  Future<String?> _showCurrencyPicker(BuildContext context, {String? initial}) {
-    return showCurrencyPickerSheet(
-      context,
-      selected: initial ?? '',
-      primaryColor: ref.read(primaryColorProvider),
-      title: AppLocalizations.of(context).ledgersSelectCurrency,
-    );
   }
 
   /// 对比合并流程（方向仲裁的第三选择）：

@@ -1637,6 +1637,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mineFunctionSection => '功能管理';
 
   @override
+  String ledgerSettingsSectionTitle(String ledgerName) {
+    return '账本设置 · $ledgerName';
+  }
+
+  @override
+  String get ledgerInfoItemTitle => '账本信息';
+
+  @override
+  String get ledgerInfoItemSubtitle => '名称、主币种与每月起始日';
+
+  @override
   String get mineHelpSection => '帮助与信息';
 
   @override
@@ -5147,7 +5158,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get automation => '自动化';
 
   @override
-  String get automationDesc => '周期记账、记账提醒';
+  String get automationDesc => '记账提醒';
 
   @override
   String get automationPageTitle => '自动化功能';
@@ -10507,6 +10518,17 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get mineFunctionSection => '功能管理';
 
   @override
+  String ledgerSettingsSectionTitle(String ledgerName) {
+    return '帳本設定 · $ledgerName';
+  }
+
+  @override
+  String get ledgerInfoItemTitle => '帳本資訊';
+
+  @override
+  String get ledgerInfoItemSubtitle => '名稱、主幣種與每月起始日';
+
+  @override
   String get mineHelpSection => '說明與資訊';
 
   @override
@@ -14017,7 +14039,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get automation => '自動化';
 
   @override
-  String get automationDesc => '週期記帳、記帳提醒';
+  String get automationDesc => '記帳提醒';
 
   @override
   String get automationPageTitle => '自動化功能';
