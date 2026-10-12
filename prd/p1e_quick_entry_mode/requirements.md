@@ -8,6 +8,27 @@
 > - 下一步：记忆上次分类 + 金额优先的极简表单；入口复用现有 home_widget/deep link 范式。
 > - 证据行：`transaction_editor_page.dart:309-321`。
 
+## ⚠️ 口径变更（2026-10-12）：R1「上次分类记忆」已被取代
+
+R1 原定的「**无时间窗**的记忆上次分类」已被 **「5 分钟内再次记账继承上一笔的分类与账户」** 取代。
+下面的 R1 / AC-R1 作为**历史契约保留、不再有效**（其它 R / AC 仍有效，语义按新口径读）：
+
+| 维度 | 原 R1（已作废） | 现口径（2026-10-12） |
+|---|---|---|
+| 触发条件 | 无时间窗，扫最近 `scanLimit` 笔找同类型带分类的一笔 | **录入时刻**距现在 ≤ **5 分钟**（`now - transactions.created_at`）；用户把发生日期改成昨天也照样按录入时刻判 |
+| 继承范围 | 只继承**分类** | **分类 + 账户**（账户需通过存在性 / 未隐藏 / 币种匹配校验，不过则退回默认账户） |
+| 生效形态 | 仅「金额表单优先」形态 | 两种形态都生效；**分类网格**形态命中时直接进金额表单 |
+| 数据层 | `getLastUsedCategoryId({ledgerId, kind, scanLimit})` | `getRecentEntryDefaults({ledgerId, kind, within})`，命中 `idx_transactions_ledger_created` 做 5 分钟范围裁剪 |
+| 新列 | 无 | `transactions.created_at`（**本地专有列**，不进云快照 / 指纹；schema v55 + 幂等回填，老行回填为 `happened_at`） |
+| 已删除 | — | `getLastUsedCategoryId`、`quickEntryLastCategorySql`、`quickEntryLastCategoryProvider`（含 `app.dart` 首帧预热）及其契约测试 |
+
+- 新契约测试：`test/data/repositories/local/recent_entry_defaults_test.dart`（窗口内/外、类型隔离、
+  批量导入/云恢复行不参与、索引命中）；落点断言见 `test/widgets/quick_entry_mode_test.dart`
+  （窗口内/外、网格形态直落、继承到的分类已删除 → 不预填）。
+- 决策 1 的方法论（**性能结论必须实测**、公开 SQL 供测试跑 `EXPLAIN QUERY PLAN`）被新查询继承，
+  见 `recentEntryDefaultsSql`。
+- 非目标里那条「不做一键复记上一笔（跳过金额输入）」**依然成立**：新口径只继承分类与账户，金额仍必须手输。
+
 ## 一、背景
 
 ### 1.1 当前「记一笔」实际路径（已逐行核对）
@@ -48,7 +69,7 @@
 
 ## 二、需求范围
 
-### R1 上次分类记忆（数据层）
+### R1 上次分类记忆（数据层） —— ⚠️ 已被取代（2026-10-12，见文首「口径变更」，本节仅存历史）
 
 - 新增仓库方法 `getLastUsedCategoryId({required int ledgerId, required String kind})`：
   取该账本 + 该类型下**最近一笔**带分类交易的分类。
@@ -92,7 +113,8 @@
 
 ## 三、验收标准
 
-### AC-R1
+### AC-R1 —— ⚠️ 已作废（2026-10-12，见文首「口径变更」；现行契约在
+`test/data/repositories/local/recent_entry_defaults_test.dart`）
 
 | # | 场景 | 预期 |
 |---|------|------|

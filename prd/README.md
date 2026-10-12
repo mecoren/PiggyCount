@@ -61,7 +61,7 @@
 | `p1b_unawaited_log_error_exit` | 后台链路统一异常出口（`unawaitedLog`）+ 统计页错误态 | 已落地（`3658b85`） |
 | `p1c_list_incremental_grouping` | 交易列表按日期段增量分组，替代全量重算 | 已落地（`62e6ed2`） |
 | `p1d_style_token_convergence_batch1` | 样式令牌收敛第一批（图表色板 / 海报语义色 / 默认主色单源） | 已落地（`5317308`）；后续批次见「仍在进行中的五项余量」 |
-| `p1e_quick_entry_mode` | 快捷记账模式（记忆上次分类 + 金额优先的极简表单） | 已落地（R1-R4，`c8c6e9c` + `ad807bc`），见下方对照表第 9 行 |
+| `p1e_quick_entry_mode` | 快捷记账模式（金额优先的极简表单 + **5 分钟内继承上一笔的分类与账户**，2026-10-12 取代原「无窗口记忆上次分类」） | 已落地（R1-R4，`c8c6e9c` + `ad807bc`），见下方对照表第 9 行 |
 | `p1f_rec6_error_observability` | 同步异常→用户提示映射表 + 本地库损坏恢复引导 | 已落地（`7330b26` → `74d3b16` → `4b337c6` → `dce6a0d`）|
 | `p2a_analyzer_baseline` | 静态分析清零（566→0）+ CI 锁基线 | 已落地（`252a4e8`） |
 

@@ -257,7 +257,7 @@ PiggyCount 的 AI 能力由自研 `flutter_ai_kit` 框架提供,支持 6 种执�
 |---|---|---|---|
 | `flutter_test` | SDK | 单元测试 / Widget 测试 | — |
 | `mocktail` | `^1.0.4` | Mock 库 | 替代 mockito,无需 codegen |
-| `integration_test` | SDK | 集成测试 | 已声明但未使用,见 [10 测试策略](./10-testing-strategy.md) |
+| `integration_test` | SDK | 集成测试（设备上跑端到端） | 2026-10-12 起真在用,见 [10 测试策略](./10-testing-strategy.md) |
 | `build_runner` | `^2.4.10`(dev) | 代码生成器 | Drift codegen |
 | `flutter_lints` | `^5.0.0`(dev) | Lint 规则 | Flutter 官方推荐 |
 | `dart_code_metrics` | `^5.7.6`(dev) | 代码度量 | 额外的代码质量检查 |

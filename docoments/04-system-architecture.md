@@ -609,7 +609,9 @@ flowchart TD
 - 测试用 `BeeDatabase.forTesting(NativeDatabase.memory())` 注入内存库
 - Mock 用 `mocktail: ^1.0.4`,不用 mockito(避免 codegen)
 - Widget 测试用 `flutter_test` 的 `testWidgets`
-- 集成测试目录 `integration_test/` **不存在**(已声明依赖但未使用),见 [10 测试策略](./10-testing-strategy.md)
+- 集成测试目录 `integration_test/` 已于 **2026-10-12** 建立（首个用例
+  `integration_test/recent_entry_inherit_test.dart`），运行
+  `flutter test integration_test -d <device> --flavor dev`，见 [10 测试策略](./10-testing-strategy.md)
 
 ---
 

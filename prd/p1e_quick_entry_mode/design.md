@@ -3,6 +3,18 @@
 > 需求见同目录 `requirements.md`。本文档写「怎么实现」与取舍，不重复需求背景。
 > 五个待拍板项见 `requirements.md` 第五节，下文按**建议选项**展开（记忆来源 A、金额优先方案 2、
 > 不记忆类型、加设置开关、换分类保留金额）。
+>
+> ⚠️ **口径变更（2026-10-12）**：R1「**无时间窗**的记忆上次分类」已被
+> **「5 分钟内再次记账继承上一笔的分类与账户」**取代 ——
+> `getLastUsedCategoryId` / `quickEntryLastCategorySql` / `quickEntryLastCategoryProvider`
+> （含 `app.dart` 首帧预热）及其契约测试**已删除**。现行实现：
+> 仓储 `TransactionRepository.getRecentEntryDefaults(ledgerId:, kind:, within:)`
+> （`recentEntryDefaultsSql`，走 `idx_transactions_ledger_created` 做 5 分钟范围裁剪，
+> 该常量与测试共用一份 SQL）+ v55 新增本地专有列 `transactions.created_at`（不回填进快照）。
+> 因此本文档第一 / 三节里 R1 相关的段落是**历史记录**（含决策 1 的 SQL 与修正过程），
+> 其方法论（性能结论必须实测、公开 SQL 供测试跑 `EXPLAIN QUERY PLAN`）由新实现继承；
+> 决策 2 的共享账本 synthetic id 派生**已完全不适用**（共享账本随 v51 整体下线，新查询只返回本地 int id）。
+> 需求侧口径见 `requirements.md` 文首「口径变更」。
 
 ## 一、需求理解
 
@@ -58,6 +70,8 @@ ON transactions(ledger_id, happened_at)`（`db.dart:1256-1258` 迁移、`db.dart
   > —— 此时 `LIMIT` 才真正等价于「只看最近 K 笔」，K 次索引项 + 至多 K 次回表的
   > 上界才成立。SQL 字符串以 `quickEntryLastCategorySql` 导出，单测对**同一份**
   > 语句跑 `EXPLAIN QUERY PLAN`，防止将来有人把 `type` 挪回 WHERE 或改坏 ORDER BY。
+  > （2026-10-12：该常量已随 R1 下线删除；同款「公开 SQL 供测试跑同一份计划」的做法
+  > 与这条教训由 `recentEntryDefaultsSql` 沿用。）
   >
   > 教训与本仓库既有的一条完全同源：**性能结论必须实测，不能推理**。
   > 本文档上一版正是引用着那条教训、又犯了一次同类错误。
@@ -171,12 +185,12 @@ synthetic 翻译、后处理与同步触发——见 `transaction_editor_page.da
 
 | 步 | 状态 | 落点 |
 |---|---|---|
-| 1 R1 数据层 | ✅ | `local_transaction_repository.dart`（`quickEntryLastCategorySql` + `getLastUsedCategoryId`）；测试 `test/data/repositories/local/quick_entry_last_category_test.dart`（13 例，含 EXPLAIN 断言） |
+| 1 R1 数据层 | ✅→**已下线**（2026-10-12） | 原落点：`local_transaction_repository.dart`（`quickEntryLastCategorySql` + `getLastUsedCategoryId`）+ `quick_entry_last_category_test.dart`（13 例，含 EXPLAIN 断言）。现由 `getRecentEntryDefaults` / `recentEntryDefaultsSql` + `recent_entry_defaults_test.dart`（14 例）取代（见文首「口径变更」） |
 | 2 provider | ✅ | `providers/quick_entry_providers.dart`；接入 `ui_state_providers.dart` 的 `appSplashInitProvider`；首帧预热在 `app.dart` initState |
 | 3 R2 表单 | ✅ | `AmountEditorSheet.displayCategory` / `onPickCategory` + `_effectiveAmount()`；`TransactionEditorPage.quickMode` / `_lastAmount` / `_resolveCategoryById` |
 | 4 R3 入口 | ✅ | `app.dart` `_openNewTransactionSheet()`（FAB 点击 + 调试悬浮按钮共用）；deep link `quickMode: categoryId == null && 开关` |
 | 5 R4 开关 | ✅ | `appearance_settings_page.dart`（「显示交易时间」下一项）+ `appearanceQuickEntryMode{,Desc}` 四语言词条 |
-| 6 widget 测试 | ✅ | `test/widgets/quick_entry_mode_test.dart`（分类位 5 例，含窄屏让位守卫 + 对照组；落点 6 例；provider 校验 4 例） |
+| 6 widget 测试 | ✅ | `test/widgets/quick_entry_mode_test.dart`（分类位 5 例，含窄屏让位守卫 + 对照组；落点 6 例；provider 校验 4 例）。2026-10-12：provider 校验那 4 例随 Provider 删除，落点改为「窗口内 / 窗口外 / 网格形态直落 / 继承分类已删除」等，现 22 例 |
 
 实现期对决策 4 的一处收窄：分类位**不再**是「可换 + 只读」两种调用形态，
 而是由 `onPickCategory` 是否非空决定 —— 当前金额表单只在 `quickAdd` 下被打开
