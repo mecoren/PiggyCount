@@ -77,6 +77,26 @@ class TransactionUpdateBySyncIdData {
   /// （含既有测试）在合并时**静默清掉**本机锚点。
   final d.Value<int?>? recurringId;
 
+  /// v56 退款关联（F1-b，`prd/refund_reimbursement`）：收入行指向被冲正的
+  /// 支出行（同账本 1:1；部分退款台账明确不做）。
+  ///
+  /// 三态（同 [recurringId]）：
+  /// - `null`（不传）：**不改动**本地关联 —— 调用方未涉及该字段时的默认值；
+  /// - `d.Value(null)`：云端显式无关联（快照未携带 / 携带 null）→ 清空；
+  /// - `d.Value(id)`：写入。
+  ///
+  /// 为什么用三态而不是「可空即清空」：同 [recurringId] 的理由 —— 会让所有
+  /// 未涉及该字段的调用方在合并时**静默清掉**本机关联。
+  final d.Value<int?>? refundOfId;
+
+  /// v56 报销状态（F1-b）：三态字符串 `none` / `pending` / `reimbursed`。
+  ///
+  /// null = 云端快照未携带该键（旧版客户端导出的 v13 快照）→ **不改动**本地
+  /// 原值；非 null 才写入（v14 快照恒写该键，合并路径照云端值落，含
+  /// `'none'` 重置）。与 [originalAmount] 同模式 —— 避免旧快照缺键把本地
+  /// 已设状态抹平。
+  final String? reimburseStatus;
+
   const TransactionUpdateBySyncIdData({
     required this.syncId,
     required this.type,
@@ -94,6 +114,8 @@ class TransactionUpdateBySyncIdData {
     this.originalAmount,
     this.customValues,
     this.recurringId,
+    this.refundOfId,
+    this.reimburseStatus,
   });
 }
 
@@ -353,6 +375,12 @@ abstract class TransactionRepository {
     // v46 自定义字段值 { fieldSyncId: value }:null / 空 = 该笔没有值(列写 NULL)。
     // 新建路径没有"不改动"语义,直接落库。
     Map<String, dynamic>? customValues,
+    // v56 退款关联(F1-b):收入行指向被冲正的支出行(同账本 1:1)。
+    // null = 非退款行(存量行与普通新行的默认态)。
+    int? refundOfId,
+    // v56 报销状态三态(F1-b):none(默认,不涉及报销)/ pending(待报销)/
+    // reimbursed(已报销)。新建路径直接落库,无"不改动"语义。
+    String reimburseStatus = 'none',
   });
 
   /// 批量新增交易，单事务内插入，返回插入条数。
@@ -414,6 +442,11 @@ abstract class TransactionRepository {
     // v46 自定义字段值三态:null = **不改动**(批量改备注/改分类等路径不得
     // 顺手清空),空 map = 清空(列写 NULL),非空 = 覆盖写入。
     Map<String, dynamic>? customValues,
+    // v56 退款关联三态(F1-b):dart null = 不改动既有值;d.Value<int?>(null) =
+    // 用户在编辑表单里解除关联;d.Value(x) / x = 写入。与 originalAmount 同模式。
+    dynamic refundOfId,
+    // v56 报销状态(F1-b):null = 不改动;非 null = 显式写入(含 'none' 重置)。
+    String? reimburseStatus,
   });
 
   /// 删除交易
@@ -598,6 +631,20 @@ abstract class TransactionRepository {
   /// 调 `updateTransactionTags`(或者更高效的 batch 接口,如果将来加的话)。
   Future<Map<String, int>> updateTransactionsBatchBySyncId(
     List<TransactionUpdateBySyncIdData> updates, {
+    bool recordChanges = true,
+  });
+
+  /// v56 退款关联批量回填（F1-b 导入路径专用，`prd/refund_reimbursement`）。
+  ///
+  /// 导入时退款行可能排在它所引用的交易**之前**（快照 JSON 数组顺序不保证），
+  /// 插入时只能先落 NULL；本方法在整批插入落库后按 syncId 解析回填。
+  /// [links] 的 `refundOfId` 为 null 表示解析不到（调用方应先过滤掉，
+  /// 方法内对 null 也按「写 NULL」处理，语义安全）。
+  ///
+  /// [recordChanges] 语义同其它写方法：false（云→本地合并路径）不回流
+  /// local_changes。返回实际更新条数。
+  Future<int> backfillRefundLinks(
+    List<({String txSyncId, int? refundOfId})> links, {
     bool recordChanges = true,
   });
 

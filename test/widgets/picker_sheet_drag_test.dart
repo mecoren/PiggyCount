@@ -24,6 +24,7 @@ import 'package:piggycount/widgets/ui/sheet_card.dart';
 const Set<String> _dragToDismissAllowed = <String>{
   'lib/widgets/currency/currency_picker_sheet.dart', // 币种列表
   'lib/widgets/category/category_picker_sheet.dart', // 分类列表 / 网格
+  'lib/widgets/biz/amount_editor_sheet.dart', // 退款关联选择器（支出交易列表）
   'lib/widgets/biz/category_selector_dialog.dart', // 分类筛选列表
   'lib/widgets/biz/day_of_month_picker.dart', // 1~28 日网格（大字号下滚动兜底）
   'lib/widgets/biz/search_filter_sheet.dart', // 筛选 - 账户列表

@@ -41,6 +41,7 @@ Transaction tx({
       currencyCode: currencyCode,
       excludeFromStats: false,
       excludeFromBudget: false,
+      reimburseStatus: 'none',
     );
 
 Category cat({

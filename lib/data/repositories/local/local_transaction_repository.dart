@@ -346,6 +346,10 @@ class LocalTransactionRepository implements TransactionRepository {
     double? nativeAmount,
     double? originalAmount,
     Map<String, dynamic>? customValues,
+    // v56 退款关联(F1-b):null = 非退款行。
+    int? refundOfId,
+    // v56 报销状态三态(F1-b):none(默认)/ pending / reimbursed。
+    String reimburseStatus = 'none',
   }) async {
     // v30:子仓收「已定值」直写;带折算的兜底(查账户/汇率)在聚合
     // LocalRepository 包装层(子仓拿不到汇率)。
@@ -369,6 +373,11 @@ class LocalTransactionRepository implements TransactionRepository {
           originalAmount: d.Value(originalAmount ?? amount),
           // v46:空/null → 列写 NULL(该笔无自定义字段值)。
           customValuesJson: d.Value(CustomFieldValueCodec.encode(customValues)),
+          // v56: 退款关联(F1-b)。NULL = 非退款行;收入行指向被冲正的支出行。
+          refundOfId: d.Value(refundOfId),
+          // v56: 报销状态三态(F1-b)。批量导入/云恢复路径不经本方法(走
+          // insertTransactionsBatch*),那些行进列默认值 'none'。
+          reimburseStatus: d.Value(reimburseStatus),
           // v55:录入时刻(本地专有列)。**只有本方法写** —— 批量导入/云恢复走
           // insertTransactionsBatch* / insertTransactionCompanion，保持 NULL,
           // 故它们不会成为「5 分钟内继承上一笔」的继承源。
@@ -493,6 +502,10 @@ class LocalTransactionRepository implements TransactionRepository {
     double? nativeAmount,
     dynamic originalAmount,
     Map<String, dynamic>? customValues,
+    // v56 退款关联三态(F1-b)。
+    dynamic refundOfId,
+    // v56 报销状态(F1-b)。
+    String? reimburseStatus,
   }) async {
     // 处理 accountId 参数
     final d.Value<int?> accountIdValue;
@@ -517,6 +530,19 @@ class LocalTransactionRepository implements TransactionRepository {
           : originalAmount;
     } else {
       originalAmountValue = d.Value(originalAmount as double?);
+    }
+
+    // v56 退款关联三态(F1-b,与 accountId / originalAmount 同模式):
+    // dart null = absent(不改动);d.Value<int?>(null) = 用户在编辑表单里
+    // 解除关联;d.Value(x) / x = 写入。批量改备注/改分类等路径不传该参数,
+    // 绝不能顺手清掉已有退款关联。
+    final d.Value<int?> refundOfIdValue;
+    if (refundOfId == null) {
+      refundOfIdValue = const d.Value.absent();
+    } else if (refundOfId is d.Value<int?>) {
+      refundOfIdValue = refundOfId;
+    } else {
+      refundOfIdValue = d.Value(refundOfId as int?);
     }
 
     await (db.update(db.transactions)..where((t) => t.id.equals(id))).write(
@@ -548,6 +574,13 @@ class LocalTransactionRepository implements TransactionRepository {
         customValuesJson: customValues == null
             ? const d.Value.absent()
             : d.Value(CustomFieldValueCodec.encode(customValues)),
+        // v56 退款关联(F1-b):三态直写(见上方 refundOfIdValue 推导)。
+        refundOfId: refundOfIdValue,
+        // v56 报销状态(F1-b):null = 不改动;非 null = 显式写入(含 'none' 重置,
+        // 用户在标记面板里选回「不涉及」)。
+        reimburseStatus: reimburseStatus == null
+            ? const d.Value.absent()
+            : d.Value(reimburseStatus),
       ),
     );
   }
@@ -1538,6 +1571,26 @@ class LocalTransactionRepository implements TransactionRepository {
   }
 
   @override
+  Future<int> backfillRefundLinks(
+    List<({String txSyncId, int? refundOfId})> links, {
+    bool recordChanges = true,
+  }) async {
+    // 子仓不挂 changeTracker,recordChanges 参数对它无作用(同
+    // insertTransactionsBatch 的惯例)——真正的 record 在 LocalRepository
+    // 包装层那一层。保留参数只为接口一致。
+    if (links.isEmpty) return 0;
+    return db.transaction(() async {
+      var updated = 0;
+      for (final link in links) {
+        updated += await (db.update(db.transactions)
+              ..where((t) => t.syncId.equals(link.txSyncId)))
+            .write(TransactionsCompanion(refundOfId: d.Value(link.refundOfId)));
+      }
+      return updated;
+    });
+  }
+
+  @override
   Future<void> updateTransactionBySyncId({
     required String syncId,
     required String type,
@@ -1589,6 +1642,9 @@ class LocalTransactionRepository implements TransactionRepository {
     return db.transaction(() async {
       await db.batch((b) {
         for (final u in updates) {
+          // v56 报销状态（F1-b）：局部变量才能过空提升（`u.reimburseStatus`
+          // 是字段访问，直接放进三元表达式无法 promote）。
+          final reimburseStatus = u.reimburseStatus;
           b.update(
             db.transactions,
             TransactionsCompanion(
@@ -1630,6 +1686,15 @@ class LocalTransactionRepository implements TransactionRepository {
               // 不写它会让「只改周期锚点」的差异被 diff 检测出来却**永远应用
               // 不了** → 每轮「下载同步」都报同一批变更、指纹永不收敛。
               recurringId: u.recurringId ?? const d.Value.absent(),
+              // v56 退款关联三态(F1-b,同 recurringId):null(不传)=不改动 /
+              // Value(null)=清空 / Value(id)=写入。不写它会让「只改关联」的
+              // 差异被检测出来却永远应用不了 → 指纹永不收敛。
+              refundOfId: u.refundOfId ?? const d.Value.absent(),
+              // v56 报销状态(F1-b):旧快照缺键(null)→ absent 保留本地原值;
+              // 非 null(v14 恒写该键)→ 按云端值落(含 'none' 重置)。
+              reimburseStatus: reimburseStatus == null
+                  ? const d.Value.absent()
+                  : d.Value(reimburseStatus),
             ),
             where: (t) => t.syncId.equals(u.syncId),
           );

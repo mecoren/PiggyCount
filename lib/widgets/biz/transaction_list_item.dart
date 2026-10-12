@@ -67,6 +67,12 @@ class TransactionListItem extends ConsumerWidget {
   final bool excludeFromStats; // 不计入收支:第二行显示「不计收支」标签
   final bool excludeFromBudget; // 不计入预算:第二行显示「不计预算」标签
 
+  /// v56 退款关联（F1-b）：非空 = 本笔是某笔支出的退款，显示「退款」标签。
+  final int? refundOfId;
+
+  /// v56 报销状态（F1-b）：pending / reimbursed 显示对应标签；none 不渲染。
+  final String reimburseStatus;
+
   /// B1(v47):自定义字段角标(「字段名: 展示值」文本,调用方已按定义解析好)。
   /// 空/null 不渲染,避免整列表被噪音填满;放入次要信息行的竖杠分段里。
   final List<String>? customFieldBadges;
@@ -105,6 +111,8 @@ class TransactionListItem extends ConsumerWidget {
     this.onAttachmentTap,
     this.excludeFromStats = false,
     this.excludeFromBudget = false,
+    this.refundOfId,
+    this.reimburseStatus = 'none',
     this.customFieldBadges,
   });
 
@@ -243,6 +251,14 @@ class TransactionListItem extends ConsumerWidget {
       if (excludeFromBudget)
         _flagChip(
             context, AppLocalizations.of(context).txFlagBudgetExcludedTag),
+      // v56 退款 + 报销徽标（F1-b）：与账单标记同级，排在标记之后。
+      // 文案与旗标对话框的三选复用同一批键（徽标场景与选项场景同文）。
+      if (refundOfId != null)
+        _flagChip(context, AppLocalizations.of(context).refundBadge),
+      if (reimburseStatus == 'pending')
+        _flagChip(context, AppLocalizations.of(context).reimbursePending),
+      if (reimburseStatus == 'reimbursed')
+        _flagChip(context, AppLocalizations.of(context).reimburseReimbursed),
     ];
 
     // 组装段：文本(join 竖杠) → 自定义字段角标 → 附件 → 标签，各段之间用竖杠连接

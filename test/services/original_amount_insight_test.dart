@@ -31,6 +31,7 @@ Transaction tx({
       excludeFromStats: false,
       excludeFromBudget: false,
       originalAmount: original,
+      reimburseStatus: 'none',
     );
 
 void main() {

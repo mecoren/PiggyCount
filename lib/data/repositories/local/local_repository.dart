@@ -550,6 +550,10 @@ class LocalRepository extends BaseRepository {
     double? nativeAmount,
     double? originalAmount,
     Map<String, dynamic>? customValues,
+    // v56 退款关联(F1-b):null = 非退款行。
+    int? refundOfId,
+    // v56 报销状态三态(F1-b):none(默认)/ pending / reimbursed。
+    String reimburseStatus = 'none',
   }) async {
     // v30 带折算兜底(02 §六):任何调用方(单币种记账/AI/周期模板)未传两字段
     // 时在此补齐 —— 外币先查有效汇率,取不到才 =amount(命中 L11 检测可捞回)。
@@ -579,6 +583,8 @@ class LocalRepository extends BaseRepository {
         nativeAmount: na,
         originalAmount: originalAmount,
         customValues: customValues,
+        refundOfId: refundOfId,
+        reimburseStatus: reimburseStatus,
       );
       if (changeTracker != null) {
         final tx = await _transactionRepo.getTransactionById(id);
@@ -653,6 +659,11 @@ class LocalRepository extends BaseRepository {
     double? nativeAmount,
     dynamic originalAmount,
     Map<String, dynamic>? customValues,
+    // v56 退款关联三态(F1-b):dart null = 不改动;d.Value(null) = 解除关联;
+    // d.Value(x) / x = 写入。
+    dynamic refundOfId,
+    // v56 报销状态(F1-b):null = 不改动;非 null = 写入(含 'none' 重置)。
+    String? reimburseStatus,
   }) async {
     final old = await _transactionRepo.getTransactionById(id);
     // v30 联动兜底(与 Cloud merge/mutator 的 L14 同规则):调用方不传两字段时——
@@ -703,6 +714,8 @@ class LocalRepository extends BaseRepository {
             nativeAmount: effNative,
             originalAmount: originalAmount,
             customValues: customValues,
+            refundOfId: refundOfId,
+            reimburseStatus: reimburseStatus,
           );
           await changeTracker!.recordLedgerChange(
             entityType: 'transaction',
@@ -728,6 +741,8 @@ class LocalRepository extends BaseRepository {
       nativeAmount: effNative,
       originalAmount: originalAmount,
       customValues: customValues,
+      refundOfId: refundOfId,
+      reimburseStatus: reimburseStatus,
     );
   }
 
@@ -1484,6 +1499,37 @@ class LocalRepository extends BaseRepository {
       ]);
       return syncIdToTxId;
     });
+  }
+
+  @override
+  Future<int> backfillRefundLinks(
+    List<({String txSyncId, int? refundOfId})> links, {
+    bool recordChanges = true,
+  }) async {
+    // v56 退款关联回填（F1-b 导入 post-pass）。逐条：查行(拿 ledgerId 记
+    // change) + 写 + 记账。链接条数在真实数据里极少（退款关联是低频功能），
+    // 不为它加批量查询接口；recordChanges=false（云→本地合并）时静默写。
+    if (links.isEmpty) return 0;
+    if (!recordChanges || changeTracker == null) {
+      return _transactionRepo.backfillRefundLinks(links);
+    }
+    var updated = 0;
+    for (final link in links) {
+      final tx = await _transactionRepo.getTransactionBySyncId(link.txSyncId);
+      if (tx == null) continue;
+      final n = await _transactionRepo.backfillRefundLinks([link]);
+      updated += n;
+      if (n > 0 && tx.syncId != null) {
+        await changeTracker!.recordLedgerChange(
+          entityType: 'transaction',
+          entityId: tx.id,
+          entitySyncId: tx.syncId!,
+          ledgerId: tx.ledgerId,
+          action: 'update',
+        );
+      }
+    }
+    return updated;
   }
 
   @override

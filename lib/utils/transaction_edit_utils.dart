@@ -21,6 +21,14 @@ class TransactionEditUtils {
     // 同步下来,这里拿到的已有值也不会因为「定义看不见」而被清掉。
     final customValues = await repo.getValuesForTransaction(transaction.id);
 
+    // v56 退款关联（F1-b）：回显 refundOfId + 原交易整行（供「冲正：日期
+    // 金额」摘要）。原交易已被软删 / purge 时 target 为 null 而 id 非空 —
+    // 表单按「原交易已删除」显示。
+    Transaction? refundTarget;
+    if (transaction.refundOfId != null) {
+      refundTarget = await repo.getTransactionById(transaction.refundOfId!);
+    }
+
     if (!context.mounted) return;
 
     // 所有类型（收入/支出/转账）都以底部抽屉形式弹出交易编辑器，
@@ -46,6 +54,10 @@ class TransactionEditUtils {
       // 账单标记（不计入收支/预算）回显
       initialExcludeFromStats: transaction.excludeFromStats,
       initialExcludeFromBudget: transaction.excludeFromBudget,
+      // v56 退款关联 + 报销状态（F1-b）回显
+      initialRefundOfId: transaction.refundOfId,
+      initialRefundTarget: refundTarget,
+      initialReimburseStatus: transaction.reimburseStatus,
       // v30 多币种:编辑外币交易时汇率行按隐含汇率回显
       initialCurrencyCode: transaction.currencyCode,
       initialNativeAmount: transaction.nativeAmount,

@@ -234,6 +234,7 @@ void main() {
           happenedAt: now,
           excludeFromStats: false,
           excludeFromBudget: false,
+          reimburseStatus: 'none',
         );
     const cat = Category(
         id: 1, name: '餐饮', kind: 'expense', icon: 'restaurant',

@@ -621,6 +621,9 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
       customFieldBadges: customBadgeTexts.isEmpty ? null : customBadgeTexts,
       excludeFromStats: t.excludeFromStats,
       excludeFromBudget: t.excludeFromBudget,
+      // v56 退款 + 报销徽标（F1-b）
+      refundOfId: t.refundOfId,
+      reimburseStatus: t.reimburseStatus,
       onAttachmentTap: row.attachmentCount > 0
           ? () => Navigator.of(context).push(
                 MaterialPageRoute(

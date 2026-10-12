@@ -43,6 +43,7 @@ void main() {
       happenedAt: happenedAt,
       excludeFromStats: false,
       excludeFromBudget: false,
+      reimburseStatus: 'none',
     );
   }
 

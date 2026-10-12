@@ -142,6 +142,16 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
           // v8 G2：交易与周期规则的关联也参与指纹（缺失视为空，
           // 保证「旧快照无此字段」与「显式无关联」产生相同指纹）
           'recurringSyncId': it['recurringSyncId'] as String? ?? '',
+          // v56 退款关联（F1-b）：被冲正交易的 syncId 参与指纹（缺失视为空，
+          // 同 recurringSyncId —— 导出侧「仅非 null 且可解析才写键」）。
+          // 本地 int id 跨设备不可比，快照与指纹都只认 syncId 形式。
+          'refundSyncId': it['refundSyncId'] as String? ?? '',
+          // v56 报销状态（F1-b）：三态字符串恒写，必须进白名单，否则
+          // 「仅改报销状态」时两端指纹相同 → 判 inSync → 永不跨设备传播。
+          // 归一口径：缺键 → 'none'（字段默认态，旧快照没有该字段即
+          // 「不涉及报销」）——「旧快照无此键」与「显式 none」指纹相同，
+          // v14 升级门控因此能对无报销的账本一次性收敛。
+          'reimburseStatus': it['reimburseStatus'] as String? ?? 'none',
           // 审计 S11：附件清单指纹（排序后的规范化行，见上方注释）
           'attachments': canonAttachments,
         };

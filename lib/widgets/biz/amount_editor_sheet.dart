@@ -30,7 +30,10 @@ import '../ui/dialog.dart';
 import '../ui/piggy_input.dart';
 import '../ui/piggy_switcher.dart';
 import '../ui/piggy_spinner.dart';
+import '../ui/picker_sheet.dart';
+import '../ui/option_sheet.dart';
 import 'tag_chip.dart';
+import 'format_money.dart';
 import '../category_icon.dart';
 import '../../pages/attachment/attachment_preview_page.dart';
 
@@ -61,6 +64,11 @@ typedef AmountEditorResult = ({
   Map<String, dynamic>? customValues,
   // 备注敏感标记（设备本地）：true = 该笔备注在 AI 外发与本地列表展示时掩码。
   bool noteSensitive,
+  // v56 退款关联（F1-b）：本笔收入冲正的原交易本地 id；null = 非退款行。
+  // 云同步侧由上层翻成 syncId（refundSyncId），表单只认本地 id。
+  int? refundOfId,
+  // v56 报销状态（F1-b）：none / pending / reimbursed 三态。
+  String reimburseStatus,
 });
 
 class AmountEditorSheet extends ConsumerStatefulWidget {
@@ -106,6 +114,15 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   final bool requireCategory;
   final bool initialExcludeFromStats; // 不计入收支，编辑模式回显
   final bool initialExcludeFromBudget; // 不计入预算，编辑模式回显
+  /// v56 退款关联（F1-b）：编辑回显的本笔冲正的原交易本地 id；null = 非退款行。
+  final int? initialRefundOfId;
+  /// v56 退款关联回显的原交易整行（供「冲正：日期 金额」摘要显示）。
+  ///
+  /// 原交易已被软删 / purge 时传 null 而 [initialRefundOfId] 非空 →
+  /// 摘要按「原交易已删除」显示。
+  final Transaction? initialRefundTarget;
+  /// v56 报销状态（F1-b）编辑回显：none / pending / reimbursed。
+  final String initialReimburseStatus;
   // v30 编辑模式回显:该笔的原币种与折算快照(用于推隐含汇率,只改备注时
   // 折算基准不漂移,.docs/multi-currency-ledger 01 §4.2)。
   final String? initialCurrencyCode;
@@ -163,6 +180,9 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
     this.requireCategory = false,
     this.initialExcludeFromStats = false,
     this.initialExcludeFromBudget = false,
+    this.initialRefundOfId,
+    this.initialRefundTarget,
+    this.initialReimburseStatus = 'none',
     this.initialCurrencyCode,
     this.initialNativeAmount,
     this.initialOriginalAmount,
@@ -360,6 +380,11 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   bool _excludeFromStats = false;
   bool _excludeFromBudget = false;
 
+  // v56 退款关联 + 报销状态（F1-b）
+  int? _refundOfId;
+  Transaction? _refundTarget; // 回显摘要用；原交易已删时为 null
+  String _reimburseStatus = 'none';
+
   // v46 自定义字段值(fieldSyncId → value)。初值来自编辑回显;
   // [CustomFieldsSection] 每次变更上抛全量快照。
   late Map<String, dynamic> _customValues;
@@ -391,6 +416,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     _date = widget.initialDate;
     _excludeFromStats = widget.initialExcludeFromStats;
     _excludeFromBudget = widget.initialExcludeFromBudget;
+    _refundOfId = widget.initialRefundOfId;
+    _refundTarget = widget.initialRefundTarget;
+    _reimburseStatus = widget.initialReimburseStatus;
     _selectedAccountId = widget.initialAccountId;
     _selectedTagIds = List.from(widget.initialTagIds ?? []);
     _customValues = Map<String, dynamic>.from(widget.initialCustomValues);
@@ -1496,6 +1524,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             // 账户 / 标签 / 附件 / 旗标 —— 合并成**一条**属性行（2026-10-09）
             const SizedBox(height: 8),
             _buildAccountAndTagRow(),
+            // v56 退款关联（F1-b）：仅收入交易渲染（支出/转账无退款语义）
+            if (widget.transactionKind == 'income') _buildRefundLinkRow(),
             // v46 自定义字段录入分区（该账本无定义时整块隐藏）
             _buildCustomFieldsSection(),
     ];
@@ -1670,6 +1700,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                         widget.initialCustomValues.isEmpty)
                                     ? null
                                     : Map<String, dynamic>.from(_customValues),
+                                // v56 退款关联 + 报销状态（F1-b）
+                                refundOfId: _refundOfId,
+                                reimburseStatus: _reimburseStatus,
                               ));
 
                               // 注意：不需要在这里重置 _isSubmitting
@@ -2003,6 +2036,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     // 弹窗内用临时变量 + StatefulBuilder 实现实时切换,关闭时写回 sheet 状态。
     bool stats = _excludeFromStats;
     bool budget = _excludeFromBudget;
+    // v56 报销状态（F1-b）：三态。转账不适用（与「不计入收支」同判定）。
+    String reimburse = _reimburseStatus;
 
     await showDialog<void>(
       context: context,
@@ -2073,6 +2108,55 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                         setState(() => _excludeFromBudget = v);
                       },
                     ),
+                  // v56 报销状态（F1-b）：三选一，实时写回 sheet 状态。
+                  // 不用 RadioListTile —— 其 groupValue/onChanged 在当前
+                  // Flutter 已废弃（RadioGroup 祖先方案），零告警门禁下改手绘
+                  // 单选行。
+                  if (showStats) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.reimburseStatusLabel,
+                      style: TextStyle(
+                        color: PiggyTokens.textPrimary(context),
+                        fontSize: PiggyTextTokens.fs15.scaled(context, ref),
+                      ),
+                    ),
+                    for (final option in const [
+                      'none',
+                      'pending',
+                      'reimbursed',
+                    ])
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        leading: Icon(
+                          reimburse == option
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          size: 20,
+                          color: reimburse == option
+                              ? primary
+                              : PiggyTokens.iconTertiary(context),
+                        ),
+                        title: Text(
+                          switch (option) {
+                            'pending' => l10n.reimbursePending,
+                            'reimbursed' => l10n.reimburseReimbursed,
+                            _ => l10n.reimburseNone,
+                          },
+                          style: TextStyle(
+                            color: PiggyTokens.textPrimary(context),
+                            fontSize: PiggyTextTokens.fs14.scaled(context, ref),
+                          ),
+                        ),
+                        onTap: () {
+                          setDialogState(() => reimburse = option);
+                          // 实时写回 sheet 状态,徽标 / 关联行即时更新
+                          setState(() => _reimburseStatus = option);
+                        },
+                      ),
+                  ],
                 ],
               ),
               actions: [
@@ -2189,7 +2273,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     // 两个开关都不适用(转账)→ 不显示旗标触发器
     if (!showStats && !showBudget) return const [];
 
-    final active = _excludeFromStats || _excludeFromBudget;
+    final active = _excludeFromStats ||
+        _excludeFromBudget ||
+        _reimburseStatus != 'none';
     return [
       const SizedBox(width: 16),
       GestureDetector(
@@ -2204,6 +2290,141 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         ),
       ),
     ];
+  }
+
+  // ==================== v56 退款关联（F1-b）====================
+
+  /// 退款关联行：仅收入交易渲染（`build` 里按 kind 过滤）。
+  ///
+  /// - 未关联：标题 + 副标题 + 右箭头，整行点击打开选择器；
+  /// - 已关联：摘要（冲正：金额 · 日期）+ 清除键；原交易已删（id 非空但
+  ///   回显目标为 null）时摘要按「原交易已删除」显示。
+  Widget _buildRefundLinkRow() {
+    final l10n = AppLocalizations.of(context);
+    final hasLink = _refundOfId != null;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: InkWell(
+        onTap: _pickRefundTarget,
+        borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: PiggyTokens.surfaceInput(context),
+            borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.undo_outlined,
+                size: 18,
+                color: hasLink
+                    ? PiggyTokens.primary(context)
+                    : PiggyTokens.iconSecondary(context),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.refundLinkTitle,
+                      style: TextStyle(
+                        color: PiggyTokens.textPrimary(context),
+                        fontSize: PiggyTextTokens.fs14.scaled(context, ref),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _refundSummaryText(l10n),
+                      style: TextStyle(
+                        color: PiggyTokens.textTertiary(context),
+                        fontSize: PiggyTextTokens.fs12.scaled(context, ref),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (hasLink)
+                GestureDetector(
+                  onTap: () => setState(() {
+                    _refundOfId = null;
+                    _refundTarget = null;
+                  }),
+                  behavior: HitTestBehavior.opaque,
+                  child: Icon(
+                    Icons.close,
+                    size: 18,
+                    color: PiggyTokens.error(context),
+                    // 供测试与将来无障碍定位（与抽屉标题栏的关闭 X 区分）
+                    key: const ValueKey('refundLinkClear'),
+                  ),
+                )
+              else
+                Icon(
+                  Icons.chevron_right,
+                  size: 20,
+                  color: PiggyTokens.iconTertiary(context),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _refundSummaryText(AppLocalizations l10n) {
+    final target = _refundTarget;
+    if (_refundOfId == null) return l10n.refundLinkSubtitle;
+    if (target == null) return l10n.refundOriginalMissing;
+    final t = target.happenedAt;
+    final date = '${t.year}-${t.month.toString().padLeft(2, '0')}-'
+        '${t.day.toString().padLeft(2, '0')}';
+    return l10n.refundLinkedRow(formatMoneyCompact(target.amount), date);
+  }
+
+  /// 退款关联选择器：列出本账本**支出**交易（近两年、倒序、客户端截断），
+  /// 选中后同时记下本地 id 与整行（供摘要回显）。
+  Future<void> _pickRefundTarget() async {
+    final repo = ref.read(repositoryProvider);
+    final now = DateTime.now();
+    final rows = (await repo.getTransactionsByLedgerInRange(
+      ledgerId: widget.ledgerId,
+      start: DateTime(now.year - 2, now.month, now.day),
+      end: now.add(const Duration(days: 1)),
+    ))
+        .where((t) => t.type == 'expense' && t.id != widget.editingTransactionId)
+        .toList()
+      ..sort((a, b) => b.happenedAt.compareTo(a.happenedAt));
+    // 客户端截断：退款 realistically 关联近期交易，避免万笔账本全量渲染。
+    final candidates = rows.take(300).toList();
+    final categoryNames = <int, String>{};
+    final catIds = candidates.map((t) => t.categoryId).whereType<int>().toSet();
+    if (catIds.isNotEmpty) {
+      final cats = await repo.getCategoriesByIds(catIds);
+      categoryNames.addAll({for (final e in cats.entries) e.key: e.value.name});
+    }
+    if (!mounted) return;
+
+    // 走项目统一的选择器外壳（悬浮卡片 + 顶栏 X/标题，见 AGENTS.md
+    // 「选择器抽屉统一口径」）——不再自绘全宽平底弹层。
+    final picked = await showPiggyPickerSheet<Transaction>(
+      context,
+      // 内容是可滚动列表：列表滚到顶后继续下拉也能收起抽屉。
+      dragToDismiss: true,
+      builder: (_) => _RefundTargetPickerSheet(
+        candidates: candidates,
+        categoryNames: categoryNames,
+        currentRefundOfId: _refundOfId,
+      ),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _refundOfId = picked.id;
+        _refundTarget = picked;
+      });
+    }
   }
 
   Future<void> _handleAttachmentTap(
@@ -2281,6 +2502,111 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
           }
         }
       },
+    );
+  }
+}
+
+/// v56 退款关联选择器（F1-b）：本账本支出交易列表 + 搜索，选中返回整行。
+///
+/// 客户端内存过滤（候选已由调用方截断到 300 条）：匹配备注 / 金额数字串 /
+/// 日期串 / 分类名，任一命中即显示。
+class _RefundTargetPickerSheet extends StatefulWidget {
+  const _RefundTargetPickerSheet({
+    required this.candidates,
+    required this.categoryNames,
+    this.currentRefundOfId,
+  });
+
+  final List<Transaction> candidates;
+  final Map<int, String> categoryNames;
+
+  /// 已关联的原交易 id —— 重新选择时给该行打选中勾（高亮只给选中项）。
+  final int? currentRefundOfId;
+
+  @override
+  State<_RefundTargetPickerSheet> createState() =>
+      _RefundTargetPickerSheetState();
+}
+
+class _RefundTargetPickerSheetState extends State<_RefundTargetPickerSheet> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final q = _query.trim();
+    final filtered = q.isEmpty
+        ? widget.candidates
+        : widget.candidates.where((t) {
+            final date = '${t.happenedAt.year}-'
+                '${t.happenedAt.month.toString().padLeft(2, '0')}-'
+                '${t.happenedAt.day.toString().padLeft(2, '0')}';
+            final cat = t.categoryId != null
+                ? (widget.categoryNames[t.categoryId] ?? '')
+                : '';
+            return (t.note ?? '').contains(q) ||
+                date.contains(q) ||
+                cat.contains(q) ||
+                t.amount.toString().contains(q);
+          }).toList();
+
+    return PiggyPickerSheet(
+      // 点选即应用 / 收起，没有待提交的选中态，顶栏只留 X + 标题。
+      title: l10n.refundPickerTitle,
+      maxHeight: 440,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: PiggyDimens.p16),
+            // 贴合卡片的内嵌搜索行 → 无边框 filled 装饰（不是表单描边式）。
+            child: TextField(
+              decoration: piggyFilledDecoration(
+                context,
+                hint: l10n.refundPickerSearchHint,
+              ),
+              onChanged: (v) => setState(() => _query = v),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: filtered.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(PiggyDimens.p24),
+                      child: Text(
+                        l10n.refundPickerEmpty,
+                        textAlign: TextAlign.center,
+                        style: PiggyTextTokens.label(context),
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final t = filtered[index];
+                      final date = '${t.happenedAt.year}-'
+                          '${t.happenedAt.month.toString().padLeft(2, '0')}-'
+                          '${t.happenedAt.day.toString().padLeft(2, '0')}';
+                      final cat = t.categoryId != null
+                          ? (widget.categoryNames[t.categoryId] ?? '')
+                          : '';
+                      // 行结构走项目统一件 PiggyOptionRow（标题 + 副文案 +
+                      // 选中勾），不再用 ListTile 的默认行高与间距。
+                      return PiggyOptionRow(
+                        title: formatMoneyCompact(t.amount),
+                        desc: [
+                          date,
+                          if (cat.isNotEmpty) cat,
+                          if ((t.note ?? '').isNotEmpty) t.note!,
+                        ].join(' · '),
+                        isSelected: t.id == widget.currentRefundOfId,
+                        onTap: () => Navigator.of(context).pop(t),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

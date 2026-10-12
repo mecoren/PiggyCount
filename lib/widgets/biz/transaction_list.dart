@@ -880,6 +880,9 @@ class TransactionListState extends ConsumerState<TransactionList> {
                 customBadgeTexts.isNotEmpty ? customBadgeTexts : null,
             excludeFromStats: it.t.excludeFromStats,
             excludeFromBudget: it.t.excludeFromBudget,
+            // v56 退款 + 报销徽标（F1-b）
+            refundOfId: it.t.refundOfId,
+            reimburseStatus: it.t.reimburseStatus,
             onAttachmentTap: attachmentCount > 0
                 ? () async {
                     switchToStreamMode(); // 用户交互，切换到 Stream 模式

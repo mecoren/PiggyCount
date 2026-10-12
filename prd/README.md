@@ -6,11 +6,18 @@
 > 约定：新增需求请建 `prd/<snake_case_id>/`，两个文件都写。
 > `requirements.md` 是验收依据，缺了它这个需求就无法判定「做完了没有」。
 
+## 本轮（2026-10-12 缺口盘点后续）新增
+
+| 目录 | 主题 | 状态 |
+|---|---|---|
+| `refund_reimbursement` | F1-b 接手版：交易表加 `refund_of_id`（自引用 1:1）+ `reimburse_status`（none/pending/reimbursed），两列进快照（格式版本 14 / schema 56），预算按退款行自身分类负值冲减（跨月按退款月，EXISTS 守卫要求原交易仍在库），编辑器关联选择器 + 报销状态入标记面板 + 列表三态徽标。部分退款台账 / 报销审批流明确不做 | **已落地（2026-10-12）**：`migration_v56_test`（7）+ `sync_contract_refund_test`（13，P1-2 成对）+ coverage 两键夹具 + `budget_refund_offset_test`（7）+ `refund_editor_ui_test`（4）+ `editor_save_read_chain` 回归；`flutter analyze --fatal-infos` 0 issue、全量 `flutter test` 2277 过 0 败 |
+| `engineering_debt_cleanup` | 工程债清理：① `platform_info_purity_test.dart` 源码扫描守门（禁裸 `Platform.is`）；② 删两壳页面（`automation_page` 入口上移 mine_page、`app_icon_page` 移除 about 入口）；③ 无设备可跑的关键路径测试补强；④ 三处文档债更正（README:96 对比度、README:99 的 27 处、README:13 订阅状态） | **已落地（2026-10-12）**：守门测试 3 例过；两壳页面删除 + l10n 三键清理 + gen-l10n；`editor_save_read_chain_test`（2 例，新建→列表/统计/余额 + 编辑回显）过 |
+
 ## 本轮（2026-10-08 订阅视图 + 到期/超支提醒）新增
 
 | 目录 | 主题 | 状态 |
 |---|---|---|
-| `subscription_and_overspend_alerts` | 从周期账单派生「订阅」视图（年支出/月均折算，零识别）+ 周期账单到期提醒（扣款前 3 天 10:00）+ 预算超支实时推送（仅 100%，同预算同周期只推一次）+ 两个全局提醒开关（含配置导出/导入）+ 周期账单编辑器改统一**表单抽屉**（`showRecurringFormBottomSheet`，含列表两入口与订阅页入口）。**零数据模型改动**：无新表、不升 `schemaVersion`、不动同步契约 | 实施中 |
+| `subscription_and_overspend_alerts` | 从周期账单派生「订阅」视图（年支出/月均折算，零识别）+ 周期账单到期提醒（扣款前 3 天 10:00）+ 预算超支实时推送（仅 100%，同预算同周期只推一次）+ 两个全局提醒开关（含配置导出/导入）+ 周期账单编辑器改统一**表单抽屉**（`showRecurringFormBottomSheet`，含列表两入口与订阅页入口）。**零数据模型改动**：无新表、不升 `schemaVersion`、不动同步契约 | 已落地（2026-10-12 核实：视图 / 提醒 / 开关 / 抽屉均已上线，原「实施中」为状态过期） |
 | `ui_bottom_drawer`（追加 2026-10-08 节） | **存量表单页全量收口**：标签 / 分类 / AI 服务商 / AI 提示词 / 周期账单五处整屏表单统一到 `PiggyFormSheet` 抽屉（各页新增 `showXxxFormBottomSheet`，调用点全部改道；标题栏动作逐项安置不丢）。证据：`test/widgets/form_drawer_unification_test.dart`、`recurring_form_drawer_test.dart`、`tag_edit_page_result_test.dart` | 已落地 |
 
 ## 本轮（2026-10-05 加固批次）新增
@@ -92,11 +99,15 @@
   09-19 起由 `test/styles/font_size_token_ratchet_test.dart` 钉死只减不增，**收敛本身未做**
   （16/13 在 `PiggyTextTokens` 里没有档位 + 令牌返回整只 `TextStyle`，理由见 `ui_consistency_optimization` 第五节）。
   另有图表响应式、`tokens.dart` 静态亮色常量下线。
-- **5 余量**：无障碍欠的是需要真机的那半张清单 —— 读屏实测、热区 ≥48×48 全量核查、大字号下 UI 不破；
-  外加对比度一项**测了没改**（亮色 `textTertiary` 2.18/2.41 < 4.5，`scripts/contrast_check.py`）。
+- **5 余量**：无障碍欠的是需要真机的那半张清单 —— 读屏实测、热区 ≥48×48 全量核查、大字号下 UI 不破。
+  ~~外加对比度一项「测了没改」~~ **已作废（2026-10-12 更正）**：亮色 `textTertiary` 已改到位
+  （`lib/styles/tokens.dart:196-198` 现为 `#5F6B7A`，页面底 4.65 / 卡片底 5.15，过 WCAG 1.4.3），
+  `test/styles/contrast_token_test.dart` + CI `scripts/contrast_check.py` 双门禁常驻。
 - **12 余量**：编辑器 / 设置页 / 账户页的**页面级**回归（deep link 契约、同步冲突、账本删除清空、导入流程已覆盖）。
 - **13**：冷启动 / 页面切换 / 列表滚动帧率基线 + 仪表盘。**内存维度另立专项**，见 `docs/optimization-plan-2026-09-19.md`。
-- **14 余量**：`PlatformFeature` 尚未收口的 `Platform.is` 剩 27 处（报告原文称 58 处，14a `63a02e9` 后见 `lib/utils/platform_info.dart`）。
+- **14 余量**：~~`PlatformFeature` 尚未收口的 `Platform.is` 剩 27 处~~ **已清零（2026-10-12 核实）**：
+  全库裸 `Platform.is` 仅剩 `lib/utils/platform_info.dart:42-43`（抽象自身），`test/` / `packages/` 零命中；
+  新增 `test/utils/platform_info_purity_test.dart` 源码扫描守门防复发（`engineering_debt_cleanup` 批次）。
 
 > 注：建议 1–5、12、13、14 落地时未建 `prd/` 目录，需求与决策只存在于提交说明与代码注释里。
 > 这是文档治理的遗留缺口，按「不追溯补写已验收完毕的历史工作」处理——需要时以提交为入口。

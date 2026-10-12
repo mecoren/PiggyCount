@@ -286,6 +286,18 @@ class SyncDiffService {
       }
     }
 
+    // v56 退款关联（F1-b）：本地交易 id → syncId，用于把本地 refund_of_id
+    // 翻成跨设备可比的 refundSyncId。
+    //
+    // 语义必须与导出侧 `transactions_json.dart` 一字不差：那边是
+    // `if (t.refundOfId != null && (txIdToSyncId[id] ?? '').isNotEmpty)`，
+    // 即「被引交易解析不到（不在本批 / 无 syncId）＝ 无关联，不写键」。
+    // 这里同样只保留可解析的映射，解析不到 → 视为无关联。
+    final localTxIdToSyncId = <int, String>{
+      for (final tx in local)
+        if (tx.syncId != null && tx.syncId!.isNotEmpty) tx.id: tx.syncId!,
+    };
+
     final cloudBySyncId = <String, ImportTransaction>{};
     for (final tx in cloudTransactions) {
       if (tx.syncId != null) {
@@ -358,6 +370,11 @@ class SyncDiffService {
         final localRecurringSyncId = localTx.recurringId != null
             ? recurringIdToSyncId[localTx.recurringId]
             : null;
+        // v56 退款关联（F1-b）：本地 refund_of_id → 被冲正交易的 syncId
+        // （口径同导出侧：解析不到 = 无关联）。
+        final localRefundSyncId = localTx.refundOfId != null
+            ? localTxIdToSyncId[localTx.refundOfId]
+            : null;
         final diffs = _compareTx(
           localTx,
           cloudTx,
@@ -367,6 +384,7 @@ class SyncDiffService {
           localCategoryName: localCategory?.name,
           localCategoryKind: localCategory?.kind,
           localRecurringSyncId: localRecurringSyncId,
+          localRefundSyncId: localRefundSyncId,
           localAttachments: attachmentsMap[localTx.id] ?? const [],
         );
         if (diffs.isNotEmpty) {
@@ -707,6 +725,7 @@ class SyncDiffService {
     String? localCategoryName,
     String? localCategoryKind,
     String? localRecurringSyncId,
+    String? localRefundSyncId,
     List<TransactionAttachment> localAttachments = const [],
   }) {
     final diffs = <String>[];
@@ -819,6 +838,26 @@ class SyncDiffService {
     if ((localRecurringSyncId ?? '') != (cloud.recurringSyncId ?? '')) {
       diffs.add('周期锚点: ${localRecurringSyncId ?? '无'} → '
           '${cloud.recurringSyncId ?? '无'}');
+    }
+
+    // v56 退款关联（F1-b）：本地 refund_of_id → refundSyncId 严格比较。
+    //
+    // 口径同周期锚点：导出侧「解析不到不写键」是确定性的，不存在
+    // originalAmount 那种「旧快照缺键」的历史包袱；两端按 `?? ''` 归一后
+    // 比较，与指纹逐字同口径，不会出现「指纹说不同、diff 说没变化」。
+    // ⚠️ 新增字段一律用策略 ① 严格比较（见上方两种策略说明）。
+    if ((localRefundSyncId ?? '') != (cloud.refundSyncId ?? '')) {
+      diffs.add('退款关联: ${localRefundSyncId ?? '无'} → '
+          '${cloud.refundSyncId ?? '无'}');
+    }
+
+    // v56 报销状态（F1-b）：严格比较。v14 快照恒写该键，导入侧缺键归一为
+    // 'none'（ImportTransaction 该字段非空、默认 'none'）——升级期旧快照会
+    // 被判一次差异并修正，正是 v14 想要的行为（内容确实不同时不自动覆盖，
+    // 走正常冲突/合并）。
+    if (local.reimburseStatus != cloud.reimburseStatus) {
+      diffs.add('报销状态: ${local.reimburseStatus} → '
+          '${cloud.reimburseStatus}');
     }
 
     // 比较标签（去重，避免历史脏数据产生重复标签名导致伪差异）
@@ -1201,6 +1240,18 @@ class SyncDiffService {
       // 查询复杂度。单币种是本 bug 的主战场。
       final updates = <TransactionUpdateBySyncIdData>[];
       final tagIdsBySyncId = <String, List<int>>{};
+      // v56 退款关联（F1-b）：云端 refundSyncId → 本地交易 id 的解析表。
+      // 惰性加载：只有本批真的带退款关联时才整表读一次（modified 通常少量；
+      // 且 added 已在上方落库，本批新插入的行也在本次读取范围内，前向引用
+      // 「退款行与原交易同批新增」可解析）。
+      Map<String, int>? refundSyncIdToLocalId;
+      if (modifiedChanges
+          .any((c) => c.cloudTransaction?.refundSyncId != null)) {
+        refundSyncIdToLocalId = {
+          for (final tx in await repo.getTransactionsByLedger(ledgerId))
+            if (tx.syncId != null && tx.syncId!.isNotEmpty) tx.syncId!: tx.id,
+        };
+      }
       for (final change in modifiedChanges) {
         final cloud = change.cloudTransaction!;
         final syncId = cloud.syncId!;
@@ -1260,6 +1311,17 @@ class SyncDiffService {
           recurringId: d.Value(cloud.recurringSyncId == null
               ? null
               : recurringSyncIdToId[cloud.recurringSyncId]),
+          // v56 退款关联（F1-b）：同周期锚点的「检测与应用必须成对」原则。
+          // 三态：快照未携带该键 → `Value(null)` 清空（与指纹口径一致）；
+          // 携带则解析为本地 id，被引交易本地不存在（用户只勾了退款行没勾
+          // 原交易）→ 解析失败同样写 null（清掉悬空关联，下轮重传时按
+          // 导出侧「解析不到不写键」收敛）。
+          refundOfId: d.Value(cloud.refundSyncId == null
+              ? null
+              : refundSyncIdToLocalId?[cloud.refundSyncId]),
+          // v56 报销状态（F1-b）：v14 快照恒写该键，照云端值落（含 'none'
+          // 重置；旧快照缺键时导入侧已归一为 'none'）。
+          reimburseStatus: cloud.reimburseStatus,
           attachments: cloudAttachments,
         ));
         tagIdsBySyncId[syncId] = tagIds;

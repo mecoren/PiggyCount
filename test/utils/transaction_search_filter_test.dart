@@ -31,6 +31,7 @@ void main() {
       excludeFromStats: false,
       excludeFromBudget: false,
       currencyCode: currencyCode,
+      reimburseStatus: 'none',
     );
   }
 

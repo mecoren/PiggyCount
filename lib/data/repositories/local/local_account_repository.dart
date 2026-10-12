@@ -893,6 +893,10 @@ class LocalAccountRepository implements AccountRepository {
         syncId: row.data['sync_id'] as String?,
         excludeFromStats: (row.data['exclude_from_stats'] as int? ?? 0) != 0,
         excludeFromBudget: (row.data['exclude_from_budget'] as int? ?? 0) != 0,
+        // v56 退款关联 + 报销状态（F1-b）：手写 row mapper 必须补两列，
+        // 否则 Transaction 数据类缺 required 的 reimburseStatus 编译不过。
+        refundOfId: row.data['refund_of_id'] as int?,
+        reimburseStatus: (row.data['reimburse_status'] as String?) ?? 'none',
       );
     }).toList();
   }

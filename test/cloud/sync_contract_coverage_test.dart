@@ -280,6 +280,20 @@ void main() {
           "1798761600, 1, 1798761600, 1798761600)"),
       cloud: () => _with(cloudDefault(), recurringSyncId: 'rec-1'),
     ),
+    'refundSyncId': _Case(
+      itemA: {'refundSyncId': ''},
+      itemB: {'refundSyncId': 'tx-0'},
+      // 本地保持默认无关联（itemA 态），云端携带关联（itemB 态）→ 差异必须
+      // 被报出。应用侧的「云端 syncId → 本地 id」解析由
+      // sync_contract_refund_test.dart 的 P1-2 组锁定。
+      cloud: () => _with(cloudDefault(), refundSyncId: 'tx-0'),
+    ),
+    'reimburseStatus': _Case(
+      itemA: {'reimburseStatus': 'none'},
+      itemB: {'reimburseStatus': 'pending'},
+      // 本地保持默认 'none'（itemA 态），云端 'pending'（itemB 态）。
+      cloud: () => _with(cloudDefault(), reimburseStatus: 'pending'),
+    ),
     'attachments': _Case(
       // 指纹读的是清单元素的 (sha256|cloudSha256, fileName, sortOrder)，
       // 不是裸字符串 —— 夹具必须给它 Map，否则两边都归一到空串、指纹相同。
@@ -546,6 +560,8 @@ ImportTransaction _with(
   Object? excludeFromStats = _unset,
   Object? excludeFromBudget = _unset,
   Object? recurringSyncId = _unset,
+  Object? refundSyncId = _unset,
+  Object? reimburseStatus = _unset,
   Object? tagNames = _unset,
   Object? tagSyncIds = _unset,
   Object? attachments = _unset,
@@ -590,6 +606,11 @@ ImportTransaction _with(
       recurringSyncId: (recurringSyncId == _unset
           ? base.recurringSyncId
           : recurringSyncId) as String?,
+      refundSyncId:
+          (refundSyncId == _unset ? base.refundSyncId : refundSyncId) as String?,
+      reimburseStatus: (reimburseStatus == _unset
+          ? base.reimburseStatus
+          : reimburseStatus) as String,
       tagNames: (tagNames == _unset ? base.tagNames : tagNames) as List<String>?,
       tagSyncIds:
           (tagSyncIds == _unset ? base.tagSyncIds : tagSyncIds) as List<String>?,

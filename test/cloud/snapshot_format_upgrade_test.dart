@@ -257,12 +257,79 @@ void main() {
   });
 
   group('导出格式版本', () {
-    test('快照 version 常量与写入一致（v13）', () async {
+    test('快照 version 常量与写入一致（v14）', () async {
       final payload = await localPayload();
       expect(payload['version'], kSnapshotFormatVersion);
-      expect(kSnapshotFormatVersion, 13,
+      expect(kSnapshotFormatVersion, 14,
           reason: '格式版本变更必须同步审查消费端的升级门控语义；'
-              'v13 = customFields 段新增 options 键（指纹白名单同步纳入 options）');
+              'v14 = items 段新增 refundSyncId（仅非 null 写键）与 '
+              'reimburseStatus（恒写）两键（指纹白名单同步纳入，'
+              '归一口径：缺 refundSyncId ≡ 无关联、缺 reimburseStatus ≡ none）');
+    });
+
+    test('v14：云端 v13 快照缺两键、本地有退款关联/待报销 → 不误判为「仅格式升级」',
+        () async {
+      // 本地：一笔关联了退款的收入（refundSyncId 非空 + reimburseStatus
+      // pending，两键都进指纹）。
+      await db.into(db.transactions).insert(TransactionsCompanion.insert(
+            ledgerId: 1,
+            type: 'income',
+            amount: 5,
+            happenedAt: d.Value(DateTime(2026, 7, 2)),
+            syncId: const d.Value('tx-2'),
+            refundOfId: const d.Value(1),
+            reimburseStatus: const d.Value('pending'),
+          ));
+      final v13Payload = await localPayload();
+      // 拆成 v13 形态：items 项去掉两键，version 声明为 13。
+      for (final item in (v13Payload['items'] as List)
+          .cast<Map<String, dynamic>>()) {
+        item.remove('refundSyncId');
+        item.remove('reimburseStatus');
+      }
+      v13Payload['version'] = 13;
+      v13Payload['contentFingerprint'] = 'legacy-algorithm-fingerprint';
+
+      final storage = _UpgradeStorage(
+        metadata: const {'fingerprint': 'legacy-algorithm-fingerprint'},
+        snapshot: jsonEncode(v13Payload),
+      );
+      final manager = buildManager(storage);
+
+      expect(
+        await manager.shouldRepublishSnapshotForFormatUpgrade(ledgerId: 1),
+        isFalse,
+        reason: '退款关联/报销状态进指纹 → 按 v14 重算云端（缺两键）≠ 本地'
+            '（有关联 + pending）→ 内容确实不同，必须交回既有的冲突 / 合并流程，'
+            '绝不借「格式升级」名义自动覆盖',
+      );
+    });
+
+    test('v14：本地无退款无报销时，云端 v13 快照（缺两键）判定一次性重传', () async {
+      // 收敛性守门：v13 形态（缺两键）按当前算法重算必须与本地相等 ——
+      // refundSyncId 缺键 ≡ 无关联（''）、reimburseStatus 缺键 ≡ 'none'，
+      // 与本地（无关联 + 'none'）同指纹 → 升级门控放行一次性 force 重传。
+      final v13Payload = await localPayload();
+      for (final item in (v13Payload['items'] as List)
+          .cast<Map<String, dynamic>>()) {
+        item.remove('refundSyncId');
+        item.remove('reimburseStatus');
+      }
+      v13Payload['version'] = 13;
+      v13Payload['contentFingerprint'] = 'legacy-algorithm-fingerprint';
+
+      final storage = _UpgradeStorage(
+        metadata: const {'fingerprint': 'legacy-algorithm-fingerprint'},
+        snapshot: jsonEncode(v13Payload),
+      );
+      final manager = buildManager(storage);
+
+      expect(
+        await manager.shouldRepublishSnapshotForFormatUpgrade(ledgerId: 1),
+        isTrue,
+        reason: '归一口径（缺键 ≡ 默认态）保证无退款/报销的账本一次性收敛，'
+            '否则每轮启动都提示有差异、永不收敛',
+      );
     });
 
     test('v13：云端 v12 快照缺 options 键、本地选项非空 → 不误判为「仅格式升级」',

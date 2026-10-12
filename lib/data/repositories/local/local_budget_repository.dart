@@ -180,15 +180,34 @@ class LocalBudgetRepository implements BudgetRepository {
     double used = 0;
     if (budget.type == 'total') {
       // 总预算：统计所有支出
+      //
+      // v56 退款回补（F1-b，prd/refund_reimbursement R3）：把「关联了原交易
+      // 的收入行（refund_of_id 非空）」按负值冲减 used。口径：
+      // - 只认**退款行自身 category_id / 全局归属**，不 join 原交易分类；
+      // - 跨月按**退款发生月**冲减（本查询按周期过滤，天然成立）；
+      // - exclude_from_budget = 1 的退款行不冲减（用户显式排除的不冲，
+      //   与支出侧排除语义对称）；
+      // - **被引原交易必须仍存在于 transactions**（EXISTS 守卫）：原交易
+      //   软删进行政归档 / 彻底 purge / 合并时只勾了退款行 → 原支出已不计
+      //   用量，退款再冲减会把用量做成负数，语义倒挂；
+      // - 存量数据 refund_of_id 全为 NULL → 冲减项恒 0 → 行为逐位不变。
       final result = await db.customSelect(
         '''
-        SELECT COALESCE(SUM(COALESCE(native_amount, amount)), 0) as total
+        SELECT
+          COALESCE(SUM(CASE WHEN type = 'expense' AND exclude_from_budget = 0
+                            THEN COALESCE(native_amount, amount) ELSE 0 END), 0)
+          - COALESCE(SUM(CASE WHEN type = 'income'
+                                   AND refund_of_id IS NOT NULL
+                                   AND exclude_from_budget = 0
+                                   AND EXISTS (SELECT 1 FROM transactions o
+                                               WHERE o.id = transactions.refund_of_id)
+                              THEN COALESCE(native_amount, amount) ELSE 0 END), 0)
+          AS total
         FROM transactions
         WHERE ledger_id = ?
-          AND type = 'expense'
-          AND exclude_from_budget = 0
           AND happened_at >= ?
           AND happened_at < ?
+          AND type IN ('expense', 'income')
         ''',
         variables: [
           d.Variable.withInt(budget.ledgerId),
@@ -200,16 +219,30 @@ class LocalBudgetRepository implements BudgetRepository {
       used = _parseDouble(result.data['total']);
     } else {
       // 分类预算：统计该分类支出（包含子分类）
+      //
+      // v56 退款回补（F1-b）：同总预算口径 —— 冲减只认**退款行自身
+      // category_id**（或其父分类），用户想把退款算到哪个分类就记到哪个
+      // 分类；未选分类的退款行不进任何分类预算的冲减；被引原交易必须仍
+      // 存在于 transactions（EXISTS 守卫，理由同总预算处）。
       final result = await db.customSelect(
         '''
-        SELECT COALESCE(SUM(COALESCE(t.native_amount, t.amount)), 0) as total
+        SELECT
+          COALESCE(SUM(CASE WHEN t.type = 'expense' AND t.exclude_from_budget = 0
+                            THEN COALESCE(t.native_amount, t.amount) ELSE 0 END), 0)
+          - COALESCE(SUM(CASE WHEN t.type = 'income'
+                                   AND t.refund_of_id IS NOT NULL
+                                   AND t.exclude_from_budget = 0
+                                   AND EXISTS (SELECT 1 FROM transactions o
+                                               WHERE o.id = t.refund_of_id)
+
+                              THEN COALESCE(t.native_amount, t.amount) ELSE 0 END), 0)
+          AS total
         FROM transactions t
         LEFT JOIN categories c ON t.category_id = c.id
         WHERE t.ledger_id = ?
-          AND t.type = 'expense'
-          AND t.exclude_from_budget = 0
           AND t.happened_at >= ?
           AND t.happened_at < ?
+          AND t.type IN ('expense', 'income')
           AND (t.category_id = ? OR c.parent_id = ?)
         ''',
         variables: [

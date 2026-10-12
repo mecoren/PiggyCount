@@ -36,6 +36,7 @@ void main() {
     excludeFromStats: false,
     excludeFromBudget: false,
     currencyCode: 'CNY',
+    reimburseStatus: 'none',
   );
   DeletedTransaction row() => DeletedTransaction(
         txId: 5,

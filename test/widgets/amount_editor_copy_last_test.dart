@@ -338,6 +338,9 @@ void main() {
                 initialAmount: 100,
                 ledgerId: 1,
                 transactionKind: transactionKind,
+                // 与生产网格路径一致（v56 起该路径也走钉底形态：属性区自滚，
+                // 收入表单的退款关联行不会再让矮屏硬溢出）。
+                pinKeypad: true,
                 prefill: draftOf(),
                 prefillToken: tokenOf(),
                 onSubmit: (_) {},

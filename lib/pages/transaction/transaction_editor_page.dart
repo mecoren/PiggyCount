@@ -47,6 +47,10 @@ Future<void> showTransactionFormBottomSheet(
   List<int>? initialTagIds,
   bool initialExcludeFromStats = false,
   bool initialExcludeFromBudget = false,
+  // v56 退款关联 + 报销状态（F1-b）编辑回显。
+  int? initialRefundOfId,
+  Transaction? initialRefundTarget,
+  String initialReimburseStatus = 'none',
   String? initialCurrencyCode,
   double? initialNativeAmount,
   // v45 原始金额回显(编辑既有明细)。
@@ -74,6 +78,9 @@ Future<void> showTransactionFormBottomSheet(
       initialTagIds: initialTagIds,
       initialExcludeFromStats: initialExcludeFromStats,
       initialExcludeFromBudget: initialExcludeFromBudget,
+      initialRefundOfId: initialRefundOfId,
+      initialRefundTarget: initialRefundTarget,
+      initialReimburseStatus: initialReimburseStatus,
       initialCurrencyCode: initialCurrencyCode,
       initialNativeAmount: initialNativeAmount,
       initialOriginalAmount: initialOriginalAmount,
@@ -102,6 +109,11 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
   final List<int>? initialTagIds; // 初始标签ID列表
   final bool initialExcludeFromStats; // 不计入收支，编辑模式回显
   final bool initialExcludeFromBudget; // 不计入预算，编辑模式回显
+  // v56 退款关联（F1-b）编辑回显：本笔冲正的原交易本地 id + 整行摘要。
+  final int? initialRefundOfId;
+  final Transaction? initialRefundTarget;
+  // v56 报销状态（F1-b）编辑回显：none / pending / reimbursed。
+  final String initialReimburseStatus;
   // v30 多币种编辑回显(推隐含汇率用)
   final String? initialCurrencyCode;
   final double? initialNativeAmount;
@@ -131,6 +143,9 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
     this.initialTagIds,
     this.initialExcludeFromStats = false,
     this.initialExcludeFromBudget = false,
+    this.initialRefundOfId,
+    this.initialRefundTarget,
+    this.initialReimburseStatus = 'none',
     this.initialCurrencyCode,
     this.initialNativeAmount,
     this.initialOriginalAmount,
@@ -771,6 +786,10 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       requireCategory: widget.editingTransactionId == null,
       initialExcludeFromStats: widget.initialExcludeFromStats,
       initialExcludeFromBudget: widget.initialExcludeFromBudget,
+      // v56 退款关联 + 报销状态（F1-b）回显
+      initialRefundOfId: widget.initialRefundOfId,
+      initialRefundTarget: widget.initialRefundTarget,
+      initialReimburseStatus: widget.initialReimburseStatus,
       initialCurrencyCode: widget.initialCurrencyCode,
       initialNativeAmount: widget.initialNativeAmount,
       initialOriginalAmount: widget.initialOriginalAmount,
@@ -882,6 +901,10 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => PiggySheetCard(
         child: AmountEditorSheet(
+          // 网格路径同样把滚动职责下沉给表单（v56：收入表单多了退款关联行，
+          // 非钉底形态在矮屏 + 自定义字段的场景会硬溢出；钉底形态属性区自滚、
+          // 键盘固定，内容放得下时布局与从前逐字一致）。
+          pinKeypad: true,
           categoryName: c.name,
           categoryId: c.id,
           // P1-E 分类位（决策 4）：编辑交易、小组件带分类的既有调用方一并显示，
@@ -917,6 +940,11 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
           initialExcludeFromBudget: prefill != null
               ? prefill.excludeFromBudget
               : widget.initialExcludeFromBudget,
+          // v56 退款关联 + 报销状态（F1-b）回显。「带出上一笔」刻意不带出
+          // 这两项（退款关联是特定语义，报销状态不应随复制流传）。
+          initialRefundOfId: widget.initialRefundOfId,
+          initialRefundTarget: widget.initialRefundTarget,
+          initialReimburseStatus: widget.initialReimburseStatus,
           initialCurrencyCode: prefill != null
               ? prefill.currencyCode
               : widget.initialCurrencyCode,
@@ -995,6 +1023,12 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
         originalAmount: d.Value<double?>(res.originalAmount),
         // v46 自定义字段:null = 不改动;空 map = 清空;非空 = 覆盖。
         customValues: res.customValues,
+        // v56 退款关联（F1-b）：三态直写（dart null = 不改动 /
+        // Value(null) = 用户在表单里解除了关联 / Value(id) = 写入）。
+        // 表单对收入交易恒回传当前值，编辑支出/转账时是 null = 不动。
+        refundOfId: d.Value<int?>(res.refundOfId),
+        // v56 报销状态（F1-b）：表单恒回传三态之一。
+        reimburseStatus: res.reimburseStatus,
       );
       transactionId = widget.editingTransactionId!;
     } else {
@@ -1012,6 +1046,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
         nativeAmount: res.nativeAmount,
         originalAmount: res.originalAmount,
         customValues: res.customValues,
+        // v56 退款关联 + 报销状态（F1-b）
+        refundOfId: res.refundOfId,
+        reimburseStatus: res.reimburseStatus,
       );
     }
     // 备注敏感标记（设备本地，不参与同步）：随本次表单结果落盘

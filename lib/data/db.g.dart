@@ -2878,6 +2878,20 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<String> customValuesJson = GeneratedColumn<String>(
       'custom_values_json', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _refundOfIdMeta =
+      const VerificationMeta('refundOfId');
+  @override
+  late final GeneratedColumn<int> refundOfId = GeneratedColumn<int>(
+      'refund_of_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _reimburseStatusMeta =
+      const VerificationMeta('reimburseStatus');
+  @override
+  late final GeneratedColumn<String> reimburseStatus = GeneratedColumn<String>(
+      'reimburse_status', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('none'));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -2900,7 +2914,9 @@ class $TransactionsTable extends Transactions
         currencyCode,
         nativeAmount,
         originalAmount,
-        customValuesJson
+        customValuesJson,
+        refundOfId,
+        reimburseStatus
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3025,6 +3041,18 @@ class $TransactionsTable extends Transactions
           customValuesJson.isAcceptableOrUnknown(
               data['custom_values_json']!, _customValuesJsonMeta));
     }
+    if (data.containsKey('refund_of_id')) {
+      context.handle(
+          _refundOfIdMeta,
+          refundOfId.isAcceptableOrUnknown(
+              data['refund_of_id']!, _refundOfIdMeta));
+    }
+    if (data.containsKey('reimburse_status')) {
+      context.handle(
+          _reimburseStatusMeta,
+          reimburseStatus.isAcceptableOrUnknown(
+              data['reimburse_status']!, _reimburseStatusMeta));
+    }
     return context;
   }
 
@@ -3076,6 +3104,10 @@ class $TransactionsTable extends Transactions
           .read(DriftSqlType.double, data['${effectivePrefix}original_amount']),
       customValuesJson: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}custom_values_json']),
+      refundOfId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}refund_of_id']),
+      reimburseStatus: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}reimburse_status'])!,
     );
   }
 
@@ -3150,6 +3182,29 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   ///   导出时**不写该键**,与 v45 original_amount 同款防漂移范式。
   /// - 仅在编辑表单读写,不参与列表/统计 SQL,所以不必可查询、无须索引。
   final String? customValuesJson;
+
+  /// v56: 退款关联（F1-b，2026-10-12，见 `prd/refund_reimbursement`）——
+  /// 收入行指向它冲正的那笔**支出**行（同账本 1:1；部分退款 / 多次冲正台账
+  /// 明确不做，需要金额级冲正模型，独立立项）。
+  ///
+  /// - NULL = 非退款行（存量行与普通新行的默认态，迁移零回填）。
+  /// - 无 FK 约束：本库连接未开 FK（全仓 `foreign_keys` 零命中，F1-a 已证实）。
+  ///   原交易软删进行政归档（`deleted_transactions`，PK 保留）后指向悬空，
+  ///   UI 徽标按「原交易已删除」显示；恢复归档行后关联自然复原；彻底 purge
+  ///   后刻意不清洗（徽标继续按已删除处理，查询侧零成本）。
+  /// - **进快照 / 指纹 / diff**（同步契约格式版本 14）：旧端快照缺键时
+  ///   导入侧按 NULL 解析，不跳过条目。
+  final int? refundOfId;
+
+  /// v56: 报销状态（F1-b）—— 三态字符串，值域由应用层常量钉死：
+  /// `none`（默认，不涉及报销）/ `pending`（待报销）/ `reimbursed`（已报销）。
+  ///
+  /// - NOT NULL + DEFAULT 'none'：存量行零回填即正确默认态。
+  /// - **恒进快照**（与 `excludeFromStats` 同款）：缺键与「明确 none」可区分，
+  ///   diff 走严格比较 —— 升级期旧端缺键会被判一次差异并修正，正是想要的行为。
+  /// - 纯标记语义，不联动余额 / 统计 / 预算（退款冲减预算是 `refundOfId`
+  ///   在 `local_budget_repository` 的职责，与本列独立）。
+  final String reimburseStatus;
   const Transaction(
       {required this.id,
       required this.ledgerId,
@@ -3171,7 +3226,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       this.currencyCode,
       this.nativeAmount,
       this.originalAmount,
-      this.customValuesJson});
+      this.customValuesJson,
+      this.refundOfId,
+      required this.reimburseStatus});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -3224,6 +3281,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     if (!nullToAbsent || customValuesJson != null) {
       map['custom_values_json'] = Variable<String>(customValuesJson);
     }
+    if (!nullToAbsent || refundOfId != null) {
+      map['refund_of_id'] = Variable<int>(refundOfId);
+    }
+    map['reimburse_status'] = Variable<String>(reimburseStatus);
     return map;
   }
 
@@ -3275,6 +3336,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       customValuesJson: customValuesJson == null && nullToAbsent
           ? const Value.absent()
           : Value(customValuesJson),
+      refundOfId: refundOfId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(refundOfId),
+      reimburseStatus: Value(reimburseStatus),
     );
   }
 
@@ -3304,6 +3369,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       nativeAmount: serializer.fromJson<double?>(json['nativeAmount']),
       originalAmount: serializer.fromJson<double?>(json['originalAmount']),
       customValuesJson: serializer.fromJson<String?>(json['customValuesJson']),
+      refundOfId: serializer.fromJson<int?>(json['refundOfId']),
+      reimburseStatus: serializer.fromJson<String>(json['reimburseStatus']),
     );
   }
   @override
@@ -3331,6 +3398,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'nativeAmount': serializer.toJson<double?>(nativeAmount),
       'originalAmount': serializer.toJson<double?>(originalAmount),
       'customValuesJson': serializer.toJson<String?>(customValuesJson),
+      'refundOfId': serializer.toJson<int?>(refundOfId),
+      'reimburseStatus': serializer.toJson<String>(reimburseStatus),
     };
   }
 
@@ -3355,7 +3424,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           Value<String?> currencyCode = const Value.absent(),
           Value<double?> nativeAmount = const Value.absent(),
           Value<double?> originalAmount = const Value.absent(),
-          Value<String?> customValuesJson = const Value.absent()}) =>
+          Value<String?> customValuesJson = const Value.absent(),
+          Value<int?> refundOfId = const Value.absent(),
+          String? reimburseStatus}) =>
       Transaction(
         id: id ?? this.id,
         ledgerId: ledgerId ?? this.ledgerId,
@@ -3387,6 +3458,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         customValuesJson: customValuesJson.present
             ? customValuesJson.value
             : this.customValuesJson,
+        refundOfId: refundOfId.present ? refundOfId.value : this.refundOfId,
+        reimburseStatus: reimburseStatus ?? this.reimburseStatus,
       );
   Transaction copyWithCompanion(TransactionsCompanion data) {
     return Transaction(
@@ -3431,6 +3504,11 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       customValuesJson: data.customValuesJson.present
           ? data.customValuesJson.value
           : this.customValuesJson,
+      refundOfId:
+          data.refundOfId.present ? data.refundOfId.value : this.refundOfId,
+      reimburseStatus: data.reimburseStatus.present
+          ? data.reimburseStatus.value
+          : this.reimburseStatus,
     );
   }
 
@@ -3457,7 +3535,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('currencyCode: $currencyCode, ')
           ..write('nativeAmount: $nativeAmount, ')
           ..write('originalAmount: $originalAmount, ')
-          ..write('customValuesJson: $customValuesJson')
+          ..write('customValuesJson: $customValuesJson, ')
+          ..write('refundOfId: $refundOfId, ')
+          ..write('reimburseStatus: $reimburseStatus')
           ..write(')'))
         .toString();
   }
@@ -3484,7 +3564,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         currencyCode,
         nativeAmount,
         originalAmount,
-        customValuesJson
+        customValuesJson,
+        refundOfId,
+        reimburseStatus
       ]);
   @override
   bool operator ==(Object other) =>
@@ -3510,7 +3592,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.currencyCode == this.currencyCode &&
           other.nativeAmount == this.nativeAmount &&
           other.originalAmount == this.originalAmount &&
-          other.customValuesJson == this.customValuesJson);
+          other.customValuesJson == this.customValuesJson &&
+          other.refundOfId == this.refundOfId &&
+          other.reimburseStatus == this.reimburseStatus);
 }
 
 class TransactionsCompanion extends UpdateCompanion<Transaction> {
@@ -3535,6 +3619,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<double?> nativeAmount;
   final Value<double?> originalAmount;
   final Value<String?> customValuesJson;
+  final Value<int?> refundOfId;
+  final Value<String> reimburseStatus;
   const TransactionsCompanion({
     this.id = const Value.absent(),
     this.ledgerId = const Value.absent(),
@@ -3557,6 +3643,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.nativeAmount = const Value.absent(),
     this.originalAmount = const Value.absent(),
     this.customValuesJson = const Value.absent(),
+    this.refundOfId = const Value.absent(),
+    this.reimburseStatus = const Value.absent(),
   });
   TransactionsCompanion.insert({
     this.id = const Value.absent(),
@@ -3580,6 +3668,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.nativeAmount = const Value.absent(),
     this.originalAmount = const Value.absent(),
     this.customValuesJson = const Value.absent(),
+    this.refundOfId = const Value.absent(),
+    this.reimburseStatus = const Value.absent(),
   })  : ledgerId = Value(ledgerId),
         type = Value(type),
         amount = Value(amount);
@@ -3605,6 +3695,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<double>? nativeAmount,
     Expression<double>? originalAmount,
     Expression<String>? customValuesJson,
+    Expression<int>? refundOfId,
+    Expression<String>? reimburseStatus,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3629,6 +3721,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (nativeAmount != null) 'native_amount': nativeAmount,
       if (originalAmount != null) 'original_amount': originalAmount,
       if (customValuesJson != null) 'custom_values_json': customValuesJson,
+      if (refundOfId != null) 'refund_of_id': refundOfId,
+      if (reimburseStatus != null) 'reimburse_status': reimburseStatus,
     });
   }
 
@@ -3653,7 +3747,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<String?>? currencyCode,
       Value<double?>? nativeAmount,
       Value<double?>? originalAmount,
-      Value<String?>? customValuesJson}) {
+      Value<String?>? customValuesJson,
+      Value<int?>? refundOfId,
+      Value<String>? reimburseStatus}) {
     return TransactionsCompanion(
       id: id ?? this.id,
       ledgerId: ledgerId ?? this.ledgerId,
@@ -3676,6 +3772,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       nativeAmount: nativeAmount ?? this.nativeAmount,
       originalAmount: originalAmount ?? this.originalAmount,
       customValuesJson: customValuesJson ?? this.customValuesJson,
+      refundOfId: refundOfId ?? this.refundOfId,
+      reimburseStatus: reimburseStatus ?? this.reimburseStatus,
     );
   }
 
@@ -3746,6 +3844,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (customValuesJson.present) {
       map['custom_values_json'] = Variable<String>(customValuesJson.value);
     }
+    if (refundOfId.present) {
+      map['refund_of_id'] = Variable<int>(refundOfId.value);
+    }
+    if (reimburseStatus.present) {
+      map['reimburse_status'] = Variable<String>(reimburseStatus.value);
+    }
     return map;
   }
 
@@ -3772,7 +3876,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('currencyCode: $currencyCode, ')
           ..write('nativeAmount: $nativeAmount, ')
           ..write('originalAmount: $originalAmount, ')
-          ..write('customValuesJson: $customValuesJson')
+          ..write('customValuesJson: $customValuesJson, ')
+          ..write('refundOfId: $refundOfId, ')
+          ..write('reimburseStatus: $reimburseStatus')
           ..write(')'))
         .toString();
   }
@@ -13556,6 +13662,8 @@ typedef $$TransactionsTableCreateCompanionBuilder = TransactionsCompanion
   Value<double?> nativeAmount,
   Value<double?> originalAmount,
   Value<String?> customValuesJson,
+  Value<int?> refundOfId,
+  Value<String> reimburseStatus,
 });
 typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
     Function({
@@ -13580,6 +13688,8 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<double?> nativeAmount,
   Value<double?> originalAmount,
   Value<String?> customValuesJson,
+  Value<int?> refundOfId,
+  Value<String> reimburseStatus,
 });
 
 class $$TransactionsTableFilterComposer
@@ -13658,6 +13768,13 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get customValuesJson => $composableBuilder(
       column: $table.customValuesJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get refundOfId => $composableBuilder(
+      column: $table.refundOfId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get reimburseStatus => $composableBuilder(
+      column: $table.reimburseStatus,
       builder: (column) => ColumnFilters(column));
 }
 
@@ -13740,6 +13857,13 @@ class $$TransactionsTableOrderingComposer
   ColumnOrderings<String> get customValuesJson => $composableBuilder(
       column: $table.customValuesJson,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get refundOfId => $composableBuilder(
+      column: $table.refundOfId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get reimburseStatus => $composableBuilder(
+      column: $table.reimburseStatus,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$TransactionsTableAnnotationComposer
@@ -13813,6 +13937,12 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get customValuesJson => $composableBuilder(
       column: $table.customValuesJson, builder: (column) => column);
+
+  GeneratedColumn<int> get refundOfId => $composableBuilder(
+      column: $table.refundOfId, builder: (column) => column);
+
+  GeneratedColumn<String> get reimburseStatus => $composableBuilder(
+      column: $table.reimburseStatus, builder: (column) => column);
 }
 
 class $$TransactionsTableTableManager extends RootTableManager<
@@ -13862,6 +13992,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<double?> nativeAmount = const Value.absent(),
             Value<double?> originalAmount = const Value.absent(),
             Value<String?> customValuesJson = const Value.absent(),
+            Value<int?> refundOfId = const Value.absent(),
+            Value<String> reimburseStatus = const Value.absent(),
           }) =>
               TransactionsCompanion(
             id: id,
@@ -13885,6 +14017,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             nativeAmount: nativeAmount,
             originalAmount: originalAmount,
             customValuesJson: customValuesJson,
+            refundOfId: refundOfId,
+            reimburseStatus: reimburseStatus,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -13908,6 +14042,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<double?> nativeAmount = const Value.absent(),
             Value<double?> originalAmount = const Value.absent(),
             Value<String?> customValuesJson = const Value.absent(),
+            Value<int?> refundOfId = const Value.absent(),
+            Value<String> reimburseStatus = const Value.absent(),
           }) =>
               TransactionsCompanion.insert(
             id: id,
@@ -13931,6 +14067,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             nativeAmount: nativeAmount,
             originalAmount: originalAmount,
             customValuesJson: customValuesJson,
+            refundOfId: refundOfId,
+            reimburseStatus: reimburseStatus,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (

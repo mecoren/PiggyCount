@@ -23,6 +23,7 @@ TxItem makeItem({
         note: note,
         excludeFromStats: false,
         excludeFromBudget: false,
+        reimburseStatus: 'none',
       ),
       category: null,
       account: null,

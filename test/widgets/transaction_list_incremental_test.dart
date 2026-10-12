@@ -26,6 +26,7 @@ TxItem item(int id, DateTime at, {double amount = 10}) => (
         happenedAt: at,
         excludeFromStats: false,
         excludeFromBudget: false,
+        reimburseStatus: 'none',
       ),
       category: null,
       account: null,

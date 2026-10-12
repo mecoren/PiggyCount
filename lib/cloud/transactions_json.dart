@@ -39,6 +39,17 @@ import 'sync_fingerprint.dart';
 ///   字段的账本两端仍相等（空数组/缺键都规范成 `''`）→ 升级门控一次性收敛；
 ///   有选项字段且云端仍是 v12 快照时指纹必然不等 → 走正常 diff / 合并，不会被
 ///   误判成「仅格式升级」而自动覆盖。
+/// - v14：退款关联 + 报销状态（2026-10-12，F1-b `prd/refund_reimbursement`）——
+///   `items` 每项新增 `refundSyncId`（**仅非 null 且可解析时写键**，本地
+///   `refund_of_id` 翻成被冲正交易的 syncId，跨设备可比；同 `recurringSyncId`
+///   的防漂移范式）与 `reimburseStatus`（三态字符串，**恒写**，同
+///   `excludeFromStats`）。`sync_fingerprint` 的 items 段白名单同批纳入两键，
+///   归一口径：`refundSyncId` 缺键 → `''`（≡ 无关联）；`reimburseStatus`
+///   缺键 → `'none'`（≡ 字段默认态，旧快照没有该字段即「不涉及报销」）。
+///   同样是**指纹算法值变化**：无退款/报销的账本两端仍相等 → 升级门控
+///   （`shouldRepublishSnapshotForFormatUpgrade`）一次性 force 重传收敛；
+///   有退款关联或报销状态非 none 且云端仍是 v13 快照时指纹必然不等 → 走正常
+///   diff / 合并，不会被误判成「仅格式升级」而自动覆盖。
 ///
 /// 消费方契约：凡是读到「云端快照 version < 本常量」的路径，都**不得**把
 /// 「指纹不相等」当作「内容不同」的证据（那是算法口径差异，不是数据差异）。
@@ -46,7 +57,7 @@ import 'sync_fingerprint.dart';
 /// 正常收敛 —— 判定见
 /// `TransactionsSyncManager.shouldRepublishSnapshotForFormatUpgrade`，
 /// 执行见 `StartupSyncChecker` 的状态检查循环。
-const int kSnapshotFormatVersion = 13;
+const int kSnapshotFormatVersion = 14;
 
 /// 账本交易数据的 JSON 导入导出工具
 ///
@@ -140,6 +151,15 @@ Future<ExportedLedgerJson> exportTransactionsJson(
   for (final r in ledgerRecurrings) {
     recurringIdToSyncId[r.id] = r.syncId;
   }
+
+  // v56 退款关联（F1-b）：本地交易 id → syncId，用于把 items 上的
+  // `refund_of_id`（本地 int id，跨设备不可比）翻成被冲正交易的 syncId。
+  // 语义与 recurringIdToSyncId 对齐：解析不到（被引交易不在本批导出 /
+  // syncId 缺失）→ 导出侧不写键，diff/指纹两侧按「无关联」归一。
+  final txIdToSyncId = <int, String>{
+    for (final t in txs)
+      if (t.syncId != null && t.syncId!.isNotEmpty) t.id: t.syncId!,
+  };
 
   // 获取所有交易的标签（批量查询）
   final txIds = txs.map((t) => t.id).toList();
@@ -334,6 +354,16 @@ Future<ExportedLedgerJson> exportTransactionsJson(
       if (t.recurringId != null &&
           (recurringIdToSyncId[t.recurringId] ?? '').isNotEmpty)
         'recurringSyncId': recurringIdToSyncId[t.recurringId],
+      // v56 退款关联（F1-b）：与 recurringSyncId 同款「仅非 null 且可解析
+      // 才写键」的防漂移范式 —— 本地 refund_of_id 翻成被冲正交易的 syncId，
+      // 99% 的交易没有退款关联，恒写纯浪费；缺键时解析侧按「无关联」落库。
+      if (t.refundOfId != null &&
+          (txIdToSyncId[t.refundOfId] ?? '').isNotEmpty)
+        'refundSyncId': txIdToSyncId[t.refundOfId],
+      // v56 报销状态三态（F1-b）：恒写（同 excludeFromStats）——「缺键」
+      // 与「明确 none」必须可区分：diff 走严格比较，升级期旧快照缺键会被判
+      // 一次差异并修正，正是 v14 想要的行为。
+      'reimburseStatus': t.reimburseStatus,
     };
 
     // 添加账户信息
@@ -1245,6 +1275,13 @@ ImportData parseJsonToImportData(String jsonStr) {
             : null,
         // v8 G2：周期规则锚点
         recurringSyncId: _readString(m, 'recurringSyncId'),
+        // v56 退款关联（F1-b）：被冲正交易的 syncId（本地 int id 由导入侧
+        // 两阶段回填解析，见 data_import_service.importTransactions）。
+        // 旧快照缺键 → null（无关联）。
+        refundSyncId: _readString(m, 'refundSyncId'),
+        // v56 报销状态三态（F1-b）：旧快照缺键 → 'none'（字段默认态，
+        // 与指纹侧归一口径一致）。
+        reimburseStatus: _readString(m, 'reimburseStatus') ?? 'none',
       ));
     }
   }

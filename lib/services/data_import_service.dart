@@ -281,6 +281,18 @@ class ImportTransaction {
   /// 空 map = 显式清空；非空 = 覆盖写入。与 [originalAmount] 同模式。
   final Map<String, dynamic>? customValues;
 
+  /// v56 退款关联（F1-b）：被冲正交易的 **syncId**（本地 int id 跨设备不可比，
+  /// 快照里只传 syncId）。null = 无关联 / 旧快照缺键。
+  ///
+  /// 导入侧两阶段解析成本地 `refund_of_id`：插入时被引交易可能尚未落库
+  /// （JSON 数组顺序不保证退款行排在原交易之后），统一在整批插入后按
+  /// syncId → 本地 id 回填（见 `importTransactions` 的 post-pass）。
+  final String? refundSyncId;
+
+  /// v56 报销状态（F1-b）：三态字符串 `none` / `pending` / `reimbursed`。
+  /// v14 快照恒写该键；旧快照缺键 → 'none'（字段默认态）。
+  final String reimburseStatus;
+
   const ImportTransaction({
     required this.type,
     required this.amount,
@@ -303,6 +315,8 @@ class ImportTransaction {
     this.recurringSyncId,
     this.originalAmount,
     this.customValues,
+    this.refundSyncId,
+    this.reimburseStatus = 'none',
   });
 }
 
@@ -1908,6 +1922,9 @@ class DataImportService {
     final batchTx = <TransactionsCompanion>[];
     final batchTagsByIndex = <int, List<int>>{};
     final batchAttachmentsByIndex = <int, List<BatchAttachmentData>>{};
+    // v56 退款关联（F1-b）：待回填的 (退款行 syncId, 被冲正交易 syncId)。
+    // 插入时被引交易可能尚未落库，统一在末尾 post-pass 按 syncId 解析。
+    final pendingRefundLinks = <({String txSyncId, String refundSyncId})>[];
 
     final localCategoryCache = Map<String, int>.from(categoryCache);
 
@@ -2116,6 +2133,12 @@ class DataImportService {
       // 静默跳过 null-syncId 交易(local_repository.dart `if (tx.syncId == null) continue;`),
       // 导致该笔永远不会被推送到云端,且 SyncEngine 无 transaction backfill 兜底。
       final effectiveSyncId = tx.syncId ?? const Uuid().v4();
+      // v56 退款关联（F1-b）：登记待回填链接（syncId 形式，本地 id 由
+      // post-pass 解析）。空串 syncId 的脏数据跳过。
+      if (tx.refundSyncId != null && tx.refundSyncId!.isNotEmpty) {
+        pendingRefundLinks
+            .add((txSyncId: effectiveSyncId, refundSyncId: tx.refundSyncId!));
+      }
       // v8 G2：周期规则关联。recurringSyncId → 本地 recurring int id
       // （映射由 importRecurrings 产出；规则未导入/未命中 → null，
       // 交易本身照常落库，仅来源关联缺失）。
@@ -2187,6 +2210,11 @@ class DataImportService {
         excludeFromStats: d.Value(tx.excludeFromStats),
         excludeFromBudget: d.Value(tx.excludeFromBudget),
         recurringId: d.Value(resolvedRecurringId),
+        // v56 报销状态（F1-b）：三态照快照值落库（旧快照缺键 → 'none'）。
+        reimburseStatus: d.Value(tx.reimburseStatus),
+        // v56 退款关联（F1-b）：**先落 NULL** —— 被冲正的交易可能排在本行
+        // 之后（快照 JSON 数组顺序不保证），整批导入末尾按 syncId 统一
+        // 解析回填（见方法末尾的 post-pass）。
       );
 
       final indexInBatch = batchTx.length;
@@ -2217,6 +2245,32 @@ class DataImportService {
 
     // 刷剩余
     await flush();
+
+    // v56 退款关联回填（F1-b，见 `prd/refund_reimbursement/design.md`
+    // 第二节）：被冲正交易可能排在本批退款行之后，插入时统一落 NULL，
+    // 这里按 syncId → 本地 id 解析后批量 UPDATE。解析不到（被引交易本地
+    // 不存在，如合并时用户只勾了退款行没勾原交易）→ 不进回填列表，保持
+    // NULL，与指纹口径一致（导出侧解析不到不写键 → `?? ''` 归一）。
+    if (pendingRefundLinks.isNotEmpty) {
+      final syncIdToLocalId = <String, int>{
+        for (final row in await repo.getTransactionsByLedger(ledgerId))
+          if (row.syncId != null && row.syncId!.isNotEmpty) row.syncId!: row.id,
+      };
+      final resolved = <({String txSyncId, int? refundOfId})>[];
+      var unresolved = 0;
+      for (final link in pendingRefundLinks) {
+        final targetId = syncIdToLocalId[link.refundSyncId];
+        if (targetId == null) {
+          unresolved++;
+          continue;
+        }
+        resolved.add((txSyncId: link.txSyncId, refundOfId: targetId));
+      }
+      final backfilled =
+          await repo.backfillRefundLinks(resolved, recordChanges: recordChanges);
+      logger.info('TxImport',
+          '退款关联回填(F1-b): 待解析=${pendingRefundLinks.length} 已回填=$backfilled 未解析=$unresolved');
+    }
 
     logger.info('TxImport',
         '交易导入完成: 总数=$total 成功=$inserted 跳过recurring重复=$skipped(同规则同日且syncId或金额+备注相同) 失败=$failed 总耗时=${overallSw.elapsedMilliseconds}ms');

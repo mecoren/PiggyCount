@@ -676,6 +676,8 @@ Transaction _sampleTransaction({
     happenedAt: happenedAt,
     excludeFromStats: false,
     excludeFromBudget: false,
+    // v56 退款关联 + 报销状态（F1-b）：样例数据用默认态。
+    reimburseStatus: 'none',
   );
 }
 
