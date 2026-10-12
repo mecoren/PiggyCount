@@ -590,6 +590,16 @@ class TransactionsSyncManager implements SyncService {
     _isInitializing = true;
     final completer = Completer<void>();
     _initCompleter = completer;
+    // 2026-10-12：本路径自己 `await _initialize`（**不** await 该 completer），
+    // completer 只服务上面的并发等待者。于是失败时若此刻没有任何等待者，
+    // `completer.completeError` 就成了一枚**无人监听的异步错误** —— Dart 会
+    // 直接把它上报到 `PlatformDispatcher.onError`：真机日志里「云端账本发现
+    // 失败（降级跳过）」与「[Zone] Uncaught platform error」同时出现，
+    // 接入崩溃上报后会把**正常的降级路径记成崩溃**。
+    // 先挂一个哨兵监听把它标记为「已处理」：有等待者时它们照常各自收到错误
+    // （try/catch 语义不变），没有等待者时不再重复上报。异常本身仍由下方
+    // `rethrow` 上抛，调用方契约不变。
+    unawaited(completer.future.catchError((Object _) {}));
     try {
       await _initialize(gen);
       // 审计 TSM-P11：只提交当前代次的成果；初始化期间发生 reinit 时，
