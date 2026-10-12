@@ -245,6 +245,21 @@ abstract class TransactionRepository {
     DateTime? now,
   });
 
+  /// 取「本机最近录入的一笔同类型交易」整行，供记账抽屉「带出上一笔」。
+  ///
+  /// 与 [getRecentEntryDefaults] **同一取数口径**（同账本、同 [kind]、按
+  /// [Transactions.createdAt] 本机录入时刻倒序、排除 `createdAt` 为 NULL 与
+  /// `recurringId` 非空的行；转账既不参与也不作源），唯一差别是：
+  /// - **没有时间窗** —— 用户显式点「带出上一笔」时，昨天那笔也该带出来；
+  /// - 返回**整行**，由调用方决定带出哪些字段（金额 / 日期等由 UI 侧排除）。
+  ///
+  /// 返回 `null` = 该类型在本账本没有可作来源的录入，调用方应隐藏入口而不是
+  /// 带出一份空数据。
+  Future<Transaction?> getLastRecordedTransaction({
+    required int ledgerId,
+    required String kind,
+  });
+
   /// 根据ID获取单条交易
   Future<Transaction?> getTransactionById(int id);
 

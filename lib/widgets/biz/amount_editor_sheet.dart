@@ -13,6 +13,7 @@ import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/data/note_history_service.dart';
 import '../../models/note_history.dart';
+import '../../models/last_entry_draft.dart';
 import '../../services/attachment_service.dart';
 import '../../providers.dart';
 import '../../providers/custom_field_providers.dart';
@@ -115,6 +116,19 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   // transaction_edit_utils 读取;新建为空。
   final Map<String, dynamic> initialCustomValues;
 
+  /// 「带出上一笔」的一次性载荷（见 [LastEntryDraft]）；`null` = 无。
+  ///
+  /// 与 [initialCustomValues] 等构造初值的区别：初值只在首帧播种，而「带出上一
+  /// 笔」是**表单已经在屏幕上**时用户点按钮触发的，必须由 [didUpdateWidget] 就
+  /// 地装填已渲染的表单（表单不关闭、不重建）。
+  ///
+  /// 只覆盖「除金额外的字段」：金额 / 原始金额 / 发生日期一律不动（用户口径）。
+  final LastEntryDraft? prefill;
+
+  /// 载荷版本号：调用方**每次带出都 +1**，子组件据此判定「这是一次新请求」
+  /// （同一份载荷连点两次也要重新装填）。与 [prefill] 成对使用。
+  final int prefillToken;
+
   /// 是否**把数字键盘钉在卡片底部**（2026-10-09）。
   ///
   /// 默认 false = 整张表单（含键盘）作为一个整体，滚动与高度全交给调用方，
@@ -153,6 +167,8 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
     this.initialNativeAmount,
     this.initialOriginalAmount,
     this.initialCustomValues = const {},
+    this.prefill,
+    this.prefillToken = 0,
   });
 
   @override
@@ -348,6 +364,18 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   // [CustomFieldsSection] 每次变更上抛全量快照。
   late Map<String, dynamic> _customValues;
 
+  /// [CustomFieldsSection] 的**播种值**（只用于挂给它 `initialValues`）。
+  ///
+  /// 为什么不直接用 [_customValues]：那个快照每次击键都会被 `onChanged` 覆盖，若
+  /// 拿它当种子并挂在 `key` 上，分区会被逐击键重建（丢焦点、丢滚动）。
+  /// 「带出上一笔」时同步刷新本字段并让 [_customFieldsSeedToken] 自增，即可靠换
+  /// `key` 强制重建 —— text / date / select 字段的内部状态只在 initState 播种、
+  /// `didUpdateWidget` 不采纳新初值，这是刷新它们**唯一**的手段。
+  late Map<String, dynamic> _customFieldsSeed;
+
+  /// [CustomFieldsSection] 的 key 版本号：随「带出上一笔」递增。
+  int _customFieldsSeedToken = 0;
+
   // v30 交易级多币种(L7 自动探测 + L12 无账户手选)
   String? _pickedCurrency; // 无账户时手选的币种;null = 本位币
   String? _selectedAccountCurrency; // 所选账户的币种(异步查,null = 未选/未知)
@@ -366,6 +394,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     _selectedAccountId = widget.initialAccountId;
     _selectedTagIds = List.from(widget.initialTagIds ?? []);
     _customValues = Map<String, dynamic>.from(widget.initialCustomValues);
+    _customFieldsSeed = Map<String, dynamic>.from(widget.initialCustomValues);
     _pickedCurrency = widget.initialCurrencyCode?.toUpperCase();
     // 编辑外币交易:汇率行初值 = 该笔隐含汇率(nativeAmount / amount),
     // 只改备注/分类时折算基准不漂移(01 §4.2)。
@@ -420,6 +449,55 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         _loadAccountCurrency(widget.initialAccountId!);
       }
     }
+    // 「带出上一笔」：这是**用户显式动作**，最后一手生效（覆盖上面那两条「迟到
+    // 初值」的补写）；只在本表单的类型与该载荷一致时应用 —— 快捷形态下支出 /
+    // 收入两份表单在 IndexedStack 里同时保活，同一份载荷会同时到达两者。
+    final prefill = widget.prefill;
+    if (prefill != null &&
+        widget.prefillToken != oldWidget.prefillToken &&
+        prefill.kind == widget.transactionKind) {
+      _applyLastEntryPrefill(prefill);
+    }
+  }
+
+  /// 把「带出上一笔」载荷就地装进已渲染的表单（字段级覆盖，不重建组件）。
+  ///
+  /// 与构造初值的差别：
+  /// - **只覆盖除金额外的字段** —— `_amountStr` / `_originalStr` / `_date` 一律不
+  ///   动（用户口径：复刻上一笔时只需重填金额，日期保持今天）；
+  /// - 覆盖是无条件的（「直接覆盖，不弹确认」）：即便用户已经选过分类 / 账户，
+  ///   也按载荷改掉，因此顺手把 `_categoryPicked` / `_accountPicked` 置真，防止
+  ///   首帧后才解析出的记忆分类 / 默认账户把带出的值顶回去；
+  /// - 自定义字段的 text / date / select 位靠换 `key` 重建分区刷新（见
+  ///   [_customFieldsSeed]），金额位走宿主每帧派生的 `amountTextOverride`，
+  ///   改 [_customValues] 即生效。
+  ///
+  /// 直接改字段而不 `setState`：本方法只在 [didUpdateWidget] 里同步调用，紧跟
+  /// 其后就有一次 build。
+  void _applyLastEntryPrefill(LastEntryDraft draft) {
+    _category = draft.category;
+    _categoryPicked = true;
+    _selectedAccountId = draft.accountId;
+    _accountPicked = true;
+    if (draft.accountId != null) {
+      unawaited(_loadAccountCurrency(draft.accountId!));
+    }
+    _noteCtrl.text = draft.note ?? '';
+    _noteSensitive = draft.noteSensitive;
+    _selectedTagIds = List<int>.from(draft.tagIds);
+    _excludeFromStats = draft.excludeFromStats;
+    _excludeFromBudget = draft.excludeFromBudget;
+    _pickedCurrency = draft.currencyCode?.toUpperCase();
+    // 自定义字段：值快照与分区种子一起换掉，并清掉「半截键盘串 / 未完成算式」，
+    // 否则旧串会盖住带出的值（[CustomFieldValueCodec] 的显示串回退链见
+    // `_customFieldStr`）。
+    _customValues = Map<String, dynamic>.from(draft.customValues);
+    _customFieldStrs.clear();
+    _accByTarget.remove(_AmountEditTarget.customField);
+    _opByTarget.remove(_AmountEditTarget.customField);
+    _customFieldsSeed = Map<String, dynamic>.from(draft.customValues);
+    _customFieldsSeedToken++;
+    unawaited(_loadRecentNotes());
   }
 
   @override
@@ -1788,8 +1866,13 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: CustomFieldsSection(
+        // key 随「带出上一笔」递增：该分区的 text / date / select 位内部状态只在
+        // initState 播种（`didUpdateWidget` 不采纳新 `initialValues`），换 key
+        // 重建是刷新它们的唯一手段。种子取本组件持有的 [_customFieldsSeed]
+        // 而非 widget.initialCustomValues：首帧两者等价，装填后前者才是当前值。
+        key: ValueKey('customFields_$_customFieldsSeedToken'),
         definitions: definitions,
-        initialValues: widget.initialCustomValues,
+        initialValues: _customFieldsSeed,
         onChanged: (values) {
           // 组件上抛的是它自己那份快照，金额位的键盘串不在其中 —— 接住其它
           // 字段的值后立刻用键盘串覆盖回来，否则刚清空的金额会被旧值顶回去。

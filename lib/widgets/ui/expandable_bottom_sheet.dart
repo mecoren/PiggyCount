@@ -32,6 +32,7 @@ class ExpandableBottomSheet extends StatelessWidget {
     this.showDragHandle = true,
     this.backgroundColor,
     this.titleWidget,
+    this.actions,
     this.bottom,
     this.bottomHeight = 0,
   });
@@ -69,6 +70,13 @@ class ExpandableBottomSheet extends StatelessWidget {
 
   /// 标题栏右侧自定义 widget（与 [onSave] 互斥：同时存在时 [titleWidget] 优先）
   final Widget? titleWidget;
+
+  /// 标题栏**右侧动作区**（逐个排在标题之后，透传给 [PiggyTitleBar.actions]）。
+  ///
+  /// 注意与 [titleWidget] 的区别：那个是**替换标题本身**（占的是标题位），
+  /// 本参数才是右侧动作位。当前唯一在用者：记账抽屉的「分类网格」形态
+  /// （`TransactionEditorPage._buildBottomSheet`）在右上角放「带出上一笔」。
+  final List<Widget>? actions;
 
   /// 标题栏底部独立区域（用于 TabBar / 分段选择器）
   final Widget? bottom;
@@ -119,6 +127,7 @@ class ExpandableBottomSheet extends StatelessWidget {
               PiggyTitleBar(
                 title: title,
                 titleWidget: titleWidget,
+                actions: actions,
                 showBack: true,
                 backIcon: const Icon(Icons.close),
                 onBack: onClose,

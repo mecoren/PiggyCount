@@ -48,6 +48,40 @@ ORDER BY created_at DESC, id DESC
 LIMIT ?
 ''';
 
+/// 「取本机最近录入的一笔同类型交易」的取数语句（记账抽屉「带出上一笔」）。
+///
+/// **为什么公开**：让 `last_recorded_transaction_test.dart` 对**同一份 SQL** 跑
+/// `EXPLAIN QUERY PLAN`，断言命中 `idx_transactions_ledger_created`。与
+/// [recentEntryDefaultsSql] 同款理由 —— 测试另抄字面量就能骗过测试。
+///
+/// 生产代码请走 [LocalTransactionRepository.getLastRecordedTransaction]。
+///
+/// 与 [recentEntryDefaultsSql] 的关系：**同一取数口径**（同账本、同 kind、按
+/// `created_at` 本机录入时刻倒序、排除 `created_at` 为 NULL 与 `recurring_id`
+/// 非空的行），唯一差别是**没有时间窗**（上一笔是十天前的也能带出），并且取整行
+/// 而不是只取分类 / 账户两列。
+///
+/// 语句要点：
+/// - `ledger_id = ?` 由复合索引 `idx_transactions_ledger_created
+///   (ledger_id, created_at)` 定位，`ORDER BY created_at DESC, id DESC` 由索引
+///   直接满足（倒序扫描），无需临时排序树；
+/// - `type = ?` / `created_at IS NOT NULL` / `recurring_id IS NULL` 是**残余
+///   谓词**（在索引项上就地判定）。这里与 [recentEntryDefaultsSql] 把 type 留在
+///   Dart 侧的处理不同：本语句没有范围下界可裁剪，若把 type 挪到 Dart 侧，
+///   `LIMIT ?` 只能约束结果行数、扫描量会退化成「整本账本索引」，所以反过来
+///   让「账本隔离」承担扫描上界、type 就地过滤，`LIMIT 1` 命中即停；
+/// - `created_at IS NOT NULL` 是显式口径（而非依赖 NULL 排最后）：批量导入 /
+///   云恢复的行没有录入时刻，不参与；
+/// - ⚠️ 最坏情形是「该类型在账本内一笔都没有」：需沿该账本的索引区间扫完才知
+///   道无结果（仍是一趟索引扫描，不建临时树，且调用方只在抽屉打开 / 切段时各探
+///   一次）。有结果时命中即停，恒定有界。
+const String lastRecordedTransactionSql = '''
+SELECT * FROM transactions
+WHERE ledger_id = ? AND type = ? AND created_at IS NOT NULL AND recurring_id IS NULL
+ORDER BY created_at DESC, id DESC
+LIMIT 1
+''';
+
 /// 本地交易Repository实现
 /// 基于 Drift 数据库实现
 class LocalTransactionRepository implements TransactionRepository {
@@ -962,6 +996,28 @@ class LocalTransactionRepository implements TransactionRepository {
 
   /// 窗口查询的防御性行数上限（见 [getRecentEntryDefaults]）。
   static const int _recentDefaultsScanLimit = 100;
+
+  @override
+  Future<Transaction?> getLastRecordedTransaction({
+    required int ledgerId,
+    required String kind,
+  }) async {
+    final row = await db
+        .customSelect(
+          lastRecordedTransactionSql,
+          variables: [
+            d.Variable<int>(ledgerId),
+            d.Variable<String>(kind),
+          ],
+          readsFrom: {db.transactions},
+        )
+        .getSingleOrNull();
+    if (row == null) return null;
+    // customSelect 拿到的是驱动原始值（DateTime 列为纪元秒整型），交给生成表的
+    // `map` 按类型映射还原，避免在这里手抄一份列转换。语句是 `SELECT *`，所有列
+    // 都在，映射不会缺列。
+    return db.transactions.map(row.data);
+  }
 
   @override
   Future<int> countByTypeInRange({

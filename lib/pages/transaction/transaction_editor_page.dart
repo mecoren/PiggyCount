@@ -12,6 +12,7 @@ import '../../providers/budget_providers.dart';
 import '../../data/db.dart';
 import '../../data/repositories/transaction_repository.dart'
     show RecentEntryDefaults;
+import '../../models/last_entry_draft.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../widgets/biz/amount_editor_sheet.dart';
@@ -171,6 +172,24 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
   final Map<String, int?> _quickAccountByKind = {};
   final Set<String> _quickInitialsResolved = {};
 
+  /// 「带出上一笔」的来源行缓存（按 kind）。`null` = 该类型暂无来源 → 按钮不渲染。
+  ///
+  /// 探测在**抽屉首帧后**与**切换分段时**各跑一次（`getLastRecordedTransaction`
+  /// 是「ledger_id 等值 + LIMIT 1」的常数级索引查询），**不进 build**：build 里
+  /// 查库会在每次击键（金额表单的每个数字键都会重建宿主）时打一发查询。
+  final Map<String, Transaction?> _copySourceByKind = {};
+  final Set<String> _copySourceProbed = {};
+
+  /// 快捷形态的「带出上一笔」载荷 + 版本号：靠它驱动
+  /// [AmountEditorSheet.didUpdateWidget] 就地装填已渲染的表单（连点两次也要重装，
+  /// 故版本号必须递增而不是只看载荷是否变化）。
+  LastEntryDraft? _lastEntryPrefill;
+  int _lastEntryPrefillToken = 0;
+
+  /// 分类网格形态的暂存载荷：网格形态点按钮时不改分类网格，等用户点分类格时
+  /// 与那一格一起传进金额表单（见 [_onCategorySelected]）。
+  LastEntryDraft? _pendingGridPrefill;
+
   /// 金额表单的**实测**高度（见 [_buildQuickEntrySheet]）。
   ///
   /// 转账的账户网格会把自然高度顶到全屏，导致切分段时抽屉高度突变；把它锁定
@@ -238,12 +257,23 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
             _activatedKinds.add(kind);
           });
           _autoOpened = true;
+          // 「带出上一笔」的来源探测：这条分支会把 _selectedKind 改成分类所属
+          // 类型（绕过了分段选择器），不补一次探测的话回到网格后按钮会缺位。
+          unawaited(_probeCopySource(kind));
           // 直接调用 onPick 逻辑，打开金额输入
           await _onCategorySelected(context, c, kind);
         });
       }
     }
     // 注意：转账编辑模式不需要在这里做任何操作，让 TransferForm 自己处理
+
+    // 「带出上一笔」：抽屉首帧后探一次当前类型的来源（两种形态共用；编辑态与
+    // 转账段由 [_probeCopySource] 直接跳过）。
+    if (widget.quickAdd && widget.initialKind != 'transfer') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_probeCopySource(widget.initialKind));
+      });
+    }
   }
 
   /// 解析「某类型」的异步初值：分类与账户。两者都取不到就保持空值 ——
@@ -440,8 +470,136 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
         // 继承值（见 [_onCategorySelected]）。
         if (value != 'transfer') {
           unawaited(_resolveQuickInitials(value));
+          // 每个类型各有自己的「上一笔」，切过去要补探一次（结果缓存，只探一次）。
+          unawaited(_probeCopySource(value));
         }
       }),
+    );
+  }
+
+  /// 「带出上一笔」入口是否**允许出现**：新建态 + 非转账段 + 走抽屉形态。
+  ///
+  /// 编辑既有交易时不出现：那一笔自己的值就是答案，被「上一笔」覆盖没有意义。
+  /// 转账段不出现：`TransferForm` 是另一套状态机，没有分类 / 自定义字段语义。
+  bool get _canCopyLast =>
+      widget.quickAdd &&
+      widget.renderAsBottomSheet &&
+      widget.editingTransactionId == null &&
+      _selectedKind != 'transfer';
+
+  /// 顶栏右上角的「带出上一笔」图标；无来源 / 不适用时返回 `null`。
+  ///
+  /// 只放图标（与左侧关闭键同款 IconButton，颜色走主题图标色，不再逐处取
+  /// token），文案走 `tooltip` —— 顶栏槽位固定 48 宽，塞文字按钮会把居中标题挤偏。
+  Widget? _buildCopyLastAction() {
+    if (!_canCopyLast) return null;
+    if (_copySourceByKind[_selectedKind] == null) return null;
+    return IconButton(
+      icon: const Icon(Icons.copy_all_outlined),
+      tooltip: AppLocalizations.of(context).txCopyLastAction,
+      onPressed: _copyLastEntry,
+    );
+  }
+
+  /// 探测某类型是否有「上一笔」可带出（结果按 kind 缓存，只探一次）。
+  ///
+  /// 查询是「ledger_id 等值 + ORDER BY created_at DESC LIMIT 1」，命中
+  /// `idx_transactions_ledger_created`，常数级。
+  Future<void> _probeCopySource(String kind) async {
+    if (widget.editingTransactionId != null) return;
+    if (kind == 'transfer' || !_copySourceProbed.add(kind)) return;
+    final ledgerId = ref.read(currentLedgerIdProvider);
+    final row = await ref.read(repositoryProvider).getLastRecordedTransaction(
+          ledgerId: ledgerId,
+          kind: kind,
+        );
+    if (!mounted) return;
+    setState(() => _copySourceByKind[kind] = row);
+  }
+
+  /// 点「带出上一笔」：组装载荷并落到当前形态的记账表单。
+  ///
+  /// - 快捷形态（金额表单已在屏上）：把载荷交给表单**就地装填**（不关不重建）；
+  /// - 分类网格形态（还没有表单）：等同于「选中上一笔的分类并进入记账表单」；
+  ///   上一笔没有可用分类时只暂存 + 提示，等用户点分类格时一并生效。
+  Future<void> _copyLastEntry() async {
+    final kind = _selectedKind;
+    if (!_canCopyLast) return;
+    final source = _copySourceByKind[kind];
+    if (source == null) return;
+
+    final draft = await _buildLastEntryDraft(source, kind);
+    if (!mounted) return;
+    HapticFeedback.lightImpact();
+
+    if (_isQuickEntryMode) {
+      setState(() {
+        _lastEntryPrefill = draft;
+        _lastEntryPrefillToken++;
+        // 同步宿主持有的初值，避免下一次重建把**过时**的分类 / 账户再传下去
+        // （表单侧已置 _categoryPicked / _accountPicked，不会吃回去，但状态要自洽）。
+        _quickCategoryByKind[kind] = draft.category;
+        _quickAccountByKind[kind] = draft.accountId;
+      });
+      return;
+    }
+
+    _pendingGridPrefill = draft;
+    final category = draft.category;
+    if (category == null) {
+      // 上一笔没有分类（历史数据 / 跨类型）：网格形态下没有「进哪张表单」的
+      // 落点，只能等用户点分类格 —— 提示一句，别让用户以为按钮没反应。
+      showToast(context, AppLocalizations.of(context).txCopyLastPickCategory);
+      return;
+    }
+    await _onCategorySelected(context, category, kind);
+  }
+
+  /// 把来源交易组装成「带出上一笔」载荷（**除金额外的字段**）。
+  ///
+  /// 每项都过一遍「还能不能用」的校验，宁可少带也不带坏值：
+  /// - 分类：已删除 / 类型不符 → 不带出（预填错分类比不预填糟得多）；
+  /// - 账户：复用 [_validatedAccountId]（删除 / 隐藏 / 币种不符 → 不带出）；
+  /// - 标签：走 join 查询，已删除的标签天然不返回，避免悬空 id 在保存时炸外键；
+  /// - 自定义字段：直接读交易行上的值（不依赖定义表是否已同步），定义缺了值也还在；
+  /// - 备注敏感标记：设备本地标记，同文案沿用同一隐私处理（方向是安全侧）。
+  ///
+  /// **刻意不带出**：金额 / 原始金额 / 折算金额 / 汇率 / 发生日期（保持今天）/
+  /// 附件（复制文件超出本需求范围）。
+  Future<LastEntryDraft> _buildLastEntryDraft(
+    Transaction source,
+    String kind,
+  ) async {
+    final ledgerId = ref.read(currentLedgerIdProvider);
+    final repo = ref.read(repositoryProvider);
+
+    Category? category;
+    final categoryId = source.categoryId;
+    if (categoryId != null) {
+      final c = await _resolveCategoryById(categoryId);
+      if (c != null && c.kind == kind) category = c;
+    }
+
+    final sourceAccountId = source.accountId;
+    final accountId = sourceAccountId == null
+        ? null
+        : await _validatedAccountId(sourceAccountId, ledgerId);
+
+    final tags = await repo.getTagsForTransaction(source.id);
+    final customValues = await repo.getValuesForTransaction(source.id);
+    final sensitiveIds = await ref.read(sensitiveNoteServiceProvider).load();
+
+    return LastEntryDraft(
+      kind: kind,
+      category: category,
+      accountId: accountId,
+      note: source.note,
+      noteSensitive: sensitiveIds.contains(source.id),
+      tagIds: [for (final t in tags) t.id],
+      excludeFromStats: source.excludeFromStats,
+      excludeFromBudget: source.excludeFromBudget,
+      currencyCode: source.currencyCode,
+      customValues: customValues,
     );
   }
 
@@ -466,6 +624,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     // 背景色取当前模式下的页面背景（淡蓝/深蓝），让弹窗与页面背景融为一体，
     // 而不是像传统 BottomSheet 那样使用卡片色悬浮在页面上（用户要求）。
     final sheetBg = PiggyTokens.scaffoldBackground(context);
+    // 「带出上一笔」：分类网格形态还没有表单，按钮放在标题栏右上角动作位
+    // （`ExpandableBottomSheet.actions` → `PiggyTitleBar.actions`）。
+    final copyLastAction = _buildCopyLastAction();
     return ExpandableBottomSheet(
       title: isEditing ? l10n.commonEdit : l10n.widgetQuickAddLabel,
       onClose: () => Navigator.of(context).pop(),
@@ -473,6 +634,7 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       minChildSize: 0.35,
       maxChildSize: 1.0,
       backgroundColor: sheetBg,
+      actions: copyLastAction == null ? null : [copyLastAction],
       bottom: segmentControl,
       bottomHeight: 52,
       builder: (context, scrollController) {
@@ -528,6 +690,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
         children: [
           PiggySheetHeader(
             title: isEditing ? l10n.commonEdit : l10n.widgetQuickAddLabel,
+            // 「带出上一笔」：右上角只放图标，无来源 / 转账段 / 编辑态为 null
+            // （标题仍严格居中 —— 槽位固定 48 宽）。
+            trailingAction: _buildCopyLastAction(),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
@@ -610,6 +775,11 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       initialNativeAmount: widget.initialNativeAmount,
       initialOriginalAmount: widget.initialOriginalAmount,
       initialCustomValues: widget.initialCustomValues,
+      // 「带出上一笔」：载荷 + 版本号驱动 didUpdateWidget 就地装填。载荷自带
+      // kind，表单只在与自己的 transactionKind 一致时应用（支出 / 收入两份表单
+      // 在 IndexedStack 里同时保活，同一份载荷会同时到达两者）。
+      prefill: _lastEntryPrefill,
+      prefillToken: _lastEntryPrefillToken,
       onSubmit: (res) => _submitQuickEntry(context, kind, res),
     );
   }
@@ -682,11 +852,18 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     }
     final ledgerId = ref.read(currentLedgerIdProvider);
 
+    // 「带出上一笔」（网格形态）：载荷在按钮按下时暂存，用户点分类格的这一下把
+    // 它一并带进金额表单 —— 分类以**用户点的这一格**为准（载荷里的分类只是
+    // 「自动替你点一下」的入口），其余字段由载荷决定（含「源确实没填」= 留空）。
+    // 立即取出并清空：本次消费掉，不影响用户取消后重选分类。
+    final prefill = _pendingGridPrefill;
+    _pendingGridPrefill = null;
+
     // 确定初始账户ID（与 [_resolveQuickInitials] 同一条优先链）：
-    // 显式传入 > 已解析的初值（5 分钟继承 > 默认账户）> 现查默认账户。
+    // 显式传入 > 带出的账户 > 已解析的初值（5 分钟继承 > 默认账户）> 现查默认账户。
     // 已解析初值走 [_quickAccountByKind]:网格路径命中窗口时用户改点别的分类，
     // 账户仍应继承上一笔（账户默认与分类选择互不绑定）。
-    int? initialAccountId = widget.initialAccountId;
+    int? initialAccountId = widget.initialAccountId ?? prefill?.accountId;
     if (widget.editingTransactionId == null && initialAccountId == null) {
       initialAccountId = _quickAccountByKind[kind];
       initialAccountId ??= await _getDefaultAccountId(kind, ledgerId);
@@ -721,20 +898,33 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
           initialDate: widget.initialDate ?? DateTime.now(),
           // 换分类回路回填的金额优先于进入页面时的初始金额
           initialAmount: _lastAmount ?? widget.initialAmount,
-          initialNote: widget.initialNote,
+          // 「带出上一笔」激活时**整体接管**这几个非金额字段：载荷里为空就是
+          // 「不带出 / 源确实没填」，不再回落到 widget.initialXxx（金额与
+          // 发生日期不在此列 —— 那两个刻意不带出）。
+          initialNote: prefill != null ? prefill.note : widget.initialNote,
           initialAccountId: initialAccountId,
-          initialTagIds: widget.initialTagIds,
-          initialNoteSensitive: _editingNoteSensitive,
+          initialTagIds: prefill != null ? prefill.tagIds : widget.initialTagIds,
+          initialNoteSensitive: prefill != null
+              ? prefill.noteSensitive
+              : _editingNoteSensitive,
           showAccountPicker: true,
           ledgerId: ledgerId,
           editingTransactionId: widget.editingTransactionId,
           transactionKind: kind,
-          initialExcludeFromStats: widget.initialExcludeFromStats,
-          initialExcludeFromBudget: widget.initialExcludeFromBudget,
-          initialCurrencyCode: widget.initialCurrencyCode,
+          initialExcludeFromStats: prefill != null
+              ? prefill.excludeFromStats
+              : widget.initialExcludeFromStats,
+          initialExcludeFromBudget: prefill != null
+              ? prefill.excludeFromBudget
+              : widget.initialExcludeFromBudget,
+          initialCurrencyCode: prefill != null
+              ? prefill.currencyCode
+              : widget.initialCurrencyCode,
           initialNativeAmount: widget.initialNativeAmount,
           initialOriginalAmount: widget.initialOriginalAmount,
-          initialCustomValues: widget.initialCustomValues,
+          initialCustomValues: prefill != null
+              ? prefill.customValues
+              : widget.initialCustomValues,
           onSubmit: (res) async {
             await _persistTransaction(context, kind, res);
             // 旧流程有两层 modal：金额表单 + 分类网格抽屉，要依次关掉。

@@ -7371,6 +7371,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get txFlagBudgetExcludedTag => '不计预算';
 
   @override
+  String get txCopyLastAction => '带出上一笔';
+
+  @override
+  String get txCopyLastPickCategory => '已带出上一笔，请选择分类';
+
+  @override
   String get txCurrencyLabel => '币种';
 
   @override
@@ -16250,6 +16256,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get txFlagBudgetExcludedTag => '不計預算';
+
+  @override
+  String get txCopyLastAction => '帶出上一筆';
+
+  @override
+  String get txCopyLastPickCategory => '已帶出上一筆，請選擇分類';
 
   @override
   String get txCurrencyLabel => '幣種';

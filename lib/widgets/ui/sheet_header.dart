@@ -19,6 +19,7 @@ class PiggySheetHeader extends StatelessWidget {
     this.onConfirm,
     this.confirmLabel,
     this.confirmEnabled = true,
+    this.trailingAction,
   });
 
   /// 顶栏居中标题。
@@ -39,6 +40,16 @@ class PiggySheetHeader extends StatelessWidget {
 
   /// 钩子是否可用；置 false 时钩子以禁用态呈现（如数据未就绪）。
   final bool confirmEnabled;
+
+  /// 顶栏**右上角**的自定义图标动作（只渲染图标，`null` = 补等宽占位）。
+  ///
+  /// 与 [onConfirm] 互斥且 [onConfirm] 优先：右侧只留**一个**动作位，确认钩子是
+  /// 主流程。槽位与左侧取消键等宽（标题因此始终居中），只放图标类动作，文案走
+  /// `IconButton.tooltip` —— 塞文字按钮会把居中标题挤偏。
+  ///
+  /// 当前唯一在用者：记账抽屉（`TransactionEditorPage._buildQuickEntrySheet`）的
+  /// 「带出上一笔」。
+  final Widget? trailingAction;
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +91,7 @@ class PiggySheetHeader extends StatelessWidget {
               onPressed: confirmEnabled ? onConfirm : null,
             )
           else
-            const SizedBox(width: 48),
+            SizedBox(width: 48, child: trailingAction),
         ],
       ),
     );

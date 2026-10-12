@@ -3283,6 +3283,8 @@
   "txFlagExcludeFromBudgetHint": "不占用预算额度",
   "txFlagExcludedTag": "不计收支",
   "txFlagBudgetExcludedTag": "不计预算",
+  "txCopyLastAction": "带出上一笔",
+  "txCopyLastPickCategory": "已带出上一笔，请选择分类",
   "txCurrencyLabel": "币种",
   "txRateLabel": "汇率",
   "txConvertedPreview": "≈ {amount} {currency}",

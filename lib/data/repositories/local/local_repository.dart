@@ -1168,6 +1168,16 @@ class LocalRepository extends BaseRepository {
       );
 
   @override
+  Future<Transaction?> getLastRecordedTransaction({
+    required int ledgerId,
+    required String kind,
+  }) =>
+      _transactionRepo.getLastRecordedTransaction(
+        ledgerId: ledgerId,
+        kind: kind,
+      );
+
+  @override
   Future<
       List<
           ({

@@ -13814,6 +13814,18 @@ abstract class AppLocalizations {
   /// **'No budget'**
   String get txFlagBudgetExcludedTag;
 
+  /// No description provided for @txCopyLastAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy last entry'**
+  String get txCopyLastAction;
+
+  /// No description provided for @txCopyLastPickCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Last entry copied, now pick a category'**
+  String get txCopyLastPickCategory;
+
   /// No description provided for @txCurrencyLabel.
   ///
   /// In en, this message translates to:

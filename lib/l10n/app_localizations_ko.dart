@@ -7454,6 +7454,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get txFlagBudgetExcludedTag => '예산 제외';
 
   @override
+  String get txCopyLastAction => '지난 거래 불러오기';
+
+  @override
+  String get txCopyLastPickCategory => '지난 거래를 불러왔습니다. 분류를 선택하세요';
+
+  @override
   String get txCurrencyLabel => '통화';
 
   @override

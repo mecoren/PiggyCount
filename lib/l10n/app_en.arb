@@ -3490,6 +3490,8 @@
   "txFlagExcludeFromBudgetHint": "Doesn't count against your budget",
   "txFlagExcludedTag": "Excluded",
   "txFlagBudgetExcludedTag": "No budget",
+  "txCopyLastAction": "Copy last entry",
+  "txCopyLastPickCategory": "Last entry copied, now pick a category",
   "txCurrencyLabel": "Currency",
   "txRateLabel": "Rate",
   "txConvertedPreview": "≈ {amount} {currency}",

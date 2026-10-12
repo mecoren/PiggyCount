@@ -7667,6 +7667,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get txFlagBudgetExcludedTag => 'No budget';
 
   @override
+  String get txCopyLastAction => 'Copy last entry';
+
+  @override
+  String get txCopyLastPickCategory => 'Last entry copied, now pick a category';
+
+  @override
   String get txCurrencyLabel => 'Currency';
 
   @override
