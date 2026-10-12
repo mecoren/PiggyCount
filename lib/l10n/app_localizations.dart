@@ -9665,24 +9665,6 @@ abstract class AppLocalizations {
   /// **'Recognized automatically in the background after sharing — no need to open PiggyCount'**
   String get shareBillingActionHint;
 
-  /// No description provided for @automation.
-  ///
-  /// In en, this message translates to:
-  /// **'Automation'**
-  String get automation;
-
-  /// No description provided for @automationDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Recording reminder'**
-  String get automationDesc;
-
-  /// No description provided for @automationPageTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Automation'**
-  String get automationPageTitle;
-
   /// No description provided for @appearanceSettings.
   ///
   /// In en, this message translates to:
@@ -13813,6 +13795,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No budget'**
   String get txFlagBudgetExcludedTag;
+
+  /// No description provided for @refundLinkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Link original transaction'**
+  String get refundLinkTitle;
+
+  /// No description provided for @refundLinkSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This income is a refund of an expense'**
+  String get refundLinkSubtitle;
+
+  /// No description provided for @refundLinkedRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Offset: {amount} · {date}'**
+  String refundLinkedRow(Object amount, Object date);
+
+  /// No description provided for @refundOriginalMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Offset: original transaction deleted'**
+  String get refundOriginalMissing;
+
+  /// No description provided for @refundPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select expense to offset'**
+  String get refundPickerTitle;
+
+  /// No description provided for @refundPickerSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search amount, note, or date'**
+  String get refundPickerSearchHint;
+
+  /// No description provided for @refundPickerEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No expense transactions to link'**
+  String get refundPickerEmpty;
+
+  /// No description provided for @refundBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund'**
+  String get refundBadge;
+
+  /// No description provided for @reimburseStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reimbursement'**
+  String get reimburseStatusLabel;
+
+  /// No description provided for @reimburseNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Not applicable'**
+  String get reimburseNone;
+
+  /// No description provided for @reimbursePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get reimbursePending;
+
+  /// No description provided for @reimburseReimbursed.
+  ///
+  /// In en, this message translates to:
+  /// **'Reimbursed'**
+  String get reimburseReimbursed;
 
   /// No description provided for @txCopyLastAction.
   ///

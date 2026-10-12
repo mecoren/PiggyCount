@@ -5155,15 +5155,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareBillingActionHint => '分享后会在后台自动识别记账，无需手动打开小猪记账';
 
   @override
-  String get automation => '自动化';
-
-  @override
-  String get automationDesc => '记账提醒';
-
-  @override
-  String get automationPageTitle => '自动化功能';
-
-  @override
   String get appearanceSettings => '个性化设置';
 
   @override
@@ -7369,6 +7360,44 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get txFlagBudgetExcludedTag => '不计预算';
+
+  @override
+  String get refundLinkTitle => '关联原交易';
+
+  @override
+  String get refundLinkSubtitle => '这笔收入是某笔支出的退款';
+
+  @override
+  String refundLinkedRow(Object amount, Object date) {
+    return '冲正：$amount · $date';
+  }
+
+  @override
+  String get refundOriginalMissing => '冲正：原交易已删除';
+
+  @override
+  String get refundPickerTitle => '选择要冲正的支出';
+
+  @override
+  String get refundPickerSearchHint => '搜索金额、备注或日期';
+
+  @override
+  String get refundPickerEmpty => '没有可关联的支出交易';
+
+  @override
+  String get refundBadge => '退款';
+
+  @override
+  String get reimburseStatusLabel => '报销状态';
+
+  @override
+  String get reimburseNone => '不涉及';
+
+  @override
+  String get reimbursePending => '待报销';
+
+  @override
+  String get reimburseReimbursed => '已报销';
 
   @override
   String get txCopyLastAction => '带出上一笔';
@@ -14042,15 +14071,6 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get shareBillingActionHint => '分享後會在背景自動識別記帳，無需手動開啟小豬記帳';
 
   @override
-  String get automation => '自動化';
-
-  @override
-  String get automationDesc => '記帳提醒';
-
-  @override
-  String get automationPageTitle => '自動化功能';
-
-  @override
   String get appearanceSettings => '個性化設定';
 
   @override
@@ -16256,6 +16276,44 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get txFlagBudgetExcludedTag => '不計預算';
+
+  @override
+  String get refundLinkTitle => '關聯原交易';
+
+  @override
+  String get refundLinkSubtitle => '這筆收入是某筆支出的退款';
+
+  @override
+  String refundLinkedRow(Object amount, Object date) {
+    return '沖正：$amount · $date';
+  }
+
+  @override
+  String get refundOriginalMissing => '沖正：原交易已刪除';
+
+  @override
+  String get refundPickerTitle => '選擇要沖正的支出';
+
+  @override
+  String get refundPickerSearchHint => '搜尋金額、備註或日期';
+
+  @override
+  String get refundPickerEmpty => '沒有可關聯的支出交易';
+
+  @override
+  String get refundBadge => '退款';
+
+  @override
+  String get reimburseStatusLabel => '報銷狀態';
+
+  @override
+  String get reimburseNone => '不涉及';
+
+  @override
+  String get reimbursePending => '待報銷';
+
+  @override
+  String get reimburseReimbursed => '已報銷';
 
   @override
   String get txCopyLastAction => '帶出上一筆';

@@ -5367,15 +5367,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Recognized automatically in the background after sharing — no need to open PiggyCount';
 
   @override
-  String get automation => 'Automation';
-
-  @override
-  String get automationDesc => 'Recording reminder';
-
-  @override
-  String get automationPageTitle => 'Automation';
-
-  @override
   String get appearanceSettings => 'Personalization';
 
   @override
@@ -7665,6 +7656,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get txFlagBudgetExcludedTag => 'No budget';
+
+  @override
+  String get refundLinkTitle => 'Link original transaction';
+
+  @override
+  String get refundLinkSubtitle => 'This income is a refund of an expense';
+
+  @override
+  String refundLinkedRow(Object amount, Object date) {
+    return 'Offset: $amount · $date';
+  }
+
+  @override
+  String get refundOriginalMissing => 'Offset: original transaction deleted';
+
+  @override
+  String get refundPickerTitle => 'Select expense to offset';
+
+  @override
+  String get refundPickerSearchHint => 'Search amount, note, or date';
+
+  @override
+  String get refundPickerEmpty => 'No expense transactions to link';
+
+  @override
+  String get refundBadge => 'Refund';
+
+  @override
+  String get reimburseStatusLabel => 'Reimbursement';
+
+  @override
+  String get reimburseNone => 'Not applicable';
+
+  @override
+  String get reimbursePending => 'Pending';
+
+  @override
+  String get reimburseReimbursed => 'Reimbursed';
 
   @override
   String get txCopyLastAction => 'Copy last entry';

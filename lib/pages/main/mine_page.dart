@@ -18,7 +18,7 @@ import '../settings/appearance_settings_page.dart';
 import '../settings/holiday_settings_page.dart';
 import '../settings/investment_settings_page.dart';
 import '../settings/smart_billing_page.dart';
-import '../settings/automation_page.dart';
+import '../settings/reminder_settings_page.dart';
 import '../settings/about_page.dart';
 import '../settings/custom_field_manage_page.dart';
 import '../budget/budget_page.dart';
@@ -400,15 +400,16 @@ class MinePage extends ConsumerWidget {
                     ),
                     // 预算管理 已挪到「账本管理 → 长按某账本 → 预算管理」
                     // (每个账本独立预算,放在账本菜单内语义更匹配)。
-                    // 自动化功能
+                    // 记账提醒（原「自动化功能」中间页只剩这一项，
+                    // 2026-10-12 壳页面清理后入口上移直达，见 prd/engineering_debt_cleanup）
                     SettingsNavItem(
-                      icon: Icons.schedule_outlined,
-                      title: AppLocalizations.of(context).automation,
-                      subtitle: AppLocalizations.of(context).automationDesc,
+                      icon: Icons.notifications_active_outlined,
+                      title: l10n.mineReminderSettings,
+                      subtitle: l10n.mineReminderSettingsSubtitle,
                       onTap: () async {
                         await Navigator.of(context).push(
                           MaterialPageRoute(
-                              builder: (_) => const AutomationPage()),
+                              builder: (_) => const ReminderSettingsPage()),
                         );
                       },
                     ),

@@ -5211,15 +5211,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '공유 후 백그라운드에서 자동으로 인식됩니다 — PiggyCount를 열 필요가 없습니다';
 
   @override
-  String get automation => '자동화';
-
-  @override
-  String get automationDesc => '기록 알림';
-
-  @override
-  String get automationPageTitle => '자동화';
-
-  @override
   String get appearanceSettings => '개인화';
 
   @override
@@ -7452,6 +7443,44 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get txFlagBudgetExcludedTag => '예산 제외';
+
+  @override
+  String get refundLinkTitle => '원 거래 연결';
+
+  @override
+  String get refundLinkSubtitle => '이 수입은 특정 지출의 환불입니다';
+
+  @override
+  String refundLinkedRow(Object amount, Object date) {
+    return '정정: $amount · $date';
+  }
+
+  @override
+  String get refundOriginalMissing => '정정: 원 거래가 삭제됨';
+
+  @override
+  String get refundPickerTitle => '정정할 지출 선택';
+
+  @override
+  String get refundPickerSearchHint => '금액, 메모 또는 날짜 검색';
+
+  @override
+  String get refundPickerEmpty => '연결할 지출 거래가 없습니다';
+
+  @override
+  String get refundBadge => '환불';
+
+  @override
+  String get reimburseStatusLabel => '정산 상태';
+
+  @override
+  String get reimburseNone => '해당 없음';
+
+  @override
+  String get reimbursePending => '정산 대기';
+
+  @override
+  String get reimburseReimbursed => '정산 완료';
 
   @override
   String get txCopyLastAction => '지난 거래 불러오기';

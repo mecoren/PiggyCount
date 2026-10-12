@@ -10,7 +10,6 @@ import '../../styles/tokens.dart';
 import '../../services/system/update_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/ui_scale_extensions.dart';
-import 'app_icon_page.dart';
 import 'changelog_page.dart';
 import 'log_center_page.dart';
 
@@ -201,18 +200,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                           },
                   );
                 }),
-              SettingsNavItem(
-                icon: Icons.app_shortcut,
-                title: l10n.appName,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const AppIconPage(),
-                    ),
-                  );
-                },
-              ),
               SettingsNavItem(
                 icon: Icons.bug_report_outlined,
                 title: l10n.logCenterTitle,
