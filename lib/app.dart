@@ -144,15 +144,10 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       _holidayScheduler = HolidayScheduler(onCheck: _runScheduledHolidayCheck)
         ..start();
       unawaited(_runScheduledHolidayCheck());
-      // P1-E 快捷记账模式：首帧后 fire-and-forget 预热「记忆分类」，
-      // 使 FAB 点击 → 金额表单之间没有 DB 往返延迟（design.md 决策 3）。
-      // provider 自身 watch currentLedgerIdProvider，账本切换会自动重算，
-      // 这里只需把两种收支各预热一次；开关关闭时不做无谓查询。
-      if (ref.read(quickEntryModeEnabledProvider)) {
-        for (final kind in const ['expense', 'income']) {
-          unawaited(ref.read(quickEntryLastCategoryProvider(kind).future));
-        }
-      }
+      // 注：P1-E 时代这里曾预热 `quickEntryLastCategoryProvider`（「记忆上次
+      // 分类」）。该能力已由「5 分钟内继承上一笔的分类与账户」取代 —— 窗口随
+      // 墙钟滑动，**不能**缓存，改为记账页每次打开时现查一次
+      // （`getRecentEntryDefaults`，命中 (ledger_id, created_at) 索引、常数级）。
     });
   }
 

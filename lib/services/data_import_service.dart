@@ -2359,19 +2359,22 @@ Future<(int, ({int inserted, int skippedRecurring}))>
 /// P1-5：恢复前抓取交易的「本机专属列」（按 syncId）。
 ///
 /// 【为什么需要】
-/// `created_by_user_id` / `last_edited_by_user_id` **从不出现在云快照里**
-/// （`transactions_json.dart` 的 item map 没有这两个键），而全量恢复是
-/// 「清空后重建行」—— 重建走的 `TransactionsCompanion.insert` 不含它们，
-/// 于是本机值被静默清空（2026-09-27 实测：全量下载后 created_by 非空行
-/// **5075 → 0**）。
+/// `created_by_user_id` / `last_edited_by_user_id` / `created_at`（v55 交易
+/// 录入时刻）**从不出现在云快照里**（`transactions_json.dart` 的 item map 没有
+/// 这些键），而全量恢复是「清空后重建行」—— 重建走的
+/// `TransactionsCompanion.insert` 不含它们，于是本机值被静默清空
+/// （2026-09-27 实测：全量下载后 created_by 非空行 **5075 → 0**）。
 ///
-/// 语义上这属于"本机专属信息被远端覆盖"：**云端从未对这两列表达过意见**，
+/// 语义上这属于「本机专属信息被远端覆盖」：**云端从未对这些列表达过意见**，
 /// 恢复不应让它们丢失。（增量合并路径本来就不会碰它们 —— 合并用的
-/// `TransactionUpdateBySyncIdData` 里没有这两列，实测 5075 → 5075 不变。）
+/// `TransactionUpdateBySyncIdData` 里没有这些列，实测 5075 → 5075 不变。）
+///
+/// `created_at` 尤其不能丢：真值只写一次（用户录入那一刻），恢复清零后
+/// 「5 分钟内继承上一笔」就再也命中不了刚录的那几笔。
 ///
 /// 只收 `syncId` 非空的行：没有稳定身份就无法在重建后对上号（这类行本来也
 /// 无法跨设备对齐，行为与改动前一致）。
-Future<Map<String, (String?, String?)>> _snapshotLocalOnlyTxColumns(
+Future<Map<String, (String?, String?, DateTime?)>> _snapshotLocalOnlyTxColumns(
     PiggyDatabase db, int ledgerId) async {
   final rows = await (db.select(db.transactions)
         ..where((t) => t.ledgerId.equals(ledgerId)))
@@ -2379,7 +2382,7 @@ Future<Map<String, (String?, String?)>> _snapshotLocalOnlyTxColumns(
   return {
     for (final r in rows)
       if (r.syncId != null && r.syncId!.isNotEmpty)
-        r.syncId!: (r.createdByUserId, r.lastEditedByUserId),
+        r.syncId!: (r.createdByUserId, r.lastEditedByUserId, r.createdAt),
   };
 }
 
@@ -2391,16 +2394,16 @@ Future<Map<String, (String?, String?)>> _snapshotLocalOnlyTxColumns(
 Future<void> _restoreLocalOnlyTxColumns(
   PiggyDatabase db,
   int ledgerId,
-  Map<String, (String?, String?)> saved,
+  Map<String, (String?, String?, DateTime?)> saved,
 ) async {
   final pending = [
     for (final e in saved.entries)
-      if (e.value.$1 != null || e.value.$2 != null) e,
+      if (e.value.$1 != null || e.value.$2 != null || e.value.$3 != null) e,
   ];
   if (pending.isEmpty) return;
   await db.batch((b) {
     for (final e in pending) {
-      final (createdBy, lastEditedBy) = e.value;
+      final (createdBy, lastEditedBy, createdAt) = e.value;
       b.update(
         db.transactions,
         TransactionsCompanion(
@@ -2410,14 +2413,17 @@ Future<void> _restoreLocalOnlyTxColumns(
           lastEditedByUserId: lastEditedBy == null
               ? const d.Value.absent()
               : d.Value(lastEditedBy),
+          createdAt: createdAt == null
+              ? const d.Value.absent()
+              : d.Value(createdAt),
         ),
         where: (t) => t.ledgerId.equals(ledgerId) & t.syncId.equals(e.key),
       );
     }
   });
   logger.info('DataImport',
-      '恢复后回填本机专属列(created_by/last_edited_by): ${pending.length} 行 '
-      '(ledgerId=$ledgerId)');
+      '恢复后回填本机专属列(created_by/last_edited_by/created_at): '
+      '${pending.length} 行 (ledgerId=$ledgerId)');
 }
 
 /// 审计 TBL-M3：按业务键 (base, quote) 把快照携带的 syncId 回写本地

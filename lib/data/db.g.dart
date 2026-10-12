@@ -2848,6 +2848,12 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
       'updated_at', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _currencyCodeMeta =
       const VerificationMeta('currencyCode');
   @override
@@ -2890,6 +2896,7 @@ class $TransactionsTable extends Transactions
         excludeFromStats,
         excludeFromBudget,
         updatedAt,
+        createdAt,
         currencyCode,
         nativeAmount,
         originalAmount,
@@ -2990,6 +2997,10 @@ class $TransactionsTable extends Transactions
       context.handle(_updatedAtMeta,
           updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
     }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
     if (data.containsKey('currency_code')) {
       context.handle(
           _currencyCodeMeta,
@@ -3055,6 +3066,8 @@ class $TransactionsTable extends Transactions
           DriftSqlType.bool, data['${effectivePrefix}exclude_from_budget'])!,
       updatedAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at']),
       currencyCode: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}currency_code']),
       nativeAmount: attachedDatabase.typeMapping
@@ -3098,6 +3111,20 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   /// trg_transactions_touch_updated_at 自动维护。
   final DateTime? updatedAt;
 
+  /// v55：交易**录入时刻**（本设备把这一行写进库的时刻），与用户可改的
+  /// [happenedAt]（发生时间）解耦。服务「5 分钟内再次记账默认继承上一笔的
+  /// 分类与账户」——窗口判定按本列而非 happenedAt，补记历史账单（发生时间设为
+  /// 过去）时也能连续继承。
+  ///
+  /// **本地专有列**（同 createdByUserId / lastEditedByUserId）：不进快照 /
+  /// 不进指纹 / 不写 local_changes，恢复路径按 syncId 从原库回填。
+  ///
+  /// **刻意可空、不设默认值**：只有「用户交互式单笔录入」
+  /// （[LocalTransactionRepository.addTransaction]）会显式写入；批量导入
+  /// （CSV / 支付宝 / 微信）、云恢复 / 合并、周期模板自动生成的行保持 NULL ——
+  /// 它们既不会成为继承源，也不会被误当成「刚录的一笔」。
+  final DateTime? createdAt;
+
   /// v30 交易级多币种(.docs/multi-currency-ledger):交易币种(ISO 大写)。
   /// 有账户 → 恒等于账户 currency(账户内不混币);无账户 → 用户所选(L12,
   /// 默认账本本位币)。显式存让交易自包含(同步/统计不必每次 join 账户)。
@@ -3140,6 +3167,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       required this.excludeFromStats,
       required this.excludeFromBudget,
       this.updatedAt,
+      this.createdAt,
       this.currencyCode,
       this.nativeAmount,
       this.originalAmount,
@@ -3180,6 +3208,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     map['exclude_from_budget'] = Variable<bool>(excludeFromBudget);
     if (!nullToAbsent || updatedAt != null) {
       map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    if (!nullToAbsent || createdAt != null) {
+      map['created_at'] = Variable<DateTime>(createdAt);
     }
     if (!nullToAbsent || currencyCode != null) {
       map['currency_code'] = Variable<String>(currencyCode);
@@ -3229,6 +3260,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       updatedAt: updatedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(updatedAt),
+      createdAt: createdAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(createdAt),
       currencyCode: currencyCode == null && nullToAbsent
           ? const Value.absent()
           : Value(currencyCode),
@@ -3265,6 +3299,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       excludeFromStats: serializer.fromJson<bool>(json['excludeFromStats']),
       excludeFromBudget: serializer.fromJson<bool>(json['excludeFromBudget']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+      createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
       currencyCode: serializer.fromJson<String?>(json['currencyCode']),
       nativeAmount: serializer.fromJson<double?>(json['nativeAmount']),
       originalAmount: serializer.fromJson<double?>(json['originalAmount']),
@@ -3291,6 +3326,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'excludeFromStats': serializer.toJson<bool>(excludeFromStats),
       'excludeFromBudget': serializer.toJson<bool>(excludeFromBudget),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+      'createdAt': serializer.toJson<DateTime?>(createdAt),
       'currencyCode': serializer.toJson<String?>(currencyCode),
       'nativeAmount': serializer.toJson<double?>(nativeAmount),
       'originalAmount': serializer.toJson<double?>(originalAmount),
@@ -3315,6 +3351,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           bool? excludeFromStats,
           bool? excludeFromBudget,
           Value<DateTime?> updatedAt = const Value.absent(),
+          Value<DateTime?> createdAt = const Value.absent(),
           Value<String?> currencyCode = const Value.absent(),
           Value<double?> nativeAmount = const Value.absent(),
           Value<double?> originalAmount = const Value.absent(),
@@ -3340,6 +3377,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         excludeFromStats: excludeFromStats ?? this.excludeFromStats,
         excludeFromBudget: excludeFromBudget ?? this.excludeFromBudget,
         updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+        createdAt: createdAt.present ? createdAt.value : this.createdAt,
         currencyCode:
             currencyCode.present ? currencyCode.value : this.currencyCode,
         nativeAmount:
@@ -3380,6 +3418,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ? data.excludeFromBudget.value
           : this.excludeFromBudget,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       currencyCode: data.currencyCode.present
           ? data.currencyCode.value
           : this.currencyCode,
@@ -3414,6 +3453,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('excludeFromStats: $excludeFromStats, ')
           ..write('excludeFromBudget: $excludeFromBudget, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('createdAt: $createdAt, ')
           ..write('currencyCode: $currencyCode, ')
           ..write('nativeAmount: $nativeAmount, ')
           ..write('originalAmount: $originalAmount, ')
@@ -3423,27 +3463,29 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      ledgerId,
-      type,
-      amount,
-      categoryId,
-      accountId,
-      toAccountId,
-      happenedAt,
-      note,
-      recurringId,
-      syncId,
-      createdByUserId,
-      lastEditedByUserId,
-      excludeFromStats,
-      excludeFromBudget,
-      updatedAt,
-      currencyCode,
-      nativeAmount,
-      originalAmount,
-      customValuesJson);
+  int get hashCode => Object.hashAll([
+        id,
+        ledgerId,
+        type,
+        amount,
+        categoryId,
+        accountId,
+        toAccountId,
+        happenedAt,
+        note,
+        recurringId,
+        syncId,
+        createdByUserId,
+        lastEditedByUserId,
+        excludeFromStats,
+        excludeFromBudget,
+        updatedAt,
+        createdAt,
+        currencyCode,
+        nativeAmount,
+        originalAmount,
+        customValuesJson
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3464,6 +3506,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.excludeFromStats == this.excludeFromStats &&
           other.excludeFromBudget == this.excludeFromBudget &&
           other.updatedAt == this.updatedAt &&
+          other.createdAt == this.createdAt &&
           other.currencyCode == this.currencyCode &&
           other.nativeAmount == this.nativeAmount &&
           other.originalAmount == this.originalAmount &&
@@ -3487,6 +3530,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<bool> excludeFromStats;
   final Value<bool> excludeFromBudget;
   final Value<DateTime?> updatedAt;
+  final Value<DateTime?> createdAt;
   final Value<String?> currencyCode;
   final Value<double?> nativeAmount;
   final Value<double?> originalAmount;
@@ -3508,6 +3552,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.excludeFromStats = const Value.absent(),
     this.excludeFromBudget = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
     this.currencyCode = const Value.absent(),
     this.nativeAmount = const Value.absent(),
     this.originalAmount = const Value.absent(),
@@ -3530,6 +3575,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.excludeFromStats = const Value.absent(),
     this.excludeFromBudget = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
     this.currencyCode = const Value.absent(),
     this.nativeAmount = const Value.absent(),
     this.originalAmount = const Value.absent(),
@@ -3554,6 +3600,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<bool>? excludeFromStats,
     Expression<bool>? excludeFromBudget,
     Expression<DateTime>? updatedAt,
+    Expression<DateTime>? createdAt,
     Expression<String>? currencyCode,
     Expression<double>? nativeAmount,
     Expression<double>? originalAmount,
@@ -3577,6 +3624,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (excludeFromStats != null) 'exclude_from_stats': excludeFromStats,
       if (excludeFromBudget != null) 'exclude_from_budget': excludeFromBudget,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (createdAt != null) 'created_at': createdAt,
       if (currencyCode != null) 'currency_code': currencyCode,
       if (nativeAmount != null) 'native_amount': nativeAmount,
       if (originalAmount != null) 'original_amount': originalAmount,
@@ -3601,6 +3649,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<bool>? excludeFromStats,
       Value<bool>? excludeFromBudget,
       Value<DateTime?>? updatedAt,
+      Value<DateTime?>? createdAt,
       Value<String?>? currencyCode,
       Value<double?>? nativeAmount,
       Value<double?>? originalAmount,
@@ -3622,6 +3671,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       excludeFromStats: excludeFromStats ?? this.excludeFromStats,
       excludeFromBudget: excludeFromBudget ?? this.excludeFromBudget,
       updatedAt: updatedAt ?? this.updatedAt,
+      createdAt: createdAt ?? this.createdAt,
       currencyCode: currencyCode ?? this.currencyCode,
       nativeAmount: nativeAmount ?? this.nativeAmount,
       originalAmount: originalAmount ?? this.originalAmount,
@@ -3681,6 +3731,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
     if (currencyCode.present) {
       map['currency_code'] = Variable<String>(currencyCode.value);
     }
@@ -3715,6 +3768,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('excludeFromStats: $excludeFromStats, ')
           ..write('excludeFromBudget: $excludeFromBudget, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('createdAt: $createdAt, ')
           ..write('currencyCode: $currencyCode, ')
           ..write('nativeAmount: $nativeAmount, ')
           ..write('originalAmount: $originalAmount, ')
@@ -13497,6 +13551,7 @@ typedef $$TransactionsTableCreateCompanionBuilder = TransactionsCompanion
   Value<bool> excludeFromStats,
   Value<bool> excludeFromBudget,
   Value<DateTime?> updatedAt,
+  Value<DateTime?> createdAt,
   Value<String?> currencyCode,
   Value<double?> nativeAmount,
   Value<double?> originalAmount,
@@ -13520,6 +13575,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<bool> excludeFromStats,
   Value<bool> excludeFromBudget,
   Value<DateTime?> updatedAt,
+  Value<DateTime?> createdAt,
   Value<String?> currencyCode,
   Value<double?> nativeAmount,
   Value<double?> originalAmount,
@@ -13586,6 +13642,9 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get currencyCode => $composableBuilder(
       column: $table.currencyCode, builder: (column) => ColumnFilters(column));
@@ -13663,6 +13722,9 @@ class $$TransactionsTableOrderingComposer
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get currencyCode => $composableBuilder(
       column: $table.currencyCode,
       builder: (column) => ColumnOrderings(column));
@@ -13737,6 +13799,9 @@ class $$TransactionsTableAnnotationComposer
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
   GeneratedColumn<String> get currencyCode => $composableBuilder(
       column: $table.currencyCode, builder: (column) => column);
 
@@ -13792,6 +13857,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<bool> excludeFromStats = const Value.absent(),
             Value<bool> excludeFromBudget = const Value.absent(),
             Value<DateTime?> updatedAt = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
             Value<String?> currencyCode = const Value.absent(),
             Value<double?> nativeAmount = const Value.absent(),
             Value<double?> originalAmount = const Value.absent(),
@@ -13814,6 +13880,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             excludeFromStats: excludeFromStats,
             excludeFromBudget: excludeFromBudget,
             updatedAt: updatedAt,
+            createdAt: createdAt,
             currencyCode: currencyCode,
             nativeAmount: nativeAmount,
             originalAmount: originalAmount,
@@ -13836,6 +13903,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<bool> excludeFromStats = const Value.absent(),
             Value<bool> excludeFromBudget = const Value.absent(),
             Value<DateTime?> updatedAt = const Value.absent(),
+            Value<DateTime?> createdAt = const Value.absent(),
             Value<String?> currencyCode = const Value.absent(),
             Value<double?> nativeAmount = const Value.absent(),
             Value<double?> originalAmount = const Value.absent(),
@@ -13858,6 +13926,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             excludeFromStats: excludeFromStats,
             excludeFromBudget: excludeFromBudget,
             updatedAt: updatedAt,
+            createdAt: createdAt,
             currencyCode: currencyCode,
             nativeAmount: nativeAmount,
             originalAmount: originalAmount,

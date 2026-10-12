@@ -10,6 +10,8 @@ import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../providers/budget_providers.dart';
 import '../../data/db.dart';
+import '../../data/repositories/transaction_repository.dart'
+    show RecentEntryDefaults;
 import '../../widgets/ui/ui.dart';
 import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../widgets/biz/amount_editor_sheet.dart';
@@ -31,8 +33,9 @@ Future<void> showTransactionFormBottomSheet(
   int? initialCategoryId,
   bool quickAdd = true,
 
-  /// P1-E 快捷记账模式：无 [initialCategoryId] 时用 R1 的记忆分类直接落金额
-  /// 表单（记忆未命中或校验失败则退回分类网格）。见 prd/p1e_quick_entry_mode。
+  /// P1-E 快捷记账模式：无 [initialCategoryId] 时**直接落金额表单**（分类初值取
+  /// 「5 分钟内继承上一笔」，未命中则留「选择分类」占位）。
+  /// 见 prd/p1e_quick_entry_mode 与 [_resolveQuickInitials]。
   bool quickMode = false,
   String? initialNote,
   double? initialAmount,
@@ -85,8 +88,8 @@ class TransactionEditorPage extends ConsumerStatefulWidget {
   // quickAdd: 点击分类后在当前弹窗上叠加金额输入，保存成功后依次关闭两个弹窗
   final bool quickAdd;
 
-  /// P1-E：无 [initialCategoryId] 时用 R1 记忆分类直落金额表单
-  /// （记忆未命中 / 校验失败 → 退回分类网格，不做「先出网格再跳表单」的闪跳）。
+  /// P1-E：无 [initialCategoryId] 时直落金额表单（分类初值 = 5 分钟内继承上一笔；
+  /// 未命中 / 校验失败 → 留占位，不做「先出网格再跳表单」的闪跳）。
   final bool quickMode;
   final int? initialCategoryId;
   final String? initialNote; // 用于金额输入弹窗回填备注
@@ -155,11 +158,15 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
   /// 首次切换到某类型时才构建对应组件，已构建的保持存活以保留状态。
   final Set<String> _activatedKinds = {};
 
-  /// 「金额表单优先」形态下按类型缓存的异步初值（记忆分类 / 默认账户）。
+  /// 按类型缓存的异步初值（分类 / 账户），**两种形态共用**：
   ///
-  /// 记账界面**先出、初值后补**：首帧渲染的分类位是占位、「无账户」高亮，
-  /// 解析完成后由 [AmountEditorSheet.didUpdateWidget] 原地补上，不做
-  /// 「先弹分类网格再跳金额表单」的闪跳。
+  /// - 「金额表单优先」形态：记账界面**先出、初值后补** —— 首帧渲染的分类位是
+  ///   占位、「无账户」高亮，解析完成后由 [AmountEditorSheet.didUpdateWidget]
+  ///   原地补上，不做「先弹分类网格再跳金额表单」的闪跳；
+  /// - 「分类网格」形态（快捷开关关闭）：网格路径命中 5 分钟窗口时拿这里的分类
+  ///   直接进金额表单；用户手动点分类时也用它兜账户（见 [_onCategorySelected]）。
+  ///
+  /// 优先链见 [_resolveQuickInitials]。
   final Map<String, Category?> _quickCategoryByKind = {};
   final Map<String, int?> _quickAccountByKind = {};
   final Set<String> _quickInitialsResolved = {};
@@ -192,27 +199,38 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     // 若需要自动打开金额输入，则在首帧后查询分类并触发
     // 注意：转账类型不走这个逻辑
     //
-    // P1-E：条件从「有 initialCategoryId」放宽为「有 initialCategoryId **或**
-    // 快捷模式」。快捷模式取 R1 的记忆分类（provider 侧已校验存在性与账本归属）；
-    // 缓存未就绪或记忆未命中 → 不预填、不报错。
-    if (widget.quickAdd &&
-        widget.initialKind != 'transfer' &&
-        (widget.initialCategoryId != null || widget.quickMode)) {
+    // 条件从「有 initialCategoryId **或** 快捷模式」放宽为「任何非转账的新建
+    // 记账」：**5 分钟内再次记账**要能默认继承上一笔的分类与账户，两条形态都要
+    // 生效（见 [_resolveQuickInitials]）。未命中窗口时行为与改造前一致 ——
+    // 不预填、不报错，等用户自己点分类。
+    if (widget.quickAdd && widget.initialKind != 'transfer') {
       if (_isQuickEntryMode) {
-        // 新形态：金额表单已经是主界面，不需要「自动开窗」；只需把异步初值
-        // 解析出来交给它。
+        // 金额表单优先形态：金额表单已经是主界面，不需要「自动开窗」；只需把
+        // 异步初值解析出来交给它。
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) unawaited(_resolveQuickInitials(widget.initialKind));
         });
       } else {
+        // 分类网格形态：初值解析出分类就**直接进金额表单**（与「小组件点分类格 /
+        // 深链带 category」的既有行为一致），解析不出就停在网格等用户自己点。
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (!mounted || _autoOpened) return;
-          // 不再读「记忆上次分类」：只有显式传入的分类（小组件点分类格 / 深链带
-          // category）才自动开窗，否则等用户自己点分类。
-          final categoryId = widget.initialCategoryId;
-          if (categoryId == null) return;
-          final c = await _resolveCategoryById(categoryId);
+          // 显式传入的分类优先，且**保留原行为**：即使它的 kind 与 initialKind
+          // 不同，也切到该分类所属类型再进表单（[_resolveQuickInitials] 会把
+          // kind 不符的显式分类当成未命中，故这里单独兜一次）。
+          final explicitId = widget.initialCategoryId;
+          Category? c = explicitId == null
+              ? null
+              : await _resolveCategoryById(explicitId);
+
+          if (c == null) {
+            await _resolveQuickInitials(widget.initialKind);
+            if (!mounted || _autoOpened) return;
+            c = _quickCategoryByKind[widget.initialKind];
+          }
+          // await 之后再核一次 mounted，避免页面已卸载仍用 context 弹表单。
           if (!mounted || c == null) return;
+
           // 切换到对应的类型（提前取出 kind 避免 closure 内流分析丢失非空信息）
           final kind = c.kind;
           setState(() {
@@ -228,17 +246,26 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     // 注意：转账编辑模式不需要在这里做任何操作，让 TransferForm 自己处理
   }
 
-  /// 解析「金额表单优先」形态某类型的异步初值：分类（显式传入优先，其次记忆）
-  /// 与默认账户。两者都取不到就保持空值 —— 用户点分类位 / 账户位自己选，
-  /// 不预填错误的值。
+  /// 解析「某类型」的异步初值：分类与账户。两者都取不到就保持空值 ——
+  /// 用户点分类位 / 账户位自己选，不预填错误的值。
+  ///
+  /// **分类优先链**：显式传入（小组件点分类格 / 深链带 category / 编辑既有交易）
+  /// > **5 分钟内继承上一笔**（见 [getRecentEntryDefaults]）> 不预填。
+  /// **账户优先链**：显式传入 > 5 分钟内继承上一笔（校验后）> 默认账户。
+  ///
+  /// 继承只对**新建**生效：编辑既有交易时那一笔自己的分类 / 账户就是答案，
+  /// 不能被「上一笔」覆盖。
+  ///
+  /// explicitId 只给初始类型：它是「这一笔」的，切到另一类型不该继承。
   Future<void> _resolveQuickInitials(String kind) async {
     if (!_quickInitialsResolved.add(kind)) return; // 每类型只解析一次
     final ledgerId = ref.read(currentLedgerIdProvider);
 
-    // 分类**不预填**：只认显式传入的 initialCategoryId（小组件点分类格 / 深链带
-    // category / 编辑既有交易），**不再读「记忆上次分类」** —— 记账时分类必须由
-    // 用户自己选，打开时分类位是「选择分类」占位（口径见 AGENTS.md）。
-    // explicitId 只给初始类型：它是"这一笔"的，切到另一类型不该继承。
+    // 5 分钟窗口内「上一笔同类型交易」的默认值：一次查询同时拿到分类与账户
+    // （窗口按录入时刻判，按 kind 分族；编辑态返回 null）。
+    final inherited = await _inheritedDefaults(kind, ledgerId);
+
+    // ---- 分类：显式 > 继承 > 不预填 ----
     final explicitId =
         kind == widget.initialKind ? widget.initialCategoryId : null;
     Category? category;
@@ -247,12 +274,24 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       // 再核一次 kind，防止用户切换类型后把另一类型的分类带过来。
       if (c != null && c.kind == kind) category = c;
     }
+    final inheritedCategoryId = inherited?.categoryId;
+    if (category == null && inheritedCategoryId != null) {
+      final c = await _resolveCategoryById(inheritedCategoryId);
+      // 继承来的分类可能已被删除；kind 理论上必同（查询已按 kind 过滤），
+      // 这里再核一次纯属防御 —— 预填错分类的危害大于不预填。
+      if (c != null && c.kind == kind) category = c;
+    }
 
-    // 默认账户：新建且调用方未指定时按类型取默认账户（含币种匹配与隐藏兜底）。
+    // ---- 账户：显式 > 继承（校验后）> 默认账户 ----
     int? accountId = widget.initialAccountId;
     if (widget.editingTransactionId == null &&
         widget.initialAccountId == null) {
-      accountId = await _getDefaultAccountId(kind, ledgerId);
+      final inheritedAccountId = inherited?.accountId;
+      if (inheritedAccountId != null) {
+        accountId = await _validatedAccountId(inheritedAccountId, ledgerId);
+      }
+      // 继承为空 / 已被删除 / 已隐藏 / 币种不符 → 退回默认账户（而不是不填）。
+      accountId ??= await _getDefaultAccountId(kind, ledgerId);
     }
 
     if (!mounted) return;
@@ -260,6 +299,16 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       _quickCategoryByKind[kind] = category;
       _quickAccountByKind[kind] = accountId;
     });
+  }
+
+  /// 取「5 分钟内上一笔同类型交易」的默认值（分类 + 账户），供新建记账预填。
+  ///
+  /// 编辑既有交易恒返回 `null`（见 [_resolveQuickInitials] 的口径）。
+  Future<RecentEntryDefaults?> _inheritedDefaults(String kind, int ledgerId) {
+    if (widget.editingTransactionId != null) return Future.value(null);
+    return ref
+        .read(repositoryProvider)
+        .getRecentEntryDefaults(ledgerId: ledgerId, kind: kind);
   }
 
   @override
@@ -385,9 +434,11 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       onValueChanged: (value) => setState(() {
         _selectedKind = value;
         _activatedKinds.add(value);
-        // 金额表单优先形态下，切到新类型时要补解析它自己的初值
-        // （记忆分类按类型分族，不继承上一个类型的分类）。
-        if (_isQuickEntryMode && value != 'transfer') {
+        // 切到新类型时要补解析**它自己**的初值：5 分钟继承按类型分族（支出找
+        // 支出、收入找收入），不继承上一个类型的分类（见 [_resolveQuickInitials]）。
+        // 两种形态都要解析 —— 网格形态下用户随后点分类时，账户要能取到该类型的
+        // 继承值（见 [_onCategorySelected]）。
+        if (value != 'transfer') {
           unawaited(_resolveQuickInitials(value));
         }
       }),
@@ -550,8 +601,8 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       ledgerId: ledgerId,
       editingTransactionId: widget.editingTransactionId,
       transactionKind: kind,
-      // 新建必须选分类（分类位已不预填）；编辑存量交易不强制 —— 历史数据可能
-      // 本来就没有分类，不能逼用户补一个才能保存。
+      // 新建必须选分类（分类位可能只是「选择分类」占位 —— 5 分钟继承未命中时）；
+      // 编辑存量交易不强制 —— 历史数据可能本来就没有分类，不能逼用户补一个才能保存。
       requireCategory: widget.editingTransactionId == null,
       initialExcludeFromStats: widget.initialExcludeFromStats,
       initialExcludeFromBudget: widget.initialExcludeFromBudget,
@@ -582,30 +633,37 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
   /// 获取默认账户ID（验证币种匹配）
   Future<int?> _getDefaultAccountId(String kind, int ledgerId) async {
     try {
-      // 1. 根据类型获取默认账户ID
+      // 根据类型获取默认账户ID
       final defaultAccountId = kind == 'income'
           ? await ref.read(defaultIncomeAccountIdProvider.future)
           : await ref.read(defaultExpenseAccountIdProvider.future);
 
       if (defaultAccountId == null) return null;
 
-      // 2. 获取账本币种
+      return await _validatedAccountId(defaultAccountId, ledgerId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// 校验某个账户能否作为本次记账的预填账户；不能则返回 `null`。
+  ///
+  /// 三态都按「不能用」处理：账户已删除、已隐藏（#240 E3：正常路径下隐藏时已
+  /// 清 pref，这里兜同步竞态等边缘情况）、币种与账本本位币不符。
+  ///
+  /// 默认账户与 **5 分钟继承到的账户** 共用这一口径 —— 预填一个错账户
+  /// （尤其是跨币种）比不预填糟得多。
+  Future<int?> _validatedAccountId(int accountId, int ledgerId) async {
+    try {
       final ledger = await ref.read(ledgerByIdProvider(ledgerId).future);
       if (ledger == null) return null;
 
-      // 3. 获取默认账户信息
-      final account =
-          await ref.read(accountByIdProvider(defaultAccountId).future);
-      if (account == null) return null;
+      final account = await ref.read(accountByIdProvider(accountId).future);
+      if (account == null || account.hidden) return null;
 
-      // 账户隐藏 #240 E3:默认账户已被隐藏时按「无默认」处理(defensive 兜底,
-      // 正常路径下隐藏时已清 pref,这里防同步竞态等边缘情况)
-      if (account.hidden) return null;
-
-      // 4. 验证币种匹配
       if (account.currency != ledger.currency) return null;
 
-      return defaultAccountId;
+      return accountId;
     } catch (e) {
       return null;
     }
@@ -624,12 +682,14 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     }
     final ledgerId = ref.read(currentLedgerIdProvider);
 
-    // 确定初始账户ID（新建时使用默认账户，编辑时保持原值）
+    // 确定初始账户ID（与 [_resolveQuickInitials] 同一条优先链）：
+    // 显式传入 > 已解析的初值（5 分钟继承 > 默认账户）> 现查默认账户。
+    // 已解析初值走 [_quickAccountByKind]:网格路径命中窗口时用户改点别的分类，
+    // 账户仍应继承上一笔（账户默认与分类选择互不绑定）。
     int? initialAccountId = widget.initialAccountId;
-    if (widget.editingTransactionId == null &&
-        widget.initialAccountId == null) {
-      // 新建模式：尝试获取默认账户
-      initialAccountId = await _getDefaultAccountId(kind, ledgerId);
+    if (widget.editingTransactionId == null && initialAccountId == null) {
+      initialAccountId = _quickAccountByKind[kind];
+      initialAccountId ??= await _getDefaultAccountId(kind, ledgerId);
     }
 
     // await 后检查 mounted，避免页面已卸载仍使用 context 弹出底部表单
@@ -800,9 +860,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
     ref.read(statsRefreshProvider.notifier).state++;
     // 刷新：预算数据
     ref.read(budgetRefreshProvider.notifier).state++;
-    // P1-E：这里的 statsRefreshProvider 递增同时就是快捷记账「记忆分类」
-    // 的失效锚点（该 provider 直接跟随 statsRefreshProvider 重算，
-    // 不在各写入点逐个 invalidate —— 理由见 quick_entry_providers.dart）。
+    // 注：这里曾是快捷记账「记忆分类」Provider 的失效锚点；该 Provider 已被
+    // 「5 分钟内继承上一笔」取代（窗口随墙钟滑动，不能缓存 —— 记账页每次打开
+    // 现查一次仓储），故此处不再承担那层语义。
     // 更新小组件数据（后台执行，不阻塞UI）
     if (context.mounted) {
       updateAppWidget(ref, context);

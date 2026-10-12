@@ -3,6 +3,17 @@ import 'package:drift/drift.dart' as d;
 import '../db.dart';
 import '../../models/note_history.dart';
 
+/// 「5 分钟内再次记账继承上一笔默认值」的窗口长度（**唯一来源**：UI 与测试共用）。
+///
+/// 语义见 [TransactionRepository.getRecentEntryDefaults]。
+const Duration kRecentEntryInheritWindow = Duration(minutes: 5);
+
+/// 从已保存交易派生的「上一笔录入默认值」，供记账页预填。
+///
+/// 字段可空：对应上一笔确实没选分类 / 账户（此时**不继续前溯**，交由调用方
+/// 回退到自己的默认值）。
+typedef RecentEntryDefaults = ({int? categoryId, int? accountId});
+
 /// 周期实例指纹：同去重键 (recurringId, 本地日历日) 下区分
 /// 「真重复」与「同日多笔合法交易」的最小字段集。
 /// 恢复侧判重规则见 [TransactionRepository.getRecurringInstanceDetails]。
@@ -214,16 +225,24 @@ abstract class TransactionRepository {
     int limit = 20,
   });
 
-  /// 取该账本 + 该类型下**最近一笔带分类交易**的分类 —— 快捷记账模式的记忆源。
+  /// 取「最近一次录入」的默认值（分类 + 账户），供记账页在
+  /// [kRecentEntryInheritWindow] 内预填 —— 连续记账少点几次。
   ///
-  /// 返回 `null` 表示扫描窗口内没有可用记忆，调用方应退回分类网格（**不要**预填空分类）。
+  /// - 窗口按 [Transactions.createdAt]（**本设备录入时刻**）判定，不看
+  ///   `happenedAt`：用户可以补记发生日期为昨天的一笔，按发生时间判会让整批
+  ///   补记都不继承。
+  /// - 按 [kind]（`expense` / `income`）分别取最近一笔同类型交易：分类本身分
+  ///   kind，跨 kind 继承会预填一个类型不匹配的分类。转账既不参与也不作源。
+  /// - `createdAt` 为 NULL 的行（批量导入 / 云恢复 / 周期模板生成）不参与。
+  /// - 返回 `null` = 窗口内没有可用来源；返回记录则**忠实地**带上上一笔的
+  ///   分类 / 账户（可能为 null，不继续前溯）。
   ///
-  /// 只扫描最近 [scanLimit] 笔以保证工作量有上界；`type` 与 `category_id`
-  /// 都不在 `idx_transactions_ledger_happened` 里，需要回表逐行判定。
-  Future<int?> getLastUsedCategoryId({
+  /// [now] 仅供测试注入，生产不要传。
+  Future<RecentEntryDefaults?> getRecentEntryDefaults({
     required int ledgerId,
     required String kind,
-    int scanLimit,
+    Duration within = kRecentEntryInheritWindow,
+    DateTime? now,
   });
 
   /// 根据ID获取单条交易

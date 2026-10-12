@@ -1,23 +1,26 @@
 /// P1-E 快捷记账模式 —— R2/R3/R4 的 widget 契约测试。
 ///
 /// 对齐 `prd/p1e_quick_entry_mode/requirements.md` 的 AC-R2 七个场景
-/// （另加 AC-R4 #1 的「关掉后不回到新分支」回归保护）。
+/// （另加 AC-R4 #1 的「关掉开关后仍停在分类网格」回归保护）。
 ///
-/// 分三层断言，各管一段责任：
+/// 分两层断言，各管一段责任：
 ///   1. `AmountEditorSheet` 的分类位 —— AC-R2 #2 / #3 / #6 的**展示与回路**半边；
-///   2. `TransactionEditorPage` 的落点 —— AC-R2 #1 / #4 / #5 / #7 的**落点**半边；
-///   3. `quickEntryLastCategoryProvider` 的校验 —— AC-R2 #4 的**数据**半边。
+///   2. `TransactionEditorPage` 的落点 —— AC-R2 #1 / #4 / #5 / #7 的**落点**半边。
 ///
-/// 为什么 #4 要拆到第三层测：页面拿到的已经是「provider 校验过的 id」，
-/// 用 provider 覆盖去喂一个不存在的 id 只能验证**页面**的兜底；
-/// 而「记忆到已被删除的分类 → 不预填」这条规则的主体在 provider 里
-/// （`getCategoryById` 复核），只有跑真实 provider 才算验证了它。
+/// 2026-10-12 口径变更：分类初值不再是「无窗口地记忆上次分类」
+/// （`quickEntryLastCategoryProvider` 已删除），而是
+/// **5 分钟内再次记账继承上一笔的分类与账户**
+/// （`TransactionRepository.getRecentEntryDefaults`）。于是：
+///   - 窗口**命中** → 分类位预填上一笔的分类（两种形态都是）；
+///   - 窗口**未命中 / 上一笔分类已删除** → 分类位留「选择分类」占位，不预填错值；
+///   - 「分类网格」形态（快捷开关关闭）命中时**直接进金额表单**。
 ///
 /// 落点断言的判别器用 `find.byType(AmountEditorSheet)`：金额表单是盖在
 /// 分类网格**之上**的模态路由，网格本身仍在树里，所以「网格在不在」
 /// 不能反过来证明「表单有没有直接打开」—— 只有前者能。
 library;
 
+import 'package:drift/drift.dart' as d;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +32,6 @@ import 'package:piggycount/data/repositories/local/local_repository.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/pages/transaction/transaction_editor_page.dart';
 import 'package:piggycount/providers/database_providers.dart';
-import 'package:piggycount/providers/quick_entry_providers.dart';
 import 'package:piggycount/widgets/biz/amount_editor_sheet.dart';
 import 'package:piggycount/widgets/category/category_selector.dart';
 import 'package:piggycount/widgets/category_icon.dart';
@@ -304,31 +306,44 @@ void main() {
 
   /// 落点测试的宿主。
   ///
-  /// 关键在于**先把「记忆」预热到 ready 再挂页面**：页面 `initState` 只在首帧后
-  /// 采样一次 provider（`.value`），而生产里 `app.dart` 已在启动首帧预热过，
-  /// 用户点 FAB 时 provider 早就 resolved。测试若不预热，首帧采到的必然是 loading
-  /// 态 → 走的是「未就绪退回网格」那条路，就测不到「命中直落表单」。
+  /// 「5 分钟内继承上一笔」是**每次打开现查**（不走 Provider 缓存 —— 窗口随墙钟
+  /// 滑动，缓存会给陈旧命中），所以这里直接往库里种「上一笔」：
+  /// [lastTxCategoryId] 非空时插一笔 `created_at = now - lastTxAgo` 的支出。
+  /// [`lastTxAgo`] 默认 1 分钟（命中窗口）；传 6 分钟即测「窗口外不继承」。
+  ///
+  /// `ledgerId` 取 1，`_validatedAccountId` 需要账本行存在（用例自己建）。
   Future<Widget> pageHost({
     bool quickMode = false,
-    int? rememberedCategoryId,
-    bool overrideMemory = true,
+    int? lastTxCategoryId,
+    int? lastTxAccountId,
+    Duration lastTxAgo = const Duration(minutes: 1),
     int? initialCategoryId,
     int? editingTransactionId,
     bool renderAsBottomSheet = false,
   }) async {
     final container = ProviderContainer(overrides: [
       repositoryProvider.overrideWithValue(repo),
-      // 不覆盖它的话，未覆盖记忆的用例会走真实 provider → 再 new 一个
+      // 不覆盖它的话，页面里按 id 取分类 / 账户的 provider 会再 new 一个
       // PiggyDatabase，drift 会打「同一 QueryExecutor 多实例」的警告。
       databaseProvider.overrideWithValue(db),
       currentLedgerProvider
           .overrideWith((ref) => Stream<Ledger?>.value(cnyLedger())),
-      if (overrideMemory)
-        quickEntryLastCategoryProvider('expense')
-            .overrideWith((ref) async => rememberedCategoryId),
     ]);
     addTearDown(container.dispose);
-    await container.read(quickEntryLastCategoryProvider('expense').future);
+
+    if (lastTxCategoryId != null) {
+      final at = DateTime.now().subtract(lastTxAgo);
+      await db.into(db.transactions).insert(TransactionsCompanion.insert(
+            ledgerId: 1,
+            type: 'expense',
+            amount: 10,
+            categoryId: d.Value(lastTxCategoryId),
+            accountId: d.Value(lastTxAccountId),
+            happenedAt: d.Value(at),
+            createdAt: d.Value(at),
+            originalAmount: const d.Value(10),
+          ));
+    }
 
     return UncontrolledProviderScope(
       container: container,
@@ -350,7 +365,7 @@ void main() {
   }
 
   group('AC-R2 落点（TransactionEditorPage.quickMode）', () {
-    testWidgets('#1 快捷模式 → 直接落在金额表单，分类位不预填', (tester) async {
+    testWidgets('#1 快捷模式 → 直接落在金额表单；5 分钟内继承上一笔的分类', (tester) async {
       await db.customStatement(
           "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
       final food = await repo.createCategory(name: '餐饮', kind: 'expense');
@@ -359,25 +374,72 @@ void main() {
         quickMode: true,
         // 抽屉形态 = 「记一笔」的真实形态（直落金额表单）
         renderAsBottomSheet: true,
-        rememberedCategoryId: food,
+        // 1 分钟前刚记过一笔「餐饮」→ 命中 5 分钟窗口
+        lastTxCategoryId: food,
       ));
       await tester.pumpAndSettle();
 
       expect(find.byType(AmountEditorSheet), findsOneWidget,
           reason: '跳过分类网格，直接出金额表单（R2 的核心预期）');
-      // 分类**不预填**：即使存在「记忆上次分类」，分类位也必须是占位。
-      // 分类网格在模态表单**下面**仍在树里，所以必须限定在表单子树内断言。
+      // 分类**预填上一笔的分类**。分类网格在模态表单**下面**仍在树里，
+      // 所以必须限定在表单子树内断言。
       expect(
         find.descendant(
             of: find.byType(AmountEditorSheet), matching: find.text('餐饮')),
-        findsNothing,
-        reason: '分类必须由用户自己选，不得用记忆分类预填',
+        findsOneWidget,
+        reason: '5 分钟内再次记账默认继承上一笔的分类（本需求的核心预期）',
       );
+
+      await drainLoggerTimer(tester);
+    });
+
+    testWidgets('上一笔超出 5 分钟窗口 → 分类位留「选择分类」占位', (tester) async {
+      await db.customStatement(
+          "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+      final food = await repo.createCategory(name: '餐饮', kind: 'expense');
+
+      await tester.pumpWidget(await pageHost(
+        quickMode: true,
+        renderAsBottomSheet: true,
+        lastTxCategoryId: food,
+        lastTxAgo: const Duration(minutes: 6), // 窗口外
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AmountEditorSheet), findsOneWidget);
       expect(
         find.descendant(
             of: find.byType(AmountEditorSheet), matching: find.text('选择分类')),
         findsOneWidget,
-        reason: '未选分类时分类位显示「选择分类」占位',
+        reason: '窗口外不继承：分类位回到「选择分类」占位',
+      );
+      expect(
+        find.descendant(
+            of: find.byType(AmountEditorSheet), matching: find.text('餐饮')),
+        findsNothing,
+        reason: '窗口外不得预填（预填错分类/凭空继承的危害大于不预填）',
+      );
+
+      await drainLoggerTimer(tester);
+    });
+
+    testWidgets('分类网格形态（开关关闭）命中窗口 → 直接进金额表单并预填', (tester) async {
+      await db.customStatement(
+          "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+      final food = await repo.createCategory(name: '餐饮', kind: 'expense');
+
+      await tester.pumpWidget(await pageHost(
+        quickMode: false, // 快捷开关关闭 = 走分类网格
+        lastTxCategoryId: food,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AmountEditorSheet), findsOneWidget,
+          reason: '网格形态命中窗口时同样直落金额表单（与「小组件点分类格」同款）');
+      expect(
+        find.descendant(
+            of: find.byType(AmountEditorSheet), matching: find.text('餐饮')),
+        findsOneWidget,
       );
 
       await drainLoggerTimer(tester);
@@ -395,7 +457,6 @@ void main() {
 
       await tester.pumpWidget(await pageHost(
         quickMode: true,
-        rememberedCategoryId: null,
         renderAsBottomSheet: true,
       ));
       await tester.pumpAndSettle();
@@ -421,15 +482,12 @@ void main() {
       await drainLoggerTimer(tester);
     });
 
-    testWidgets('#5 首次使用（记忆为 null）→ 退回分类网格，不显示空的快捷态', (tester) async {
+    testWidgets('#5 首次使用（没有上一笔）→ 退回分类网格，不显示空的快捷态', (tester) async {
       await db.customStatement(
           "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
       await repo.createCategory(name: '餐饮', kind: 'expense');
 
-      await tester.pumpWidget(await pageHost(
-        quickMode: true,
-        rememberedCategoryId: null,
-      ));
+      await tester.pumpWidget(await pageHost(quickMode: true));
       await tester.pumpAndSettle();
 
       expect(find.byType(AmountEditorSheet), findsNothing);
@@ -437,14 +495,15 @@ void main() {
       expect(tester.takeException(), isNull, reason: '不得报错/白屏');
     });
 
-    testWidgets('#4 记忆指向的分类已不存在 → 静默退回网格，不预填不报错', (tester) async {
+    testWidgets('#4 继承到的分类已不存在 → 静默退回网格，不预填不报错', (tester) async {
       await db.customStatement(
           "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
       await repo.createCategory(name: '餐饮', kind: 'expense');
 
       await tester.pumpWidget(await pageHost(
         quickMode: true,
-        rememberedCategoryId: 999999, // 已被删除 / 不属于本账本
+        // 上一笔的分类已被删除 / 不属于本账本 —— 取不到实体
+        lastTxCategoryId: 999999,
       ));
       await tester.pumpAndSettle();
 
@@ -459,10 +518,7 @@ void main() {
           "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
       final food = await repo.createCategory(name: '餐饮', kind: 'expense');
 
-      await tester.pumpWidget(await pageHost(
-        overrideMemory: false,
-        initialCategoryId: food,
-      ));
+      await tester.pumpWidget(await pageHost(initialCategoryId: food));
       await tester.pumpAndSettle();
 
       expect(find.byType(AmountEditorSheet), findsOneWidget);
@@ -504,18 +560,20 @@ void main() {
       await drainLoggerTimer(tester);
     });
 
-    testWidgets('AC-R4 #1 回归保护：关掉开关（quickMode=false）→ 停网格，不预填', (tester) async {
+    testWidgets('AC-R4 #1 回归保护：关掉开关 + 窗口未命中 → 停在分类网格，不预填', (tester) async {
       await db.customStatement(
           "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
       final food = await repo.createCategory(name: '餐饮', kind: 'expense');
 
       await tester.pumpWidget(await pageHost(
         quickMode: false,
-        rememberedCategoryId: food, // 记忆命中也不许用 —— 关掉就该等于改动前
+        lastTxCategoryId: food,
+        lastTxAgo: const Duration(minutes: 6), // 窗口外
       ));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AmountEditorSheet), findsNothing);
+      expect(find.byType(AmountEditorSheet), findsNothing,
+          reason: '关掉开关 + 没有可继承的一笔 → 行为与改动前一致：停在网格');
       expect(find.byType(CategorySelector), findsWidgets);
     });
 
@@ -524,11 +582,10 @@ void main() {
     testWidgets('抽屉形态：点击记账直接落在记账界面，不铺开分类网格', (tester) async {
       await db.customStatement(
           "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
-      final food = await repo.createCategory(name: '餐饮', kind: 'expense');
+      await repo.createCategory(name: '餐饮', kind: 'expense');
 
       await tester.pumpWidget(await pageHost(
         quickMode: true,
-        rememberedCategoryId: food,
         renderAsBottomSheet: true,
       ));
       await tester.pumpAndSettle();
@@ -547,14 +604,13 @@ void main() {
       await drainLoggerTimer(tester);
     });
 
-    testWidgets('抽屉形态：记忆未命中也不退回网格，分类位给「选择分类」占位', (tester) async {
+    testWidgets('抽屉形态：没有可继承的一笔也不退回网格，分类位给「选择分类」占位', (tester) async {
       await db.customStatement(
           "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
       await repo.createCategory(name: '餐饮', kind: 'expense');
 
       await tester.pumpWidget(await pageHost(
         quickMode: true,
-        rememberedCategoryId: null,
         renderAsBottomSheet: true,
       ));
       await tester.pumpAndSettle();
@@ -570,16 +626,15 @@ void main() {
     testWidgets('抽屉形态：点分类位弹出分类子界面，记账界面原地不动', (tester) async {
       await db.customStatement(
           "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
-      final food = await repo.createCategory(name: '餐饮', kind: 'expense');
+      await repo.createCategory(name: '餐饮', kind: 'expense');
 
       await tester.pumpWidget(await pageHost(
         quickMode: true,
-        rememberedCategoryId: food,
         renderAsBottomSheet: true,
       ));
       await tester.pumpAndSettle();
 
-      // 分类不预填 → 分类位是「选择分类」占位，点它同样应弹出分类子界面
+      // 没有可继承的一笔 → 分类位是「选择分类」占位，点它同样应弹出分类子界面
       await tester.tap(find.text('选择分类'));
       await tester.pumpAndSettle();
 
@@ -597,11 +652,10 @@ void main() {
       // 调 token 不该让本用例变红。
       await db.customStatement(
           "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
-      final food = await repo.createCategory(name: '餐饮', kind: 'expense');
+      await repo.createCategory(name: '餐饮', kind: 'expense');
 
       await tester.pumpWidget(await pageHost(
         quickMode: true,
-        rememberedCategoryId: food,
         renderAsBottomSheet: true,
       ));
       await tester.pumpAndSettle();
@@ -632,11 +686,10 @@ void main() {
     testWidgets('抽屉形态：切到转账时抽屉高度与支出/收入一致（不跳到全屏）', (tester) async {
       await db.customStatement(
           "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
-      final food = await repo.createCategory(name: '餐饮', kind: 'expense');
+      await repo.createCategory(name: '餐饮', kind: 'expense');
 
       await tester.pumpWidget(await pageHost(
         quickMode: true,
-        rememberedCategoryId: food,
         renderAsBottomSheet: true,
       ));
       await tester.pumpAndSettle();
@@ -659,46 +712,8 @@ void main() {
     });
   });
 
-  // ——— 第三层：quickEntryLastCategoryProvider 的校验 ———
-
-  group('AC-R2 #4 记忆校验（quickEntryLastCategoryProvider）', () {
-    ProviderContainer container() => ProviderContainer(overrides: [
-          repositoryProvider.overrideWithValue(repo),
-          databaseProvider.overrideWithValue(db),
-        ]);
-
-    test('记忆到的本地分类仍存在 → 返回该 id', () async {
-      final food = await repo.createCategory(name: '餐饮', kind: 'expense');
-      await repo.addTransaction(
-        ledgerId: 1,
-        type: 'expense',
-        amount: 10,
-        categoryId: food,
-        happenedAt: DateTime(2026, 9, 1),
-      );
-
-      final c = container();
-      addTearDown(c.dispose);
-      expect(
-          await c.read(quickEntryLastCategoryProvider('expense').future), food);
-    });
-
-    test('记忆到的分类已被删除 → 返回 null（不得把死 id 预填进表单）', () async {
-      final food = await repo.createCategory(name: '餐饮', kind: 'expense');
-      await repo.addTransaction(
-        ledgerId: 1,
-        type: 'expense',
-        amount: 10,
-        categoryId: food,
-        happenedAt: DateTime(2026, 9, 1),
-      );
-      await repo.deleteCategory(food);
-
-      final c = container();
-      addTearDown(c.dispose);
-      expect(await c.read(quickEntryLastCategoryProvider('expense').future),
-          isNull);
-    });
-
-  });
+  // 第三层原为 `quickEntryLastCategoryProvider` 的校验（AC-R2 #4 的「数据半边」）。
+  // 该 Provider 已删除（口径变更为「5 分钟内继承上一笔」，不能缓存），
+  // 对应契约由 `test/data/repositories/local/recent_entry_defaults_test.dart`
+  // （分类已删除 / 类型隔离 / 窗口边界）与上面的「#4 继承到的分类已不存在」用例接管。
 }

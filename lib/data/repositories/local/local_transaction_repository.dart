@@ -14,35 +14,37 @@ import '../../models/custom_field_values.dart';
 import '../transaction_repository.dart';
 import '../../../services/system/logger_service.dart';
 
-/// 快捷记账「上次分类」的取数语句（P1-E R1）。
+/// 「5 分钟内再次记账继承上一笔默认值」的取数语句。
 ///
-/// **为什么公开**：让 `quick_entry_last_category_test.dart` 能对**同一份 SQL**
-/// 跑 `EXPLAIN QUERY PLAN`，断言命中 `idx_transactions_ledger_happened`。
-/// 若测试自己另抄一份字面量，那么改这里就能悄悄骗过测试，索引退化会直接溜进 CI。
+/// **为什么公开**：让 `recent_entry_defaults_test.dart` 对**同一份 SQL** 跑
+/// `EXPLAIN QUERY PLAN`，断言命中 `idx_transactions_ledger_created`。
+/// 若测试自己另抄一份字面量，那么改这里（比如退回全表扫）就能悄悄骗过测试，
+/// 索引退化会直接溜进 CI。同款「公开 SQL 供测试对同一份跑计划」的做法也用在
+/// `db.dart` 的迁移 / 索引常量上。
 ///
-/// 生产代码请走 [LocalTransactionRepository.getLastUsedCategoryId]，不要直接用本串。
-///
-/// ⚠️ **`type` 过滤刻意不写进 WHERE，而是在 Dart 侧做** —— 这是上界成立的前提。
-/// SQLite 的 `LIMIT` 约束的是**结果行数**，不是**扫描行数**：若写成
-/// `WHERE ledger_id = ? AND type = ? ... LIMIT ?`，当最近若干笔都不是目标类型时，
-/// SQLite 必须沿索引一路回表扫描到凑满 K 行匹配记录（或扫完整个索引）才返回 ——
-/// 上界直接丢失，退化成与被否决的「全账本 GROUP BY」同量级的 O(N)。
-/// 把 `type` 判在结果集之外，`LIMIT` 才真正等价于「只看最近 K 笔」。
-///
-/// （本设计文档 `prd/p1e_quick_entry_mode/design.md` 决策 1 最初给出的 SQL 就是
-/// 带 `type = ?` 的版本，其「工作量上界 100 次索引项」的推理是错的；
-/// 该 bug 由本方法的单测在实现当天测出，详见测试文件头注释。）
+/// 生产代码请走 [LocalTransactionRepository.getRecentEntryDefaults]。
 ///
 /// 语句要点：
-/// - `ledger_id` 等值 + `happened_at DESC` 由复合索引一次满足；
-/// - `id` 是 INTEGER PRIMARY KEY（即 rowid），索引倒序扫描天然给出
-///   `happened_at DESC, id DESC`，无需额外排序步骤；
-/// - `happened_at IS NOT NULL` 排除排序位置无意义的行（NULL 在 DESC 下落到末尾）。
-const String quickEntryLastCategorySql = '''
-SELECT type, category_id
+/// - `ledger_id` 等值 + `created_at >= ?` 由复合索引
+///   `idx_transactions_ledger_created (ledger_id, created_at)` 做**范围裁剪**：
+///   扫描量恒为「窗口内的行数」（通常 0~2 行），与账本总笔数无关。
+/// - `created_at` 为 NULL 的行天然被排除（NULL 比较为假）—— 批量导入 /
+///   云恢复 / 周期模板生成的行不参与，无需额外条件。
+/// - `ORDER BY created_at DESC, id DESC`：`id` 是 INTEGER PRIMARY KEY（即
+///   rowid），索引项天然按 `(ledger_id, created_at, rowid)` 有序，倒序扫描
+///   即得该序，无需临时排序。
+/// - ⚠️ `type` / `recurring_id` 过滤**刻意留在 Dart 侧**，不进 WHERE：SQLite 的
+///   `LIMIT` 约束的是**结果行数**、不是**扫描行数** —— 写成
+///   `WHERE ... AND type = ? LIMIT ?` 时，最近若干笔都不是目标类型就得沿索引
+///   一路扫描直到凑满 K 行匹配（或扫完整个索引），上界直接丢失。
+///   这里的扫描量由 `created_at >= ?` 的范围裁剪界定，与 `LIMIT ?` 一起恒定有界。
+///   （历史教训：P1-E 的记忆分类查询最初把 `type = ?` 写进 WHERE，其「工作量
+///   上界 = scanLimit 次索引项」的推理是错的，实现当天被单测测出。）
+const String recentEntryDefaultsSql = '''
+SELECT type, category_id, account_id, recurring_id
 FROM transactions
-WHERE ledger_id = ? AND happened_at IS NOT NULL
-ORDER BY happened_at DESC, id DESC
+WHERE ledger_id = ? AND created_at >= ?
+ORDER BY created_at DESC, id DESC
 LIMIT ?
 ''';
 
@@ -333,6 +335,12 @@ class LocalTransactionRepository implements TransactionRepository {
           originalAmount: d.Value(originalAmount ?? amount),
           // v46:空/null → 列写 NULL(该笔无自定义字段值)。
           customValuesJson: d.Value(CustomFieldValueCodec.encode(customValues)),
+          // v55:录入时刻(本地专有列)。**只有本方法写** —— 批量导入/云恢复走
+          // insertTransactionsBatch* / insertTransactionCompanion，保持 NULL,
+          // 故它们不会成为「5 分钟内继承上一笔」的继承源。
+          // 显式传 now 而不依赖列默认值:列刻意是「可空、无默认」,以使 NULL
+          // 具备「非用户录入」的语义。
+          createdAt: d.Value(DateTime.now()),
         ));
   }
 
@@ -912,40 +920,48 @@ class LocalTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Future<int?> getLastUsedCategoryId({
+  Future<RecentEntryDefaults?> getRecentEntryDefaults({
     required int ledgerId,
     required String kind,
-    int scanLimit = 100,
+    Duration within = kRecentEntryInheritWindow,
+    DateTime? now,
   }) async {
-    // 与 getNoteHistory 同一取径：直接从已保存交易派生，不维护可能与同步脱节的缓存副本。
-    //
-    // 为什么是「索引倒序游走 + K 上限」而不是 GROUP BY 全账本聚合：
-    // `ledger_id` 等值 + `happened_at` 倒序由 idx_transactions_ledger_happened
-    // 一次满足，窗口恒定 = 最近 K 笔（K 次索引项 + 至多 K 次回表）。
-    // ⚠️ type 必须在 Dart 侧判，不能进 WHERE —— 否则 LIMIT 不再约束扫描量，
-    // 上界会丢失（理由见 [quickEntryLastCategorySql] 的文档）。
-    final limit = scanLimit.clamp(1, 500).toInt();
+    // 窗口下界：`now` 可注入（测试用固定时刻），生产走墙钟。
+    final anchor = now ?? DateTime.now();
+    final since = anchor.subtract(within);
+
+    // LIMIT 只作防御性兜底：`created_at >= ?` 已经把扫描量裁到「窗口内的行」，
+    // 正常 0~2 行；这里防的是时钟回拨等异常造出大量同窗行。
     final rows = await db.customSelect(
-      quickEntryLastCategorySql,
+      recentEntryDefaultsSql,
       variables: [
         d.Variable<int>(ledgerId),
-        d.Variable<int>(limit),
+        d.Variable<DateTime>(since),
+        d.Variable<int>(_recentDefaultsScanLimit),
       ],
       readsFrom: {db.transactions},
     ).get();
 
     for (final row in rows) {
-      // 转账与另一类型直接跳过：窗口内它们不占用记忆位。
+      // 类型在 Dart 侧判（见 [recentEntryDefaultsSql] 的说明）。
       if (row.data['type'] != kind) continue;
+      // 周期模板生成的行不是「用户刚录的一笔」，不作继承源；跳过继续前溯。
+      if (row.data['recurring_id'] != null) continue;
 
-      final localId = row.data['category_id'];
-      if (localId is num) return localId.toInt();
-
-      // 无分类 = 这笔没有分类。**不能提前中断** ——
-      // AC-R1 #4 要求继续往前找最近一笔「带分类」的交易。
+      return (
+        categoryId: row.data['category_id'] is num
+            ? (row.data['category_id'] as num).toInt()
+            : null,
+        accountId: row.data['account_id'] is num
+            ? (row.data['account_id'] as num).toInt()
+            : null,
+      );
     }
     return null;
   }
+
+  /// 窗口查询的防御性行数上限（见 [getRecentEntryDefaults]）。
+  static const int _recentDefaultsScanLimit = 100;
 
   @override
   Future<int> countByTypeInRange({

@@ -289,6 +289,20 @@ class Transactions extends Table {
   /// trg_transactions_touch_updated_at 自动维护。
   DateTimeColumn get updatedAt => dateTime().nullable()();
 
+  /// v55：交易**录入时刻**（本设备把这一行写进库的时刻），与用户可改的
+  /// [happenedAt]（发生时间）解耦。服务「5 分钟内再次记账默认继承上一笔的
+  /// 分类与账户」——窗口判定按本列而非 happenedAt，补记历史账单（发生时间设为
+  /// 过去）时也能连续继承。
+  ///
+  /// **本地专有列**（同 createdByUserId / lastEditedByUserId）：不进快照 /
+  /// 不进指纹 / 不写 local_changes，恢复路径按 syncId 从原库回填。
+  ///
+  /// **刻意可空、不设默认值**：只有「用户交互式单笔录入」
+  /// （[LocalTransactionRepository.addTransaction]）会显式写入；批量导入
+  /// （CSV / 支付宝 / 微信）、云恢复 / 合并、周期模板自动生成的行保持 NULL ——
+  /// 它们既不会成为继承源，也不会被误当成「刚录的一笔」。
+  DateTimeColumn get createdAt => dateTime().nullable()();
+
   /// v30 交易级多币种(.docs/multi-currency-ledger):交易币种(ISO 大写)。
   /// 有账户 → 恒等于账户 currency(账户内不混币);无账户 → 用户所选(L12,
   /// 默认账本本位币)。显式存让交易自包含(同步/统计不必每次 join 账户)。
@@ -694,6 +708,38 @@ class SavingsGoals extends Table {
 // transactions 上的全部共享专属列(均 v51)。相关代码(picker synthetic 替换机制、
 // override 写入/回显、Editor 权限门控)已同步删除,勿再新增引用。
 
+/// v55 迁移（交易**录入时刻** `transactions.created_at`）的 DDL 与回填 SQL。
+///
+/// ⚠️ 必须放在 `@DriftDatabase` 注解**之前**：注解只作用于紧随其后的声明，
+/// 插在注解与 [PiggyDatabase] 之间会让 drift 生成器当作注解挂在常量上，
+/// `db.g.dart` 直接不生成（踩过）。
+///
+/// **为什么公开**：让 `test/data/migration_v55_test.dart` 引用**同一份 SQL**，
+/// 避免测试自己另抄一份字面量后，改实现悄悄骗过测试（部分状态重跑、脏类型守护
+/// 是最容易在抄写中漂移的两条）。同款做法也用在仓库层的窗口查询 SQL 常量上
+/// （`recentEntryDefaultsSql`）。
+const String addTransactionCreatedAtSql =
+    'ALTER TABLE transactions ADD COLUMN created_at INTEGER;';
+
+/// 存量行回填：迁移前没有录入时刻信息，`happened_at` 是最好的可得近似。
+///
+/// - `WHERE created_at IS NULL`：迁移必须幂等可重入（上次中途崩溃后重跑不得
+///   覆盖已回填值）。
+/// - `typeof(happened_at) IN ('integer','real')`：`created_at` 由 Drift 按
+///   纪元秒整数读写，理论上为 TEXT 的历史脏值不得被搬进来。
+/// - ⚠️ 本 UPDATE 会命中 `trg_transactions_touch_updated_at`
+///   （`WHEN NEW.updated_at IS OLD.updated_at`）从而刷新 `updated_at`：
+///   该列仅供审计，不进快照 / 不进指纹 / 不参与同步方向仲裁，属可接受副作用。
+const String backfillTransactionCreatedAtSql = 'UPDATE transactions SET '
+    'created_at = happened_at WHERE created_at IS NULL '
+    "AND typeof(happened_at) IN ('integer','real');";
+
+/// 服务「本账本最近 window 内录入的行」这一唯一高频查询
+/// （`ledger_id = ? AND created_at >= ?` 的范围裁剪）。
+const String createTransactionsLedgerCreatedIndexSql =
+    'CREATE INDEX IF NOT EXISTS idx_transactions_ledger_created '
+    'ON transactions(ledger_id, created_at);';
+
 @DriftDatabase(tables: [
   Ledgers,
   Accounts,
@@ -723,6 +769,7 @@ class SavingsGoals extends Table {
   HolidayEntries,
   HolidayUpdateMeta,
 ])
+
 class PiggyDatabase extends _$PiggyDatabase {
   PiggyDatabase() : super(_openConnection());
 
@@ -733,7 +780,7 @@ class PiggyDatabase extends _$PiggyDatabase {
 
   @override
   int get schemaVersion =>
-      54; // v54: 自定义字段新增「单选/多选」类型 — custom_field_definitions.options_json(JSON 字符串数组,NULL=无选项,仅 singleSelect/multiSelect 使用;每个选项只有一个字符串,既是存储值也是显示名);快照格式同批 v12→v13(customFields 段新增 options 键,指纹 customFieldCanon 纳入 options); v53: 储蓄目标(账本私有) — savings_goals 表(ledger_id/name/target_amount/currency/account_id/saved_amount/start_date/target_date/note/sort_order/sync_id):进度来源二选一,account_id 非空=账户模式(进度=该账户余额,币种锁账户币种,故无视图期汇率折算),为空=手动模式(进度=saved_amount,UI「存入/取出」调整);账户删除时 account_id 置 NULL 降级为手动模式,不级联删目标;刻意不建存入明细表(只回答「离目标还差多少」);ledger-scoped 同步实体,快照格式同批 v11→v12(新增 savingsGoals 段 + 段门控 sectionAbsent('savingsGoals', 12)); v52: 投资持仓(手动估值版) — holdings 表:投资账户金额改由 Σ(份额×生效净值) 接管,无持仓时回退 initial_balance(绝不双计);同批一次性预留行情接入字段(market/auto_quote 可同步,quote_price/quote_fetched_at/quote_source_id 为**本地专有缓存列**,不进快照/指纹/local_changes),后期接 A股/美股/加密行情源无需再升 schema 与快照格式版本； v51: 共享账本残留整体移除 — DROP shared_ledger_{categories,accounts,tags} / transaction_tag_overrides 四张死表(镜像表无写入方恒空) + ledgers(my_role/member_count/is_shared/owner_user_id) 与 transactions(category/account/to_account_sync_id_override + tag_sync_ids_override 死列) 八个共享专属列;同步契约三件套(指纹/快照/diff)与守门测试同批收窄; v50: 删除 ledger_members 死表(全库零读写;共享账本协作下线且项目无老用户,无需存量兼容); v49: 日历节假日本地缓存 — holiday_entries(date 主键,整年替换) + holiday_update_meta(单行 1:上次成功/尝试时间、连续失败数、自动更新开关);两张表都是「随时可整表重建」的本地缓存,不进同步白名单/指纹/diff/备份,也不挂 updated_at 触发器(与 exchange_rates 同定位) v48: 索引修复型迁移 — 补建 v10/v11/v12 只写进 onUpgrade 分支、onCreate 遗漏的 transaction_tags ×2 / budgets ×3 / transaction_attachments ×1 索引(2026-09-26 双端实测:新装库 EXPLAIN 报 SCAN transaction_tags,合并路径 tag 批量读固定 ~0.5s); v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+      55; // v55: 交易录入时刻 transactions.created_at(**本地专有列**,不进快照/指纹/local_changes;可空、无默认值 —— 只有用户交互式单笔录入 addTransaction 显式写入,批量导入/云恢复/周期模板生成保持 NULL,故它们不作「5 分钟内继承上一笔」的继承源);存量行回填 = happened_at(加 typeof 脏类型守护 + WHERE IS NULL 幂等守卫);新增复合索引 idx_transactions_ledger_created (ledger_id, created_at) 服务窗口查询; v54: 自定义字段新增「单选/多选」类型 — custom_field_definitions.options_json(JSON 字符串数组,NULL=无选项,仅 singleSelect/multiSelect 使用;每个选项只有一个字符串,既是存储值也是显示名);快照格式同批 v12→v13(customFields 段新增 options 键,指纹 customFieldCanon 纳入 options); v53: 储蓄目标(账本私有) — savings_goals 表(ledger_id/name/target_amount/currency/account_id/saved_amount/start_date/target_date/note/sort_order/sync_id):进度来源二选一,account_id 非空=账户模式(进度=该账户余额,币种锁账户币种,故无视图期汇率折算),为空=手动模式(进度=saved_amount,UI「存入/取出」调整);账户删除时 account_id 置 NULL 降级为手动模式,不级联删目标;刻意不建存入明细表(只回答「离目标还差多少」);ledger-scoped 同步实体,快照格式同批 v11→v12(新增 savingsGoals 段 + 段门控 sectionAbsent('savingsGoals', 12)); v52: 投资持仓(手动估值版) — holdings 表:投资账户金额改由 Σ(份额×生效净值) 接管,无持仓时回退 initial_balance(绝不双计);同批一次性预留行情接入字段(market/auto_quote 可同步,quote_price/quote_fetched_at/quote_source_id 为**本地专有缓存列**,不进快照/指纹/local_changes),后期接 A股/美股/加密行情源无需再升 schema 与快照格式版本； v51: 共享账本残留整体移除 — DROP shared_ledger_{categories,accounts,tags} / transaction_tag_overrides 四张死表(镜像表无写入方恒空) + ledgers(my_role/member_count/is_shared/owner_user_id) 与 transactions(category/account/to_account_sync_id_override + tag_sync_ids_override 死列) 八个共享专属列;同步契约三件套(指纹/快照/diff)与守门测试同批收窄; v50: 删除 ledger_members 死表(全库零读写;共享账本协作下线且项目无老用户,无需存量兼容); v49: 日历节假日本地缓存 — holiday_entries(date 主键,整年替换) + holiday_update_meta(单行 1:上次成功/尝试时间、连续失败数、自动更新开关);两张表都是「随时可整表重建」的本地缓存,不进同步白名单/指纹/diff/备份,也不挂 updated_at 触发器(与 exchange_rates 同定位) v48: 索引修复型迁移 — 补建 v10/v11/v12 只写进 onUpgrade 分支、onCreate 遗漏的 transaction_tags ×2 / budgets ×3 / transaction_attachments ×1 索引(2026-09-26 双端实测:新装库 EXPLAIN 报 SCAN transaction_tags,合并路径 tag 批量读固定 ~0.5s); v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   /// WAL 检查点后允许残留的字节数（见 [migration] 的 beforeOpen）。
   /// 公开给回归测试取期望值，别处不要依赖。
@@ -1827,6 +1874,36 @@ class PiggyDatabase extends _$PiggyDatabase {
                 'ALTER TABLE custom_field_definitions ADD COLUMN options_json TEXT;');
             logger.info('DBMigration', 'v54 迁移完成');
           }
+          if (from < 55) {
+            // v55: 交易录入时刻（2026-10-12）。
+            //
+            // 背景：记账页要支持「5 分钟内再次记账默认继承上一笔的分类与账户」，
+            // 窗口必须按「本设备录入时刻」判，而不是 happened_at（用户可改成
+            // 过去日期，补记历史账单时按 happened_at 会整批不继承）。
+            // updated_at 由 AFTER UPDATE 触发器维护、新插入行为 NULL，也不能用。
+            //
+            // 纯新增 + 存量回填为近似值：本地专有列，不进快照 / 指纹 /
+            // local_changes，故快照格式版本保持 v12 不动。
+            // SQL 与 test/data/migration_v55_test.dart 逐字对应（常量已公开在
+            // 文件顶部，测试直接引用同一份）。
+            logger.info('DBMigration', '开始迁移到 v55: 交易录入时刻(created_at)');
+            await _addColumnIfMissing(
+                'transactions', 'created_at', addTransactionCreatedAtSql);
+            // ⚠️ 先补齐 v40 的 `updated_at`：下面的回填 UPDATE 会触发
+            // `trg_transactions_touch_updated_at`（触发器体引用 NEW.updated_at），
+            // 而「直升形态」的库（user_version 直接跳到 ≥v40、v40 块从未跑过，
+            // 见 [_addColumnIfMissing] 的说明与 test/data/migration_v51_test.dart
+            // 手写的 v50 形态库）里该列可能压根不存在 —— 此时触发器在 CREATE 阶段
+            // 不校验列、能建成功，但**之后任何**对 transactions 的 UPDATE 都会在
+            // prepare 阶段报 `no such column: NEW.updated_at`（v55 的回填是本路径
+            // 上第一条这样的语句，已实测复现）。补上列后该触发器即恢复正常语义
+            // （顺带刷新 updated_at，见 backfillTransactionCreatedAtSql 的说明）。
+            await _addColumnIfMissing('transactions', 'updated_at',
+                'ALTER TABLE transactions ADD COLUMN updated_at INTEGER;');
+            await customStatement(backfillTransactionCreatedAtSql);
+            await customStatement(createTransactionsLedgerCreatedIndexSql);
+            logger.info('DBMigration', 'v55 迁移完成');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
@@ -1937,6 +2014,10 @@ class PiggyDatabase extends _$PiggyDatabase {
           await customStatement(
               'CREATE UNIQUE INDEX IF NOT EXISTS uq_savings_goals_sync_id '
               'ON savings_goals(sync_id);');
+          // v55: 交易录入时刻索引（与 onUpgrade v55 同构 —— 新装库走 onCreate
+          // 而非 migration，漏建即永久缺失；表本体由上方 m.createAll 创建）。
+          // v48 教训：onUpgrade 与 onCreate 的索引集合必须逐一对齐。
+          await customStatement(createTransactionsLedgerCreatedIndexSql);
         },
       );
 

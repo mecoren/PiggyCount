@@ -15,7 +15,9 @@ import '../transaction_repository.dart'
     show
         BatchAttachmentData,
         RecurringInstanceFingerprint,
+        RecentEntryDefaults,
         TransactionUpdateBySyncIdData,
+        kRecentEntryInheritWindow,
         kTransactionWindowSize;
 import 'local_ledger_repository.dart';
 import 'local_transaction_repository.dart';
@@ -1152,15 +1154,17 @@ class LocalRepository extends BaseRepository {
       );
 
   @override
-  Future<int?> getLastUsedCategoryId({
+  Future<RecentEntryDefaults?> getRecentEntryDefaults({
     required int ledgerId,
     required String kind,
-    int scanLimit = 100,
+    Duration within = kRecentEntryInheritWindow,
+    DateTime? now,
   }) =>
-      _transactionRepo.getLastUsedCategoryId(
+      _transactionRepo.getRecentEntryDefaults(
         ledgerId: ledgerId,
         kind: kind,
-        scanLimit: scanLimit,
+        within: within,
+        now: now,
       );
 
   @override
