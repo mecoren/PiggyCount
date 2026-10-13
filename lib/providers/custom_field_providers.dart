@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../data/db.dart';
 import '../data/models/custom_field_values.dart';
+import '../services/custom_field_stats_service.dart';
 import 'database_providers.dart';
 import 'theme_providers.dart';
 
@@ -61,6 +62,25 @@ final customFieldFilledCountProvider =
   ref.watch(customFieldListRefreshProvider);
   final repo = ref.watch(repositoryProvider);
   return repo.countTransactionsWithValues(ledgerId);
+});
+
+/// 指定区间内自定义字段值桶聚合（空 = 无定义或无值行）。
+///
+/// 「定义为空跳过值行查询」沿用 range_report_page 的优化（零定义账本不该
+/// 白扫一遍 transactions）。键含 refreshTick，与洞察主链路 memoKey 同源
+/// （U8 语义：新增/编辑交易后卡片数字随下次查询刷新）；autoDispose 对应
+/// 「旧键的 future 无人再读直接丢弃」，不随交互累积。
+final customFieldStatsForRangeProvider = FutureProvider.autoDispose.family<
+    List<CustomFieldFieldStats>,
+    ({int ledgerId, DateTime start, DateTime end, int refreshTick})>(
+    (ref, q) async {
+  ref.watch(customFieldListRefreshProvider);
+  final repo = ref.watch(repositoryProvider);
+  final defs = await repo.getDefinitionsForLedger(q.ledgerId);
+  if (defs.isEmpty) return const [];
+  final rows = await repo.customFieldStatsRows(
+      ledgerId: q.ledgerId, start: q.start, end: q.end);
+  return CustomFieldStatsService.aggregate(defs: defs, rows: rows);
 });
 
 /// B1(v47):当前账本的明细行自定义字段角标 —— txId → [(字段名, 展示文本)]。

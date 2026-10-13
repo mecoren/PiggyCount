@@ -11,6 +11,8 @@ import '../../widgets/charts/analytics_bar_chart.dart';
 import '../../widgets/charts/category_pie_chart.dart';
 import '../../widgets/analytics/analytics_summary.dart';
 import '../../widgets/analytics/category_rank_row.dart';
+import '../../widgets/analytics/custom_field_stats_card.dart';
+import '../../widgets/analytics/insight_card.dart';
 import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/export/share_poster_service.dart';
@@ -62,16 +64,16 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   /// 唯一消费点只在 build 里读当前键，历史条目无人再读，保留单条即满足
   /// 「setState 重建复用已发查询」的原始目的。
   ///
-  /// 结果形状是 `(口径, list)` 记录：支出/收入/结余三种口径的 list 位次不同
-  /// （结余 9 位、支出/收入各 6 位），而 FutureBuilder 换 future 时会**保留**
-  /// 上一份 `_data`，不带口径标签就无法判断这份数据能不能给当前口径用——
-  /// 跨口径复用会读到 list[7] 越界。
-  Future<(String, List<dynamic>)>? _lastAnalyticsFuture;
+  /// 结果形状是 `(口径, 数据包)` 记录：支出/收入/结余三种口径数据包字段不同
+  /// （结余是 [BalanceInsightsData]、支出/收入是 [InOutInsightsData]），而
+  /// FutureBuilder 换 future 时会**保留**上一份 `_data`，不带口径标签就无法
+  /// 判断这份数据能不能给当前口径用——跨口径复用会串数据。
+  Future<(String, InsightsData)>? _lastAnalyticsFuture;
   String? _lastAnalyticsKey;
 
   /// 已查过的口径结果，键 = memoKey（含口径 + 范围 + 刷新 tick）。
   /// 切回看过的口径命中缓存 → `SynchronousFuture` 同帧出数，不再转圈。
-  final Map<String, (String, List<dynamic>)> _resultCache = {};
+  final Map<String, (String, InsightsData)> _resultCache = {};
   String? _cacheScope;
 
   /// U8 缓存的记忆化入口：键命中返回已发 future；未命中发起查询并替换
@@ -79,8 +81,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   ///
   /// 三级取数（与 range_report_page 的 `_futureFor` 同款）：同键复用已发查询
   /// → 口径缓存命中同步出数 → 都没有才真查库。
-  Future<(String, List<dynamic>)> _rememberAnalyticsFuture(String memoKey,
-      String scopeKey, Future<(String, List<dynamic>)> Function() create) {
+  Future<(String, InsightsData)> _rememberAnalyticsFuture(String memoKey,
+      String scopeKey, Future<(String, InsightsData)> Function() create) {
     if (_cacheScope != scopeKey) {
       _cacheScope = scopeKey;
       _resultCache.clear();
@@ -429,20 +431,6 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
       out.add((month: m, total: map[m] ?? 0));
     }
     return out;
-  }
-
-  // 从序列数据中计算总和
-  double _getSumFromSeries(dynamic seriesData) {
-    if (seriesData is List<({DateTime day, double total})>) {
-      return seriesData.fold<double>(0, (sum, e) => sum + e.total);
-    }
-    if (seriesData is List<({DateTime month, double total})>) {
-      return seriesData.fold<double>(0, (sum, e) => sum + e.total);
-    }
-    if (seriesData is List<({int year, double total})>) {
-      return seriesData.fold<double>(0, (sum, e) => sum + e.total);
-    }
-    return 0.0;
   }
 
   @override
@@ -808,7 +796,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                               prevStart,
                               prevEnd,
                               chartSeriesFuture))
-                      .then((list) => (shape, list));
+                      .then((loaded) => (shape, loaded));
                 },
               ),
               builder: (context, snapshot) {
@@ -849,9 +837,9 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 // FutureBuilder 换 future 时保留的 _data 是上一口径的记录，
                 // 口径不匹配时必须丢弃（否则按错位次取值 = 串数据）。
                 final tag = snapshot.data;
-                final list =
+                final data =
                     (tag != null && tag.$1 == _shapeOf(_type)) ? tag.$2 : null;
-                if (list == null) {
+                if (data == null) {
                   return Center(
                     child: PiggySpinner(
                       size: 36,
@@ -862,91 +850,52 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
                 // 在balance模式下，需要计算结余数据
                 dynamic seriesRaw;
-                List<
-                    ({
-                      int? id,
-                      String name,
-                      db.Category? category,
-                      double total,
-                      int count,
-                      List<
-                          ({
-                            int id,
-                            db.Category category,
-                            String name,
-                            double total
-                          })> subCategories
-                    })> catData;
+                List<CatAgg> catData;
                 int txCount;
                 double sum;
                 double balance = 0; // 本期收支结余
                 double? prevTotal; // 上期总额（同比）
                 double expenseTotal = 0; // 本期总支出（结余视角第 4 格用）
 
-                if (_type == 'balance') {
-                  // balance模式：list[3]是收入数据，list[4]是支出数据，list[5]是收入交易数量
-                  final incomeData = list[3];
-                  final expenseData = list[4];
+                // 穷尽 switch（无 default）：新增数据包子类时编译器强制补分支
+                switch (data) {
+                  case BalanceInsightsData(
+                      :final series,
+                      :final cats,
+                      :final curTotals,
+                      :final prevTotals,
+                      :final expenseCount,
+                      :final incomeCount,
+                    ):
+                    // 结余序列由加载侧算好（见 BalanceInsightsData.series）
+                    seriesRaw = series;
 
-                  // 结余序列由加载侧算好放在 list[7]（见 _loadBalanceData 位次注释）
-                  seriesRaw = list[7];
+                    // 分类数据显示支出分类（但结余模式下不显示排行榜）
+                    catData = cats;
 
-                  // 分类数据显示支出分类（但结余模式下不显示排行榜）
-                  catData = list[0] as List<
-                      ({
-                        int? id,
-                        String name,
-                        db.Category? category,
-                        double total,
-                        int count,
-                        List<
-                            ({
-                              int id,
-                              db.Category category,
-                              String name,
-                              double total
-                            })> subCategories
-                      })>;
+                    // 收入和支出的交易数量合计
+                    txCount = expenseCount + incomeCount;
 
-                  // 获取收入和支出的交易数量
-                  final expenseCount = list[2] as int;
-                  final incomeCount = list[5] as int;
-                  txCount = expenseCount + incomeCount;
-
-                  // 计算总结余（收入总额 - 支出总额）
-                  final incomeSum = _getSumFromSeries(incomeData);
-                  final expenseSum = _getSumFromSeries(expenseData);
-                  sum = incomeSum - expenseSum;
-                  // 结余视角：结余即总额；同比=上期收入-支出；第4格显示总支出
-                  final prevTotals = list[6] as (double, double);
-                  balance = sum;
-                  prevTotal = prevTotals.$1 - prevTotals.$2;
-                  expenseTotal = expenseSum;
-                } else {
-                  catData = list[0] as List<
-                      ({
-                        int? id,
-                        String name,
-                        db.Category? category,
-                        double total,
-                        int count,
-                        List<
-                            ({
-                              int id,
-                              db.Category category,
-                              String name,
-                              double total
-                            })> subCategories
-                      })>;
-                  seriesRaw = list[1];
-                  txCount = list[2] as int;
-                  sum = catData.fold<double>(0, (a, b) => a + b.total);
-                  // 本期收支与上期收支（同比）
-                  final curTotals = list[3] as (double, double);
-                  final prevTotals = list[4] as (double, double);
-                  balance = curTotals.$1 - curTotals.$2;
-                  prevTotal =
-                      _type == 'expense' ? prevTotals.$2 : prevTotals.$1;
+                    // 总结余 = 收入总额 - 支出总额（总额由加载侧求和）
+                    sum = curTotals.$1 - curTotals.$2;
+                    // 结余视角：结余即总额；同比=上期收入-支出；第4格显示总支出
+                    balance = sum;
+                    prevTotal = prevTotals.$1 - prevTotals.$2;
+                    expenseTotal = curTotals.$2;
+                  case InOutInsightsData(
+                      :final series,
+                      :final cats,
+                      :final curTotals,
+                      :final prevTotals,
+                    ):
+                    catData = cats;
+                    seriesRaw = series;
+                    // 不解构 txCount：pattern 绑定会同名遮蔽外层局部变量
+                    txCount = data.txCount;
+                    sum = catData.fold<double>(0, (a, b) => a + b.total);
+                    balance = curTotals.$1 - curTotals.$2;
+                    prevTotal =
+                        _type == 'expense' ? prevTotals.$2 : prevTotals.$1;
                 }
 
                 // 统一取数列的数值数组
@@ -1035,7 +984,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
                 // ===== 图表6周期序列（柱状图/折线图共用）=====
                 // 周报 = 本周+前5周、月报 = 本月+前5月、年报 = 本年+前5年；全部 = 全部年份
-                final chartSeriesRaw = list[list.length - 1];
+                final chartSeriesRaw = data.chartSeries;
                 dynamic chartSeries;
                 if (chartSeriesRaw is List<({DateTime day, double total})>) {
                   // 桶起点与查询窗口同源（chartSeriesWindow）：6 桶 = 本期+前5期
@@ -1221,22 +1170,28 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 final barBadge =
                     '${hide ? '**' : formatBalance(sum, baseCurrency, isChineseLocale: isZh)} ${_navPeriodLabel(context, selMonth)}';
 
-                return GestureDetector(
-                  onHorizontalDragEnd: (details) {
-                    if (_chartSwiped) {
-                      setState(() => _chartSwiped = false);
-                      return;
-                    }
-                    // 左右滑动切换类型
-                    if (details.primaryVelocity! > 0) {
-                      _cycleTypeBackward();
-                    } else {
-                      _cycleTypeForward();
-                    }
-                  },
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    children: [
+                // 分类构成卡的环形图数据（record 映射移出内层 Builder，见
+                // design.md §一.3：Builder 只保树形，不再藏取数逻辑）
+                final pieData = <PieCategoryItem>[
+                  for (final c in catData)
+                    (
+                      id: c.id,
+                      name: c.name,
+                      category: c.category,
+                      total: c.total,
+                      subCategories: c.subCategories,
+                    ),
+                ];
+
+                // ===== 洞察卡片注册表 =====
+                // 新增/隐藏卡片 = 清单一项 + 谓词一处；五卡顺序与收编前逐项
+                // 一致。build 返回「卡片 + 后置间距」片段——卡片间距不均匀
+                // （排行榜与自定义字段卡之间无间距），片段化才能保持树形。
+                final cards = <InsightCardDef>[
+                  InsightCardDef(
+                    id: 'summary',
+                    visible: true,
+                    build: () => [
                       AnalyticsSummary(
                         scope: _scope,
                         isExpense: _type == 'expense',
@@ -1247,12 +1202,19 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         expenseColor: PiggyTokens.expenseColor(context, ref),
                         incomeColor: PiggyTokens.incomeColor(context, ref),
                         // 四指标：同比（全部视角无上期→显示记账笔数）+ 结余
-                        prevTotal: _scope == AnalyticsScope.all ? null : prevTotal,
+                        prevTotal:
+                            _scope == AnalyticsScope.all ? null : prevTotal,
                         balance: balance,
                         txCount: txCount,
                         expenseTotal: _type == 'balance' ? expenseTotal : null,
                       ),
                       const SizedBox(height: 12),
+                    ],
+                  ),
+                  InsightCardDef(
+                    id: 'trendChart',
+                    visible: true,
+                    build: () => [
                       // 趋势折线卡：标题 + 平滑曲线 + Y轴大金额缩写 + 点按气泡
                       Container(
                         padding: const EdgeInsets.fromLTRB(12, 14, 12, 8),
@@ -1370,129 +1332,169 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      // 结余视角不显示分类构成与排行榜
-                      if (_type != 'balance') ...[
-                        // 分类构成卡：标题 + 环形图（外置标签），仅展示主分类
-                        Builder(builder: (context) {
-                          final pieData = <PieCategoryItem>[
-                            for (final c in catData)
-                              (
-                                id: c.id,
-                                name: c.name,
-                                category: c.category,
-                                total: c.total,
-                                subCategories: c.subCategories,
-                              ),
-                          ];
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Container(
-                                padding:
-                                    const EdgeInsets.fromLTRB(16, 14, 16, 12),
-                                decoration: BoxDecoration(
-                                  color: PiggyTokens.surface(context),
-                                  borderRadius: BorderRadius.circular(
-                                      PiggyDimens.radius2xl),
-                                  border: Border.all(
-                                    color: ref.watch(primaryColorProvider),
-                                    width: 1.5,
-                                  ),
+                    ],
+                  ),
+                  // 分类构成卡：标题 + 环形图（外置标签），仅展示主分类
+                  // 结余视角不显示（与排行榜同口径）
+                  InsightCardDef(
+                    id: 'categoryBreakdown',
+                    visible: _type != 'balance',
+                    build: () => [
+                      Builder(builder: (context) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Container(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                              decoration: BoxDecoration(
+                                color: PiggyTokens.surface(context),
+                                borderRadius: BorderRadius.circular(
+                                    PiggyDimens.radius2xl),
+                                border: Border.all(
+                                  color: ref.watch(primaryColorProvider),
+                                  width: 1.5,
                                 ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          width: 3,
-                                          height: 14,
-                                          margin:
-                                              const EdgeInsets.only(right: 8),
-                                          decoration: BoxDecoration(
-                                            color: PiggyTokens.primary(context),
-                                            borderRadius: BorderRadius.circular(
-                                                PiggyDimens.radiusXs),
-                                          ),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 3,
+                                        height: 14,
+                                        margin:
+                                            const EdgeInsets.only(right: 8),
+                                        decoration: BoxDecoration(
+                                          color: PiggyTokens.primary(context),
+                                          borderRadius: BorderRadius.circular(
+                                              PiggyDimens.radiusXs),
                                         ),
-                                        Expanded(
-                                          child: Text(
-                                            l10n.analyticsCategoryComposition(
-                                                typeWord),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: PiggyTextTokens.strongTitle(
-                                                context),
-                                          ),
+                                      ),
+                                      Expanded(
+                                        child: Text(
+                                          l10n.analyticsCategoryComposition(
+                                              typeWord),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: PiggyTextTokens.strongTitle(
+                                              context),
                                         ),
-                                      ],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  if (pieData.isNotEmpty && sum > 0)
+                                    RepaintBoundary(
+                                      // 环形图扇区触摸高亮隔离,避免排行榜重绘
+                                      child: CategoryPieChart(
+                                        data: pieData,
+                                        sum: sum,
+                                      ),
                                     ),
-                                    const SizedBox(height: 8),
-                                    if (pieData.isNotEmpty && sum > 0)
-                                      RepaintBoundary(
-                                        // 环形图扇区触摸高亮隔离,避免排行榜重绘
-                                        child: CategoryPieChart(
-                                          data: pieData,
-                                          sum: sum,
-                                        ),
-                                      ),
-                                  ],
-                                ),
+                                ],
                               ),
-                              const SizedBox(height: 12),
-                              // 排行榜卡：序号 + 图标 + 名称笔数 + 进度条 + 百分比金额
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: PiggyTokens.surface(context),
-                                  borderRadius: BorderRadius.circular(
-                                      PiggyDimens.radius2xl),
-                                  border: Border.all(
-                                    color: ref.watch(primaryColorProvider),
-                                    width: 1.5,
-                                  ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                        );
+                      }),
+                    ],
+                  ),
+                  // 排行榜卡：序号 + 图标 + 名称笔数 + 进度条 + 百分比金额
+                  InsightCardDef(
+                    id: 'categoryRank',
+                    visible: _type != 'balance',
+                    build: () => [
+                      Builder(builder: (context) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: PiggyTokens.surface(context),
+                            borderRadius: BorderRadius.circular(
+                                PiggyDimens.radius2xl),
+                            border: Border.all(
+                              color: ref.watch(primaryColorProvider),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // 仅主分类排行（本项目无子分类），点击直接进分类详情
+                              for (var i = 0; i < catData.length; i++)
+                                CategoryRankRow(
+                                  categoryId: catData[i].id,
+                                  category: catData[i].category,
+                                  name: catData[i].name,
+                                  value: catData[i].total,
+                                  percent: sum == 0
+                                      ? 0
+                                      : catData[i].total / sum,
+                                  color: _pieColorAt(context, i),
+                                  start: start,
+                                  end: end,
+                                  scope: _scope,
+                                  selMonth: selMonth,
+                                  rank: i + 1,
+                                  count: catData[i].count,
+                                  // 周/自定义由页面传入范围文案（自定义区间
+                                  // 在 row 侧无法还原，其余档位 row 自算）
+                                  periodLabel: switch (_scope) {
+                                    AnalyticsScope.week => weekRangeText(
+                                        weekRangeFor(_selWeek)),
+                                    AnalyticsScope.custom =>
+                                      _customRangeText(),
+                                    AnalyticsScope.month ||
+                                    AnalyticsScope.quarter ||
+                                    AnalyticsScope.year ||
+                                    AnalyticsScope.all => null,
+                                  },
                                 ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    // 仅主分类排行（本项目无子分类），点击直接进分类详情
-                                    for (var i = 0; i < catData.length; i++)
-                                      CategoryRankRow(
-                                        categoryId: catData[i].id,
-                                        category: catData[i].category,
-                                        name: catData[i].name,
-                                        value: catData[i].total,
-                                        percent: sum == 0
-                                            ? 0
-                                            : catData[i].total / sum,
-                                        color: _pieColorAt(context, i),
-                                        start: start,
-                                        end: end,
-                                        scope: _scope,
-                                        selMonth: selMonth,
-                                        rank: i + 1,
-                                        count: catData[i].count,
-                                        // 周/自定义由页面传入范围文案（自定义区间
-                                        // 在 row 侧无法还原，其余档位 row 自算）
-                                        periodLabel: switch (_scope) {
-                                          AnalyticsScope.week => weekRangeText(
-                                              weekRangeFor(_selWeek)),
-                                          AnalyticsScope.custom =>
-                                            _customRangeText(),
-                                          AnalyticsScope.month ||
-                                          AnalyticsScope.quarter ||
-                                          AnalyticsScope.year ||
-                                          AnalyticsScope.all => null,
-                                        },
-                                      ),
-                                  ],
-                                ),
-                              ),
                             ],
-                          );
-                        }),
-                      ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                  // 自定义字段汇总卡：结余视角与空数据自隐藏
+                  // （prd/analytics_custom_field_card，数据自取不走位次表）
+                  InsightCardDef(
+                    id: 'customFieldSummary',
+                    // 卡片内部自隐藏（balance/聚合空）；谓词恒真不重复判定
+                    visible: true,
+                    build: () => [
+                      CustomFieldStatsCard(
+                        start: start,
+                        end: end,
+                        type: _type,
+                      ),
+                    ],
+                  ),
+                ];
+
+                return GestureDetector(
+                  onHorizontalDragEnd: (details) {
+                    if (_chartSwiped) {
+                      setState(() => _chartSwiped = false);
+                      return;
+                    }
+                    // 左右滑动切换类型
+                    if (details.primaryVelocity! > 0) {
+                      _cycleTypeBackward();
+                    } else {
+                      _cycleTypeForward();
+                    }
+                  },
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    children: [
+                      // 注册表驱动渲染：可见卡片的「卡片 + 后置间距」片段
+                      // 依序展开，树形与收编前逐节点一致；底部留白非卡片保持原样
+                      for (final card in cards)
+                        if (card.visible) ...card.build(),
                       // 底部留白，避免被悬浮 Tab 栏遮挡
                       SizedBox(
                           height: 56 +
@@ -1527,9 +1529,111 @@ Color _pieColorAt(BuildContext context, int i) => i < 8
 /// `key: ValueKey(_type)`（切口径销毁元素→整页转圈）换成数据自带标签的前提。
 String _shapeOf(String type) => type == 'balance' ? 'balance' : 'inOut';
 
+// 从序列数据中计算总和：day/month/year 三种 record 形状逐项累加 total，
+// 未知形状返回 0（形状分派保留——series 保持 dynamic 是本批边界，见
+// prd/analytics_card_registry/design.md §一.2）。原为 State 方法
+// _getSumFromSeries，收编为顶层纯函数以便脱离页面单测。
+double sumOfSeries(dynamic seriesData) {
+  if (seriesData is List<({DateTime day, double total})>) {
+    return seriesData.fold<double>(0, (sum, e) => sum + e.total);
+  }
+  if (seriesData is List<({DateTime month, double total})>) {
+    return seriesData.fold<double>(0, (sum, e) => sum + e.total);
+  }
+  if (seriesData is List<({int year, double total})>) {
+    return seriesData.fold<double>(0, (sum, e) => sum + e.total);
+  }
+  return 0.0;
+}
+
+/// 分类聚合行：`aggregateTopLevelCategories` 返回的 record 形状别名
+/// （此前在 build/load 两侧重复展开 7 层 record 字面量）。
+typedef CatAgg = ({
+  int? id,
+  String name,
+  db.Category? category,
+  double total,
+  int count,
+  List<({int id, db.Category category, String name, double total})> subCategories,
+});
+
+/// 洞察页查询结果数据包（批次②：替代 `List<dynamic>` 位次表）。
+///
+/// 两口径的同名字段语义不同（series：分类主序列 vs 结余序列；笔数：单维 vs
+/// 收支合计），sealed 穷尽匹配把「跨形状误读」从运行时静默错值变成编译错误。
+/// `series`/`chartSeries` 保持 dynamic（day/month/year 三种 record 形状）：
+/// 形状强类型化波及图表全家桶的 `is` 分派，超出本批「收编位次」边界。
+sealed class InsightsData {
+  const InsightsData({
+    required this.shape,
+    required this.series,
+    required this.chartSeries,
+    required this.cats,
+    required this.curTotals,
+    required this.prevTotals,
+  });
+
+  /// 形状标签（'inOut' | 'balance'）：在途复用闸门用，语义见 [_shapeOf]。
+  final String shape;
+
+  /// 主序列：收支口径 = 分类维度总额序列；结余口径 = 结余序列。
+  final dynamic series;
+
+  /// 图表 6 周期序列（原 `list[list.length - 1]` 隐式约定，命名后消失）。
+  final dynamic chartSeries;
+
+  /// 一级分类聚合（含子分类明细），排行榜/分类构成用。
+  final List<CatAgg> cats;
+
+  /// (本期收入, 本期支出)；结余口径同构（由收支序列求和而来）。
+  final (double, double) curTotals;
+
+  /// (上期收入, 上期支出)。
+  final (double, double) prevTotals;
+}
+
+/// 支出/收入口径数据包（原 6 位位次表）。
+final class InOutInsightsData extends InsightsData {
+  const InOutInsightsData({
+    required super.shape,
+    required super.series,
+    required super.chartSeries,
+    required super.cats,
+    required super.curTotals,
+    required super.prevTotals,
+    required this.txCount,
+  });
+
+  /// 本期该口径交易笔数。
+  final int txCount;
+}
+
+/// 结余口径数据包（原 9 位位次表）。
+final class BalanceInsightsData extends InsightsData {
+  const BalanceInsightsData({
+    required super.shape,
+    required super.series,
+    required super.chartSeries,
+    required super.cats,
+    required super.curTotals,
+    required super.prevTotals,
+    required this.expenseCount,
+    required this.incomeCount,
+    required this.incomeSeries,
+    required this.expenseSeries,
+  });
+
+  final int expenseCount;
+  final int incomeCount;
+
+  /// 收入/支出序列（求和即 [curTotals]，保留原始序列供形状分派复用）。
+  final dynamic incomeSeries;
+  final dynamic expenseSeries;
+}
+
 // 加载分类数据并聚合
-// 返回 [catData, seriesRaw, txCount, (本期收入,本期支出), (上期收入,上期支出), chartSeriesRaw]
-Future<List<dynamic>> _loadCategoryData(
+// 返回命名数据包（原 6 位位次表，见 InsightsData）
+Future<InOutInsightsData> _loadCategoryData(
   dynamic repo,
   int ledgerId,
   String type,
@@ -1567,19 +1671,22 @@ Future<List<dynamic>> _loadCategoryData(
       })>;
   final aggregated = await aggregateTopLevelCategories(hierarchyData, repo);
 
-  return [
-    aggregated,
-    results[1],
-    results[2],
-    results[3],
-    results[4],
-    results[5],
-  ];
+  // 命名数据包（原 6 位位次表：0=catData 1=series 2=txCount
+  // 3=(本期收入,本期支出) 4=(上期收入,上期支出) 5=chartSeries）
+  return InOutInsightsData(
+    shape: _shapeOf(type),
+    series: results[1],
+    chartSeries: results[5],
+    cats: aggregated,
+    curTotals: results[3] as (double, double),
+    prevTotals: results[4] as (double, double),
+    txCount: results[2] as int,
+  );
 }
 
 // 加载结余数据并聚合
-// 返回 [catData, series, expenseCount, incomeSeries, expenseSeries, incomeCount, (上期收入,上期支出), chartSeriesRaw]
-Future<List<dynamic>> _loadBalanceData(
+// 返回命名数据包（原 9 位位次表，见 BalanceInsightsData）
+Future<BalanceInsightsData> _loadBalanceData(
   dynamic repo,
   int ledgerId,
   DateTime start,
@@ -1622,19 +1729,24 @@ Future<List<dynamic>> _loadBalanceData(
 
   // 结余序列在加载侧算：两份按日/按月序列各最长 6 桶×31 天，合并是纯函数，
   // 放在 build 里等于每次 setState 重排一遍（F2 顺手收的旧账）。
-  // 返回位次：0=catData 1=series 2=expenseCount 3=incomeSeries 4=expenseSeries
-  // 5=incomeCount 6=(上期收入,上期支出) 7=结余序列 8=图表序列
-  return [
-    aggregated,
-    results[1],
-    results[2],
-    results[3],
-    results[4],
-    results[5],
-    results[6],
-    _calculateBalanceSeries(results[3], results[4]),
-    results[7],
-  ];
+  // 命名数据包（原 9 位位次表：0=catData 1=series 2=expenseCount
+  // 3=incomeSeries 4=expenseSeries 5=incomeCount 6=(上期收入,上期支出)
+  // 7=结余序列 8=chartSeries）
+  return BalanceInsightsData(
+    shape: _shapeOf('balance'),
+    series: _calculateBalanceSeries(results[3], results[4]),
+    chartSeries: results[7],
+    cats: aggregated,
+    curTotals: (
+      sumOfSeries(results[3]),
+      sumOfSeries(results[4]),
+    ),
+    prevTotals: results[6] as (double, double),
+    expenseCount: results[2] as int,
+    incomeCount: results[5] as int,
+    incomeSeries: results[3],
+    expenseSeries: results[4],
+  );
 }
 
 // 计算结余序列（收入 - 支出）
