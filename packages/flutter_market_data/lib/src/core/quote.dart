@@ -70,6 +70,7 @@ class Quote {
   const Quote({
     required this.symbol,
     required this.price,
+    this.name,
     this.market,
     this.currency,
     this.asOf,
@@ -78,6 +79,10 @@ class Quote {
   });
 
   final String symbol;
+
+  /// 标的名称（如「贵州茅台」）。null = 该源不提供 / 未取到 —— 调用方据此决定
+  /// 是否用它回填用户输入（只在用户尚未填名时兜底，绝不覆盖用户已填内容）。
+  final String? name;
 
   /// 市场标识（见 [QuoteMarket]）
   final String? market;
@@ -108,5 +113,6 @@ class Quote {
   }
 
   @override
-  String toString() => 'Quote($key, $price $currency, asOf=$asOf)';
+  String toString() =>
+      'Quote($key, $name, $price $currency, asOf=$asOf)';
 }

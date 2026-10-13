@@ -129,11 +129,11 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       // v52：持仓表变更 → bump statsRefreshProvider。持仓的任何写（含行情缓存）
       // 都会改变账户金额，缺这条订阅会出现「持仓页新、净资产卡旧」。
       ref.read(holdingsTableWatchProvider);
-      // v52 行情自动刷新：当前唯一行情源是手动录入（capability.isAutomatic
-      // == false），enabled 恒 false → 不建 Timer、不发请求。后期接真实源
-      // 后这里会自动生效（supportsAutomaticQuotes 变 true）。
+      // v52 行情自动刷新：调度器常驻每 15 分钟一跳，但「是否真拉」在
+      // _runScheduledQuoteRefresh 里按（自动刷新开关 × 源自动能力 × 频率节流 ×
+      // 恢复临界区）四道闸门收敛 —— 默认开关关闭 / 手动源，一跳也发不出请求。
       _quoteScheduler = QuoteRefreshScheduler(
-        enabled: ref.read(quoteServiceProvider).supportsAutomaticQuotes,
+        enabled: true,
         onCheck: _runScheduledQuoteRefresh,
       )..start();
       // 每日定时备份：1 分钟粒度检查，触发条件在闭包内判定
@@ -224,14 +224,18 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
   /// 当日自动名额，失败不占用（P2-4 弱网日自动补试直至成功或跨日）。
   /// v52 行情自动刷新的每轮编排（由 [QuoteRefreshScheduler] 注入调用）。
   ///
-  /// 三层闸门（缺一不可）：
-  /// 1. 行情源必须自带自动拉取能力（手动源直接 return，零请求）；
-  /// 2. 距上次成功拉取必须超过源的 `minRefreshInterval`（[QuoteRefreshScheduler.shouldTriggerNow]）；
-  /// 3. 恢复临界区内不跑（与备份同款让位：半恢复态刷行情只会把旧值写进缓存）。
+  /// 四道闸门（缺一不可）：
+  /// 1. 自动刷新总开关开启（[quoteAutoRefreshSettingsProvider]，默认关闭）；
+  /// 2. 行情源必须自带自动拉取能力（手动源直接 return，零请求）；
+  /// 3. 距上次成功拉取须 ≥ 生效最小间隔（[quoteEffectiveMinIntervalProvider]
+  ///    = 用户频率与源 `minRefreshInterval` 取大，[QuoteRefreshScheduler.shouldTriggerNow]）；
+  /// 4. 恢复临界区内不跑（与备份同款让位：半恢复态刷行情只会把旧值写进缓存）。
   ///
   /// 失败**不弹任何 UI**：后台路径失败是常态，错误类别已由 `QuoteService`
   /// 记录并从返回值透出；界面上的新鲜度由 `quote_fetched_at` 展示决定。
   Future<void> _runScheduledQuoteRefresh() async {
+    final settings = ref.read(quoteAutoRefreshSettingsProvider);
+    if (!settings.enabled) return;
     final service = ref.read(quoteServiceProvider);
     if (!service.supportsAutomaticQuotes) return;
     if (SyncRestoreGuard.isBusy) return;
@@ -245,21 +249,20 @@ class _PiggyAppState extends ConsumerState<PiggyApp>
       if (at == null) continue;
       if (lastFetchAt == null || at.isAfter(lastFetchAt)) lastFetchAt = at;
     }
+    final minInterval = ref.read(quoteEffectiveMinIntervalProvider);
     if (!QuoteRefreshScheduler.shouldTriggerNow(
       enabled: true,
       lastFetchAt: lastFetchAt,
-      minInterval: service.capability.minRefreshInterval,
+      minInterval: minInterval,
       now: DateTime.now(),
     )) {
       return;
     }
 
     final result = await service.refreshQuotes();
-    if (result.updated > 0) {
-      // 持仓表 watch 会自行 bump statsRefresh（见 holding_providers），
-      // 这里不重复触发；仅记录一行便于排查「为什么净值没变」。
-      logger.info('QuoteService', '定时行情刷新：$result');
-    }
+    // 持仓表 watch 会自行 bump statsRefresh（见 holding_providers），
+    // 这里不重复触发；仅记录一行便于排查「为什么净值没变」。
+    logger.info('QuoteService', '定时行情刷新：$result');
   }
 
   /// backup_auto_last_attempt_ms 记录每次尝试时刻：失败退避 30 分钟 +

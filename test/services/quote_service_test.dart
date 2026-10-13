@@ -38,6 +38,12 @@ class _FakeQuoteProvider implements QuoteProvider {
   /// 非 null 时 [fetchQuotes] 直接抛该异常
   QuoteException? throwError;
 
+  /// 非 null 时给所有返回行情标上该报价币种（用于测「缺汇率剔除」跨币种折算）
+  String? quoteCurrency;
+
+  /// 非 null 时给所有返回行情标上该名称（用于测名称回填）
+  String? quoteName;
+
   /// 记录每次请求里的标的 key（顺序保留），用于断言切片与跳过
   final List<List<String>> requests = <List<String>>[];
 
@@ -71,6 +77,8 @@ class _FakeQuoteProvider implements QuoteProvider {
         symbol: item.symbol,
         market: item.market,
         price: price,
+        name: quoteName,
+        currency: quoteCurrency,
         sourceId: providerId,
         asOf: DateTime(2026, 10, 8),
       );
@@ -109,11 +117,12 @@ void main() {
     String? market,
     bool autoQuote = true,
     double unitPrice = 10,
+    String currency = 'CNY',
   }) =>
       repo.createHolding(
         accountId: accountId,
         name: name,
-        currency: 'CNY',
+        currency: currency,
         symbol: symbol,
         market: market,
         autoQuote: autoQuote,
@@ -315,6 +324,171 @@ void main() {
       expect(result.updated, 2);
       expect((await repo.getHolding(a))!.quotePrice, 1700);
       expect((await repo.getHolding(b))!.quotePrice, 1700);
+    });
+  });
+
+  group('缺汇率剔除（报价币种 ≠ 持仓币种）', () {
+    test('缺汇率解析器 → 整条剔除、不写缓存、不推进 fetchedAt', () async {
+      final id = await addHolding(
+          name: '港股', symbol: '00700', market: 'HK', currency: 'CNY');
+      await repo.writeQuoteCache(id,
+          price: 280, fetchedAt: DateTime(2026, 10, 7), sourceId: 'fake');
+      final provider = _FakeQuoteProvider(markets: const {'SH', 'SZ', 'HK', 'US'})
+        ..price('HK', '00700', 300)
+        ..quoteCurrency = 'HKD';
+
+      final result = await serviceWith(provider).refreshQuotes();
+
+      expect(result.updated, 0);
+      expect(result.excluded, 1, reason: '折算不到持仓币种 → 计入 excluded');
+      final row = await repo.getHolding(id);
+      expect(row!.quotePrice, 280, reason: '旧缓存必须保留，不得写脏值');
+      expect(row.quoteFetchedAt, DateTime(2026, 10, 7));
+    });
+
+    test('有汇率解析器 → 按汇率折算到持仓币种', () async {
+      final id = await addHolding(
+          name: '港股', symbol: '00700', market: 'HK', currency: 'CNY');
+      final provider = _FakeQuoteProvider(markets: const {'SH', 'SZ', 'HK', 'US'})
+        ..price('HK', '00700', 300)
+        ..quoteCurrency = 'HKD';
+      final service = QuoteService(
+        repository: repo,
+        provider: provider,
+        // 1 HKD = 0.92 CNY
+        ratesToBaseResolver: () async => {'CNY': 1.0, 'HKD': 0.92},
+        now: () => fixedNow,
+      );
+
+      final result = await service.refreshQuotes();
+
+      expect(result.updated, 1);
+      expect(result.excluded, 0);
+      expect((await repo.getHolding(id))!.quotePrice, closeTo(300 * 0.92, 1e-6));
+    });
+
+    test('同币种 → 不消费汇率解析器（零额外开销）', () async {
+      final id = await addHolding(
+          name: 'A股', symbol: '600519', market: 'SH', currency: 'CNY');
+      var resolverCalled = false;
+      final provider = _FakeQuoteProvider()
+        ..price('SH', '600519', 1700)
+        ..quoteCurrency = 'CNY';
+      final service = QuoteService(
+        repository: repo,
+        provider: provider,
+        ratesToBaseResolver: () async {
+          resolverCalled = true;
+          return const {};
+        },
+        now: () => fixedNow,
+      );
+
+      final result = await service.refreshQuotes();
+
+      expect(result.updated, 1);
+      expect(result.excluded, 0);
+      expect(resolverCalled, isFalse, reason: '同币种不该碰汇率');
+      expect((await repo.getHolding(id))!.quotePrice, 1700);
+    });
+
+    test('报价未标币种（currency == null）→ 视为与持仓同币种，直接写入', () async {
+      final id = await addHolding(
+          name: 'A股', symbol: '600519', market: 'SH', currency: 'CNY');
+      final provider = _FakeQuoteProvider()..price('SH', '600519', 1700);
+
+      final result = await serviceWith(provider).refreshQuotes();
+
+      expect(result.updated, 1);
+      expect((await repo.getHolding(id))!.quotePrice, 1700);
+    });
+  });
+
+  group('单标的即时预览 previewQuote（编辑表单「输代码即更新价 + 带出名称」）', () {
+    test('同币种 → 返回行情价与名称', () async {
+      final provider = _FakeQuoteProvider()
+        ..price('SH', '600519', 1700)
+        ..quoteName = '贵州茅台';
+      final preview = await serviceWith(provider).previewQuote(
+        symbol: '600519',
+        market: 'SH',
+        holdingCurrency: 'CNY',
+      );
+
+      expect(preview?.price, 1700);
+      expect(preview?.name, '贵州茅台');
+      expect(provider.requests, hasLength(1));
+    });
+
+    test('源未提供名称 → name 为 null（回填逻辑据此跳过）', () async {
+      final provider = _FakeQuoteProvider()..price('SH', '600519', 1700);
+      final preview = await serviceWith(provider).previewQuote(
+        symbol: '600519',
+        market: 'SH',
+        holdingCurrency: 'CNY',
+      );
+
+      expect(preview?.price, 1700);
+      expect(preview?.name, isNull);
+    });
+
+    test('跨币种 + 有汇率 → 折算到持仓币种', () async {
+      final provider = _FakeQuoteProvider()
+        ..price('HK', '00700', 300)
+        ..quoteCurrency = 'HKD';
+      final service = QuoteService(
+        repository: repo,
+        provider: provider,
+        ratesToBaseResolver: () async => {'CNY': 1.0, 'HKD': 0.92},
+      );
+
+      final preview = await service.previewQuote(
+        symbol: '00700',
+        market: 'HK',
+        holdingCurrency: 'CNY',
+      );
+
+      expect(preview?.price, closeTo(300 * 0.92, 1e-6));
+    });
+
+    test('跨币种 + 缺汇率 → null（绝不按 1:1 展示脏价）', () async {
+      final provider = _FakeQuoteProvider()
+        ..price('HK', '00700', 300)
+        ..quoteCurrency = 'HKD';
+
+      final preview = await serviceWith(provider).previewQuote(
+        symbol: '00700',
+        market: 'HK',
+        holdingCurrency: 'CNY',
+      );
+
+      expect(preview, isNull);
+    });
+
+    test('未命中 → null', () async {
+      final provider = _FakeQuoteProvider(); // 没预置价格 → 源没有该标的
+      final preview = await serviceWith(provider).previewQuote(
+        symbol: '600519',
+        market: 'SH',
+        holdingCurrency: 'CNY',
+      );
+
+      expect(preview, isNull);
+    });
+
+    test('请求失败 → 抛 QuoteException（调用方按类别提示）', () async {
+      final provider = _FakeQuoteProvider()
+        ..throwError = const QuoteException(QuoteErrorKind.network, 'boom');
+
+      expect(
+        () => serviceWith(provider).previewQuote(
+          symbol: '600519',
+          market: 'SH',
+          holdingCurrency: 'CNY',
+        ),
+        throwsA(isA<QuoteException>()
+            .having((e) => e.kind, 'kind', QuoteErrorKind.network)),
+      );
     });
   });
 }

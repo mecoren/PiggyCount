@@ -129,6 +129,9 @@ dependencies:
   # 无需改 schema / 快照格式 / 同步契约（持仓表已预留行情字段与本地缓存列）。
   flutter_market_data:
     path: packages/flutter_market_data
+  # 东方财富行情源（A股/港股/基金，免费公开、免密钥）。装配层注册后设置页可选。
+  flutter_market_data_eastmoney:
+    path: packages/flutter_market_data_eastmoney
   quick_actions: ^1.1.0
   table_calendar: ^3.1.0
   local_auth: ^3.0.2

@@ -4,6 +4,7 @@ import 'package:flutter_market_data/flutter_market_data.dart';
 
 import '../../data/db.dart';
 import '../../data/repositories/base_repository.dart';
+import '../../utils/holding_metrics.dart' show crossRate;
 import '../system/logger_service.dart';
 
 /// 一次行情刷新的统计结果。
@@ -13,6 +14,7 @@ class QuoteRefreshResult {
     required this.skipped,
     required this.failed,
     required this.requestCount,
+    this.excluded = 0,
     this.errorKind,
   });
 
@@ -32,6 +34,10 @@ class QuoteRefreshResult {
   /// 因请求失败而未更新的持仓条数
   final int failed;
 
+  /// 因「报价币种 ≠ 持仓币种且缺汇率」而被剔除、未写缓存的持仓条数
+  /// （命中且价格合法，但折算不到持仓币种 —— 不写脏值、不推进 `fetchedAt`）。
+  final int excluded;
+
   /// 实际发出的请求次数（批量源一次可带多个标的；超过上限会切片）
   final int requestCount;
 
@@ -40,7 +46,19 @@ class QuoteRefreshResult {
 
   @override
   String toString() => 'QuoteRefreshResult(updated=$updated, skipped=$skipped, '
-      'failed=$failed, requests=$requestCount, error=$errorKind)';
+      'failed=$failed, excluded=$excluded, requests=$requestCount, '
+      'error=$errorKind)';
+}
+
+/// 单标的即时预览结果（编辑表单用）：折算到持仓币种的价 + 源返回的名称。
+class QuotePreview {
+  const QuotePreview({required this.price, this.name});
+
+  /// 已折算到持仓币种的价
+  final double price;
+
+  /// 标的名称（源未提供 / 未取到为 null）—— 只在用户尚未填名时用于回填。
+  final String? name;
 }
 
 /// 请求切片里的一个标的及其关联持仓。
@@ -69,15 +87,25 @@ class _Candidate {
 ///    **绝不碰** `unitPrice`（用户数据）；且这些列不进快照 / 指纹 / `local_changes`。
 /// 3. **失败不写脏值**：请求失败或标的未命中时保留旧缓存，连 `quote_fetched_at`
 ///    都不推进 —— 否则 TTL 会把它误判为「刚更新过」，用户永远等不到重试。
+/// 4. **缺汇率剔除**：报价币种 ≠ 持仓币种时按 `crossRate` 折算；折算不到（缺汇率）
+///    整条剔除、不写缓存（`QuoteRefreshResult.excluded`），绝不把外币报价当本币写。
 class QuoteService {
   QuoteService({
     required this.repository,
     required this.provider,
+    this.ratesToBaseResolver,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now;
 
   final BaseRepository repository;
   final QuoteProvider provider;
+
+  /// 「币种 → 1 单位该币种 = ? 单位本位币」的汇率表解析器（`crossRate` 的入参）。
+  ///
+  /// 仅当「报价币种 ≠ 持仓币种」时才消费；为 null（未注入）时等价于空汇率表，
+  /// 跨币种持仓一律剔除 —— 宁可少写也不把 100 USD 的报价当 100 CNY 写进缓存。
+  final Future<Map<String, double>> Function()? ratesToBaseResolver;
+
   final DateTime Function() _now;
 
   QuoteCapability get capability => provider.capability;
@@ -138,8 +166,17 @@ class QuoteService {
 
     var updated = 0;
     var failed = 0;
+    var excluded = 0;
     var requestCount = 0;
     QuoteErrorKind? errorKind;
+
+    // 汇率表惰性解析：只有「报价币种 ≠ 持仓币种」时才消费（多数同币种场景零开销）。
+    Map<String, double>? ratesToBase;
+    Future<Map<String, double>> resolveRates() async {
+      return ratesToBase ??= ratesToBaseResolver != null
+          ? await ratesToBaseResolver!()
+          : const <String, double>{};
+    }
 
     for (var start = 0; start < candidates.length; start += batchSize) {
       final chunk = candidates.sublist(
@@ -171,16 +208,27 @@ class QuoteService {
         continue;
       }
 
-      // ④ 写缓存：只写命中的、且价格为正的标的。
+      // ④ 写缓存：只写命中的、价格为正、且能折算到持仓币种的标的。
       final stamp = _now();
       for (final c in chunk) {
         final quote = quotes[c.key];
         // 未命中（源没有这个标的）或价格非法 → 保留旧缓存，不写脏值。
         if (quote == null || quote.price <= 0) continue;
         for (final holding in c.holdings) {
+          final qc = (quote.currency ?? '').trim().toUpperCase();
+          final hc = holding.currency.trim().toUpperCase();
+          // 同币种 / 源未标币种 → 零折算开销；跨币种才解析汇率表。
+          final price = (qc.isEmpty || qc == hc)
+              ? quote.price
+              : _convertWithRates(quote, holding.currency, await resolveRates());
+          if (price == null) {
+            // 缺汇率整条剔除，不写脏值。
+            excluded++;
+            continue;
+          }
           await repository.writeQuoteCache(
             holding.id,
-            price: quote.price,
+            price: price,
             fetchedAt: stamp,
             sourceId: provider.providerId,
           );
@@ -190,14 +238,66 @@ class QuoteService {
     }
 
     logger.debug('QuoteService',
-        '行情刷新完成：更新=$updated 跳过=$skipped 失败=$failed 请求=$requestCount');
+        '行情刷新完成：更新=$updated 跳过=$skipped 失败=$failed '
+        '剔除=$excluded 请求=$requestCount');
 
     return QuoteRefreshResult(
       updated: updated,
       skipped: skipped,
       failed: failed,
+      excluded: excluded,
       requestCount: requestCount,
       errorKind: errorKind,
     );
+  }
+
+  /// 单标的**即时预览**（编辑表单「输入代码即按源更新价 + 带出名称」用）。
+  ///
+  /// 与 [refreshQuotes] 同口径但**不写缓存、不节流**：命中且价格为正才返回，
+  /// 跨币种按汇率折算到 [holdingCurrency]，未命中 / 缺汇率一律返回 null；
+  /// 请求失败抛 [QuoteException]（调用方按 `kind` 提示）。
+  ///
+  /// 是否该调用由调用方判定（源是否具备自动能力 / 是否支持该市场 / 用户是否
+  /// 勾选了自动刷新），本方法只管「把请求变成一个可展示的价 + 名称」。
+  Future<QuotePreview?> previewQuote({
+    required String symbol,
+    required String market,
+    required String holdingCurrency,
+  }) async {
+    final item = QuoteRequestItem(symbol: symbol, market: market);
+    final quotes = await provider.fetchQuotes(
+      QuoteRequest(items: [item]),
+    );
+    final quote = quotes[item.key];
+    if (quote == null || quote.price <= 0) return null;
+    final qc = (quote.currency ?? '').trim().toUpperCase();
+    final hc = holdingCurrency.trim().toUpperCase();
+    final price = (qc.isEmpty || qc == hc)
+        ? quote.price
+        : _convertWithRates(quote, holdingCurrency, await _loadRates());
+    if (price == null) return null;
+    return QuotePreview(price: price, name: quote.name);
+  }
+
+  /// 报价币种 → 持仓币种 的折算；同币种 / 源未标币种直接返回，缺汇率返回 null。
+  double? _convertWithRates(
+    Quote quote,
+    String holdingCurrency,
+    Map<String, double> ratesToBase,
+  ) {
+    final qc = (quote.currency ?? '').trim().toUpperCase();
+    final hc = holdingCurrency.trim().toUpperCase();
+    if (qc.isEmpty || qc == hc) return quote.price;
+    final rate = crossRate(from: qc, to: hc, ratesToBase: ratesToBase);
+    if (rate == null) return null;
+    return quote.price * rate;
+  }
+
+  /// 解析一次汇率表。未注入解析器时等价于**空表**（跨币种持仓一律按
+  /// 「缺汇率」处理）—— 宁可少展示，也不把外币报价当本币。
+  Future<Map<String, double>> _loadRates() async {
+    return ratesToBaseResolver != null
+        ? await ratesToBaseResolver!()
+        : const <String, double>{};
   }
 }

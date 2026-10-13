@@ -655,6 +655,13 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
+  flutter_market_data_eastmoney:
+    dependency: "direct main"
+    description:
+      path: "packages/flutter_market_data_eastmoney"
+      relative: true
+    source: path
+    version: "0.1.0"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
