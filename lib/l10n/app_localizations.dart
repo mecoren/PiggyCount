@@ -16124,6 +16124,102 @@ abstract class AppLocalizations {
   /// **'\"Manual entry\" makes no network requests. Every holding price comes from what you type.'**
   String get investmentQuoteSourceHint;
 
+  /// No description provided for @investmentQuoteSourceEastmoney.
+  ///
+  /// In en, this message translates to:
+  /// **'Eastmoney'**
+  String get investmentQuoteSourceEastmoney;
+
+  /// No description provided for @investmentQuoteSourceEastmoneyDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Free public source: A-shares, HK stocks and funds'**
+  String get investmentQuoteSourceEastmoneyDesc;
+
+  /// No description provided for @investmentAutoRefreshSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto refresh'**
+  String get investmentAutoRefreshSection;
+
+  /// No description provided for @investmentAutoRefreshToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-refresh quotes'**
+  String get investmentAutoRefreshToggle;
+
+  /// No description provided for @investmentAutoRefreshToggleDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch latest quotes in the background (requires network)'**
+  String get investmentAutoRefreshToggleDesc;
+
+  /// No description provided for @investmentRefreshFrequencyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh frequency'**
+  String get investmentRefreshFrequencyLabel;
+
+  /// No description provided for @investmentRefreshFrequency15m.
+  ///
+  /// In en, this message translates to:
+  /// **'15 minutes'**
+  String get investmentRefreshFrequency15m;
+
+  /// No description provided for @investmentRefreshFrequency30m.
+  ///
+  /// In en, this message translates to:
+  /// **'30 minutes'**
+  String get investmentRefreshFrequency30m;
+
+  /// No description provided for @investmentRefreshFrequency1h.
+  ///
+  /// In en, this message translates to:
+  /// **'1 hour'**
+  String get investmentRefreshFrequency1h;
+
+  /// No description provided for @investmentRefreshFrequency4h.
+  ///
+  /// In en, this message translates to:
+  /// **'4 hours'**
+  String get investmentRefreshFrequency4h;
+
+  /// No description provided for @investmentRefreshNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh now'**
+  String get investmentRefreshNow;
+
+  /// No description provided for @investmentRefreshNowDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetch latest quotes once'**
+  String get investmentRefreshNowDesc;
+
+  /// No description provided for @investmentRefreshResultUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {count} quotes'**
+  String investmentRefreshResultUpdated(int count);
+
+  /// No description provided for @investmentRefreshResultExcluded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} not updated (missing exchange rate)'**
+  String investmentRefreshResultExcluded(int count);
+
+  /// No description provided for @investmentRefreshResultNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No holdings to refresh'**
+  String get investmentRefreshResultNone;
+
+  /// No description provided for @investmentRefreshResultFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh failed, try again later'**
+  String get investmentRefreshResultFailed;
+
   /// No description provided for @syncEntityKindHolding.
   ///
   /// In en, this message translates to:
@@ -16274,6 +16370,30 @@ abstract class AppLocalizations {
   /// **'Current price'**
   String get holdingFieldUnitPrice;
 
+  /// No description provided for @holdingFieldUnitPriceQuoteManaged.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-updated by quotes; your manual price is used only when quotes are unavailable'**
+  String get holdingFieldUnitPriceQuoteManaged;
+
+  /// No description provided for @holdingQuoteFetching.
+  ///
+  /// In en, this message translates to:
+  /// **'Fetching quote…'**
+  String get holdingQuoteFetching;
+
+  /// No description provided for @holdingQuoteFetchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to fetch quote, try again later'**
+  String get holdingQuoteFetchFailed;
+
+  /// No description provided for @holdingQuoteFetchEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No quote found — check the code and market'**
+  String get holdingQuoteFetchEmpty;
+
   /// No description provided for @holdingFieldAutoQuote.
   ///
   /// In en, this message translates to:
@@ -16283,7 +16403,7 @@ abstract class AppLocalizations {
   /// No description provided for @holdingFieldAutoQuoteSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Once a real quote source is configured this holding follows it. Manual entry only for now.'**
+  /// **'This holding follows the quote source when configured. Manual price otherwise.'**
   String get holdingFieldAutoQuoteSubtitle;
 
   /// No description provided for @holdingFieldNote.

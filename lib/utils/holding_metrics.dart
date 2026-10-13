@@ -80,20 +80,24 @@ bool isQuoteUsable({
 /// 持仓行 → 纯计算输入。
 ///
 /// **「行情缓存是否可用」判定的唯一定点**：Repository 的净值口径与全部 UI 都必须
-/// 走它，不要各自写 `quotePrice != null` —— 那种写法忽略了 [isQuoteUsable] 的 TTL
-/// 与「缺拉取时刻」判定，接入真实行情源后会让持仓卡用一个过期价、而账户金额
-/// 按 TTL 剔除，两处口径悄悄漂移。
+/// 走它，不要各自写 `quotePrice != null` —— 那种写法忽略了 [isQuoteUsable] 的 TTL、
+/// 「缺拉取时刻」与 `autoQuote` 总闸，接入真实行情源后会让持仓卡用一个过期价 /
+/// 已被用户关闭自动刷新的价，而账户金额按同一判据剔除，两处口径悄悄漂移。
 HoldingValueInput holdingValueInputOf(Holding holding, {DateTime? now}) =>
     HoldingValueInput(
       quantity: holding.quantity,
       unitCost: holding.unitCost,
       unitPrice: holding.unitPrice,
       quotePrice: holding.quotePrice,
-      useQuote: isQuoteUsable(
-        quotePrice: holding.quotePrice,
-        quoteFetchedAt: holding.quoteFetchedAt,
-        now: now ?? DateTime.now(),
-      ),
+      // `autoQuote` 是**是否采用行情价**的总闸（见 db.dart：默认 false
+      // = 始终用手填净值）。关掉它的那一刻起就该回退手填值 —— 否则「关闭
+      // 自动刷新」后界面还会继续显示上一轮行情价，直到 TTL 过期才收敛。
+      useQuote: holding.autoQuote &&
+          isQuoteUsable(
+            quotePrice: holding.quotePrice,
+            quoteFetchedAt: holding.quoteFetchedAt,
+            now: now ?? DateTime.now(),
+          ),
       currency: holding.currency,
     );
 

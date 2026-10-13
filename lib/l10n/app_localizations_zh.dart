@@ -8640,6 +8640,58 @@ class AppLocalizationsZh extends AppLocalizations {
   String get investmentQuoteSourceHint => '「手动录入」不会发起任何网络请求，持仓净值完全由你填写。';
 
   @override
+  String get investmentQuoteSourceEastmoney => '东方财富';
+
+  @override
+  String get investmentQuoteSourceEastmoneyDesc => '免费公开源，支持 A 股 / 港股 / 基金';
+
+  @override
+  String get investmentAutoRefreshSection => '自动刷新';
+
+  @override
+  String get investmentAutoRefreshToggle => '自动刷新行情';
+
+  @override
+  String get investmentAutoRefreshToggleDesc => '后台定时拉取最新行情（需联网）';
+
+  @override
+  String get investmentRefreshFrequencyLabel => '刷新频率';
+
+  @override
+  String get investmentRefreshFrequency15m => '15 分钟';
+
+  @override
+  String get investmentRefreshFrequency30m => '30 分钟';
+
+  @override
+  String get investmentRefreshFrequency1h => '1 小时';
+
+  @override
+  String get investmentRefreshFrequency4h => '4 小时';
+
+  @override
+  String get investmentRefreshNow => '立即刷新';
+
+  @override
+  String get investmentRefreshNowDesc => '立即拉取一次最新行情';
+
+  @override
+  String investmentRefreshResultUpdated(int count) {
+    return '已更新 $count 项行情';
+  }
+
+  @override
+  String investmentRefreshResultExcluded(int count) {
+    return '$count 项因缺汇率未更新';
+  }
+
+  @override
+  String get investmentRefreshResultNone => '没有可刷新的持仓';
+
+  @override
+  String get investmentRefreshResultFailed => '刷新失败，请稍后重试';
+
+  @override
   String get syncEntityKindHolding => '持仓';
 
   @override
@@ -8719,10 +8771,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get holdingFieldUnitPrice => '当前净值';
 
   @override
+  String get holdingFieldUnitPriceQuoteManaged => '由行情自动更新；手填值仅在行情失效时回退';
+
+  @override
+  String get holdingQuoteFetching => '正在获取行情…';
+
+  @override
+  String get holdingQuoteFetchFailed => '行情获取失败，请稍后重试';
+
+  @override
+  String get holdingQuoteFetchEmpty => '未获取到行情，可核对代码与市场';
+
+  @override
   String get holdingFieldAutoQuote => '允许自动刷新行情';
 
   @override
-  String get holdingFieldAutoQuoteSubtitle => '接入真实行情源后该持仓会跟随行情更新；当前为手动录入，无影响';
+  String get holdingFieldAutoQuoteSubtitle => '接入行情源后该持仓会跟随行情更新；未开启时保持手填净值';
 
   @override
   String get holdingFieldNote => '备注';
@@ -17557,6 +17621,58 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get investmentQuoteSourceHint => '「手動輸入」不會發起任何網路請求，持倉淨值完全由你填寫。';
 
   @override
+  String get investmentQuoteSourceEastmoney => '東方財富';
+
+  @override
+  String get investmentQuoteSourceEastmoneyDesc => '免費公開源，支援 A 股 / 港股 / 基金';
+
+  @override
+  String get investmentAutoRefreshSection => '自動更新';
+
+  @override
+  String get investmentAutoRefreshToggle => '自動更新行情';
+
+  @override
+  String get investmentAutoRefreshToggleDesc => '背景定時拉取最新行情（需連網）';
+
+  @override
+  String get investmentRefreshFrequencyLabel => '更新頻率';
+
+  @override
+  String get investmentRefreshFrequency15m => '15 分鐘';
+
+  @override
+  String get investmentRefreshFrequency30m => '30 分鐘';
+
+  @override
+  String get investmentRefreshFrequency1h => '1 小時';
+
+  @override
+  String get investmentRefreshFrequency4h => '4 小時';
+
+  @override
+  String get investmentRefreshNow => '立即更新';
+
+  @override
+  String get investmentRefreshNowDesc => '立即拉取一次最新行情';
+
+  @override
+  String investmentRefreshResultUpdated(int count) {
+    return '已更新 $count 項行情';
+  }
+
+  @override
+  String investmentRefreshResultExcluded(int count) {
+    return '$count 項因缺匯率未更新';
+  }
+
+  @override
+  String get investmentRefreshResultNone => '沒有可更新的持倉';
+
+  @override
+  String get investmentRefreshResultFailed => '更新失敗，請稍後重試';
+
+  @override
   String get syncEntityKindHolding => '持倉';
 
   @override
@@ -17636,10 +17752,22 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get holdingFieldUnitPrice => '目前淨值';
 
   @override
+  String get holdingFieldUnitPriceQuoteManaged => '由行情自動更新；手填值僅在行情失效時回退';
+
+  @override
+  String get holdingQuoteFetching => '正在取得行情…';
+
+  @override
+  String get holdingQuoteFetchFailed => '行情取得失敗，請稍後重試';
+
+  @override
+  String get holdingQuoteFetchEmpty => '未取得行情，可核對代碼與市場';
+
+  @override
   String get holdingFieldAutoQuote => '允許自動更新行情';
 
   @override
-  String get holdingFieldAutoQuoteSubtitle => '接上真實行情來源後此持倉會跟隨行情更新；目前為手動輸入，無影響';
+  String get holdingFieldAutoQuoteSubtitle => '接入行情來源後此持倉會跟隨行情更新；未開啟時保持手填淨值';
 
   @override
   String get holdingFieldNote => '備註';

@@ -8743,6 +8743,58 @@ class AppLocalizationsKo extends AppLocalizations {
       '\"직접 입력\"은 네트워크 요청을 보내지 않으며, 보유 가격은 모두 직접 입력한 값입니다.';
 
   @override
+  String get investmentQuoteSourceEastmoney => '이스트머니';
+
+  @override
+  String get investmentQuoteSourceEastmoneyDesc => '무료 공개 소스: A주 / 홍콩주 / 펀드';
+
+  @override
+  String get investmentAutoRefreshSection => '자동 새로고침';
+
+  @override
+  String get investmentAutoRefreshToggle => '시세 자동 새로고침';
+
+  @override
+  String get investmentAutoRefreshToggleDesc => '백그라운드에서 최신 시세를 가져옵니다(네트워크 필요)';
+
+  @override
+  String get investmentRefreshFrequencyLabel => '새로고침 주기';
+
+  @override
+  String get investmentRefreshFrequency15m => '15분';
+
+  @override
+  String get investmentRefreshFrequency30m => '30분';
+
+  @override
+  String get investmentRefreshFrequency1h => '1시간';
+
+  @override
+  String get investmentRefreshFrequency4h => '4시간';
+
+  @override
+  String get investmentRefreshNow => '지금 새로고침';
+
+  @override
+  String get investmentRefreshNowDesc => '최신 시세를 한 번 가져옵니다';
+
+  @override
+  String investmentRefreshResultUpdated(int count) {
+    return '$count개 시세 업데이트';
+  }
+
+  @override
+  String investmentRefreshResultExcluded(int count) {
+    return '환율 부족으로 $count개 미업데이트';
+  }
+
+  @override
+  String get investmentRefreshResultNone => '새로고침할 보유 종목 없음';
+
+  @override
+  String get investmentRefreshResultFailed => '새로고침 실패, 잠시 후 다시 시도';
+
+  @override
   String get syncEntityKindHolding => '보유 종목';
 
   @override
@@ -8822,11 +8874,24 @@ class AppLocalizationsKo extends AppLocalizations {
   String get holdingFieldUnitPrice => '현재 가격';
 
   @override
+  String get holdingFieldUnitPriceQuoteManaged =>
+      '시세로 자동 업데이트되며, 직접 입력값은 시세가 없을 때만 사용됩니다';
+
+  @override
+  String get holdingQuoteFetching => '시세를 가져오는 중…';
+
+  @override
+  String get holdingQuoteFetchFailed => '시세를 가져오지 못했습니다. 잠시 후 다시 시도하세요';
+
+  @override
+  String get holdingQuoteFetchEmpty => '시세를 찾을 수 없습니다. 코드와 시장을 확인하세요';
+
+  @override
   String get holdingFieldAutoQuote => '시세 자동 갱신 허용';
 
   @override
   String get holdingFieldAutoQuoteSubtitle =>
-      '실제 시세 소스를 연결하면 이 종목이 시세를 따릅니다. 현재는 직접 입력만 지원합니다.';
+      '시세 소스를 연결하면 이 종목이 시세를 따릅니다. 비활성화 시 직접 입력값을 유지합니다.';
 
   @override
   String get holdingFieldNote => '메모';

@@ -1,29 +1,104 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_market_data/flutter_market_data.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
+import '../../services/system/logger_service.dart';
 import '../../styles/tokens.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/ui/ui.dart';
 
-/// 「行情与投资」设置页（v52 预留）。
+/// 「行情与投资」设置页。
 ///
-/// 当前只有一项可配：**行情源**（唯一选项是「手动录入」）。
-/// 这个页面存在的意义是把「后期接实时行情」的入口先建好 —— 那时只需在
-/// `kAvailableQuoteProviderIds` 里加一个 id 并实现对应 `QuoteProvider` 子包，
-/// 选项会自动出现在这里，无需改本页。
-///
-/// 文案全部走 l10n；**不渲染接口层的 `providerName`**（那是开发者可读名，
-/// 直接显示会让中文界面出现英文源名）。
-class InvestmentSettingsPage extends ConsumerWidget {
+/// 三块配置：
+/// 1. **行情源**：手动录入 / 东方财富（源名走 l10n，不渲染接口层 `providerName`）；
+/// 2. **自动刷新**：主开关 + 刷新频率（后台定时拉取，需自动源）；
+/// 3. **立即刷新**：手动触发一次拉取，结果用 toast 反馈。
+class InvestmentSettingsPage extends ConsumerStatefulWidget {
   const InvestmentSettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<InvestmentSettingsPage> createState() =>
+      _InvestmentSettingsPageState();
+}
+
+class _InvestmentSettingsPageState
+    extends ConsumerState<InvestmentSettingsPage> {
+  bool _refreshing = false;
+
+  Future<void> _refreshNow() async {
+    if (_refreshing) return;
+    setState(() => _refreshing = true);
+    try {
+      final service = ref.read(quoteServiceProvider);
+      final result = await service.refreshQuotes();
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      final String message;
+      if (result.updated > 0) {
+        message = l10n.investmentRefreshResultUpdated(result.updated);
+      } else if (result.failed > 0) {
+        message = l10n.investmentRefreshResultFailed;
+      } else if (result.excluded > 0) {
+        message = l10n.investmentRefreshResultExcluded(result.excluded);
+      } else {
+        message = l10n.investmentRefreshResultNone;
+      }
+      showToast(context, message);
+    } catch (e) {
+      // 兜底：编排层已按类别吞错，这里只防「汇率解析器等外围异常」冒泡成
+      // 未捕获错误（否则用户点了按钮既没提示、又有控制台红字）。
+      logger.warning('QuoteService', '手动刷新行情异常: $e');
+      if (mounted) {
+        showToast(context, AppLocalizations.of(context).investmentRefreshResultFailed);
+      }
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
+
+  Future<void> _pickFrequency() async {
+    final l10n = AppLocalizations.of(context);
+    final current = ref.read(quoteAutoRefreshSettingsProvider).interval;
+    await showPiggyOptionSheet<Duration>(
+      context: context,
+      title: l10n.investmentRefreshFrequencyLabel,
+      selected: current,
+      options: [
+        for (final d in kQuoteRefreshFrequencies)
+          PiggyOptionSheetItem<Duration>(
+            value: d,
+            title: _frequencyLabel(d, l10n),
+          ),
+      ],
+      onSelected: (d) =>
+          ref.read(quoteAutoRefreshSettingsProvider.notifier).setInterval(d),
+    );
+  }
+
+  static String _frequencyLabel(Duration d, AppLocalizations l10n) {
+    switch (d.inMinutes) {
+      case 15:
+        return l10n.investmentRefreshFrequency15m;
+      case 30:
+        return l10n.investmentRefreshFrequency30m;
+      case 60:
+        return l10n.investmentRefreshFrequency1h;
+      case 240:
+        return l10n.investmentRefreshFrequency4h;
+      default:
+        return '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final currentId = ref.watch(quoteProviderIdProvider);
+    final autoRefresh = ref.watch(quoteAutoRefreshSettingsProvider);
+    final isManual = currentId == ManualQuoteProvider.id;
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
@@ -62,6 +137,56 @@ class InvestmentSettingsPage extends ConsumerWidget {
               style: PiggyTextTokens.caption(context),
             ),
           ),
+
+          SizedBox(height: PiggyDimens.p24.scaled(context, ref)),
+          SettingsSectionLabel(l10n.investmentAutoRefreshSection),
+          SizedBox(height: PiggyDimens.p8.scaled(context, ref)),
+          SettingsCard(
+            children: [
+              SettingsToggleItem(
+                icon: Icons.schedule_rounded,
+                useIconBox: true,
+                title: l10n.investmentAutoRefreshToggle,
+                subtitle: isManual
+                    ? l10n.investmentQuoteSourceManualDesc
+                    : l10n.investmentAutoRefreshToggleDesc,
+                value: autoRefresh.enabled,
+                onChanged: (v) => ref
+                    .read(quoteAutoRefreshSettingsProvider.notifier)
+                    .setEnabled(v),
+              ),
+              SettingsNavItem(
+                icon: Icons.av_timer_rounded,
+                useIconBox: true,
+                title: l10n.investmentRefreshFrequencyLabel,
+                subtitle: _frequencyLabel(autoRefresh.interval, l10n),
+                enabled: autoRefresh.enabled,
+                onTap: autoRefresh.enabled ? _pickFrequency : null,
+              ),
+              SettingsNavItem(
+                icon: Icons.sync_rounded,
+                useIconBox: true,
+                title: l10n.investmentRefreshNow,
+                subtitle: l10n.investmentRefreshNowDesc,
+                enabled: !isManual,
+                onTap: (_refreshing || isManual) ? null : _refreshNow,
+                trailing: _refreshing
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: PiggyTokens.primary(context),
+                        ),
+                      )
+                    : Icon(
+                        Icons.refresh_rounded,
+                        size: 20,
+                        color: PiggyTokens.iconTertiary(context),
+                      ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -88,6 +213,12 @@ class _QuoteSourceTile extends StatelessWidget {
   /// 行情源 id → (l10n 文案, 图标)。新增行情源时在这里加一个 case。
   ({String title, String subtitle, IconData icon}) _texts(AppLocalizations l10n) {
     switch (providerId) {
+      case 'eastmoney':
+        return (
+          title: l10n.investmentQuoteSourceEastmoney,
+          subtitle: l10n.investmentQuoteSourceEastmoneyDesc,
+          icon: Icons.query_stats_rounded,
+        );
       case 'manual':
       default:
         return (

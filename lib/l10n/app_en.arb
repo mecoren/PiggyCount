@@ -4370,6 +4370,36 @@
   "investmentQuoteSourceManual": "Manual entry",
   "investmentQuoteSourceManualDesc": "No network. You enter every holding price yourself.",
   "investmentQuoteSourceHint": "\"Manual entry\" makes no network requests. Every holding price comes from what you type.",
+  "investmentQuoteSourceEastmoney": "Eastmoney",
+  "investmentQuoteSourceEastmoneyDesc": "Free public source: A-shares, HK stocks and funds",
+  "investmentAutoRefreshSection": "Auto refresh",
+  "investmentAutoRefreshToggle": "Auto-refresh quotes",
+  "investmentAutoRefreshToggleDesc": "Fetch latest quotes in the background (requires network)",
+  "investmentRefreshFrequencyLabel": "Refresh frequency",
+  "investmentRefreshFrequency15m": "15 minutes",
+  "investmentRefreshFrequency30m": "30 minutes",
+  "investmentRefreshFrequency1h": "1 hour",
+  "investmentRefreshFrequency4h": "4 hours",
+  "investmentRefreshNow": "Refresh now",
+  "investmentRefreshNowDesc": "Fetch latest quotes once",
+  "investmentRefreshResultUpdated": "Updated {count} quotes",
+  "@investmentRefreshResultUpdated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "investmentRefreshResultExcluded": "{count} not updated (missing exchange rate)",
+  "@investmentRefreshResultExcluded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "investmentRefreshResultNone": "No holdings to refresh",
+  "investmentRefreshResultFailed": "Refresh failed, try again later",
   "syncEntityKindHolding": "Holding",
   "holdingPageTitle": "Holdings",
   "holdingAddTitle": "New holding",
@@ -4409,8 +4439,12 @@
   "holdingFieldQuantity": "Units",
   "holdingFieldUnitCost": "Unit cost",
   "holdingFieldUnitPrice": "Current price",
+  "holdingFieldUnitPriceQuoteManaged": "Auto-updated by quotes; your manual price is used only when quotes are unavailable",
+  "holdingQuoteFetching": "Fetching quote…",
+  "holdingQuoteFetchFailed": "Failed to fetch quote, try again later",
+  "holdingQuoteFetchEmpty": "No quote found — check the code and market",
   "holdingFieldAutoQuote": "Allow automatic quotes",
-  "holdingFieldAutoQuoteSubtitle": "Once a real quote source is configured this holding follows it. Manual entry only for now.",
+  "holdingFieldAutoQuoteSubtitle": "This holding follows the quote source when configured. Manual price otherwise.",
   "holdingFieldNote": "Note",
   "holdingPreviewMarketValue": "Market value",
   "holdingPreviewProfit": "P/L",

@@ -8988,6 +8988,60 @@ class AppLocalizationsEn extends AppLocalizations {
       '\"Manual entry\" makes no network requests. Every holding price comes from what you type.';
 
   @override
+  String get investmentQuoteSourceEastmoney => 'Eastmoney';
+
+  @override
+  String get investmentQuoteSourceEastmoneyDesc =>
+      'Free public source: A-shares, HK stocks and funds';
+
+  @override
+  String get investmentAutoRefreshSection => 'Auto refresh';
+
+  @override
+  String get investmentAutoRefreshToggle => 'Auto-refresh quotes';
+
+  @override
+  String get investmentAutoRefreshToggleDesc =>
+      'Fetch latest quotes in the background (requires network)';
+
+  @override
+  String get investmentRefreshFrequencyLabel => 'Refresh frequency';
+
+  @override
+  String get investmentRefreshFrequency15m => '15 minutes';
+
+  @override
+  String get investmentRefreshFrequency30m => '30 minutes';
+
+  @override
+  String get investmentRefreshFrequency1h => '1 hour';
+
+  @override
+  String get investmentRefreshFrequency4h => '4 hours';
+
+  @override
+  String get investmentRefreshNow => 'Refresh now';
+
+  @override
+  String get investmentRefreshNowDesc => 'Fetch latest quotes once';
+
+  @override
+  String investmentRefreshResultUpdated(int count) {
+    return 'Updated $count quotes';
+  }
+
+  @override
+  String investmentRefreshResultExcluded(int count) {
+    return '$count not updated (missing exchange rate)';
+  }
+
+  @override
+  String get investmentRefreshResultNone => 'No holdings to refresh';
+
+  @override
+  String get investmentRefreshResultFailed => 'Refresh failed, try again later';
+
+  @override
   String get syncEntityKindHolding => 'Holding';
 
   @override
@@ -9069,11 +9123,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get holdingFieldUnitPrice => 'Current price';
 
   @override
+  String get holdingFieldUnitPriceQuoteManaged =>
+      'Auto-updated by quotes; your manual price is used only when quotes are unavailable';
+
+  @override
+  String get holdingQuoteFetching => 'Fetching quote…';
+
+  @override
+  String get holdingQuoteFetchFailed =>
+      'Failed to fetch quote, try again later';
+
+  @override
+  String get holdingQuoteFetchEmpty =>
+      'No quote found — check the code and market';
+
+  @override
   String get holdingFieldAutoQuote => 'Allow automatic quotes';
 
   @override
   String get holdingFieldAutoQuoteSubtitle =>
-      'Once a real quote source is configured this holding follows it. Manual entry only for now.';
+      'This holding follows the quote source when configured. Manual price otherwise.';
 
   @override
   String get holdingFieldNote => 'Note';
