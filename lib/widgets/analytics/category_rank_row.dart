@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../styles/tokens.dart';
 import '../../widgets/category_icon.dart';
 import '../biz/biz.dart';
+import '../../utils/analytics_scope.dart';
 import '../../utils/category_utils.dart';
 import '../../pages/transaction/category_detail_page.dart';
 import '../../l10n/app_localizations.dart';
@@ -17,7 +18,7 @@ class CategoryRankRow extends ConsumerStatefulWidget {
   final Color color;
   final DateTime start; // 统计开始时间
   final DateTime end; // 统计结束时间
-  final String scope; // 周期范围
+  final AnalyticsScope scope; // 周期范围
   final DateTime selMonth; // 选中的月份
   final List<({int id, db.Category category, String name, double total})>? subCategories; // 预计算的子分类明细
   final int? rank; // 排名序号（1 起），null 不显示
@@ -104,7 +105,7 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
 
     // 生成周期标签（周视角由页面直接传入范围文案）
     String? periodLabel = widget.periodLabel;
-    if (periodLabel == null && widget.scope != 'all') {
+    if (periodLabel == null && widget.scope != AnalyticsScope.all) {
       periodLabel = _currentPeriodLabel(widget.scope, widget.selMonth, context);
     }
 
@@ -113,21 +114,22 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
         builder: (_) => CategoryDetailPage(
           categoryId: categoryId,
           categoryName: categoryName,
-          startDate: widget.scope != 'all' ? widget.start : null,
-          endDate: widget.scope != 'all' ? widget.end : null,
+          startDate: widget.scope != AnalyticsScope.all ? widget.start : null,
+          endDate: widget.scope != AnalyticsScope.all ? widget.end : null,
           periodLabel: periodLabel,
         ),
       ),
     );
   }
 
-  String _currentPeriodLabel(String scope, DateTime selMonth, BuildContext context) {
+  String _currentPeriodLabel(
+      AnalyticsScope scope, DateTime selMonth, BuildContext context) {
     switch (scope) {
-      case 'year':
+      case AnalyticsScope.year:
         return '${selMonth.year}';
-      case 'all':
+      case AnalyticsScope.all:
         return AppLocalizations.of(context).analyticsAllYears;
-      default:
+      case AnalyticsScope.week || AnalyticsScope.month:
         return '${selMonth.year}.${selMonth.month.toString().padLeft(2, '0')}';
     }
   }

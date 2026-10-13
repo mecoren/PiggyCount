@@ -4,6 +4,7 @@ import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/currency_providers.dart';
 import '../../providers/theme_providers.dart';
+import '../../utils/analytics_scope.dart';
 import '../../utils/currencies.dart';
 
 /// 完整数字格式：千分号 + 始终保留两位小数，不带币种符号、不压缩万/k/M。
@@ -58,7 +59,7 @@ Text _summaryAmount(BuildContext context, String text, Color? color) {
 /// 数字展示规则（用户要求）：4 个金额统一字号，不带币种符号，不使用万/k/M
 /// 缩写，始终保留两位小数（如 `146,300.00`）。见 [_formatFullPlain]。
 class AnalyticsSummary extends ConsumerWidget {
-  final String scope; // week/month/year/all
+  final AnalyticsScope scope;
   final bool isExpense;
   final bool isBalance; // 结余视角
   final double total; // 本期总额（结余视角为结余）
@@ -86,17 +87,12 @@ class AnalyticsSummary extends ConsumerWidget {
   });
 
   /// 周期平均值标签：月视角=日均、年视角=月均、全部=平均值
-  String _avgLabel(AppLocalizations l10n) {
-    switch (scope) {
-      case 'year':
-        return l10n.analyticsMonthlyAvg;
-      case 'all':
-        return l10n.analyticsOverallAvg;
-      case 'month':
-      default:
-        return l10n.analyticsDailyAvg;
-    }
-  }
+  /// （周视角沿用日均——现状口径）
+  String _avgLabel(AppLocalizations l10n) => switch (scope) {
+        AnalyticsScope.year => l10n.analyticsMonthlyAvg,
+        AnalyticsScope.all => l10n.analyticsOverallAvg,
+        AnalyticsScope.week || AnalyticsScope.month => l10n.analyticsDailyAvg,
+      };
 
   /// 去掉 l10n 文案尾部的冒号空格（标签用于卡片网格）
   String _trimColon(String s) => s.replaceAll(RegExp(r'[\s:：]+$'), '');
@@ -110,7 +106,7 @@ class AnalyticsSummary extends ConsumerWidget {
     // 周视角标签为「本周支出/本周收入」，其余为「总支出/总收入」
     final title = isBalance
         ? _trimColon(titleWord)
-        : _trimColon(scope == 'week'
+        : _trimColon(scope == AnalyticsScope.week
             ? l10n.analyticsWeekTotal(titleWord)
             : l10n.analyticsTotal(titleWord));
     final avgLabel = _avgLabel(l10n);
@@ -170,7 +166,7 @@ class AnalyticsSummary extends ConsumerWidget {
               _cell(
                 context,
                 label: (prevTotal != null
-                        ? (scope == 'week'
+                        ? (scope == AnalyticsScope.week
                             ? l10n.analyticsComparedToLastWeek
                             : l10n.analyticsComparedToLastYear)
                         : l10n.analyticsTxCount) +

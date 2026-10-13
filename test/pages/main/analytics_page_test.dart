@@ -159,7 +159,12 @@ void main() {
     expect(find.byType(PiggySpinner), findsNothing);
     // 同口径（支出/收入共用一套 list 位次）→ 上一份结果继续渲染，不闪
     expect(find.text('350.00'), findsWidgets);
-    expect(find.byType(WaitSlidingSegmentedControl<String>), findsNWidgets(2));
+    // 两个分段控件（scope=<AnalyticsScope>、type=<String>）都应原地保留；
+    // byType 是精确 runtimeType 匹配兜不住两种泛型实例化，改用无泛型 is 谓词
+    expect(
+      find.byWidgetPredicate((w) => w is WaitSlidingSegmentedControl),
+      findsNWidgets(2),
+    );
 
     gated.gate.complete();
     await tester.pumpAndSettle();

@@ -9,6 +9,7 @@ import '../../providers.dart';
 import '../../services/custom_field_stats_service.dart';
 import '../../styles/tokens.dart';
 import '../../utils/analytics_category_rollup.dart';
+import '../../utils/analytics_scope.dart';
 import '../../utils/format_utils.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/analytics/category_rank_row.dart';
@@ -568,9 +569,9 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
                 : PiggyTokens.textTertiary(context),
             start: _start,
             end: _end,
-            // 组件按 scope 决定「是否把区间带给分类详情页」（'all' 会丢掉），
-            // 自定义区间要原样透传，所以这里给非 'all' 的值 + 显式标签文案。
-            scope: 'month',
+            // 组件按 scope 决定「是否把区间带给分类详情页」（all 会丢掉），
+            // 自定义区间要原样透传，所以这里给非 all 的值 + 显式标签文案。
+            scope: AnalyticsScope.month,
             selMonth: _start,
             periodLabel: _rangeText(),
             rank: i + 1,

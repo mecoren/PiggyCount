@@ -17,6 +17,7 @@ import '../../services/export/share_poster_service.dart';
 import '../../services/system/logger_service.dart';
 import '../../data/db.dart' as db;
 import '../report/range_report_page.dart';
+import '../../utils/analytics_scope.dart';
 import '../../utils/month_range.dart';
 import '../../utils/week_range.dart';
 import '../../utils/format_utils.dart';
@@ -34,7 +35,7 @@ class AnalyticsPage extends ConsumerStatefulWidget {
 }
 
 class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
-  String _scope = 'month'; // week | month | year | all
+  AnalyticsScope _scope = AnalyticsScope.month;
   String _type = 'expense'; // expense | income | balance
   bool _chartSwiped = false; // 吸收图表区域横滑，避免父级切换收入/支出
   bool _localChartDismissed = false;
@@ -94,42 +95,43 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   // 显示周期选择器
   void _showPeriodPicker() async {
     final selMonth = ref.read(selectedMonthProvider);
-    if (_scope == 'week') {
-      final res = await showWheelDatePicker(
-        context,
-        initial: _selWeek,
-        mode: WheelDatePickerMode.ymd,
-        maxDate: DateTime.now(),
-      );
-      if (res != null) {
-        setState(() => _selWeek = weekLabelFor(res));
-      }
-      return;
+    // 穷尽 switch（无 default）：新增档位时编译器强制补分支
+    switch (_scope) {
+      case AnalyticsScope.week:
+        final res = await showWheelDatePicker(
+          context,
+          initial: _selWeek,
+          mode: WheelDatePickerMode.ymd,
+          maxDate: DateTime.now(),
+        );
+        if (res != null) {
+          setState(() => _selWeek = weekLabelFor(res));
+        }
+      case AnalyticsScope.month:
+        final res = await showWheelDatePicker(
+          context,
+          initial: selMonth,
+          mode: WheelDatePickerMode.ym,
+          maxDate: DateTime.now(),
+        );
+        final picked = res == null ? null : DateTime(res.year, res.month, 1);
+        if (picked != null) {
+          ref.read(selectedMonthProvider.notifier).state = picked;
+        }
+      case AnalyticsScope.year:
+        final res = await showWheelDatePicker(
+          context,
+          initial: selMonth,
+          mode: WheelDatePickerMode.y,
+          maxDate: DateTime.now(),
+        );
+        if (res != null) {
+          ref.read(selectedMonthProvider.notifier).state =
+              DateTime(res.year, 1, 1);
+        }
+      case AnalyticsScope.all:
+        break; // all视角不显示选择器
     }
-    if (_scope == 'month') {
-      final res = await showWheelDatePicker(
-        context,
-        initial: selMonth,
-        mode: WheelDatePickerMode.ym,
-        maxDate: DateTime.now(),
-      );
-      final picked = res == null ? null : DateTime(res.year, res.month, 1);
-      if (picked != null) {
-        ref.read(selectedMonthProvider.notifier).state = picked;
-      }
-    } else if (_scope == 'year') {
-      final res = await showWheelDatePicker(
-        context,
-        initial: selMonth,
-        mode: WheelDatePickerMode.y,
-        maxDate: DateTime.now(),
-      );
-      if (res != null) {
-        ref.read(selectedMonthProvider.notifier).state =
-            DateTime(res.year, 1, 1);
-      }
-    }
-    // all视角不显示选择器
   }
 
   // 显示类型选择菜单
@@ -254,50 +256,33 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   }
 
   // 根据scope切换周期（用于图表滑动 / 导航箭头）
+  // 步进+钳制已收拢到 analytics_scope.dart 的 nextAnchor/prevAnchor 纯函数；
+  // 状态写回留页面：周→_selWeek 本地，月/年→selectedMonthProvider 共享。
   void _onChartSwipeLeft() {
     final selMonth = ref.read(selectedMonthProvider);
-    final now = DateTime.now();
     setState(() {
-      if (_scope == 'week') {
-        // 周视角：切换到下一周（不能超过当前周）
-        final nextWeek = weekAdd(_selWeek, 1);
-        if (!nextWeek.isAfter(weekLabelFor(now))) {
-          _selWeek = nextWeek;
-        }
-      } else if (_scope == 'month') {
-        // 月视角：切换到下一个月（不能超过当前月）
-        final nextMonth = DateTime(selMonth.year, selMonth.month + 1, 1);
-        if (nextMonth.year < now.year ||
-            (nextMonth.year == now.year && nextMonth.month <= now.month)) {
-          ref.read(selectedMonthProvider.notifier).state = nextMonth;
-        }
-      } else if (_scope == 'year') {
-        // 年视角：切换到下一年（不能超过当前年）
-        final nextYear = DateTime(selMonth.year + 1, 1, 1);
-        if (nextYear.year <= now.year) {
-          ref.read(selectedMonthProvider.notifier).state = nextYear;
-        }
+      final anchor = _scope == AnalyticsScope.week ? _selWeek : selMonth;
+      final next = nextAnchor(_scope, anchor, DateTime.now());
+      if (next == null) return; // all视角不操作 / 已钳制在当前周期
+      if (_scope == AnalyticsScope.week) {
+        _selWeek = next;
+      } else {
+        ref.read(selectedMonthProvider.notifier).state = next;
       }
-      // all视角：不做任何操作
     });
   }
 
   void _onChartSwipeRight() {
     final selMonth = ref.read(selectedMonthProvider);
     setState(() {
-      if (_scope == 'week') {
-        // 周视角：切换到上一周
-        _selWeek = weekAdd(_selWeek, -1);
-      } else if (_scope == 'month') {
-        // 月视角：切换到上一个月
-        final prevMonth = DateTime(selMonth.year, selMonth.month - 1, 1);
-        ref.read(selectedMonthProvider.notifier).state = prevMonth;
-      } else if (_scope == 'year') {
-        // 年视角：切换到上一年
-        final prevYear = DateTime(selMonth.year - 1, 1, 1);
-        ref.read(selectedMonthProvider.notifier).state = prevYear;
+      final anchor = _scope == AnalyticsScope.week ? _selWeek : selMonth;
+      final prev = prevAnchor(_scope, anchor);
+      if (prev == null) return; // all视角不操作
+      if (_scope == AnalyticsScope.week) {
+        _selWeek = prev;
+      } else {
+        ref.read(selectedMonthProvider.notifier).state = prev;
       }
-      // all视角：不做任何操作
     });
   }
 
@@ -327,19 +312,15 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   }
 
   /// 导航行周期文案：周=日期范围，月=yyyy-MM，年=yyyy，全部=全部年份
-  String _navPeriodLabel(BuildContext context, DateTime selMonth) {
-    switch (_scope) {
-      case 'week':
-        return weekRangeText(weekRangeFor(_selWeek));
-      case 'year':
-        return '${selMonth.year}';
-      case 'all':
-        return AppLocalizations.of(context).analyticsAllYears;
-      case 'month':
-      default:
-        return '${selMonth.year}-${selMonth.month.toString().padLeft(2, '0')}';
-    }
-  }
+  String _navPeriodLabel(BuildContext context, DateTime selMonth) =>
+      switch (_scope) {
+        AnalyticsScope.week => weekRangeText(weekRangeFor(_selWeek)),
+        AnalyticsScope.month =>
+          '${selMonth.year}-${selMonth.month.toString().padLeft(2, '0')}',
+        AnalyticsScope.year => '${selMonth.year}',
+        AnalyticsScope.all =>
+          AppLocalizations.of(context).analyticsAllYears,
+      };
 
   // 将「天」序列聚合为 6 个周桶（本周 + 前5周），桶标签 = 周一起始日
   List<({DateTime day, double total})> _aggregateToWeeks(
@@ -399,56 +380,17 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     final selMonth = ref.watch(selectedMonthProvider);
     // 统计刷新 tick：当有新增/编辑/删除时我们会 +1，这里监听以触发重建和重新拉取
     final refreshTick = ref.watch(statsRefreshProvider);
-    // 时间范围
-    late DateTime start;
-    late DateTime end;
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
     final sd = ref.watch(currentMonthStartDayProvider);
-    if (_scope == 'week') {
-      final range = weekRangeFor(_selWeek);
-      start = range.start;
-      final isCurrentWeek =
-          !now.isBefore(range.start) && now.isBefore(range.end);
-      // 当前周：只到今天；历史周：到周末
-      end = isCurrentWeek ? today.add(const Duration(days: 1)) : range.end;
-    } else if (_scope == 'month') {
-      final range = periodForLabel(selMonth.year, selMonth.month, sd);
-      start = range.start;
-      // 「当前周期」判定用周期标签，不能用自然月相等(6月5日属5月周期)
-      final nowLabel = labelForDate(now, sd);
-      final isCurrentPeriod =
-          selMonth.year == nowLabel.year && selMonth.month == nowLabel.month;
-      // 当前周期：只到今天；历史周期：到周期末
-      end = isCurrentPeriod ? today.add(const Duration(days: 1)) : range.end;
-    } else if (_scope == 'year') {
-      final range = yearRangeFor(selMonth.year, sd);
-      start = range.start;
-      // 当前年度周期：只到今天；历史：到年度周期末
-      final isCurrentYear =
-          !now.isBefore(range.start) && now.isBefore(range.end);
-      end = isCurrentYear ? today.add(const Duration(days: 1)) : range.end;
-    } else {
-      start = DateTime(1970, 1, 1);
-      end = today.add(const Duration(days: 1));
-    }
-
-    // 同比所需的上期范围：周视角=上周，月视角=去年同期周期，年视角=去年周期，全部视角无上期
-    DateTime? prevStart;
-    DateTime? prevEnd;
-    if (_scope == 'week') {
-      prevStart = weekAdd(_selWeek, -1);
-      prevEnd = weekRangeFor(_selWeek).start; // 上周区间 [上周一, 本周一)
-    } else if (_scope == 'month') {
-      final prevRange = periodForLabel(selMonth.year - 1, selMonth.month, sd);
-      prevStart = prevRange.start;
-      prevEnd = prevRange.end;
-    } else if (_scope == 'year') {
-      final prevRange = yearRangeFor(selMonth.year - 1, sd);
-      prevStart = prevRange.start;
-      prevEnd = prevRange.end;
-    }
+    // 时间范围 + 同比上期窗口：周期计算收拢在 analytics_scope.dart 纯函数
+    // （含「当前周期只到今天」截断与各档上期口径，行为冻结见该文件文档）
+    final anchor = _scope == AnalyticsScope.week ? _selWeek : selMonth;
+    final period =
+        resolveAnalyticsPeriod(_scope, anchor: anchor, startDay: sd, now: now);
+    final start = period.start;
+    final end = period.end;
+    final prevStart = period.prevStart;
+    final prevEnd = period.prevEnd;
 
     // 按视角获取序列
     Future<dynamic> seriesFuture = Future.value(<dynamic>[]);
@@ -467,57 +409,50 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
         (_lastAnalyticsKey == memoKey && _lastAnalyticsFuture != null);
 
     if (!memoHit) {
+      // 主序列路由由 seriesKind 决定：week/month=日、year=月、all=年序列
       if (_type == 'balance') {
         // 结余模式：同时获取收入和支出数据
-        if (_scope == 'week' || _scope == 'month') {
-          incomeSeriesFuture = repo.totalsByDay(
-              ledgerId: ledgerId, type: 'income', start: start, end: end);
-          expenseSeriesFuture = repo.totalsByDay(
-              ledgerId: ledgerId, type: 'expense', start: start, end: end);
-          seriesFuture = Future.value([]); // 占位
-        } else if (_scope == 'year') {
-          incomeSeriesFuture = repo.totalsByMonth(
-              ledgerId: ledgerId, type: 'income', year: selMonth.year);
-          expenseSeriesFuture = repo.totalsByMonth(
-              ledgerId: ledgerId, type: 'expense', year: selMonth.year);
-          seriesFuture = Future.value([]);
-        } else {
-          incomeSeriesFuture =
-              repo.totalsByYearSeries(ledgerId: ledgerId, type: 'income');
-          expenseSeriesFuture =
-              repo.totalsByYearSeries(ledgerId: ledgerId, type: 'expense');
-          seriesFuture = Future.value([]);
+        switch (_scope.seriesKind) {
+          case AnalyticsSeriesKind.day:
+            incomeSeriesFuture = repo.totalsByDay(
+                ledgerId: ledgerId, type: 'income', start: start, end: end);
+            expenseSeriesFuture = repo.totalsByDay(
+                ledgerId: ledgerId, type: 'expense', start: start, end: end);
+          case AnalyticsSeriesKind.month:
+            incomeSeriesFuture = repo.totalsByMonth(
+                ledgerId: ledgerId, type: 'income', year: selMonth.year);
+            expenseSeriesFuture = repo.totalsByMonth(
+                ledgerId: ledgerId, type: 'expense', year: selMonth.year);
+          case AnalyticsSeriesKind.yearSeries:
+            incomeSeriesFuture =
+                repo.totalsByYearSeries(ledgerId: ledgerId, type: 'income');
+            expenseSeriesFuture =
+                repo.totalsByYearSeries(ledgerId: ledgerId, type: 'expense');
         }
+        seriesFuture = Future.value([]); // 占位
       } else {
         // 收入或支出模式
-        seriesFuture = (_scope == 'week' || _scope == 'month')
-            ? repo.totalsByDay(
-                ledgerId: ledgerId, type: _type, start: start, end: end)
-            : _scope == 'year'
-                ? repo.totalsByMonth(
-                    ledgerId: ledgerId, type: _type, year: selMonth.year)
-                : repo.totalsByYearSeries(ledgerId: ledgerId, type: _type);
+        seriesFuture = switch (_scope.seriesKind) {
+          AnalyticsSeriesKind.day => repo.totalsByDay(
+              ledgerId: ledgerId, type: _type, start: start, end: end),
+          AnalyticsSeriesKind.month => repo.totalsByMonth(
+              ledgerId: ledgerId, type: _type, year: selMonth.year),
+          AnalyticsSeriesKind.yearSeries =>
+            repo.totalsByYearSeries(ledgerId: ledgerId, type: _type),
+        };
       }
 
-      // 图表固定6根柱的序列（柱状图/折线图共用）：
-      //   周报 = 本周 + 前5周；月报 = 本月 + 前5个月；年报 = 本年 + 前5年
+      // 图表固定6根柱的序列（柱状图/折线图共用）：本期 + 前5期
+      // （窗口见 chartSeriesWindow：周=本周+前5周、月=本月+前5周期月；
+      // 年/全部走年序列无窗口）
       Future<dynamic> buildChartSeries(
           dynamic repo, int ledgerId, String type) {
-        if (_scope == 'week') {
-          final cStart = weekAdd(_selWeek, -5);
-          final cEnd = weekRangeFor(_selWeek).end;
-          return repo.totalsByDay(
-              ledgerId: ledgerId, type: type, start: cStart, end: cEnd);
+        final w = chartSeriesWindow(_scope, anchor: anchor, startDay: sd);
+        if (w == null) {
+          return repo.totalsByYearSeries(ledgerId: ledgerId, type: type);
         }
-        if (_scope == 'month') {
-          final firstLabel = DateTime(selMonth.year, selMonth.month - 5, 1);
-          final cStart =
-              periodForLabel(firstLabel.year, firstLabel.month, sd).start;
-          final cEnd = periodForLabel(selMonth.year, selMonth.month, sd).end;
-          return repo.totalsByDay(
-              ledgerId: ledgerId, type: type, start: cStart, end: cEnd);
-        }
-        return repo.totalsByYearSeries(ledgerId: ledgerId, type: type);
+        return repo.totalsByDay(
+            ledgerId: ledgerId, type: type, start: w.start, end: w.end);
       }
 
       if (_type == 'balance') {
@@ -594,45 +529,37 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                               if (!context.mounted) return;
 
                               // 使用动态预览对话框（支持隐藏收入）
-                              if (_scope == 'week') {
-                                // 周报回退到该周所在月的月报海报
-                                await SharePosterService
-                                    .showDynamicPosterPreview(
-                                  context,
-                                  ref,
-                                  type: 'month',
-                                  ledgerId: ledgerId,
-                                  year: _selWeek.year,
-                                  month: _selWeek.month,
-                                );
-                              } else if (_scope == 'month') {
-                                await SharePosterService
-                                    .showDynamicPosterPreview(
-                                  context,
-                                  ref,
-                                  type: 'month',
-                                  ledgerId: ledgerId,
-                                  year: selMonth.year,
-                                  month: selMonth.month,
-                                );
-                              } else if (_scope == 'year') {
-                                await SharePosterService
-                                    .showDynamicPosterPreview(
-                                  context,
-                                  ref,
-                                  type: 'year',
-                                  ledgerId: ledgerId,
-                                  year: selMonth.year,
-                                );
-                              } else {
-                                await SharePosterService
-                                    .showDynamicPosterPreview(
-                                  context,
-                                  ref,
-                                  type: 'ledger',
-                                  ledgerId: ledgerId,
-                                );
-                              }
+                              // 注意：周报回退到该周所在月的月报海报（现状语义）
+                              final poster = switch (_scope) {
+                                AnalyticsScope.week => (
+                                    type: 'month',
+                                    year: _selWeek.year,
+                                    month: _selWeek.month,
+                                  ),
+                                AnalyticsScope.month => (
+                                    type: 'month',
+                                    year: selMonth.year,
+                                    month: selMonth.month,
+                                  ),
+                                AnalyticsScope.year => (
+                                    type: 'year',
+                                    year: selMonth.year,
+                                    month: null,
+                                  ),
+                                AnalyticsScope.all => (
+                                    type: 'ledger',
+                                    year: null,
+                                    month: null,
+                                  ),
+                              };
+                              await SharePosterService.showDynamicPosterPreview(
+                                context,
+                                ref,
+                                type: poster.type,
+                                ledgerId: ledgerId,
+                                year: poster.year,
+                                month: poster.month,
+                              );
                             }
                           } catch (e) {
                             if (context.mounted) {
@@ -649,25 +576,25 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-                  child: WaitSlidingSegmentedControl<String>(
+                  child: WaitSlidingSegmentedControl<AnalyticsScope>(
                     selected: _scope,
                     height: 38,
                     fontSize: PiggyTextTokens.fs14,
                     segments: [
                       WaitSlidingSegment(
-                        value: 'week',
+                        value: AnalyticsScope.week,
                         label: AppLocalizations.of(context).analyticsWeek,
                       ),
                       WaitSlidingSegment(
-                        value: 'month',
+                        value: AnalyticsScope.month,
                         label: AppLocalizations.of(context).analyticsMonth,
                       ),
                       WaitSlidingSegment(
-                        value: 'year',
+                        value: AnalyticsScope.year,
                         label: AppLocalizations.of(context).analyticsYear,
                       ),
                       WaitSlidingSegment(
-                        value: 'all',
+                        value: AnalyticsScope.all,
                         label: AppLocalizations.of(context).analyticsAll,
                       ),
                     ],
@@ -679,12 +606,12 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
                   child: Row(
                     children: [
-                      if (_scope != 'all')
+                      if (_scope != AnalyticsScope.all)
                         _periodNavArrow(
                             context, Icons.chevron_left, _onChartSwipeRight),
                       Expanded(
                         child: InkWell(
-                          onTap: _scope != 'all' ? _showPeriodPicker : null,
+                          onTap: _scope != AnalyticsScope.all ? _showPeriodPicker : null,
                           child: Center(
                             child: Text(
                               _navPeriodLabel(context, selMonth),
@@ -700,7 +627,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           ),
                         ),
                       ),
-                      if (_scope != 'all')
+                      if (_scope != AnalyticsScope.all)
                         _periodNavArrow(
                             context, Icons.chevron_right, _onChartSwipeLeft),
                       const SizedBox(width: 8),
@@ -1010,29 +937,31 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 final chartSeriesRaw = list[list.length - 1];
                 dynamic chartSeries;
                 if (chartSeriesRaw is List<({DateTime day, double total})>) {
-                  if (_scope == 'week') {
-                    chartSeries = _aggregateToWeeks(
-                        chartSeriesRaw, weekAdd(_selWeek, -5));
-                  } else if (_scope == 'month') {
-                    chartSeries = _aggregateToMonths(chartSeriesRaw,
-                        DateTime(selMonth.year, selMonth.month - 5, 1), sd);
-                  } else {
-                    chartSeries = chartSeriesRaw;
-                  }
+                  // 桶起点与查询窗口同源（chartSeriesWindow）：6 桶 = 本期+前5期
+                  final w = chartSeriesWindow(_scope,
+                      anchor: anchor, startDay: sd);
+                  chartSeries = switch (_scope) {
+                    AnalyticsScope.week =>
+                      _aggregateToWeeks(chartSeriesRaw, w!.start),
+                    AnalyticsScope.month => _aggregateToMonths(
+                        chartSeriesRaw, labelForDate(w!.start, sd), sd),
+                    AnalyticsScope.year || AnalyticsScope.all => chartSeriesRaw,
+                  };
                 } else if (chartSeriesRaw is List<({int year, double total})>) {
-                  if (_scope == 'year') {
+                  chartSeries = switch (_scope) {
                     // 年报：选中年 + 前5年（最多6个年份）
-                    final ys = chartSeriesRaw
-                        .where((e) => e.year <= selMonth.year)
-                        .toList();
-                    chartSeries =
-                        ys.length > 6 ? ys.sublist(ys.length - 6) : ys;
-                  } else {
-                    // 全部：所有年份
-                    chartSeries = chartSeriesRaw
-                        .where((e) => e.year <= now.year)
-                        .toList();
-                  }
+                    AnalyticsScope.year => () {
+                        final ys = chartSeriesRaw
+                            .where((e) => e.year <= selMonth.year)
+                            .toList();
+                        return ys.length > 6 ? ys.sublist(ys.length - 6) : ys;
+                      }(),
+                    // 全部：所有年份（过滤未来年份）
+                    AnalyticsScope.week ||
+                    AnalyticsScope.month ||
+                    AnalyticsScope.all =>
+                      chartSeriesRaw.where((e) => e.year <= now.year).toList(),
+                  };
                 } else {
                   chartSeries = chartSeriesRaw;
                 }
@@ -1055,7 +984,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   if (chartSeries is List<({DateTime day, double total})>) {
                     String two(int v) => v.toString().padLeft(2, '0');
                     // 周视角：周一起始日 MM.dd 短标签
-                    if (_scope == 'week') {
+                    if (_scope == AnalyticsScope.week) {
                       return chartSeries
                           .map((e) => '${two(e.day.month)}.${two(e.day.day)}')
                           .toList(growable: false);
@@ -1080,7 +1009,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
                 // 高亮当前选中周期（最后一根柱/最后一点）；全部视角不高亮
                 int? highlightIndex;
-                if (_scope != 'all' && xLabels.isNotEmpty) {
+                if (_scope != AnalyticsScope.all && xLabels.isNotEmpty) {
                   highlightIndex = xLabels.length - 1;
                 }
 
@@ -1107,10 +1036,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
                 // 折线图卡片标题：本周趋势 / 本月趋势 / 今年趋势 / 全部趋势
                 final lineTitle = l10n.analyticsTrendTitle(switch (_scope) {
-                  'week' => l10n.analyticsThisWeek,
-                  'month' => l10n.analyticsThisMonth,
-                  'year' => l10n.analyticsThisYear,
-                  _ => l10n.analyticsAll,
+                  AnalyticsScope.week => l10n.analyticsThisWeek,
+                  AnalyticsScope.month => l10n.analyticsThisMonth,
+                  AnalyticsScope.year => l10n.analyticsThisYear,
+                  AnalyticsScope.all => l10n.analyticsAll,
                 });
 
                 // 折线点按气泡：MM.dd 支出 ¥1,918.03（天序列）/ 标签+金额（月年序列）
@@ -1174,7 +1103,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         expenseColor: PiggyTokens.expenseColor(context, ref),
                         incomeColor: PiggyTokens.incomeColor(context, ref),
                         // 四指标：同比（全部视角无上期→显示记账笔数）+ 结余
-                        prevTotal: _scope == 'all' ? null : prevTotal,
+                        prevTotal: _scope == AnalyticsScope.all ? null : prevTotal,
                         balance: balance,
                         txCount: txCount,
                         expenseTotal: _type == 'balance' ? expenseTotal : null,
@@ -1400,7 +1329,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                         selMonth: selMonth,
                                         rank: i + 1,
                                         count: catData[i].count,
-                                        periodLabel: _scope == 'week'
+                                        periodLabel: _scope == AnalyticsScope.week
                                             ? weekRangeText(
                                                 weekRangeFor(_selWeek))
                                             : null,
