@@ -493,9 +493,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         _loadAccountCurrency(widget.initialAccountId!);
       }
     }
-    // 「带出上一笔」：这是**用户显式动作**，最后一手生效（覆盖上面那两条「迟到
-    // 初值」的补写）；只在本表单的类型与该载荷一致时应用 —— 快捷形态下支出 /
-    // 收入两份表单在 IndexedStack 里同时保活，同一份载荷会同时到达两者。
+    // 「带出上一笔」：这是**用户显式动作**，只在本表单的类型与该载荷一致时应用
+    // —— 快捷形态下支出 / 收入两份表单在 IndexedStack 里同时保活，同一份载荷
+    // 会同时到达两者。装填口径是「仅填空缺」，不动已有值（见 [_applyLastEntryPrefill]）。
     final prefill = widget.prefill;
     if (prefill != null &&
         widget.prefillToken != oldWidget.prefillToken &&

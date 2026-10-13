@@ -6,11 +6,16 @@
 ///     进当前表单：分类 / 账户 / 备注（含敏感标记）/ 标签 / 币种 / 不计入收支
 ///     与预算 / 自定义字段；
 ///   - **不带出**金额、原始金额、汇率、发生日期（保持今天）、附件；
-///   - 直接覆盖、不弹确认；
+///     **金额类型的自定义字段**与「金额」同口径，一律不带出；
+///   - **仅填空缺**（2026-10-13 反转原「直接覆盖」）：目标字段已有值就保留用户
+///     现值；「有值」判据 —— 分类 / 账户以「用户主动选过」为准（系统预填的默认
+///     账户、5 分钟继承的分类不算有值）、备注非空、标签已选、两个开关「已打开」、
+///     币种「已手选」、自定义字段该字段非空；
 ///   - 两种记账形态都有按钮；编辑既有交易、转账段不出现；该类型暂无来源不出现。
 ///
 /// 分三层敲定：
-///   1. 快捷形态（金额表单已在屏上）：点按钮**就地装填**，金额与日期一动不动；
+///   1. 快捷形态（金额表单已在屏上）：点按钮**就地装填**，金额与日期一动不动，
+///      已有值的字段保留；
 ///   2. 表单级 kind 守卫：载荷类型与表单类型不符时不得装填（支出 / 收入两份表单
 ///      在 IndexedStack 里同时保活，同一份载荷会同时到达两者）；
 ///   3. 分类网格形态：点按钮等同于「选中上一笔的分类并进入记账表单」；上一笔
@@ -33,6 +38,7 @@ import 'package:piggycount/models/last_entry_draft.dart';
 import 'package:piggycount/pages/transaction/transaction_editor_page.dart';
 import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/providers/theme_providers.dart';
+import 'package:piggycount/widgets/biz/account_selector.dart';
 import 'package:piggycount/widgets/biz/amount_editor_sheet.dart';
 
 void main() {
@@ -79,6 +85,13 @@ void main() {
     bool renderAsBottomSheet = true,
     int? editingTransactionId,
     DateTime? initialDate,
+    String? initialNote,
+    int? initialAccountId,
+    List<int>? initialTagIds,
+    bool initialExcludeFromStats = false,
+    bool initialExcludeFromBudget = false,
+    String? initialCurrencyCode,
+    Map<String, dynamic> initialCustomValues = const {},
   }) async {
     final container = ProviderContainer(overrides: [
       repositoryProvider.overrideWithValue(repo),
@@ -102,6 +115,13 @@ void main() {
           renderAsBottomSheet: renderAsBottomSheet,
           editingTransactionId: editingTransactionId,
           initialDate: initialDate,
+          initialNote: initialNote,
+          initialAccountId: initialAccountId,
+          initialTagIds: initialTagIds,
+          initialExcludeFromStats: initialExcludeFromStats,
+          initialExcludeFromBudget: initialExcludeFromBudget,
+          initialCurrencyCode: initialCurrencyCode,
+          initialCustomValues: initialCustomValues,
         ),
       )),
     );
@@ -142,12 +162,18 @@ void main() {
   }
 
   /// 该笔自定义字段需要一条**定义**才会渲染输入位。
-  Future<void> seedTextField({String syncId = 'f-text', String name = '商户'}) {
+  ///
+  /// `fieldType: 'amount'` 用于验证「金额类型的自定义字段永不带出」。
+  Future<void> seedCustomField({
+    String syncId = 'f-text',
+    String name = '商户',
+    String fieldType = 'text',
+  }) {
     return db.into(db.customFieldDefinitions).insert(
           CustomFieldDefinitionsCompanion.insert(
             ledgerId: 1,
             name: name,
-            fieldType: 'text',
+            fieldType: fieldType,
             syncId: d.Value(syncId),
           ),
         );
@@ -166,6 +192,14 @@ void main() {
   Finder inSheet(Finder matching) =>
       find.descendant(of: find.byType(AmountEditorSheet), matching: matching);
 
+  /// 读账户选择器**当前选中**的账户 id。
+  ///
+  /// 不能用 `find.text('支付宝')` 判断选中：账户选择器会把**全部**候选账户
+  /// 渲染成横滑芯片（未选中的也在屏上），文本存在 ≠ 被选中。
+  int? selectedAccountId(WidgetTester tester) => tester
+      .widget<AccountSelector>(inSheet(find.byType(AccountSelector)))
+      .selectedAccountId;
+
   // ——— 第一层：快捷形态（金额表单已在屏上） ———
 
   group('快捷形态：就地装填', () {
@@ -178,7 +212,7 @@ void main() {
       await repo.createCategory(name: '交通', kind: 'expense');
       final cash = await repo.createAccount(ledgerId: 1, name: '现金');
       final tagId = await repo.createTag(name: '差旅');
-      await seedTextField();
+      await seedCustomField();
       await seedLastEntry(
         categoryId: food,
         accountId: cash,
@@ -310,6 +344,207 @@ void main() {
     });
   });
 
+  // ——— 第一层 B：仅填空缺（2026-10-13 用户口径，反转原「直接覆盖」） ———
+
+  group('快捷形态：仅填空缺', () {
+    /// 读自定义「金额」字段当前显示串（空 → 显示 hint 文案）。
+    String amountFieldText(WidgetTester tester, String syncId) => tester
+        .widget<Text>(
+            find.byKey(ValueKey('custom_field_amount_value_$syncId')))
+        .data!;
+
+    testWidgets('已有值的备注 / 标签 / 自定义字段保留，空白的才被补上', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+      await seedCustomField(); // f-text「商户」
+      final food = await repo.createCategory(name: '餐饮', kind: 'expense');
+      final mineTag = await repo.createTag(name: '我的标签');
+      final srcTag = await repo.createTag(name: '差旅');
+      await seedLastEntry(
+        categoryId: food,
+        note: '午饭',
+        tagId: srcTag,
+        customValues: {'f-text': 'A店'},
+      );
+
+      // 表单里这几项都已经有值：备注、标签、自定义字段各占一项；分类位仍空着。
+      await tester.pumpWidget(await pageHost(
+        quickMode: true,
+        initialNote: '我自己写的',
+        initialTagIds: [mineTag],
+        initialCustomValues: {'f-text': 'B店'},
+      ));
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+
+      expect(inSheet(find.text('我自己写的')), findsOneWidget);
+      expect(inSheet(find.text('B店')), findsOneWidget);
+      expect(inSheet(find.text('选择分类')), findsOneWidget,
+          reason: '3 天前那一笔不在继承窗口内，分类位应是占位');
+
+      await tester.tap(find.byTooltip('带出上一笔'));
+      await tester.pumpAndSettle();
+
+      // 已有值 → 保留
+      expect(inSheet(find.text('我自己写的')), findsOneWidget,
+          reason: '备注已有值，不被上一笔覆盖');
+      expect(inSheet(find.text('午饭')), findsNothing);
+      expect(inSheet(find.text('我的标签')), findsOneWidget,
+          reason: '标签已选，不被上一笔覆盖');
+      expect(inSheet(find.text('差旅')), findsNothing);
+      expect(inSheet(find.text('B店')), findsOneWidget,
+          reason: '自定义字段已有值，不被上一笔覆盖');
+      expect(inSheet(find.text('A店')), findsNothing);
+      // 空白 → 补上
+      expect(inSheet(find.text('餐饮')), findsOneWidget,
+          reason: '分类位仍空白，应被上一笔补上');
+
+      await drainTimers(tester);
+    });
+
+    testWidgets('自定义金额字段永不带出值（源有值、表单为空也不带）', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+      await seedCustomField(syncId: 'f-amt', name: '折扣', fieldType: 'amount');
+      await seedCustomField(); // f-text「商户」
+      await seedLastEntry(customValues: {'f-amt': 88, 'f-text': 'A店'});
+
+      await tester.pumpWidget(await pageHost(quickMode: true));
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+
+      expect(amountFieldText(tester, 'f-amt'), isNot('88'),
+          reason: '装填前金额字段应是空的');
+
+      await tester.tap(find.byTooltip('带出上一笔'));
+      await tester.pumpAndSettle();
+
+      expect(inSheet(find.text('A店')), findsOneWidget,
+          reason: '非金额自定义字段照常带出');
+      expect(amountFieldText(tester, 'f-amt'), isNot('88'),
+          reason: '金额类型的自定义字段与「金额」同口径，一律不带出');
+
+      await drainTimers(tester);
+    });
+
+    testWidgets('开关：已打开的不被关掉，未打开的才被补上', (tester) async {
+      // 来源两个开关都关；表单已打开「不计入收支」→ 复制不得把它关掉。
+      await seedLastEntry();
+
+      await tester.pumpWidget(await pageHost(
+        quickMode: true,
+        initialExcludeFromStats: true,
+      ));
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+      expect(inSheet(find.byIcon(Icons.flag)), findsOneWidget,
+          reason: '表单已打开标记');
+
+      await tester.tap(find.byTooltip('带出上一笔'));
+      await tester.pumpAndSettle();
+
+      expect(inSheet(find.byIcon(Icons.flag)), findsOneWidget,
+          reason: '「已打开」算有值，上一笔的「关」不得把它关掉');
+      expect(inSheet(find.byIcon(Icons.outlined_flag)), findsNothing);
+
+      await drainTimers(tester);
+    });
+
+    testWidgets('开关：未打开的会被上一笔补上', (tester) async {
+      await seedLastEntry(excludeFromBudget: true);
+
+      await tester.pumpWidget(await pageHost(quickMode: true));
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+      expect(inSheet(find.byIcon(Icons.outlined_flag)), findsOneWidget);
+
+      await tester.tap(find.byTooltip('带出上一笔'));
+      await tester.pumpAndSettle();
+
+      expect(inSheet(find.byIcon(Icons.flag)), findsOneWidget,
+          reason: '开关默认关 = 空缺，应被上一笔补上');
+
+      await drainTimers(tester);
+    });
+
+    testWidgets('币种：已手选的不被覆盖', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+      await seedLastEntry(currencyCode: 'JPY');
+
+      await tester.pumpWidget(await pageHost(
+        quickMode: true,
+        initialCurrencyCode: 'USD',
+      ));
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+      expect(inSheet(find.text('USD')), findsOneWidget);
+
+      await tester.tap(find.byTooltip('带出上一笔'));
+      await tester.pumpAndSettle();
+
+      expect(inSheet(find.text('USD')), findsOneWidget,
+          reason: '「已手选」算有值，币种不被上一笔覆盖');
+      expect(inSheet(find.text('JPY')), findsNothing);
+
+      await drainTimers(tester);
+    });
+
+    testWidgets('系统预填的账户不算有值，会被上一笔覆盖', (tester) async {
+      final cash = await repo.createAccount(ledgerId: 1, name: '现金');
+      final alipay = await repo.createAccount(ledgerId: 1, name: '支付宝');
+      await seedLastEntry(accountId: cash);
+
+      // 用户没主动选过，账户只是系统预填（同「默认账户」那条链路）。
+      await tester.pumpWidget(
+          await pageHost(quickMode: true, initialAccountId: alipay));
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+      expect(selectedAccountId(tester), alipay,
+          reason: '系统预填选中支付宝（用户没主动选过）');
+
+      await tester.tap(find.byTooltip('带出上一笔'));
+      await tester.pumpAndSettle();
+
+      expect(selectedAccountId(tester), cash,
+          reason: '系统预填的账户「不算有值」，允许被上一笔替换');
+
+      await drainTimers(tester);
+    });
+
+    testWidgets('用户主动选过的分类不算空缺，不被上一笔覆盖', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
+
+      final food = await repo.createCategory(name: '餐饮', kind: 'expense');
+      await repo.createCategory(name: '交通', kind: 'expense');
+      await seedLastEntry(categoryId: food);
+
+      await tester.pumpWidget(await pageHost(quickMode: true));
+      await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+
+      // 用户主动选「交通」：点分类位 → 分类选择子界面 → 选中。
+      await tester.tap(find.byKey(const ValueKey('amountEditorCategoryChip')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('交通').last);
+      await tester.pumpAndSettle();
+      expect(inSheet(find.text('交通')), findsOneWidget);
+
+      await tester.tap(find.byTooltip('带出上一笔'));
+      await tester.pumpAndSettle();
+
+      expect(inSheet(find.text('交通')), findsOneWidget,
+          reason: '用户主动选过的分类算有值，不被上一笔覆盖');
+      expect(inSheet(find.text('餐饮')), findsNothing);
+
+      await drainTimers(tester);
+    });
+  });
+
   // ——— 第二层：表单级 kind 守卫 ———
 
   group('AmountEditorSheet 的载荷守卫', () {
@@ -352,7 +587,7 @@ void main() {
     }
 
     testWidgets('载荷 kind 与表单 kind 不符 → 不装填', (tester) async {
-      await seedTextField();
+      await seedCustomField();
       StateSetter? rebuild;
       LastEntryDraft? draft;
       var token = 0;
@@ -382,7 +617,7 @@ void main() {
     });
 
     testWidgets('载荷 kind 相符 → 装填（含 text 自定义字段的刷新）', (tester) async {
-      await seedTextField();
+      await seedCustomField();
       StateSetter? rebuild;
       LastEntryDraft? draft;
       var token = 0;
@@ -410,7 +645,8 @@ void main() {
           reason: 'text 类型的自定义字段内部状态只在 initState 播种，'
               '装填必须换 key 重建分区才刷得出来');
 
-      // 同一份载荷再点一次（token 再 +1）也要重新装填 —— 用户先把字段改掉再点。
+      // 用户先把字段改成 B店，再点一次（token 再 +1）：**仅填空缺** —— 已有值
+      // 的字段保留用户现值，不再被载荷覆盖。
       await tester.enterText(
         find.byKey(const ValueKey('custom_field_input_f-text')),
         'B店',
@@ -422,9 +658,9 @@ void main() {
       rebuild!(() {});
       await tester.pumpAndSettle();
 
-      expect(inSheet(find.text('A店')), findsOneWidget,
-          reason: 'token 递增 = 一次新的带出请求，必须重新覆盖');
-      expect(inSheet(find.text('B店')), findsNothing);
+      expect(inSheet(find.text('B店')), findsOneWidget,
+          reason: '字段已有值，再次带出不得覆盖（仅填空缺）');
+      expect(inSheet(find.text('A店')), findsNothing);
     });
   });
 
