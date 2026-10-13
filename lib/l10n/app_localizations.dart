@@ -1560,6 +1560,30 @@ abstract class AppLocalizations {
   /// **'This Year'**
   String get analyticsThisYear;
 
+  /// No description provided for @analyticsThisQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'This Quarter'**
+  String get analyticsThisQuarter;
+
+  /// No description provided for @analyticsQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'Quarter'**
+  String get analyticsQuarter;
+
+  /// No description provided for @analyticsCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get analyticsCustom;
+
+  /// No description provided for @analyticsSelectedRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected Range'**
+  String get analyticsSelectedRange;
+
   /// No description provided for @analyticsTrendTitle.
   ///
   /// In en, this message translates to:
@@ -6927,6 +6951,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'vs Last Year'**
   String get analyticsComparedToLastYear;
+
+  /// No description provided for @analyticsComparedToPrevRange.
+  ///
+  /// In en, this message translates to:
+  /// **'vs Previous Range'**
+  String get analyticsComparedToPrevRange;
 
   /// No description provided for @analyticsTxCount.
   ///

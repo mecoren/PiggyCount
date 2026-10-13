@@ -131,6 +131,15 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
         return AppLocalizations.of(context).analyticsAllYears;
       case AnalyticsScope.week || AnalyticsScope.month:
         return '${selMonth.year}.${selMonth.month.toString().padLeft(2, '0')}';
+      case AnalyticsScope.quarter:
+        // 与洞察页导航行同款：yyyyQn
+        return '${selMonth.year}Q${((selMonth.month - 1) ~/ 3) + 1}';
+      case AnalyticsScope.custom:
+        // 自定义兜底：起止日期（含端展示，内部存半开区间故 end -1 天）
+        final e = widget.end.subtract(const Duration(days: 1));
+        String f(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+            '${d.day.toString().padLeft(2, '0')}';
+        return '${f(widget.start)} ~ ${f(e)}';
     }
   }
 

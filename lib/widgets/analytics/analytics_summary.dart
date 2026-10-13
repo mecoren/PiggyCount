@@ -87,11 +87,27 @@ class AnalyticsSummary extends ConsumerWidget {
   });
 
   /// 周期平均值标签：月视角=日均、年视角=月均、全部=平均值
-  /// （周视角沿用日均——现状口径）
+  /// （周视角沿用日均——现状口径；季度/自定义走天序列，同为日均）
   String _avgLabel(AppLocalizations l10n) => switch (scope) {
         AnalyticsScope.year => l10n.analyticsMonthlyAvg,
         AnalyticsScope.all => l10n.analyticsOverallAvg,
-        AnalyticsScope.week || AnalyticsScope.month => l10n.analyticsDailyAvg,
+        AnalyticsScope.week ||
+        AnalyticsScope.month ||
+        AnalyticsScope.quarter ||
+        AnalyticsScope.custom =>
+          l10n.analyticsDailyAvg,
+      };
+
+  /// 对比文案：周=比上周、自定义=比上一区间（等长环比）、其余=比上年
+  /// （季度上期=同比去年同季度，沿用「比上年」）
+  String _compareLabel(AppLocalizations l10n) => switch (scope) {
+        AnalyticsScope.week => l10n.analyticsComparedToLastWeek,
+        AnalyticsScope.custom => l10n.analyticsComparedToPrevRange,
+        AnalyticsScope.month ||
+        AnalyticsScope.quarter ||
+        AnalyticsScope.year ||
+        AnalyticsScope.all =>
+          l10n.analyticsComparedToLastYear,
       };
 
   /// 去掉 l10n 文案尾部的冒号空格（标签用于卡片网格）
@@ -166,9 +182,7 @@ class AnalyticsSummary extends ConsumerWidget {
               _cell(
                 context,
                 label: (prevTotal != null
-                        ? (scope == AnalyticsScope.week
-                            ? l10n.analyticsComparedToLastWeek
-                            : l10n.analyticsComparedToLastYear)
+                        ? _compareLabel(l10n)
                         : l10n.analyticsTxCount) +
                     unit,
                 value: prevTotal != null

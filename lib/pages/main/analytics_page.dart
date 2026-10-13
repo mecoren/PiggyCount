@@ -42,6 +42,18 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   // 周报选中的周（该周周一），独立于首页月份状态，避免污染首页
   DateTime _selWeek = weekLabelFor(DateTime.now());
 
+  /// 自定义区间（半开 [start, end)）。与 _selWeek 同定位：页面本地状态，
+  /// 不进 selectedMonthProvider（自定义区间不是「共享选中月」语义）。
+  /// late 惰性初始化：首次切入自定义档位 = 近 30 天（含今天）。
+  late DateRange _customRange = _defaultCustomRange();
+
+  /// 默认自定义区间 = 近 30 天（含今天）：[today-29d, today+1d)。
+  DateRange _defaultCustomRange() {
+    final today = DateTime.now();
+    final start = DateTime(today.year, today.month, today.day - 29);
+    return (start: start, end: start.add(const Duration(days: 30)));
+  }
+
   /// 审计 U8：FutureBuilder future 缓存（key: type|start|end|refreshTick）
   ///
   /// 单条记忆化：只保留**最近一次**查询的 future —— 键含 refreshTick/时间戳/
@@ -128,6 +140,40 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
         if (res != null) {
           ref.read(selectedMonthProvider.notifier).state =
               DateTime(res.year, 1, 1);
+        }
+      case AnalyticsScope.quarter:
+        // 无 yq 模式 wheel：用年月选择后吸附到该月所在季度首月标签月
+        // （锚点形状 DateTime(y, 3k+1, 1)，见 analytics_scope.dart D2/D3）
+        final res = await showWheelDatePicker(
+          context,
+          initial: selMonth,
+          mode: WheelDatePickerMode.ym,
+          maxDate: DateTime.now(),
+        );
+        if (res != null) {
+          ref.read(selectedMonthProvider.notifier).state =
+              DateTime(res.year, ((res.month - 1) ~/ 3) * 3 + 1, 1);
+        }
+      case AnalyticsScope.custom:
+        // 项目统一区间抽屉（与 RangeReportPage 同款）：抽屉收含端日期，
+        // 页面统一存半开区间 [start, end)，故 end 回读时 +1 天
+        final r = _customRange;
+        final now = DateTime.now();
+        final picked = await showPiggyRangePickerSheet(
+          context,
+          firstDate: DateTime(2000),
+          lastDate: DateTime(now.year, now.month, now.day),
+          initialStart: r.start,
+          initialEnd: r.end.subtract(const Duration(days: 1)),
+        );
+        if (picked != null) {
+          setState(() {
+            _customRange = (
+              start: picked.start,
+              end: DateTime(
+                  picked.end.year, picked.end.month, picked.end.day + 1),
+            );
+          });
         }
       case AnalyticsScope.all:
         break; // all视角不显示选择器
@@ -257,12 +303,19 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
   // 根据scope切换周期（用于图表滑动 / 导航箭头）
   // 步进+钳制已收拢到 analytics_scope.dart 的 nextAnchor/prevAnchor 纯函数；
-  // 状态写回留页面：周→_selWeek 本地，月/年→selectedMonthProvider 共享。
+  // 状态写回留页面：周→_selWeek 本地，月/季/年→selectedMonthProvider 共享，
+  // 自定义→_customRange 本地（等长平移，shiftCustomRange）。
   void _onChartSwipeLeft() {
+    if (_scope == AnalyticsScope.custom) {
+      setState(
+          () => _customRange = shiftCustomRange(_customRange, 1));
+      return;
+    }
     final selMonth = ref.read(selectedMonthProvider);
+    final sd = ref.read(currentMonthStartDayProvider);
     setState(() {
       final anchor = _scope == AnalyticsScope.week ? _selWeek : selMonth;
-      final next = nextAnchor(_scope, anchor, DateTime.now());
+      final next = nextAnchor(_scope, anchor, DateTime.now(), startDay: sd);
       if (next == null) return; // all视角不操作 / 已钳制在当前周期
       if (_scope == AnalyticsScope.week) {
         _selWeek = next;
@@ -273,6 +326,11 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   }
 
   void _onChartSwipeRight() {
+    if (_scope == AnalyticsScope.custom) {
+      setState(
+          () => _customRange = shiftCustomRange(_customRange, -1));
+      return;
+    }
     final selMonth = ref.read(selectedMonthProvider);
     setState(() {
       final anchor = _scope == AnalyticsScope.week ? _selWeek : selMonth;
@@ -311,16 +369,30 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     );
   }
 
-  /// 导航行周期文案：周=日期范围，月=yyyy-MM，年=yyyy，全部=全部年份
+  /// 导航行周期文案：周=日期范围，月=yyyy-MM，季=yyyyQn，年=yyyy，
+  /// 自定义=起止日期（含端展示），全部=全部年份
   String _navPeriodLabel(BuildContext context, DateTime selMonth) =>
       switch (_scope) {
         AnalyticsScope.week => weekRangeText(weekRangeFor(_selWeek)),
         AnalyticsScope.month =>
           '${selMonth.year}-${selMonth.month.toString().padLeft(2, '0')}',
+        AnalyticsScope.quarter =>
+          '${selMonth.year}Q${((selMonth.month - 1) ~/ 3) + 1}',
         AnalyticsScope.year => '${selMonth.year}',
+        AnalyticsScope.custom => _customRangeText(),
         AnalyticsScope.all =>
           AppLocalizations.of(context).analyticsAllYears,
       };
+
+  /// 自定义区间文案：yyyy-MM-dd ~ yyyy-MM-dd（含端展示，与
+  /// RangeReportPage._rangeText 同风格；内部存半开区间故 end -1 天）
+  String _customRangeText() {
+    final r = _customRange;
+    final e = r.end.subtract(const Duration(days: 1));
+    String f(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+    return '${f(r.start)} ~ ${f(e)}';
+  }
 
   // 将「天」序列聚合为 6 个周桶（本周 + 前5周），桶标签 = 周一起始日
   List<({DateTime day, double total})> _aggregateToWeeks(
@@ -386,7 +458,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     // （含「当前周期只到今天」截断与各档上期口径，行为冻结见该文件文档）
     final anchor = _scope == AnalyticsScope.week ? _selWeek : selMonth;
     final period =
-        resolveAnalyticsPeriod(_scope, anchor: anchor, startDay: sd, now: now);
+        resolveAnalyticsPeriod(_scope,
+            anchor: anchor, range: _customRange, startDay: sd, now: now);
     final start = period.start;
     final end = period.end;
     final prevStart = period.prevStart;
@@ -447,7 +520,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
       // 年/全部走年序列无窗口）
       Future<dynamic> buildChartSeries(
           dynamic repo, int ledgerId, String type) {
-        final w = chartSeriesWindow(_scope, anchor: anchor, startDay: sd);
+        final w = chartSeriesWindow(_scope,
+            anchor: anchor, range: _customRange, startDay: sd);
         if (w == null) {
           return repo.totalsByYearSeries(ledgerId: ledgerId, type: type);
         }
@@ -501,8 +575,9 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           },
                         ),
                       ),
-                      // 分享按钮
-                      IconButton(
+                      // 分享按钮（自定义区间无海报模板，隐藏入口，Q5）
+                      if (_scope != AnalyticsScope.custom)
+                        IconButton(
                         icon: Icon(Icons.share,
                             color: PiggyTokens.textPrimary(context)),
                         tooltip: AppLocalizations.of(context).sharePosterShare,
@@ -530,6 +605,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
                               // 使用动态预览对话框（支持隐藏收入）
                               // 注意：周报回退到该周所在月的月报海报（现状语义）
+                              // 季度→年报回退（Q5）；自定义区间无海报模板，
+                              // 分享入口已隐藏（Q5），null 仅作防御性兜底。
                               final poster = switch (_scope) {
                                 AnalyticsScope.week => (
                                     type: 'month',
@@ -541,17 +618,24 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                     year: selMonth.year,
                                     month: selMonth.month,
                                   ),
+                                AnalyticsScope.quarter => (
+                                    type: 'year',
+                                    year: selMonth.year,
+                                    month: null,
+                                  ),
                                 AnalyticsScope.year => (
                                     type: 'year',
                                     year: selMonth.year,
                                     month: null,
                                   ),
+                                AnalyticsScope.custom => null,
                                 AnalyticsScope.all => (
                                     type: 'ledger',
                                     year: null,
                                     month: null,
                                   ),
                               };
+                              if (poster == null) return;
                               await SharePosterService.showDynamicPosterPreview(
                                 context,
                                 ref,
@@ -590,15 +674,32 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         label: AppLocalizations.of(context).analyticsMonth,
                       ),
                       WaitSlidingSegment(
+                        value: AnalyticsScope.quarter,
+                        label: AppLocalizations.of(context).analyticsQuarter,
+                      ),
+                      WaitSlidingSegment(
                         value: AnalyticsScope.year,
                         label: AppLocalizations.of(context).analyticsYear,
+                      ),
+                      WaitSlidingSegment(
+                        value: AnalyticsScope.custom,
+                        label: AppLocalizations.of(context).analyticsCustom,
                       ),
                       WaitSlidingSegment(
                         value: AnalyticsScope.all,
                         label: AppLocalizations.of(context).analyticsAll,
                       ),
                     ],
-                    onValueChanged: (value) => setState(() => _scope = value),
+                    onValueChanged: (value) => setState(() {
+                      _scope = value;
+                      if (value == AnalyticsScope.quarter) {
+                        // 切到季档：锚点吸附到所在季度首月标签月
+                        // （月/季/年共享 selectedMonthProvider，D5）
+                        final sel = ref.read(selectedMonthProvider);
+                        ref.read(selectedMonthProvider.notifier).state =
+                            DateTime(sel.year, ((sel.month - 1) ~/ 3) * 3 + 1, 1);
+                      }
+                    }),
                   ),
                 ),
                 // 周期导航行：‹ 范围文案 › 居左，支出/收入/结余三段胶囊居右
@@ -939,12 +1040,25 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 if (chartSeriesRaw is List<({DateTime day, double total})>) {
                   // 桶起点与查询窗口同源（chartSeriesWindow）：6 桶 = 本期+前5期
                   final w = chartSeriesWindow(_scope,
-                      anchor: anchor, startDay: sd);
+                      anchor: anchor, range: _customRange, startDay: sd);
                   chartSeries = switch (_scope) {
                     AnalyticsScope.week =>
                       _aggregateToWeeks(chartSeriesRaw, w!.start),
                     AnalyticsScope.month => _aggregateToMonths(
                         chartSeriesRaw, labelForDate(w!.start, sd), sd),
+                    // 季度：日序列滚 6 个季度桶（本期+前5季），桶键=季度首月标签月
+                    AnalyticsScope.quarter => () {
+                        final ql = quarterLabelFor(w!.start, sd);
+                        return aggregateToQuarters(chartSeriesRaw,
+                            firstQuarterLabel:
+                                DateTime(ql.year, (ql.quarter - 1) * 3 + 1, 1),
+                            startDay: sd);
+                      }(),
+                    // 自定义：≤31 天按天画；超限按自然月并桶（同收支报表口径）
+                    AnalyticsScope.custom =>
+                      chartSeriesRaw.length > RangeReportPage.dayChartLimit
+                          ? RangeReportPage.rollToMonths(chartSeriesRaw)
+                          : chartSeriesRaw,
                     AnalyticsScope.year || AnalyticsScope.all => chartSeriesRaw,
                   };
                 } else if (chartSeriesRaw is List<({int year, double total})>) {
@@ -956,9 +1070,11 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                             .toList();
                         return ys.length > 6 ? ys.sublist(ys.length - 6) : ys;
                       }(),
-                    // 全部：所有年份（过滤未来年份）
+                    // 全部/其他：所有年份（过滤未来年份）
                     AnalyticsScope.week ||
                     AnalyticsScope.month ||
+                    AnalyticsScope.quarter ||
+                    AnalyticsScope.custom ||
                     AnalyticsScope.all =>
                       chartSeriesRaw.where((e) => e.year <= now.year).toList(),
                   };
@@ -989,11 +1105,35 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           .map((e) => '${two(e.day.month)}.${two(e.day.day)}')
                           .toList(growable: false);
                     }
+                    // 自定义：≤31 天按天 MM.dd；超限已并桶为月（day=月首），yy.MM
+                    if (_scope == AnalyticsScope.custom) {
+                      final rolled =
+                          chartSeriesRaw.length > RangeReportPage.dayChartLimit;
+                      return chartSeries
+                          .map((e) => rolled
+                              ? '${e.day.year.toString().substring(2)}.${two(e.day.month)}'
+                              : '${two(e.day.month)}.${two(e.day.day)}')
+                          .toList(growable: false);
+                    }
                     return chartSeries
                         .map((e) => e.day.day.toString())
                         .toList(growable: false);
                   }
                   if (chartSeries is List<({DateTime month, double total})>) {
+                    // 季度桶：桶键=季度首月标签月，标 yyQn 短标签
+                    if (_scope == AnalyticsScope.quarter) {
+                      return chartSeries
+                          .map((e) =>
+                              '${e.month.year.toString().substring(2)}Q${quarterOf(e.month)}')
+                          .toList(growable: false);
+                    }
+                    // 自定义月桶（防御分支，实际 custom 保持天形状）：yy.MM
+                    if (_scope == AnalyticsScope.custom) {
+                      return chartSeries
+                          .map((e) =>
+                              '${e.month.year.toString().substring(2)}.${e.month.month.toString().padLeft(2, '0')}')
+                          .toList(growable: false);
+                    }
                     return chartSeries
                         .map((e) => AppLocalizations.of(context).homeMonth(
                             e.month.month.toString().padLeft(2, '0')))
@@ -1007,9 +1147,11 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   return const <String>[];
                 }();
 
-                // 高亮当前选中周期（最后一根柱/最后一点）；全部视角不高亮
+                // 高亮当前选中周期（最后一根柱/最后一点）；全部/自定义无「当前期」不高亮
                 int? highlightIndex;
-                if (_scope != AnalyticsScope.all && xLabels.isNotEmpty) {
+                if (_scope != AnalyticsScope.all &&
+                    _scope != AnalyticsScope.custom &&
+                    xLabels.isNotEmpty) {
                   highlightIndex = xLabels.length - 1;
                 }
 
@@ -1034,11 +1176,13 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         : l10n.analyticsBalance
                             .replaceAll(RegExp(r'[\s:：]+$'), '');
 
-                // 折线图卡片标题：本周趋势 / 本月趋势 / 今年趋势 / 全部趋势
+                // 折线图卡片标题：本周趋势 / 本月趋势 / 本季度趋势 / 今年趋势 / …
                 final lineTitle = l10n.analyticsTrendTitle(switch (_scope) {
                   AnalyticsScope.week => l10n.analyticsThisWeek,
                   AnalyticsScope.month => l10n.analyticsThisMonth,
+                  AnalyticsScope.quarter => l10n.analyticsThisQuarter,
                   AnalyticsScope.year => l10n.analyticsThisYear,
+                  AnalyticsScope.custom => l10n.analyticsSelectedRange,
                   AnalyticsScope.all => l10n.analyticsAll,
                 });
 
@@ -1329,10 +1473,18 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                         selMonth: selMonth,
                                         rank: i + 1,
                                         count: catData[i].count,
-                                        periodLabel: _scope == AnalyticsScope.week
-                                            ? weekRangeText(
-                                                weekRangeFor(_selWeek))
-                                            : null,
+                                        // 周/自定义由页面传入范围文案（自定义区间
+                                        // 在 row 侧无法还原，其余档位 row 自算）
+                                        periodLabel: switch (_scope) {
+                                          AnalyticsScope.week => weekRangeText(
+                                              weekRangeFor(_selWeek)),
+                                          AnalyticsScope.custom =>
+                                            _customRangeText(),
+                                          AnalyticsScope.month ||
+                                          AnalyticsScope.quarter ||
+                                          AnalyticsScope.year ||
+                                          AnalyticsScope.all => null,
+                                        },
                                       ),
                                   ],
                                 ),

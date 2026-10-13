@@ -197,4 +197,221 @@ void main() {
           isNull);
     });
   });
+
+  // ===== 自定义时间档位（quarter / custom）=====
+  // 见 prd/custom_time_scope_extension/design.md：季度=账期口径（D3）、
+  // custom=显式区间不截断 + 等长环比（D6 对照表，Q2/Q4/Q6 推荐方案）。
+
+  group('quarterRangeFor / quarterLabelFor', () {
+    test('startDay=1 自然季度边界', () {
+      expect(quarterRangeFor(2026, 1, 1),
+          (start: DateTime(2026, 1, 1), end: DateTime(2026, 4, 1)));
+      expect(quarterRangeFor(2026, 4, 1),
+          (start: DateTime(2026, 10, 1), end: DateTime(2027, 1, 1)));
+    });
+
+    test('startDay=10 账期口径边界', () {
+      expect(quarterRangeFor(2026, 1, 10),
+          (start: DateTime(2026, 1, 10), end: DateTime(2026, 4, 10)));
+      expect(quarterRangeFor(2026, 4, 10),
+          (start: DateTime(2026, 10, 10), end: DateTime(2027, 1, 10)));
+    });
+
+    test('startDay=28 跨年借位：Q4=10/28~次年1/28', () {
+      expect(quarterRangeFor(2026, 4, 28),
+          (start: DateTime(2026, 10, 28), end: DateTime(2027, 1, 28)));
+    });
+
+    test('quarterLabelFor：日期映射到季度标签（含跨年借位）', () {
+      expect(quarterLabelFor(DateTime(2026, 10, 13), 1),
+          (year: 2026, quarter: 4));
+      // startDay=10：10-05 未到 10-10，属 Q3（账期口径）
+      expect(quarterLabelFor(DateTime(2026, 10, 5), 10),
+          (year: 2026, quarter: 3));
+      // startDay=10：1 月 5 日属上年 Q4（2025-10-10~2026-01-10）
+      expect(quarterLabelFor(DateTime(2026, 1, 5), 10),
+          (year: 2025, quarter: 4));
+    });
+  });
+
+  group('resolveAnalyticsPeriod quarter/custom', () {
+    test('quarter 当前季：截断到今天+1天，上期=去年同季度（同比）', () {
+      final r = resolveAnalyticsPeriod(AnalyticsScope.quarter,
+          anchor: DateTime(2026, 10, 1), startDay: 1, now: now);
+      expect(r.start, DateTime(2026, 10, 1));
+      expect(r.end, today);
+      expect(r.prevStart, DateTime(2025, 10, 1));
+      expect(r.prevEnd, DateTime(2026, 1, 1));
+    });
+
+    test('quarter 历史季：到季度末', () {
+      final r = resolveAnalyticsPeriod(AnalyticsScope.quarter,
+          anchor: DateTime(2026, 7, 1), startDay: 1, now: now);
+      expect(r.start, DateTime(2026, 7, 1));
+      expect(r.end, DateTime(2026, 10, 1));
+      expect(r.prevStart, DateTime(2025, 7, 1));
+      expect(r.prevEnd, DateTime(2025, 10, 1));
+    });
+
+    test('quarter startDay=10：账期边界 + 当前季截断', () {
+      final r = resolveAnalyticsPeriod(AnalyticsScope.quarter,
+          anchor: DateTime(2026, 10, 1), startDay: 10, now: now);
+      expect(r.start, DateTime(2026, 10, 10));
+      expect(r.end, today);
+      expect(r.prevStart, DateTime(2025, 10, 10));
+      expect(r.prevEnd, DateTime(2026, 1, 10));
+    });
+
+    test('custom：区间原样（不截断），上期=等长环比前置区间', () {
+      final r = resolveAnalyticsPeriod(AnalyticsScope.custom,
+          anchor: DateTime(2026, 10, 1),
+          range: (start: DateTime(2026, 9, 1), end: DateTime(2026, 10, 1)),
+          startDay: 1,
+          now: now);
+      expect(r.start, DateTime(2026, 9, 1));
+      expect(r.end, DateTime(2026, 10, 1));
+      expect(r.prevStart, DateTime(2026, 8, 2));
+      expect(r.prevEnd, DateTime(2026, 9, 1));
+    });
+
+    test('custom 含今天也不截断（Q6：选哪段就是哪段）', () {
+      final r = resolveAnalyticsPeriod(AnalyticsScope.custom,
+          anchor: DateTime(2026, 10, 1),
+          range: (start: DateTime(2026, 10, 1), end: DateTime(2026, 11, 1)),
+          startDay: 1,
+          now: now);
+      expect(r.start, DateTime(2026, 10, 1));
+      expect(r.end, DateTime(2026, 11, 1));
+      // 等长环比按 Duration 等长（momWindow 语义）：10 月 31 天 → 上期回推 31 天
+      expect(r.prevStart, DateTime(2026, 8, 31));
+      expect(r.prevEnd, DateTime(2026, 10, 1));
+    });
+
+    test('custom 缺 range 断言失败', () {
+      expect(
+          () => resolveAnalyticsPeriod(AnalyticsScope.custom,
+              anchor: DateTime(2026, 10, 1), startDay: 1, now: now),
+          throwsAssertionError);
+    });
+  });
+
+  group('nextAnchor/prevAnchor quarter/custom', () {
+    test('quarter：平移一季，不进未来季（季度标签比较）', () {
+      expect(
+          nextAnchor(AnalyticsScope.quarter, DateTime(2026, 7, 1), now,
+              startDay: 1),
+          DateTime(2026, 10, 1));
+      expect(
+          nextAnchor(AnalyticsScope.quarter, DateTime(2026, 10, 1), now,
+              startDay: 1),
+          isNull);
+    });
+
+    test('quarter 钳制吃 startDay：10-05 在 startDay=10 下仍是 Q3、不可进 Q4', () {
+      final now1005 = DateTime(2026, 10, 5);
+      expect(
+          nextAnchor(AnalyticsScope.quarter, DateTime(2026, 7, 1), now1005,
+              startDay: 10),
+          isNull);
+      // 自然口径（startDay=1）下 Q4 已开始，可前进
+      expect(
+          nextAnchor(AnalyticsScope.quarter, DateTime(2026, 7, 1), now1005,
+              startDay: 1),
+          DateTime(2026, 10, 1));
+    });
+
+    test('quarter 后退一季（含跨年借位）', () {
+      expect(prevAnchor(AnalyticsScope.quarter, DateTime(2026, 10, 1)),
+          DateTime(2026, 7, 1));
+      expect(prevAnchor(AnalyticsScope.quarter, DateTime(2026, 1, 1)),
+          DateTime(2025, 10, 1));
+    });
+
+    test('custom：next/prev 均 no-op（平移走 shiftCustomRange）', () {
+      expect(
+          nextAnchor(AnalyticsScope.custom, DateTime(2026, 10, 1), now,
+              startDay: 1),
+          isNull);
+      expect(prevAnchor(AnalyticsScope.custom, DateTime(2026, 10, 1)), isNull);
+    });
+  });
+
+  group('shiftCustomRange（等长平移）', () {
+    test('前移/后移一个区间长度（Duration 等长，非自然月）', () {
+      final r = (start: DateTime(2026, 9, 1), end: DateTime(2026, 10, 1));
+      // 30 天区间平移一格 = 30 天，10 月 31 天故 end 不到 11-01
+      expect(shiftCustomRange(r, 1),
+          (start: DateTime(2026, 10, 1), end: DateTime(2026, 10, 31)));
+      expect(shiftCustomRange(r, -1),
+          (start: DateTime(2026, 8, 2), end: DateTime(2026, 9, 1)));
+    });
+  });
+
+  group('seriesKind +2 档位', () {
+    test('quarter/custom=day', () {
+      expect(AnalyticsScope.quarter.seriesKind, AnalyticsSeriesKind.day);
+      expect(AnalyticsScope.custom.seriesKind, AnalyticsSeriesKind.day);
+    });
+  });
+
+  group('chartSeriesWindow quarter/custom', () {
+    test('quarter：本季+前 5 季', () {
+      final w = chartSeriesWindow(AnalyticsScope.quarter,
+          anchor: DateTime(2026, 10, 1), startDay: 1)!;
+      expect(w.start, DateTime(2025, 7, 1));
+      expect(w.end, DateTime(2027, 1, 1));
+    });
+
+    test('quarter startDay=10：窗口按账期边界', () {
+      final w = chartSeriesWindow(AnalyticsScope.quarter,
+          anchor: DateTime(2026, 10, 1), startDay: 10)!;
+      expect(w.start, DateTime(2025, 7, 10));
+      expect(w.end, DateTime(2027, 1, 10));
+    });
+
+    test('custom：窗口=区间本身', () {
+      final r = (start: DateTime(2026, 9, 1), end: DateTime(2026, 10, 1));
+      expect(
+          chartSeriesWindow(AnalyticsScope.custom,
+              anchor: DateTime(2026, 10, 1), range: r, startDay: 1),
+          r);
+    });
+  });
+
+  group('aggregateToQuarters', () {
+    test('按季分桶 + 6 桶零桶补齐（桶键=季度首月标签月）', () {
+      final out = aggregateToQuarters(
+        [
+          (day: DateTime(2026, 8, 15), total: 10),
+          (day: DateTime(2026, 9, 1), total: 5),
+          (day: DateTime(2026, 11, 20), total: 3),
+        ],
+        firstQuarterLabel: DateTime(2025, 7, 1),
+        startDay: 1,
+      );
+      expect(out, [
+        (month: DateTime(2025, 7, 1), total: 0),
+        (month: DateTime(2025, 10, 1), total: 0),
+        (month: DateTime(2026, 1, 1), total: 0),
+        (month: DateTime(2026, 4, 1), total: 0),
+        (month: DateTime(2026, 7, 1), total: 15),
+        (month: DateTime(2026, 10, 1), total: 3),
+      ]);
+    });
+
+    test('startDay=10：10-05 归 Q3 桶（账期口径）', () {
+      final out = aggregateToQuarters(
+        [
+          (day: DateTime(2026, 10, 5), total: 7),
+          (day: DateTime(2026, 10, 10), total: 2),
+        ],
+        firstQuarterLabel: DateTime(2026, 7, 1),
+        startDay: 10,
+      );
+      expect(out[0].month, DateTime(2026, 7, 1));
+      expect(out[0].total, 7);
+      expect(out[1].month, DateTime(2026, 10, 1));
+      expect(out[1].total, 2);
+    });
+  });
 }

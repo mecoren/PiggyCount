@@ -570,8 +570,9 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
             start: _start,
             end: _end,
             // 组件按 scope 决定「是否把区间带给分类详情页」（all 会丢掉），
-            // 自定义区间要原样透传，所以这里给非 all 的值 + 显式标签文案。
-            scope: AnalyticsScope.month,
+            // 自定义区间要原样透传，这里用 custom 档位（原为 month 权宜值，
+            // 自定义档位落地后归位）+ 显式标签文案。
+            scope: AnalyticsScope.custom,
             selMonth: _start,
             periodLabel: _rangeText(),
             rank: i + 1,

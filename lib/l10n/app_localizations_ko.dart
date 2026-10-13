@@ -834,6 +834,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get analyticsThisYear => '올해';
 
   @override
+  String get analyticsThisQuarter => '이번 분기';
+
+  @override
+  String get analyticsQuarter => '분기';
+
+  @override
+  String get analyticsCustom => '사용자 지정';
+
+  @override
+  String get analyticsSelectedRange => '선택한 기간';
+
+  @override
   String analyticsTrendTitle(Object period) {
     return '$period 추세';
   }
@@ -3732,6 +3744,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get analyticsComparedToLastYear => '전년 대비';
+
+  @override
+  String get analyticsComparedToPrevRange => '이전 기간 대비';
 
   @override
   String get analyticsTxCount => '거래 건수';

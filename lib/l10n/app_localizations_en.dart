@@ -846,6 +846,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsThisYear => 'This Year';
 
   @override
+  String get analyticsThisQuarter => 'This Quarter';
+
+  @override
+  String get analyticsQuarter => 'Quarter';
+
+  @override
+  String get analyticsCustom => 'Custom';
+
+  @override
+  String get analyticsSelectedRange => 'Selected Range';
+
+  @override
   String analyticsTrendTitle(Object period) {
     return '$period Trend';
   }
@@ -3817,6 +3829,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get analyticsComparedToLastYear => 'vs Last Year';
+
+  @override
+  String get analyticsComparedToPrevRange => 'vs Previous Range';
 
   @override
   String get analyticsTxCount => 'Records';

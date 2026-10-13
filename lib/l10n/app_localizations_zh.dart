@@ -823,6 +823,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analyticsThisYear => '今年';
 
   @override
+  String get analyticsThisQuarter => '本季度';
+
+  @override
+  String get analyticsQuarter => '季度';
+
+  @override
+  String get analyticsCustom => '自定义';
+
+  @override
+  String get analyticsSelectedRange => '所选区间';
+
+  @override
   String analyticsTrendTitle(Object period) {
     return '$period趋势';
   }
@@ -3704,6 +3716,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get analyticsComparedToLastYear => '比上年';
+
+  @override
+  String get analyticsComparedToPrevRange => '比上一区间';
 
   @override
   String get analyticsTxCount => '记账笔数';
@@ -9895,6 +9910,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get analyticsThisYear => '今年';
 
   @override
+  String get analyticsThisQuarter => '本季度';
+
+  @override
+  String get analyticsQuarter => '季度';
+
+  @override
+  String get analyticsCustom => '自訂';
+
+  @override
+  String get analyticsSelectedRange => '所選區間';
+
+  @override
   String analyticsTrendTitle(Object period) {
     return '$period趨勢';
   }
@@ -12776,6 +12803,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get analyticsComparedToLastYear => '比上年';
+
+  @override
+  String get analyticsComparedToPrevRange => '比上一區間';
 
   @override
   String get analyticsTxCount => '記帳筆數';
