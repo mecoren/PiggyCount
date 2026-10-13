@@ -177,14 +177,32 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
         children: [
           SizedBox(
             width: widget.labelWidth,
-            child: Text(
-              def.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: PiggyTextTokens.fs13,
-                color: PiggyTokens.textSecondary(context),
-              ),
+            child: Row(
+              children: [
+                // 名称可截断，必填星号恒显示（截断也不吞掉必填提示）。
+                Expanded(
+                  child: Text(
+                    def.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: PiggyTextTokens.fs13,
+                      color: PiggyTokens.textSecondary(context),
+                    ),
+                  ),
+                ),
+                // v57 必填标记：独立 Text widget（供测试 find.text('*') 精确匹配），
+                // 红色 * 与「必须选分类」同款视觉语言。
+                if (def.isRequired)
+                  Text(
+                    '*',
+                    style: TextStyle(
+                      fontSize: PiggyTextTokens.fs13,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(width: 8),

@@ -257,14 +257,15 @@ void main() {
   });
 
   group('导出格式版本', () {
-    test('快照 version 常量与写入一致（v14）', () async {
+    test('快照 version 常量与写入一致（v15）', () async {
       final payload = await localPayload();
       expect(payload['version'], kSnapshotFormatVersion);
-      expect(kSnapshotFormatVersion, 14,
+      expect(kSnapshotFormatVersion, 15,
           reason: '格式版本变更必须同步审查消费端的升级门控语义；'
+              'v15 = customFieldDefinitions 段新增 isRequired（恒写）一键'
+              '（指纹白名单同步纳入，归一口径：缺 isRequired ≡ 非必填）；'
               'v14 = items 段新增 refundSyncId（仅非 null 写键）与 '
-              'reimburseStatus（恒写）两键（指纹白名单同步纳入，'
-              '归一口径：缺 refundSyncId ≡ 无关联、缺 reimburseStatus ≡ none）');
+              'reimburseStatus（恒写）两键');
     });
 
     test('v14：云端 v13 快照缺两键、本地有退款关联/待报销 → 不误判为「仅格式升级」',

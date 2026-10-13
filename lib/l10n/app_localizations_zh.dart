@@ -6161,6 +6161,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get customFieldSortHint => '长按拖动排序';
 
   @override
+  String get customFieldRequiredLabel => '必填';
+
+  @override
+  String get customFieldRequiredHint => '记账时必须填写该字段';
+
+  @override
+  String get customFieldRequiredBadge => '必填';
+
+  @override
+  String customFieldRequiredMissing(String names) {
+    return '请填写必填字段：$names';
+  }
+
+  @override
   String get tagManageTitle => '标签管理';
 
   @override
@@ -15246,6 +15260,20 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get customFieldSortHint => '長按拖曳排序';
+
+  @override
+  String get customFieldRequiredLabel => '必填';
+
+  @override
+  String get customFieldRequiredHint => '記帳時必須填寫該欄位';
+
+  @override
+  String get customFieldRequiredBadge => '必填';
+
+  @override
+  String customFieldRequiredMissing(String names) {
+    return '請填寫必填欄位：$names';
+  }
 
   @override
   String get tagManageTitle => '標籤管理';

@@ -89,6 +89,7 @@ void main() {
     required String type,
     int sortOrder = 0,
     List<String>? options,
+    bool isRequired = false,
   }) async {
     await db.into(db.customFieldDefinitions).insert(
           CustomFieldDefinitionsCompanion.insert(
@@ -98,6 +99,7 @@ void main() {
             syncId: Value(syncId),
             sortOrder: Value(sortOrder),
             optionsJson: Value(CustomFieldOptionsCodec.encode(options)),
+            isRequired: Value(isRequired),
           ),
         );
   }
@@ -511,5 +513,105 @@ void main() {
     await submit(tester);
 
     expect(captured!.customValues, isEmpty, reason: '游离值可被看见并清除');
+  });
+
+  // ==================== v57 必填校验 ====================
+
+  testWidgets('v57 必填：字段名后显示 *，非必填字段不显示', (tester) async {
+    prepareTest(tester);
+    await seedField(syncId: 'cf-a', name: '税费', type: 'text', isRequired: true);
+    await seedField(syncId: 'cf-b', name: '备注值', type: 'text', sortOrder: 1);
+
+    await tester.pumpWidget(host(onSubmit: (_) {}));
+    await tester.pumpAndSettle();
+
+    expect(find.text('*'), findsOneWidget,
+        reason: '只有必填字段显示 * 标记');
+  });
+
+  testWidgets('v57 必填未填 → 点「完成」被拦截：不出 onSubmit 且弹 Toast',
+      (tester) async {
+    prepareTest(tester);
+    await seedField(syncId: 'cf-a', name: '税费', type: 'text', isRequired: true);
+    AmountEditorResult? captured;
+
+    await tester.pumpWidget(host(onSubmit: (r) => captured = r));
+    await tester.pumpAndSettle();
+
+    await submit(tester);
+    await tester.pump();
+
+    expect(captured, isNull, reason: '必填未填不得提交');
+    expect(find.text('请填写必填字段：税费'), findsOneWidget,
+        reason: 'Toast 必须列出缺失的字段名');
+  });
+
+  testWidgets('v57 多字段缺失 → Toast 列出全部缺失字段名', (tester) async {
+    prepareTest(tester);
+    await seedField(syncId: 'cf-a', name: '税费', type: 'text', isRequired: true);
+    await seedField(
+        syncId: 'cf-b', name: '备注值', type: 'text',
+        sortOrder: 1, isRequired: true);
+    AmountEditorResult? captured;
+
+    await tester.pumpWidget(host(onSubmit: (r) => captured = r));
+    await tester.pumpAndSettle();
+
+    await submit(tester);
+    await tester.pump();
+
+    expect(captured, isNull);
+    expect(find.text('请填写必填字段：税费、备注值'), findsOneWidget);
+  });
+
+  testWidgets('v57 必填已填 → 正常提交', (tester) async {
+    prepareTest(tester);
+    await seedField(syncId: 'cf-a', name: '税费', type: 'text', isRequired: true);
+    AmountEditorResult? captured;
+
+    await tester.pumpWidget(host(onSubmit: (r) => captured = r));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(inputFor('cf-a'), '发票 001');
+    await tester.pump();
+
+    await submit(tester);
+
+    expect(captured, isNotNull, reason: '必填已填必须放行');
+    expect(captured!.customValues!['cf-a'], '发票 001');
+  });
+
+  testWidgets('v57 金额必填：数字键盘填写后放行（键盘串并入校验口径）',
+      (tester) async {
+    prepareTest(tester, tall: true);
+    await seedField(syncId: 'cf-a', name: '税费', type: 'amount', isRequired: true);
+    AmountEditorResult? captured;
+
+    await tester.pumpWidget(host(onSubmit: (r) => captured = r));
+    await tester.pumpAndSettle();
+
+    await tapAmountField(tester, 'cf-a');
+    await tapKey(tester, '1');
+    await tapKey(tester, '2');
+
+    await submit(tester);
+
+    expect(captured, isNotNull,
+        reason: '金额键盘的暂存字符串值必须在校验前并入 _customValues');
+    expect(captured!.customValues!['cf-a'], 12.0);
+  });
+
+  testWidgets('v57 非必填字段未填不拦提交（存量行为不变）', (tester) async {
+    prepareTest(tester);
+    await seedField(syncId: 'cf-a', name: '税费', type: 'text');
+    AmountEditorResult? captured;
+
+    await tester.pumpWidget(host(onSubmit: (r) => captured = r));
+    await tester.pumpAndSettle();
+
+    await submit(tester);
+
+    expect(captured, isNotNull);
+    expect(captured!.customValues, isNull);
   });
 }

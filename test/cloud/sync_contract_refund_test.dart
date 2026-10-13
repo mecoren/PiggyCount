@@ -92,9 +92,10 @@ void main() {
       expect(fpSrc, isNot(contains("'reimburse_status'")));
     });
 
-    test('快照格式版本已抬到 14', () {
-      expect(kSnapshotFormatVersion, 14,
-          reason: 'items 段新增两键必须抬版本，否则升级门控永不触发');
+    test('快照格式版本已抬到 15', () {
+      expect(kSnapshotFormatVersion, 15,
+          reason: 'items 段新增两键必须抬版本，否则升级门控永不触发；'
+              'v15 为自定义字段 isRequired 的后续抬版');
     });
   });
 

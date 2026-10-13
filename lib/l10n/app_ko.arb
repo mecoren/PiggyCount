@@ -1951,6 +1951,17 @@
   "customFieldTextHint": "내용을 입력하세요",
   "customFieldAmountHint": "0.00",
   "customFieldSortHint": "길게 눌러 순서 변경",
+  "customFieldRequiredLabel": "필수",
+  "customFieldRequiredHint": "기입 시 반드시 입력해야 하는 필드입니다",
+  "customFieldRequiredBadge": "필수",
+  "customFieldRequiredMissing": "필수 항목을 입력해 주세요: {names}",
+  "@customFieldRequiredMissing": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "tagManageTitle": "태그",
   "tagManageSubtitle": "거래 태그를 관리하세요",
   "tagManageEmpty": "아직 태그가 없습니다",

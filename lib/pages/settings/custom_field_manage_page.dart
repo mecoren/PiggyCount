@@ -166,7 +166,10 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 2),
             child: Text(
-              _typeLabel(l10n, def.fieldType),
+              // v57：必填字段在类型后追加徽标，列表上一眼可辨。
+              def.isRequired
+                  ? '${_typeLabel(l10n, def.fieldType)} · ${l10n.customFieldRequiredBadge}'
+                  : _typeLabel(l10n, def.fieldType),
               style: TextStyle(
                 fontSize: PiggyTextTokens.fs12,
                 color: typeColor,
@@ -359,6 +362,9 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
   bool _submitting = false;
   String? _error;
 
+  /// v57 必填开关：true = 记账提交时该字段必须填写（未填拦截并 Toast）。
+  late bool _isRequired;
+
   /// v54 选项行：单选/多选字段的选项编辑。每行保留原始值（'' = 本次新增），
   /// 保存时据「文本被改过」判定为改名并级联更新历史已记录的值。
   late final List<_OptionRow> _optionRows;
@@ -373,6 +379,7 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
     super.initState();
     _nameController = TextEditingController(text: widget.existing?.name ?? '');
     _type = widget.existing?.fieldType ?? CustomFieldType.amount;
+    _isRequired = widget.existing?.isRequired ?? false;
     final existing = widget.existing;
     _optionRows = [
       for (final o in existing == null
@@ -458,6 +465,55 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
               ),
             ),
           ],
+          // v57 必填开关：设为必填后记账提交时该字段必须填写，未填拦截并 Toast。
+          const SizedBox(height: PiggyDimens.p16),
+          _buildRequiredSwitch(l10n),
+        ],
+      ),
+    );
+  }
+
+  /// v57 必填开关行：左侧「必填」标题 + 副说明，右侧 Switch（Semantics 覆盖
+  /// 整行，与核心交互控件同规格）。
+  Widget _buildRequiredSwitch(AppLocalizations l10n) {
+    return Semantics(
+      container: true,
+      label: l10n.customFieldRequiredLabel,
+      hint: l10n.customFieldRequiredHint,
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.customFieldRequiredLabel,
+                  style: TextStyle(
+                    fontSize: PiggyTextTokens.fs14,
+                    fontWeight: FontWeight.w600,
+                    color: PiggyTokens.textPrimary(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  l10n.customFieldRequiredHint,
+                  style: TextStyle(
+                    fontSize: PiggyTextTokens.fs12,
+                    color: PiggyTokens.textTertiary(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _isRequired,
+            onChanged: _submitting
+                ? null
+                : (v) => setState(() {
+                      _error = null;
+                      _isRequired = v;
+                    }),
+          ),
         ],
       ),
     );
@@ -705,6 +761,7 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
           name: name,
           fieldType: _type,
           options: options,
+          isRequired: _isRequired,
         );
         // 选项改名 → 级联更新历史已记录的值（仅选择类型；新增/删除行不动）。
         final fieldSyncId = existing.syncId;
@@ -732,6 +789,7 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
           fieldType: _type,
           sortOrder: existing.length,
           options: options,
+          isRequired: _isRequired,
         );
       }
       if (mounted) Navigator.of(context).pop(true);

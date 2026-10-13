@@ -6060,6 +6060,16 @@ class $CustomFieldDefinitionsTable extends CustomFieldDefinitions
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultValue: const Constant(0));
+  static const VerificationMeta _isRequiredMeta =
+      const VerificationMeta('isRequired');
+  @override
+  late final GeneratedColumn<bool> isRequired = GeneratedColumn<bool>(
+      'is_required', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_required" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -6087,6 +6097,7 @@ class $CustomFieldDefinitionsTable extends CustomFieldDefinitions
         fieldType,
         optionsJson,
         sortOrder,
+        isRequired,
         createdAt,
         syncId,
         updatedAt
@@ -6133,6 +6144,12 @@ class $CustomFieldDefinitionsTable extends CustomFieldDefinitions
       context.handle(_sortOrderMeta,
           sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta));
     }
+    if (data.containsKey('is_required')) {
+      context.handle(
+          _isRequiredMeta,
+          isRequired.isAcceptableOrUnknown(
+              data['is_required']!, _isRequiredMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -6166,6 +6183,8 @@ class $CustomFieldDefinitionsTable extends CustomFieldDefinitions
           .read(DriftSqlType.string, data['${effectivePrefix}options_json']),
       sortOrder: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}sort_order'])!,
+      isRequired: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_required'])!,
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       syncId: attachedDatabase.typeMapping
@@ -6203,6 +6222,12 @@ class CustomFieldDefinition extends DataClass
 
   /// 展示与录入门槛顺序,数字越小越靠前(与 Categories/Tags.sortOrder 同义)。
   final int sortOrder;
+
+  /// v57: 必填标记（prd/custom_field_required）。true = 手工记账表单提交时该
+  /// 字段必须已填，未填拦截保存并 Toast 提醒。仅约束手工记账口（CSV 导入 /
+  /// 云端恢复 / 周期模板生成等批量路径不拦，避免历史数据回填被卡死）。
+  /// DEFAULT 0：存量字段零回填即「非必填」。
+  final bool isRequired;
   final DateTime createdAt;
 
   /// 跨设备同步唯一标识 (UUID)。字段值的 JSON 键就是本列。
@@ -6218,6 +6243,7 @@ class CustomFieldDefinition extends DataClass
       required this.fieldType,
       this.optionsJson,
       required this.sortOrder,
+      required this.isRequired,
       required this.createdAt,
       this.syncId,
       this.updatedAt});
@@ -6232,6 +6258,7 @@ class CustomFieldDefinition extends DataClass
       map['options_json'] = Variable<String>(optionsJson);
     }
     map['sort_order'] = Variable<int>(sortOrder);
+    map['is_required'] = Variable<bool>(isRequired);
     map['created_at'] = Variable<DateTime>(createdAt);
     if (!nullToAbsent || syncId != null) {
       map['sync_id'] = Variable<String>(syncId);
@@ -6252,6 +6279,7 @@ class CustomFieldDefinition extends DataClass
           ? const Value.absent()
           : Value(optionsJson),
       sortOrder: Value(sortOrder),
+      isRequired: Value(isRequired),
       createdAt: Value(createdAt),
       syncId:
           syncId == null && nullToAbsent ? const Value.absent() : Value(syncId),
@@ -6271,6 +6299,7 @@ class CustomFieldDefinition extends DataClass
       fieldType: serializer.fromJson<String>(json['fieldType']),
       optionsJson: serializer.fromJson<String?>(json['optionsJson']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      isRequired: serializer.fromJson<bool>(json['isRequired']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       syncId: serializer.fromJson<String?>(json['syncId']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
@@ -6286,6 +6315,7 @@ class CustomFieldDefinition extends DataClass
       'fieldType': serializer.toJson<String>(fieldType),
       'optionsJson': serializer.toJson<String?>(optionsJson),
       'sortOrder': serializer.toJson<int>(sortOrder),
+      'isRequired': serializer.toJson<bool>(isRequired),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'syncId': serializer.toJson<String?>(syncId),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
@@ -6299,6 +6329,7 @@ class CustomFieldDefinition extends DataClass
           String? fieldType,
           Value<String?> optionsJson = const Value.absent(),
           int? sortOrder,
+          bool? isRequired,
           DateTime? createdAt,
           Value<String?> syncId = const Value.absent(),
           Value<DateTime?> updatedAt = const Value.absent()}) =>
@@ -6309,6 +6340,7 @@ class CustomFieldDefinition extends DataClass
         fieldType: fieldType ?? this.fieldType,
         optionsJson: optionsJson.present ? optionsJson.value : this.optionsJson,
         sortOrder: sortOrder ?? this.sortOrder,
+        isRequired: isRequired ?? this.isRequired,
         createdAt: createdAt ?? this.createdAt,
         syncId: syncId.present ? syncId.value : this.syncId,
         updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
@@ -6323,6 +6355,8 @@ class CustomFieldDefinition extends DataClass
       optionsJson:
           data.optionsJson.present ? data.optionsJson.value : this.optionsJson,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      isRequired:
+          data.isRequired.present ? data.isRequired.value : this.isRequired,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       syncId: data.syncId.present ? data.syncId.value : this.syncId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -6338,6 +6372,7 @@ class CustomFieldDefinition extends DataClass
           ..write('fieldType: $fieldType, ')
           ..write('optionsJson: $optionsJson, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('isRequired: $isRequired, ')
           ..write('createdAt: $createdAt, ')
           ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt')
@@ -6347,7 +6382,7 @@ class CustomFieldDefinition extends DataClass
 
   @override
   int get hashCode => Object.hash(id, ledgerId, name, fieldType, optionsJson,
-      sortOrder, createdAt, syncId, updatedAt);
+      sortOrder, isRequired, createdAt, syncId, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -6358,6 +6393,7 @@ class CustomFieldDefinition extends DataClass
           other.fieldType == this.fieldType &&
           other.optionsJson == this.optionsJson &&
           other.sortOrder == this.sortOrder &&
+          other.isRequired == this.isRequired &&
           other.createdAt == this.createdAt &&
           other.syncId == this.syncId &&
           other.updatedAt == this.updatedAt);
@@ -6371,6 +6407,7 @@ class CustomFieldDefinitionsCompanion
   final Value<String> fieldType;
   final Value<String?> optionsJson;
   final Value<int> sortOrder;
+  final Value<bool> isRequired;
   final Value<DateTime> createdAt;
   final Value<String?> syncId;
   final Value<DateTime?> updatedAt;
@@ -6381,6 +6418,7 @@ class CustomFieldDefinitionsCompanion
     this.fieldType = const Value.absent(),
     this.optionsJson = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.isRequired = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -6392,6 +6430,7 @@ class CustomFieldDefinitionsCompanion
     required String fieldType,
     this.optionsJson = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.isRequired = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.syncId = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -6405,6 +6444,7 @@ class CustomFieldDefinitionsCompanion
     Expression<String>? fieldType,
     Expression<String>? optionsJson,
     Expression<int>? sortOrder,
+    Expression<bool>? isRequired,
     Expression<DateTime>? createdAt,
     Expression<String>? syncId,
     Expression<DateTime>? updatedAt,
@@ -6416,6 +6456,7 @@ class CustomFieldDefinitionsCompanion
       if (fieldType != null) 'field_type': fieldType,
       if (optionsJson != null) 'options_json': optionsJson,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (isRequired != null) 'is_required': isRequired,
       if (createdAt != null) 'created_at': createdAt,
       if (syncId != null) 'sync_id': syncId,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -6429,6 +6470,7 @@ class CustomFieldDefinitionsCompanion
       Value<String>? fieldType,
       Value<String?>? optionsJson,
       Value<int>? sortOrder,
+      Value<bool>? isRequired,
       Value<DateTime>? createdAt,
       Value<String?>? syncId,
       Value<DateTime?>? updatedAt}) {
@@ -6439,6 +6481,7 @@ class CustomFieldDefinitionsCompanion
       fieldType: fieldType ?? this.fieldType,
       optionsJson: optionsJson ?? this.optionsJson,
       sortOrder: sortOrder ?? this.sortOrder,
+      isRequired: isRequired ?? this.isRequired,
       createdAt: createdAt ?? this.createdAt,
       syncId: syncId ?? this.syncId,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -6466,6 +6509,9 @@ class CustomFieldDefinitionsCompanion
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
+    if (isRequired.present) {
+      map['is_required'] = Variable<bool>(isRequired.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -6487,6 +6533,7 @@ class CustomFieldDefinitionsCompanion
           ..write('fieldType: $fieldType, ')
           ..write('optionsJson: $optionsJson, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('isRequired: $isRequired, ')
           ..write('createdAt: $createdAt, ')
           ..write('syncId: $syncId, ')
           ..write('updatedAt: $updatedAt')
@@ -15118,6 +15165,7 @@ typedef $$CustomFieldDefinitionsTableCreateCompanionBuilder
   required String fieldType,
   Value<String?> optionsJson,
   Value<int> sortOrder,
+  Value<bool> isRequired,
   Value<DateTime> createdAt,
   Value<String?> syncId,
   Value<DateTime?> updatedAt,
@@ -15130,6 +15178,7 @@ typedef $$CustomFieldDefinitionsTableUpdateCompanionBuilder
   Value<String> fieldType,
   Value<String?> optionsJson,
   Value<int> sortOrder,
+  Value<bool> isRequired,
   Value<DateTime> createdAt,
   Value<String?> syncId,
   Value<DateTime?> updatedAt,
@@ -15161,6 +15210,9 @@ class $$CustomFieldDefinitionsTableFilterComposer
 
   ColumnFilters<int> get sortOrder => $composableBuilder(
       column: $table.sortOrder, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isRequired => $composableBuilder(
+      column: $table.isRequired, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -15199,6 +15251,9 @@ class $$CustomFieldDefinitionsTableOrderingComposer
   ColumnOrderings<int> get sortOrder => $composableBuilder(
       column: $table.sortOrder, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get isRequired => $composableBuilder(
+      column: $table.isRequired, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -15235,6 +15290,9 @@ class $$CustomFieldDefinitionsTableAnnotationComposer
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<bool> get isRequired => $composableBuilder(
+      column: $table.isRequired, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -15283,6 +15341,7 @@ class $$CustomFieldDefinitionsTableTableManager extends RootTableManager<
             Value<String> fieldType = const Value.absent(),
             Value<String?> optionsJson = const Value.absent(),
             Value<int> sortOrder = const Value.absent(),
+            Value<bool> isRequired = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<String?> syncId = const Value.absent(),
             Value<DateTime?> updatedAt = const Value.absent(),
@@ -15294,6 +15353,7 @@ class $$CustomFieldDefinitionsTableTableManager extends RootTableManager<
             fieldType: fieldType,
             optionsJson: optionsJson,
             sortOrder: sortOrder,
+            isRequired: isRequired,
             createdAt: createdAt,
             syncId: syncId,
             updatedAt: updatedAt,
@@ -15305,6 +15365,7 @@ class $$CustomFieldDefinitionsTableTableManager extends RootTableManager<
             required String fieldType,
             Value<String?> optionsJson = const Value.absent(),
             Value<int> sortOrder = const Value.absent(),
+            Value<bool> isRequired = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<String?> syncId = const Value.absent(),
             Value<DateTime?> updatedAt = const Value.absent(),
@@ -15316,6 +15377,7 @@ class $$CustomFieldDefinitionsTableTableManager extends RootTableManager<
             fieldType: fieldType,
             optionsJson: optionsJson,
             sortOrder: sortOrder,
+            isRequired: isRequired,
             createdAt: createdAt,
             syncId: syncId,
             updatedAt: updatedAt,

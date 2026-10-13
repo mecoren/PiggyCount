@@ -6228,6 +6228,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get customFieldSortHint => '길게 눌러 순서 변경';
 
   @override
+  String get customFieldRequiredLabel => '필수';
+
+  @override
+  String get customFieldRequiredHint => '기입 시 반드시 입력해야 하는 필드입니다';
+
+  @override
+  String get customFieldRequiredBadge => '필수';
+
+  @override
+  String customFieldRequiredMissing(String names) {
+    return '필수 항목을 입력해 주세요: $names';
+  }
+
+  @override
   String get tagManageTitle => '태그';
 
   @override

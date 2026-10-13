@@ -11550,6 +11550,30 @@ abstract class AppLocalizations {
   /// **'Long press to reorder'**
   String get customFieldSortHint;
 
+  /// No description provided for @customFieldRequiredLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get customFieldRequiredLabel;
+
+  /// No description provided for @customFieldRequiredHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This field must be filled in when recording'**
+  String get customFieldRequiredHint;
+
+  /// No description provided for @customFieldRequiredBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get customFieldRequiredBadge;
+
+  /// No description provided for @customFieldRequiredMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Please fill in required fields: {names}'**
+  String customFieldRequiredMissing(String names);
+
   /// No description provided for @tagManageTitle.
   ///
   /// In en, this message translates to:

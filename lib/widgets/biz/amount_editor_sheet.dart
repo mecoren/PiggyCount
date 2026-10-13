@@ -1642,6 +1642,37 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                 return;
                               }
 
+                              // v57 必填校验：设为必填的自定义字段未填 → 拦下
+                              // 并 Toast 提示缺少哪些字段（新建 + 编辑交易都拦；
+                              // 周期账单模板 / CSV 导入 / 云端恢复走非本提交路径
+                              // 不拦）。已填口径与落库口径一致：键盘串先并入
+                              // 快照，再经 normalize 剔空后看 syncId 是否存在
+                              // （金额 0 合法）。
+                              _applyCustomFieldAmountValues();
+                              final requiredDefs = (ref
+                                          .read(customFieldsForCurrentLedgerProvider)
+                                          .value ??
+                                      const <CustomFieldDefinition>[])
+                                  .where((d) =>
+                                      d.isRequired && (d.syncId ?? '').isNotEmpty)
+                                  .toList(growable: false);
+                              if (requiredDefs.isNotEmpty) {
+                                final filled =
+                                    CustomFieldValueCodec.normalize(_customValues);
+                                final missing = [
+                                  for (final d in requiredDefs)
+                                    if (!filled.containsKey(d.syncId)) d.name,
+                                ];
+                                if (missing.isNotEmpty) {
+                                  showToast(
+                                      context,
+                                      AppLocalizations.of(context)
+                                          .customFieldRequiredMissing(
+                                              missing.join('、')));
+                                  return;
+                                }
+                              }
+
                               // 正常模式：提交
                               // 防重复点击
                               if (_isSubmitting) return;

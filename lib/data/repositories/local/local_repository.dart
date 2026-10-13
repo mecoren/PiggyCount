@@ -4448,6 +4448,7 @@ class LocalRepository extends BaseRepository {
     int sortOrder = 0,
     String? syncId,
     List<String>? options,
+    bool isRequired = false,
   }) =>
       _customFieldRepo.createDefinition(
         ledgerId: ledgerId,
@@ -4456,6 +4457,7 @@ class LocalRepository extends BaseRepository {
         sortOrder: sortOrder,
         syncId: syncId,
         options: options,
+        isRequired: isRequired,
       );
 
   @override
@@ -4466,6 +4468,7 @@ class LocalRepository extends BaseRepository {
     int? sortOrder,
     String? syncId,
     List<String>? options,
+    bool isRequired = false,
   }) =>
       _customFieldRepo.upsertDefinition(
         ledgerId: ledgerId,
@@ -4474,6 +4477,7 @@ class LocalRepository extends BaseRepository {
         sortOrder: sortOrder,
         syncId: syncId,
         options: options,
+        isRequired: isRequired,
       );
 
   @override
@@ -4483,6 +4487,7 @@ class LocalRepository extends BaseRepository {
     String? fieldType,
     int? sortOrder,
     List<String>? options,
+    bool? isRequired,
   }) =>
       _customFieldRepo.updateDefinition(
         id,
@@ -4490,6 +4495,7 @@ class LocalRepository extends BaseRepository {
         fieldType: fieldType,
         sortOrder: sortOrder,
         options: options,
+        isRequired: isRequired,
       );
 
   @override

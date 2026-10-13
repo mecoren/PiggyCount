@@ -2630,6 +2630,17 @@
   "customFieldTextHint": "请输入内容",
   "customFieldAmountHint": "0.00",
   "customFieldSortHint": "长按拖动排序",
+  "customFieldRequiredLabel": "必填",
+  "customFieldRequiredHint": "记账时必须填写该字段",
+  "customFieldRequiredBadge": "必填",
+  "customFieldRequiredMissing": "请填写必填字段：{names}",
+  "@customFieldRequiredMissing": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "tagManageTitle": "标签管理",
   "tagManageSubtitle": "管理交易标签",
   "tagManageEmpty": "暂无标签",

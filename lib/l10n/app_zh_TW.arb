@@ -2360,6 +2360,17 @@
   "customFieldTextHint": "請輸入內容",
   "customFieldAmountHint": "0.00",
   "customFieldSortHint": "長按拖曳排序",
+  "customFieldRequiredLabel": "必填",
+  "customFieldRequiredHint": "記帳時必須填寫該欄位",
+  "customFieldRequiredBadge": "必填",
+  "customFieldRequiredMissing": "請填寫必填欄位：{names}",
+  "@customFieldRequiredMissing": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "tagManageSubtitle": "管理交易標籤",
   "tagManageTitle": "標籤管理",
   "tagNameDuplicate": "標籤名稱已存在",

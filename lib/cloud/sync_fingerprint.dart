@@ -339,6 +339,9 @@ String contentFingerprintFromMap(Map<String, dynamic> payload) {
             // 与「无选项」等价，不产生一轮永久 outOfSync。
             'options': CustomFieldOptionsCodec.canonical(
                 f['options'] is List ? f['options'] as List : null),
+            // v15 必填：必须进白名单，否则「只改必填」永不跨设备传播。
+            // 缺键归一 false（旧快照没有该键 ≡ 非必填，与字段默认态一致）。
+            'isRequired': f['isRequired'] == true,
             'sortOrder': (f['sortOrder'] as num?)?.toInt() ?? 0,
           })
       .toList()

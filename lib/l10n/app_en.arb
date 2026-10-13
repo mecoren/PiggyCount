@@ -2835,6 +2835,17 @@
   "customFieldTextHint": "Enter text",
   "customFieldAmountHint": "0.00",
   "customFieldSortHint": "Long press to reorder",
+  "customFieldRequiredLabel": "Required",
+  "customFieldRequiredHint": "This field must be filled in when recording",
+  "customFieldRequiredBadge": "Required",
+  "customFieldRequiredMissing": "Please fill in required fields: {names}",
+  "@customFieldRequiredMissing": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "tagManageTitle": "Tags",
   "tagManageSubtitle": "Manage transaction tags",
   "tagManageEmpty": "No tags yet",

@@ -6414,6 +6414,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customFieldSortHint => 'Long press to reorder';
 
   @override
+  String get customFieldRequiredLabel => 'Required';
+
+  @override
+  String get customFieldRequiredHint =>
+      'This field must be filled in when recording';
+
+  @override
+  String get customFieldRequiredBadge => 'Required';
+
+  @override
+  String customFieldRequiredMissing(String names) {
+    return 'Please fill in required fields: $names';
+  }
+
+  @override
   String get tagManageTitle => 'Tags';
 
   @override
