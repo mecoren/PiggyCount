@@ -1,6 +1,20 @@
 # 洞察卡片注册表 + 命名数据包 — 设计文档
 
-> **状态：待评审**（2026-10-13 拟稿）。对应 `requirements.md`（缺口②，先③后②之②）。
+> **状态：已落地**（2026-10-13 拟稿，2026-10-13 落地并真机回归通过）。对应
+> `requirements.md`（缺口②，先③后②之②）。
+>
+> **落地偏差说明**（均为实现细化，不违背设计决策）：
+> - `sumOfSeries` 测试落为独立文件 `test/pages/main/analytics_sum_of_series_test.dart`
+>   （5 例：day/month/year 形状 + 空/未知形状返回 0），而非塞进
+>   `analytics_page_test.dart`。
+> - `InsightCardDef.build` 返回**「卡片 + 后置间距」widget 片段列表**而非单卡
+>   Widget：卡片间距不均匀（排行榜卡与自定义字段卡之间现状无间距），片段化才能
+>   让 ListView children 序列与收编前逐节点一致（§二.4 树形红线）。
+> - 分类构成卡的 `pieData` record 映射从内层 `Builder` 提升到注册表组装处，
+>   `Builder` 只保树形不再藏取数逻辑。
+> - 门禁全绿：`flutter analyze` 0 issue、全量 `flutter test` 2393 通过 +1 skip
+>   （既有断言零改动）、`List<dynamic>`/`list[` 位次读取 grep 零残留、真机目检
+>   （MuMu 127.0.0.1:16384）卡片顺序/树形/结余隐藏口径逐像素一致。
 
 落地点（拟）：`lib/pages/main/analytics_page.dart`（数据包、load 函数、注册表、build
 取数，主体都在本文件）、`lib/widgets/analytics/insight_card.dart`（新建，仅

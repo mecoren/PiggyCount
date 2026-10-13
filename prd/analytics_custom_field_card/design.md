@@ -1,6 +1,13 @@
 # 自定义字段卡片进洞察 — 设计文档
 
-> **状态：待评审**（2026-10-13 拟稿）。对应 `requirements.md`（缺口③，先③后②之③）。
+> **状态：已落地**（2026-10-13 拟稿，2026-10-13 落地并真机回归通过）。对应
+> `requirements.md`（缺口③，先③后②之③）。
+>
+> **落地验证**：卡片自隐藏（balance/聚合空）、共享视图 topN=8+「其他」、
+> range_report_page 改调共享 widget 均按设计落地；9 例新测试（view 4 + card 5）
+> 全绿，全量 `flutter test` 2393 通过 +1 skip；真机目检（MuMu 127.0.0.1:16384）
+> 洞察页末位渲染「自定义字段汇总」卡、结余视角自隐藏确认。
+> 卡片已随批次②收编为注册表成员（`InsightCardDef` id='customFieldSummary'）。
 
 落地点（拟）：`lib/providers/custom_field_providers.dart`（新增区间聚合 provider）、
 `lib/widgets/analytics/custom_field_stats_view.dart`（新建，共享内容 widget）、
