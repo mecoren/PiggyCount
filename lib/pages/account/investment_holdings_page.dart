@@ -40,53 +40,82 @@ class InvestmentHoldingsPage extends ConsumerWidget {
         title: l10n.holdingPageTitle,
         showBack: true,
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      // 只要一个「+」按钮，不带文字；按钮名走 tooltip（长按提示 + 无障碍朗读）
+      // —— 与储蓄目标页同款口径。
+      floatingActionButton: FloatingActionButton(
         onPressed: () => _openEdit(context, ref, null),
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.holdingAddTitle),
+        tooltip: l10n.holdingAddTitle,
+        child: const Icon(Icons.add_rounded),
       ),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          0,
-          // 账户模块的子页统一不带 extra（settings 子页才 +16）
-          PiggyTokens.topScrollablePadding(context),
-          0,
-          96, // 给 FAB 留位，避免遮住最后一条持仓
-        ),
+      // 汇总卡**固定**在标题栏下方，只有明细区滚动：整页共用一个 ListView 时，
+      // 往下滚会把「总市值」一起卷走，与「总览常驻」的预期不符（口径同储蓄目标页）。
+      body: Column(
         children: [
-          if (summaryAsync.value != null && summaryAsync.value!.total > 0)
-            _SummaryCard(
-              summary: summaryAsync.value!,
-              account: account,
+          Padding(
+            padding: EdgeInsets.only(
+              // 标题栏下方留出呼吸位（与预算页 / 储蓄页口径一致），
+              // 否则首卡顶边贴住标题栏下缘
+              top: PiggyTokens.topScrollablePadding(
+                context,
+                extra: PiggyDimens.p8,
+              ),
             ),
-          if (holdings.isEmpty && holdingsAsync.hasValue)
-            Padding(
-              padding: EdgeInsets.only(
-                top: 48.0.scaled(context, ref),
-                left: 24.0.scaled(context, ref),
-                right: 24.0.scaled(context, ref),
-              ),
-              child: AppEmpty(
-                icon: Icons.trending_up_outlined,
-                text: l10n.holdingEmptyTitle,
-                subtext: l10n.holdingEmptySubtitle,
-              ),
-            )
-          else
-            SectionCard(
-              child: Column(
-                children: [
-                  for (var i = 0; i < holdings.length; i++) ...[
-                    if (i > 0) Divider(height: 1, color: PiggyTokens.divider(context)),
-                    HoldingCard(
-                      holding: holdings[i],
-                      share: _shareOf(holdings, holdings[i], summaryAsync.value),
-                      onTap: () => _openEdit(context, ref, holdings[i]),
-                    ),
-                  ],
+            child: Column(
+              children: [
+                if (summaryAsync.value != null && summaryAsync.value!.total > 0) ...[
+                  _SummaryCard(
+                    summary: summaryAsync.value!,
+                    account: account,
+                  ),
+                  // SectionCard 只带水平 margin，卡与卡的纵向间距要在这里补，
+                  // 否则汇总卡与列表卡上下贴死（间距口径取预算 / 储蓄页的 12）
+                  SizedBox(height: PiggyDimens.p12.scaled(context, ref)),
                 ],
-              ),
+              ],
             ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.only(
+                // 给 FAB 留位 + 底部安全区
+                bottom: 96 + MediaQuery.of(context).padding.bottom,
+              ),
+              children: [
+                if (holdings.isEmpty && holdingsAsync.hasValue)
+                  Padding(
+                    padding: EdgeInsets.only(
+                      top: 48.0.scaled(context, ref),
+                      left: 24.0.scaled(context, ref),
+                      right: 24.0.scaled(context, ref),
+                    ),
+                    child: AppEmpty(
+                      icon: Icons.trending_up_outlined,
+                      text: l10n.holdingEmptyTitle,
+                      subtext: l10n.holdingEmptySubtitle,
+                    ),
+                  )
+                else
+                  SectionCard(
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < holdings.length; i++) ...[
+                          if (i > 0)
+                            Divider(
+                                height: 1,
+                                color: PiggyTokens.divider(context)),
+                          HoldingCard(
+                            holding: holdings[i],
+                            share: _shareOf(
+                                holdings, holdings[i], summaryAsync.value),
+                            onTap: () => _openEdit(context, ref, holdings[i]),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -155,8 +184,16 @@ class _SummaryCard extends ConsumerWidget {
         : PiggyTokens.incomeColor(context, ref);
 
     return SectionCard(
+      // 主题色描边（去掉阴影）：汇总卡与下方普通列表卡区分开，
+      // 外观口径同储蓄页汇总卡 / 预算页「总预算卡」
+      borderColor: ref.watch(primaryColorProvider),
       child: Padding(
-        padding: EdgeInsets.all(PiggyDimens.p8.scaled(context, ref)),
+        // 水平 12（+ SectionCard 自身 12 = 24）：与下方持仓卡的内容左缘对齐
+        // （HoldingCard 自带水平 p12 + SectionCard 的 p12）
+        padding: EdgeInsets.symmetric(
+          horizontal: PiggyDimens.p12.scaled(context, ref),
+          vertical: PiggyDimens.p12.scaled(context, ref),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
