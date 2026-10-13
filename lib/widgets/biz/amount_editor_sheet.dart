@@ -139,11 +139,12 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   /// 笔」是**表单已经在屏幕上**时用户点按钮触发的，必须由 [didUpdateWidget] 就
   /// 地装填已渲染的表单（表单不关闭、不重建）。
   ///
-  /// 只覆盖「除金额外的字段」：金额 / 原始金额 / 发生日期一律不动（用户口径）。
+  /// 只覆盖「除金额外的字段」（金额 / 原始金额 / 发生日期一律不动），且**仅填
+  /// 目标字段的空缺** —— 已有值的字段保留用户现值（用户口径，2026-10-13）。
   final LastEntryDraft? prefill;
 
   /// 载荷版本号：调用方**每次带出都 +1**，子组件据此判定「这是一次新请求」
-  /// （同一份载荷连点两次也要重新装填）。与 [prefill] 成对使用。
+  /// （同一份载荷连点两次也要重新评估哪些字段还空着）。与 [prefill] 成对使用。
   final int prefillToken;
 
   /// 是否**把数字键盘钉在卡片底部**（2026-10-09）。
@@ -354,6 +355,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       // 把已存值读成键盘串作为起点（此后首键是「追加」而不是覆盖，
       // 与原始金额位的既有手感一致）。
       _customFieldStrs.putIfAbsent(syncId, () => _customFieldStr(syncId));
+      // 物理键盘的焦点收回本表单（备注框刚在打字时，下一次敲数字要落回金额位）。
+      _keyboardFocus.requestFocus();
     });
   }
 
@@ -366,6 +369,19 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
   // 备注框焦点节点
   final FocusNode _noteFocusNode = FocusNode();
+
+  /// 记账表单的**物理键盘**焦点节点（2026-10-13）。
+  ///
+  /// 金额位刻意不用 TextField（由下方自制数字键盘输入），代价是宿主机键盘
+  /// （模拟器 / 连了实机的键盘）敲进去毫无反应。这里挂在表单最外层的 [Focus]
+  /// 上，把 0–9 / `.` / Backspace / Enter / Esc 映射到自制键盘已有的
+  /// `_append` / `_backspace` / 提交 / 关闭逻辑。
+  ///
+  /// 用 [Focus] + autofocus 而非全局按键监听：隐藏的兄弟表单
+  /// （IndexedStack 里的 expense / income / transfer）被 `ExcludeFocus` 挡住拿不到
+  /// 焦点，所以同一时刻只有**可见**的那张表单会接管按键。
+  final FocusNode _keyboardFocus =
+      FocusNode(debugLabel: 'amountEditorKeyboard');
 
   // 防重复提交标志
   bool _isSubmitting = false;
@@ -488,49 +504,83 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     }
   }
 
-  /// 把「带出上一笔」载荷就地装进已渲染的表单（字段级覆盖，不重建组件）。
+  /// 把「带出上一笔」载荷就地装进已渲染的表单（**仅填空缺**，不重建组件）。
   ///
-  /// 与构造初值的差别：
+  /// 三条口径（2026-10-13 用户确认）：
   /// - **只覆盖除金额外的字段** —— `_amountStr` / `_originalStr` / `_date` 一律不
-  ///   动（用户口径：复刻上一笔时只需重填金额，日期保持今天）；
-  /// - 覆盖是无条件的（「直接覆盖，不弹确认」）：即便用户已经选过分类 / 账户，
-  ///   也按载荷改掉，因此顺手把 `_categoryPicked` / `_accountPicked` 置真，防止
-  ///   首帧后才解析出的记忆分类 / 默认账户把带出的值顶回去；
-  /// - 自定义字段的 text / date / select 位靠换 `key` 重建分区刷新（见
-  ///   [_customFieldsSeed]），金额位走宿主每帧派生的 `amountTextOverride`，
-  ///   改 [_customValues] 即生效。
+  ///   动（复刻上一笔时只需重填金额，日期保持今天）；
+  /// - **只填空缺**：目标字段当前已有值就保留用户的，不被载荷顶掉。逐字段的
+  ///   「有值」判据见下；
+  /// - 金额类型的自定义字段已由装配方（`_buildLastEntryDraft`）整体剔除，这里
+  ///   天然收不到它们的值。
   ///
-  /// 直接改字段而不 `setState`：本方法只在 [didUpdateWidget] 里同步调用，紧跟
-  /// 其后就有一次 build。
+  /// **有值判据**：
+  /// - 分类 / 账户：以「用户主动选过」为准（`_categoryPicked` / `_accountPicked`），
+  ///   系统预填的默认账户、5 分钟继承来的分类**不算有值**，允许被上一笔替换；
+  /// - 备注：正文非空即算有值（连敏感标记一起保留）；
+  /// - 标签：已选任一标签即算有值；
+  /// - 两个开关：只有**已打开**才算有值 —— 只会把关闭的补上，绝不把用户打开的关掉；
+  /// - 币种：以「用户手选过」为准（`_pickedCurrency` 非空）；
+  /// - 自定义字段：逐个 syncId 判，当前值非空即保留。
+  ///
+  /// 填进分类 / 账户时顺手把 `_categoryPicked` / `_accountPicked` 置真，防止首帧后
+  /// 才解析出的记忆分类 / 默认账户把带出的值顶回去。自定义字段的 text / date /
+  /// select 位靠换 `key` 重建分区刷新（见 [_customFieldsSeed]），金额位走宿主每帧
+  /// 派生的 `amountTextOverride`，改 [_customValues] 即生效。
+  ///
+  /// 直接改字段而不 `setState`：本方法只在 [didUpdateWidget] 里同步调用，紧跟其
+  /// 后就有一次 build。
   void _applyLastEntryPrefill(LastEntryDraft draft) {
-    _category = draft.category;
-    _categoryPicked = true;
-    _selectedAccountId = draft.accountId;
-    _accountPicked = true;
-    if (draft.accountId != null) {
+    // 分类 / 账户：系统预填不算有值（用户口径），只有用户主动选过才保留。
+    if (!_categoryPicked && draft.category != null) {
+      _category = draft.category;
+      _categoryPicked = true;
+    }
+    if (!_accountPicked && draft.accountId != null) {
+      _selectedAccountId = draft.accountId;
+      _accountPicked = true;
       unawaited(_loadAccountCurrency(draft.accountId!));
     }
-    _noteCtrl.text = draft.note ?? '';
-    _noteSensitive = draft.noteSensitive;
-    _selectedTagIds = List<int>.from(draft.tagIds);
-    _excludeFromStats = draft.excludeFromStats;
-    _excludeFromBudget = draft.excludeFromBudget;
-    _pickedCurrency = draft.currencyCode?.toUpperCase();
-    // 自定义字段：值快照与分区种子一起换掉，并清掉「半截键盘串 / 未完成算式」，
-    // 否则旧串会盖住带出的值（[CustomFieldValueCodec] 的显示串回退链见
-    // `_customFieldStr`）。
-    _customValues = Map<String, dynamic>.from(draft.customValues);
-    _customFieldStrs.clear();
-    _accByTarget.remove(_AmountEditTarget.customField);
-    _opByTarget.remove(_AmountEditTarget.customField);
-    _customFieldsSeed = Map<String, dynamic>.from(draft.customValues);
-    _customFieldsSeedToken++;
+    // 备注：已有正文就整组保留（敏感标记随备注走，不单独覆盖）。
+    final note = draft.note ?? '';
+    if (_noteCtrl.text.trim().isEmpty && note.isNotEmpty) {
+      _noteCtrl.text = note;
+      _noteSensitive = draft.noteSensitive;
+    }
+    // 标签：已选过任意标签就保留。
+    if (_selectedTagIds.isEmpty && draft.tagIds.isNotEmpty) {
+      _selectedTagIds = List<int>.from(draft.tagIds);
+    }
+    // 开关：只有「已打开」算有值（默认关 = 空缺），故只会补上、不会关掉。
+    if (draft.excludeFromStats) _excludeFromStats = true;
+    if (draft.excludeFromBudget) _excludeFromBudget = true;
+    // 币种：只有用户手选过才算有值。
+    if (_pickedCurrency == null && draft.currencyCode != null) {
+      _pickedCurrency = draft.currencyCode!.toUpperCase();
+    }
+    // 自定义字段：逐 syncId 仅填空缺（空值在 codec 口径下等于「键不存在」）。
+    var customFilled = false;
+    final merged = Map<String, dynamic>.from(_customValues);
+    for (final entry in draft.customValues.entries) {
+      if (CustomFieldValueCodec.normalizeValue(merged[entry.key]) == null) {
+        merged[entry.key] = entry.value;
+        customFilled = true;
+      }
+    }
+    if (customFilled) {
+      // 金额类型已不在载荷里，故**不清** `_customFieldStrs` / 算式缓存 ——
+      // 清掉会把用户正在输入的自定义金额半成品一起抹掉。
+      _customValues = merged;
+      _customFieldsSeed = Map<String, dynamic>.from(merged);
+      _customFieldsSeedToken++;
+    }
     unawaited(_loadRecentNotes());
   }
 
   @override
   void dispose() {
     _noteFocusNode.dispose();
+    _keyboardFocus.dispose();
     super.dispose();
   }
 
@@ -1023,6 +1073,185 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     SystemSound.play(SystemSoundType.click);
   }
 
+  /// 计算等号：完成当前运算，把结果写回**当前输入目标**，清空该目标的运算状态。
+  ///
+  /// 原本是 build 里的局部闭包；为让物理键盘 Enter 与点「完成」共用同一条路径，
+  /// 上提为 State 方法（行为逐字不变）。
+  void _applyEquals() {
+    final op = _opByTarget[_editTarget];
+    if (op == null) return; // 没有运算符，不执行
+    final cur = _parsedActive();
+    final total = _compute(_acc, op, cur);
+    _activeStr = _trimZeros(total);
+    _acc = 0;
+    _op = null;
+    _applyCustomFieldAmountValues();
+    HapticFeedback.selectionClick();
+    SystemSound.play(SystemSoundType.click);
+    setState(() {});
+  }
+
+  /// 记账金额位的求值（与当前焦点无关）。
+  ///
+  /// 提交求值与「完成」可用性都钉在记账金额上 —— 否则焦点停在原始金额位时会
+  /// 漏算记账侧的算式。
+  double _amountTotal() {
+    final cur = double.tryParse(_amountStr) ?? 0.0;
+    return _amountOp == null ? cur : _compute(_amountAcc, _amountOp!, cur);
+  }
+
+  /// 「完成」键当前是否可用（与键面状态、[_handleDone] 用同一判据）。
+  bool _doneEnabled() {
+    // 运算模式下「完成」先当等号用，所以恒可用。
+    final isInCalcMode = _op != null;
+    return (isInCalcMode ? true : _amountTotal().abs() > 0) && !_isSubmitting;
+  }
+
+  /// 物理键盘事件 → 复用自制数字键盘的既有逻辑。
+  ///
+  /// 只在**本表单自己拿到主要焦点**时接管：备注 / 自定义文本字段聚焦时
+  /// [FocusNode.hasPrimaryFocus] 为 false，按键原样让给那些真实文本框
+  /// （否则在备注里敲数字会串进金额）。
+  KeyEventResult _onHardwareKey(KeyEvent event) {
+    if (!_keyboardFocus.hasPrimaryFocus) return KeyEventResult.ignored;
+    // 按下与自动重复都算击键；抬起不算。
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    // 数字 / 小数点：优先取事件字符（主键盘与数字小键盘都覆盖），缺失时退回
+    // 逻辑键标签。
+    final ch = (event.character != null && event.character!.isNotEmpty)
+        ? event.character!
+        : event.logicalKey.keyLabel;
+    if (ch.length == 1) {
+      final c = ch.codeUnitAt(0);
+      if ((c >= 0x30 && c <= 0x39) || ch == '.') {
+        _append(ch);
+        return KeyEventResult.handled;
+      }
+    }
+
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.backspace ||
+        key == LogicalKeyboardKey.delete) {
+      _backspace();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      _handleDone();
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.escape) {
+      // 与标题栏关闭按钮同一动作：关掉当前这一层记账弹层。
+      Navigator.of(context).maybePop();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// 点「完成」/ 物理键盘 Enter 共用的提交路径。
+  ///
+  /// 逻辑原样搬自 `doneKey` 的 onTap 闭包（含分类必填、自定义字段必填、汇率
+  /// 有效性三重拦截），只是把「求值 / 等号」改为调用 State 方法。
+  void _handleDone() {
+    // 当前输入目标仍在运算中时，「完成」先当等号用。
+    if (_op != null) {
+      _applyEquals();
+      return;
+    }
+    if (!_doneEnabled()) return;
+
+    // 新建记账强制选分类：未选直接拦下并提示（分类位已不再预填，用户忘选是
+    // 高频路径）。编辑存量无分类交易时 requireCategory=false，不拦。
+    if (widget.requireCategory && _category == null) {
+      showToast(context,
+          AppLocalizations.of(context).transactionSelectCategoryRequired);
+      return;
+    }
+
+    // v57 必填校验：设为必填的自定义字段未填 → 拦下并 Toast 提示缺少哪些字段
+    //（新建 + 编辑交易都拦；周期账单模板 / CSV 导入 / 云端恢复走非本提交路径
+    // 不拦）。已填口径与落库口径一致：键盘串先并入快照，再经 normalize 剔空后
+    // 看 syncId 是否存在（金额 0 合法）。
+    _applyCustomFieldAmountValues();
+    final requiredDefs = (ref
+                .read(customFieldsForCurrentLedgerProvider)
+                .value ??
+            const <CustomFieldDefinition>[])
+        .where((d) => d.isRequired && (d.syncId ?? '').isNotEmpty)
+        .toList(growable: false);
+    if (requiredDefs.isNotEmpty) {
+      final filled = CustomFieldValueCodec.normalize(_customValues);
+      final missing = [
+        for (final d in requiredDefs)
+          if (!filled.containsKey(d.syncId)) d.name,
+      ];
+      if (missing.isNotEmpty) {
+        showToast(context,
+            AppLocalizations.of(context).customFieldRequiredMissing(missing.join('、')));
+        return;
+      }
+    }
+
+    // 防重复点击
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+
+    // v30:折本位币快照。外币且汇率无效 → 阻断(L8)。
+    final total = _amountTotal();
+    final txCurrency = _txCurrency();
+    final ledgerBase = ref.read(currentLedgerCurrencyProvider);
+    double? nativeAmount;
+    if (txCurrency == ledgerBase) {
+      nativeAmount = total.abs();
+    } else {
+      final r = _currentRate();
+      if (r == null || r <= 0) {
+        setState(() => _isSubmitting = false);
+        showToast(context, AppLocalizations.of(context).txRateMissingHint);
+        return;
+      }
+      nativeAmount = total.abs() * r;
+    }
+
+    HapticFeedback.lightImpact();
+    SystemSound.play(SystemSoundType.click);
+    // v45 原始金额:空串/非法输入 → null,由仓储层在保存时兜底为记账金额
+    // (产品口径:每条明细都有原始金额)。
+    final ogText = _originalStr.trim();
+    final originalAmount = ogText.isEmpty ? null : double.tryParse(ogText);
+    widget.onSubmit((
+      amount: total.abs(), // 始终正数
+      note: _noteCtrl.text.isEmpty ? null : _noteCtrl.text,
+      noteSensitive: _noteSensitive,
+      date: _date,
+      accountId: _selectedAccountId,
+      tagIds: _selectedTagIds,
+      pendingAttachments: _pendingAttachments,
+      // 表单内部持有的分类（用户可能刚在本表单里换过）。
+      category: _category,
+      excludeFromStats: _excludeFromStats,
+      excludeFromBudget: _excludeFromBudget,
+      currencyCode: txCurrency,
+      nativeAmount: nativeAmount,
+      originalAmount: originalAmount,
+      // v46 自定义字段:原值与现值都为空 → null
+      // (不改动,避免把别的设备已填的值抹掉);否则提交全量快照(空 map = 显式清空)。
+      customValues: (_customValues.isEmpty &&
+              widget.initialCustomValues.isEmpty)
+          ? null
+          : Map<String, dynamic>.from(_customValues),
+      // v56 退款关联 + 报销状态（F1-b）
+      refundOfId: _refundOfId,
+      reimburseStatus: _reimburseStatus,
+    ));
+
+    // 注意：不需要在这里重置 _isSubmitting，因为提交后整个 Sheet 会被关闭，
+    // State 会被销毁。
+  }
+
   // 旧 _toggleSign 已废弃，符号由类别含义决定
 
   // _setToday 移除，改为点击日历按钮选择日期
@@ -1104,8 +1333,6 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     final primary = Theme.of(context).colorScheme.primary;
     final text = Theme.of(context).textTheme;
 
-    double parsed() => double.tryParse(_amountStr) ?? 0.0;
-
     void applyOp(String op) {
       // 运算符作用于**当前输入目标**：不再把焦点抢回记账金额，
       // 两个金额位的运算状态各自独立（_accByTarget / _opByTarget）。
@@ -1119,21 +1346,6 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       }
       _op = op;
       _activeStr = '0';
-      HapticFeedback.selectionClick();
-      SystemSound.play(SystemSoundType.click);
-      setState(() {});
-    }
-
-    // 计算等号：完成当前运算，将结果写回当前目标，清空该目标的运算状态
-    void applyEquals() {
-      final op = _opByTarget[_editTarget];
-      if (op == null) return; // 没有运算符，不执行
-      final cur = _parsedActive();
-      final total = _compute(_acc, op, cur);
-      _activeStr = _trimZeros(total);
-      _acc = 0;
-      _op = null;
-      _applyCustomFieldAmountValues();
       HapticFeedback.selectionClick();
       SystemSound.play(SystemSoundType.click);
       setState(() {});
@@ -1311,8 +1523,12 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     Expanded(
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTap: () => setState(
-                            () => _editTarget = _AmountEditTarget.amount),
+                        onTap: () => setState(() {
+                          _editTarget = _AmountEditTarget.amount;
+                          // 物理键盘焦点收回本表单（备注框刚在打字时，
+                          // 下一次敲数字要落回金额位）。
+                          _keyboardFocus.requestFocus();
+                        }),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 120),
                           padding: const EdgeInsets.symmetric(
@@ -1369,8 +1585,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                       ),
                       Text(
                         (() {
-                          final cur = parsed();
-                          final total = _compute(_amountAcc, _amountOp!, cur);
+                          final total = _amountTotal();
                           final s = total.abs().toStringAsFixed(2);
                           final r1 = s.contains('.')
                               ? s.replaceFirst(RegExp(r'0+$'), '')
@@ -1412,8 +1627,11 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                 Expanded(
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: () => setState(
-                        () => _editTarget = _AmountEditTarget.original),
+                    onTap: () => setState(() {
+                      _editTarget = _AmountEditTarget.original;
+                      // 物理键盘焦点收回本表单（同上）。
+                      _keyboardFocus.requestFocus();
+                    }),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 120),
                       height: 40,
@@ -1602,17 +1820,10 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     ),
                   );
               Widget doneKey() {
-                // 提交的是**记账金额**：求值必须用记账金额位的运算状态，
-                // 与当前焦点无关（否则焦点在原始金额时会漏算记账侧的算式）。
-                final cur = parsed();
-                final total = _amountOp == null
-                    ? cur
-                    : _compute(_amountAcc, _amountOp!, cur);
-
-                // 当前焦点位仍在运算中时，「完成」先当等号用。
+                // 当前输入目标仍在运算中时，「完成」先当等号用（键面显示 '='）。
                 final isInCalcMode = _op != null;
-                final isEnabled =
-                    (isInCalcMode ? true : total.abs() > 0) && !_isSubmitting;
+                // 可用性判据与 _handleDone 共用（求值钉在记账金额位，与焦点无关）。
+                final isEnabled = _doneEnabled();
 
                 return Padding(
                   padding: const EdgeInsets.all(6),
@@ -1623,123 +1834,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                      onTap: isEnabled
-                          ? () async {
-                              if (isInCalcMode) {
-                                // 运算模式：点击等号计算结果
-                                applyEquals();
-                                return;
-                              }
-
-                              // 新建记账强制选分类：未选直接拦下并提示（分类位
-                              // 已不再预填，用户忘选是高频路径）。编辑存量无分类
-                              // 交易时 requireCategory=false，不拦。
-                              if (widget.requireCategory && _category == null) {
-                                showToast(
-                                    context,
-                                    AppLocalizations.of(context)
-                                        .transactionSelectCategoryRequired);
-                                return;
-                              }
-
-                              // v57 必填校验：设为必填的自定义字段未填 → 拦下
-                              // 并 Toast 提示缺少哪些字段（新建 + 编辑交易都拦；
-                              // 周期账单模板 / CSV 导入 / 云端恢复走非本提交路径
-                              // 不拦）。已填口径与落库口径一致：键盘串先并入
-                              // 快照，再经 normalize 剔空后看 syncId 是否存在
-                              // （金额 0 合法）。
-                              _applyCustomFieldAmountValues();
-                              final requiredDefs = (ref
-                                          .read(customFieldsForCurrentLedgerProvider)
-                                          .value ??
-                                      const <CustomFieldDefinition>[])
-                                  .where((d) =>
-                                      d.isRequired && (d.syncId ?? '').isNotEmpty)
-                                  .toList(growable: false);
-                              if (requiredDefs.isNotEmpty) {
-                                final filled =
-                                    CustomFieldValueCodec.normalize(_customValues);
-                                final missing = [
-                                  for (final d in requiredDefs)
-                                    if (!filled.containsKey(d.syncId)) d.name,
-                                ];
-                                if (missing.isNotEmpty) {
-                                  showToast(
-                                      context,
-                                      AppLocalizations.of(context)
-                                          .customFieldRequiredMissing(
-                                              missing.join('、')));
-                                  return;
-                                }
-                              }
-
-                              // 正常模式：提交
-                              // 防重复点击
-                              if (_isSubmitting) return;
-                              setState(() => _isSubmitting = true);
-
-                              // v30:折本位币快照。外币且汇率无效 → 阻断(L8)。
-                              final txCurrency = _txCurrency();
-                              final ledgerBase =
-                                  ref.read(currentLedgerCurrencyProvider);
-                              double? nativeAmount;
-                              if (txCurrency == ledgerBase) {
-                                nativeAmount = total.abs();
-                              } else {
-                                final r = _currentRate();
-                                if (r == null || r <= 0) {
-                                  setState(() => _isSubmitting = false);
-                                  showToast(
-                                      context,
-                                      AppLocalizations.of(context)
-                                          .txRateMissingHint);
-                                  return;
-                                }
-                                nativeAmount = total.abs() * r;
-                              }
-
-                              HapticFeedback.lightImpact();
-                              SystemSound.play(SystemSoundType.click);
-                              // v45 原始金额:空串/非法输入 → null,由仓储层
-                              // 在保存时兜底为记账金额(产品口径:每条明细都有
-                              // 原始金额)。
-                              final ogText = _originalStr.trim();
-                              final originalAmount = ogText.isEmpty
-                                  ? null
-                                  : double.tryParse(ogText);
-                              widget.onSubmit((
-                                amount: total.abs(), // 始终正数
-                                note: _noteCtrl.text.isEmpty
-                                    ? null
-                                    : _noteCtrl.text,
-                                noteSensitive: _noteSensitive,
-                                date: _date,
-                                accountId: _selectedAccountId,
-                                tagIds: _selectedTagIds,
-                                pendingAttachments: _pendingAttachments,
-                                // 表单内部持有的分类（用户可能刚在本表单里换过）。
-                                category: _category,
-                                excludeFromStats: _excludeFromStats,
-                                excludeFromBudget: _excludeFromBudget,
-                                currencyCode: txCurrency,
-                                nativeAmount: nativeAmount,
-                                originalAmount: originalAmount,
-                                // v46 自定义字段:原值与现值都为空 → null
-                                // (不改动,避免把别的设备已填的值抹掉);
-                                // 否则提交全量快照(空 map = 显式清空)。
-                                customValues: (_customValues.isEmpty &&
-                                        widget.initialCustomValues.isEmpty)
-                                    ? null
-                                    : Map<String, dynamic>.from(_customValues),
-                                // v56 退款关联 + 报销状态（F1-b）
-                                refundOfId: _refundOfId,
-                                reimburseStatus: _reimburseStatus,
-                              ));
-
-                              // 注意：不需要在这里重置 _isSubmitting
-                              // 因为提交后整个 Sheet 会被关闭，State 会被销毁
-                            }
-                          : null,
+                      // 点按与物理键盘 Enter 走同一条提交路径（见 _handleDone）。
+                      onTap: isEnabled ? _handleDone : null,
                       child: SizedBox(
                         height: 60,
                         child: Center(
@@ -1843,15 +1939,23 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
             children: column,
           );
 
-    return SafeArea(
-      top: false,
-      // 底部**不**自己垫 padding：三个调用方（记账抽屉、分类网格路径的金额表单、
-      // 转账金额表单）都把本表单放进 [PiggySheetCard]，由卡片统一负责键盘避让
-      // （`MediaQuery.viewInsets.bottom`）与底部留距。这里再垫一份 extraPadding
-      // 只会双重顶高，把「完成」键挤出可视区。
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        child: form,
+    // 物理键盘（模拟器 / 连了实机的键盘）：0–9 / `.` / Backspace / Enter / Esc
+    // 映射到自制数字键盘的既有逻辑。用 Focus + autofocus —— 隐藏的兄弟表单会被
+    // IndexedStack 的 ExcludeFocus 挡住拿不到焦点，所以只有可见那张接管按键。
+    return Focus(
+      focusNode: _keyboardFocus,
+      autofocus: true,
+      onKeyEvent: (_, event) => _onHardwareKey(event),
+      child: SafeArea(
+        top: false,
+        // 底部**不**自己垫 padding：三个调用方（记账抽屉、分类网格路径的金额表单、
+        // 转账金额表单）都把本表单放进 [PiggySheetCard]，由卡片统一负责键盘避让
+        // （`MediaQuery.viewInsets.bottom`）与底部留距。这里再垫一份 extraPadding
+        // 只会双重顶高，把「完成」键挤出可视区。
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: form,
+        ),
       ),
     );
   }
