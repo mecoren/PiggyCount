@@ -3497,6 +3497,98 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exportFailedTitle => '导出失败';
 
   @override
+  String get exportPdfSectionTitle => 'PDF 报表';
+
+  @override
+  String get exportPdfSectionDesc =>
+      '导出月报 / 年报 / 自选区间报表：含收支总览、分类排行、趋势与交易明细，可直接用于报销与对账。';
+
+  @override
+  String get exportPdfKindMonth => '月报';
+
+  @override
+  String get exportPdfKindYear => '年报';
+
+  @override
+  String get exportPdfKindRange => '区间报表';
+
+  @override
+  String get exportPdfButton => '生成 PDF 报表';
+
+  @override
+  String get exportPdfGenerating => '正在生成报表…';
+
+  @override
+  String get pdfReportTitle => '账本报表';
+
+  @override
+  String get pdfReportSummaryTitle => '收支总览';
+
+  @override
+  String pdfReportLedgerLine(String name) {
+    return '账本：$name';
+  }
+
+  @override
+  String pdfReportPeriodLine(String range) {
+    return '统计周期：$range';
+  }
+
+  @override
+  String pdfReportGeneratedAt(String time) {
+    return '生成时间：$time';
+  }
+
+  @override
+  String get pdfReportTrendTitle => '收支趋势';
+
+  @override
+  String pdfReportCategoryTitle(String type) {
+    return '$type分类排行';
+  }
+
+  @override
+  String get pdfReportColRank => '排名';
+
+  @override
+  String get pdfReportColCategory => '分类';
+
+  @override
+  String get pdfReportColCount => '笔数';
+
+  @override
+  String get pdfReportColAmount => '金额';
+
+  @override
+  String get pdfReportColPercent => '占比';
+
+  @override
+  String get pdfReportDetailTitle => '交易明细';
+
+  @override
+  String get pdfReportColDate => '日期';
+
+  @override
+  String get pdfReportColType => '类型';
+
+  @override
+  String get pdfReportColAccount => '账户';
+
+  @override
+  String get pdfReportColNote => '备注';
+
+  @override
+  String pdfReportPageOf(int page, int total) {
+    return '第 $page / $total 页';
+  }
+
+  @override
+  String get pdfReportFooterNote => '由 PiggyCount 生成 · 数据仅存于本机';
+
+  @override
+  String get pdfReportDetailEmpty => '该周期没有交易记录';
+
+  @override
   String get exportTypeIncome => '收入';
 
   @override
@@ -12475,6 +12567,98 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get exportFailedTitle => '匯出失敗';
+
+  @override
+  String get exportPdfSectionTitle => 'PDF 報表';
+
+  @override
+  String get exportPdfSectionDesc =>
+      '匯出月報 / 年報 / 自選區間報表：含收支總覽、分類排行、趨勢與交易明細，可直接用於報銷與對帳。';
+
+  @override
+  String get exportPdfKindMonth => '月報';
+
+  @override
+  String get exportPdfKindYear => '年報';
+
+  @override
+  String get exportPdfKindRange => '區間報表';
+
+  @override
+  String get exportPdfButton => '產生 PDF 報表';
+
+  @override
+  String get exportPdfGenerating => '正在產生報表…';
+
+  @override
+  String get pdfReportTitle => '帳本報表';
+
+  @override
+  String get pdfReportSummaryTitle => '收支總覽';
+
+  @override
+  String pdfReportLedgerLine(String name) {
+    return '帳本：$name';
+  }
+
+  @override
+  String pdfReportPeriodLine(String range) {
+    return '統計週期：$range';
+  }
+
+  @override
+  String pdfReportGeneratedAt(String time) {
+    return '產生時間：$time';
+  }
+
+  @override
+  String get pdfReportTrendTitle => '收支趨勢';
+
+  @override
+  String pdfReportCategoryTitle(String type) {
+    return '$type分類排行';
+  }
+
+  @override
+  String get pdfReportColRank => '排名';
+
+  @override
+  String get pdfReportColCategory => '分類';
+
+  @override
+  String get pdfReportColCount => '筆數';
+
+  @override
+  String get pdfReportColAmount => '金額';
+
+  @override
+  String get pdfReportColPercent => '佔比';
+
+  @override
+  String get pdfReportDetailTitle => '交易明細';
+
+  @override
+  String get pdfReportColDate => '日期';
+
+  @override
+  String get pdfReportColType => '類型';
+
+  @override
+  String get pdfReportColAccount => '帳戶';
+
+  @override
+  String get pdfReportColNote => '備註';
+
+  @override
+  String pdfReportPageOf(int page, int total) {
+    return '第 $page / $total 頁';
+  }
+
+  @override
+  String get pdfReportFooterNote => '由 PiggyCount 產生 · 資料僅存於本機';
+
+  @override
+  String get pdfReportDetailEmpty => '此週期沒有交易記錄';
 
   @override
   String get exportTypeIncome => '收入';

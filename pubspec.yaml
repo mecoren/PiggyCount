@@ -103,6 +103,12 @@ dependencies:
   app_links: ^7.2.1
   record: ^7.1.1
   yaml: ^3.1.2
+  # PDF 报表导出（月报 / 年报 / 区间报表）：纯 Dart，无原生桥接，全平台可用。
+  # ⚠️ 刻意**不**引 `printing`：那套是「系统打印 / 预览」用的原生插件，而我们的
+  # 保存 / 分享链路已由 share_plus + path_provider 覆盖（见 export_page），多加
+  # 一个不用的依赖只会白带 android/ios/macos/windows/linux 五份原生实现。
+  # 中文渲染靠内嵌子集字体（assets/fonts/，见 scripts/fetch_pdf_report_font.py）。
+  pdf: ^3.12.0
   qr_flutter: ^4.1.0
   gal: ^2.3.0
   # 停 3.x（2026-10-06 实测）：archive 4.x 与 excel ^4.0.6（其依赖 archive ^3.6.1）
@@ -262,6 +268,11 @@ flutter:
     - assets/icons/social/
     - assets/images/
     - assets/header_skins/
+    # PDF 报表内嵌中文字体（Noto Sans SC 子集，两个字重共 ~4.9MB）。
+    # 只作**资产**加载（pdf 包渲染用），不注册成 Flutter 字体族 —— 界面仍走
+    # 系统字体，字体设置页的显示缩放不受影响。重新生成见
+    # scripts/fetch_pdf_report_font.py（改文案后 `--check` 会报缺字）。
+    - assets/fonts/
   # 字体已移动到可选依赖，使用系统字体以减少应用体积
   # fonts:
   #   - family: Inter
