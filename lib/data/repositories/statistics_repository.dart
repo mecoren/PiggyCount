@@ -177,4 +177,13 @@ abstract class StatisticsRepository {
     required DateTime start,
     required DateTime end,
   });
+
+  /// 区间内计入统计的交易总笔数（同 [customFieldStatsRows] 口径：排除
+  /// 「不计收支」、不限类型）——分类型统计的填写率分母。与值行分开查：
+  /// 绝大多数交易没有自定义字段值，合成一条 SQL 会白扫全表解 JSON。
+  Future<int> customFieldStatsTotalCount({
+    required int ledgerId,
+    required DateTime start,
+    required DateTime end,
+  });
 }

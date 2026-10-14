@@ -6175,6 +6175,70 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get customFieldAnalysisTitle => '字段分析';
+
+  @override
+  String get customFieldAnalysisEntry => '字段分析';
+
+  @override
+  String customFieldFilledCount(int count) {
+    return '已填写 $count 笔';
+  }
+
+  @override
+  String get customFieldStatSum => '求和';
+
+  @override
+  String get customFieldStatAvg => '均值';
+
+  @override
+  String get customFieldStatMin => '最小';
+
+  @override
+  String get customFieldStatMax => '最大';
+
+  @override
+  String get customFieldAnalysisValueDistribution => '值分布';
+
+  @override
+  String get customFieldAnalysisMonthlyTrend => '按月趋势';
+
+  @override
+  String get customFieldAnalysisValueRank => '值排行';
+
+  @override
+  String get customFieldAnalysisFillRate => '填写率';
+
+  @override
+  String get customFieldAnalysisEmptySubtext => '在记账时填写该字段后，这里会展示统计';
+
+  @override
+  String get customFieldExportCsv => '导出 CSV';
+
+  @override
+  String get customFieldExportAggregateCsv => '导出汇总表';
+
+  @override
+  String get customFieldExportDetailCsv => '导出明细';
+
+  @override
+  String get customFieldExportSuccess => '已导出';
+
+  @override
+  String get customFieldCsvHeaderFilledCount => '已填写笔数';
+
+  @override
+  String get customFieldCsvHeaderStatItem => '统计项';
+
+  @override
+  String get customFieldCsvHeaderValue => '数值';
+
+  @override
+  String customFieldFilterChip(String field, String value) {
+    return '$field：$value';
+  }
+
+  @override
   String get tagManageTitle => '标签管理';
 
   @override
@@ -15273,6 +15337,70 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String customFieldRequiredMissing(String names) {
     return '請填寫必填欄位：$names';
+  }
+
+  @override
+  String get customFieldAnalysisTitle => '欄位分析';
+
+  @override
+  String get customFieldAnalysisEntry => '欄位分析';
+
+  @override
+  String customFieldFilledCount(int count) {
+    return '已填寫 $count 筆';
+  }
+
+  @override
+  String get customFieldStatSum => '求和';
+
+  @override
+  String get customFieldStatAvg => '均值';
+
+  @override
+  String get customFieldStatMin => '最小';
+
+  @override
+  String get customFieldStatMax => '最大';
+
+  @override
+  String get customFieldAnalysisValueDistribution => '值分佈';
+
+  @override
+  String get customFieldAnalysisMonthlyTrend => '按月趨勢';
+
+  @override
+  String get customFieldAnalysisValueRank => '值排行';
+
+  @override
+  String get customFieldAnalysisFillRate => '填寫率';
+
+  @override
+  String get customFieldAnalysisEmptySubtext => '在記帳時填寫該欄位後，這裡會展示統計';
+
+  @override
+  String get customFieldExportCsv => '匯出 CSV';
+
+  @override
+  String get customFieldExportAggregateCsv => '匯出彙總表';
+
+  @override
+  String get customFieldExportDetailCsv => '匯出明細';
+
+  @override
+  String get customFieldExportSuccess => '已匯出';
+
+  @override
+  String get customFieldCsvHeaderFilledCount => '已填寫筆數';
+
+  @override
+  String get customFieldCsvHeaderStatItem => '統計項';
+
+  @override
+  String get customFieldCsvHeaderValue => '數值';
+
+  @override
+  String customFieldFilterChip(String field, String value) {
+    return '$field：$value';
   }
 
   @override

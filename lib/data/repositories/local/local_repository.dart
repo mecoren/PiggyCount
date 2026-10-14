@@ -3216,6 +3216,18 @@ class LocalRepository extends BaseRepository {
         end: end,
       );
 
+  @override
+  Future<int> customFieldStatsTotalCount({
+    required int ledgerId,
+    required DateTime start,
+    required DateTime end,
+  }) =>
+      _statisticsRepo.customFieldStatsTotalCount(
+        ledgerId: ledgerId,
+        start: start,
+        end: end,
+      );
+
   // ============================================
   // RecurringTransactionRepository 接口实现 - 委托给 LocalRecurringTransactionRepository
   // ============================================
@@ -4581,6 +4593,10 @@ class LocalRepository extends BaseRepository {
   @override
   Future<int> countTransactionsWithValues(int ledgerId) =>
       _customFieldRepo.countTransactionsWithValues(ledgerId);
+
+  @override
+  Future<Map<String, int>> countFilledPerField({required int ledgerId}) =>
+      _customFieldRepo.countFilledPerField(ledgerId: ledgerId);
 
   // ============================================
   // 云同步实体镜像删除的引用守卫（跨表聚合）

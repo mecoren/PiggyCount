@@ -6242,6 +6242,70 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get customFieldAnalysisTitle => '필드 분석';
+
+  @override
+  String get customFieldAnalysisEntry => '필드 분석';
+
+  @override
+  String customFieldFilledCount(int count) {
+    return '$count건 입력';
+  }
+
+  @override
+  String get customFieldStatSum => '합계';
+
+  @override
+  String get customFieldStatAvg => '평균';
+
+  @override
+  String get customFieldStatMin => '최소';
+
+  @override
+  String get customFieldStatMax => '최대';
+
+  @override
+  String get customFieldAnalysisValueDistribution => '값 분포';
+
+  @override
+  String get customFieldAnalysisMonthlyTrend => '월별 추세';
+
+  @override
+  String get customFieldAnalysisValueRank => '값 순위';
+
+  @override
+  String get customFieldAnalysisFillRate => '입력율';
+
+  @override
+  String get customFieldAnalysisEmptySubtext => '기록 시 이 필드를 입력하면 통계가 표시됩니다';
+
+  @override
+  String get customFieldExportCsv => 'CSV 내보내기';
+
+  @override
+  String get customFieldExportAggregateCsv => '요약 표 내보내기';
+
+  @override
+  String get customFieldExportDetailCsv => '내역 내보내기';
+
+  @override
+  String get customFieldExportSuccess => '내보냈습니다';
+
+  @override
+  String get customFieldCsvHeaderFilledCount => '입력된 건수';
+
+  @override
+  String get customFieldCsvHeaderStatItem => '통계 항목';
+
+  @override
+  String get customFieldCsvHeaderValue => '값';
+
+  @override
+  String customFieldFilterChip(String field, String value) {
+    return '$field: $value';
+  }
+
+  @override
   String get tagManageTitle => '태그';
 
   @override

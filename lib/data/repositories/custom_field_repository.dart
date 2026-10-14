@@ -135,4 +135,10 @@ abstract class CustomFieldRepository {
 
   /// 该账本下有多少笔交易填了自定义字段值（管理页删字段前提示影响面）。
   Future<int> countTransactionsWithValues(int ledgerId);
+
+  /// 该账本下**逐字段**的已填写笔数：fieldSyncId → 笔数（F5 管理页「已填写
+  /// n 笔」）。口径与 [countTransactionsWithValues] 的「有任一值的交易数」
+  /// 不同——这里是「含该字段有效值的交易数」，值为 null/空串不计；无值的
+  /// 字段不出现在 map 里（调用方按 0 兜底）。
+  Future<Map<String, int>> countFilledPerField({required int ledgerId});
 }

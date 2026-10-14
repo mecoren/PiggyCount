@@ -20,7 +20,11 @@ import 'category_detail_page.dart';
 
 /// 搜索页面
 class SearchPage extends ConsumerStatefulWidget {
-  const SearchPage({super.key});
+  const SearchPage({super.key, this.initialCustomFieldConditions = const []});
+
+  /// 初始字段值筛选条件（分析页下钻直达用，F3「下钻即筛选」）。
+  /// 进入即按条件过滤，chip 可见可移除。
+  final List<CustomFieldCondition> initialCustomFieldConditions;
 
   @override
   ConsumerState<SearchPage> createState() => _SearchPageState();
@@ -73,6 +77,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   Map<int, Set<int>> _txTagIds = const {};
   Set<int> _txWithAttachment = const {};
   bool _relationsLoaded = false;
+  // 字段值筛选条件（F3）：下钻直达时随构造带入，chips 可单条移除。
+  List<CustomFieldCondition> _customFieldConditions = const [];
   // 交易数据代际：StreamBuilder 每次拿到新快照才重新过滤，避免「结果为空 →
   // 每帧重新调度搜索」的循环。
   int _allTxGeneration = 0;
@@ -91,6 +97,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+    // 下钻直达：初始条件直接进筛选态（StreamBuilder 数据到位后自动按它过滤）。
+    _customFieldConditions = widget.initialCustomFieldConditions;
   }
 
   @override
@@ -123,6 +131,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         tagIds: _selectedTagIds,
         hasAttachment: _hasAttachmentFilter,
         currencyCode: _selectedCurrency,
+        customFieldConditions: _customFieldConditions,
       );
 
   bool get _hasAnyFilter => _currentFilter.isNotEmpty;
@@ -139,6 +148,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         _totalExpense = 0.0;
         _totalIncome = 0.0;
         _isSearching = false;
+        // 搜索「完成」才盖代数章：加载态判定（_isSearching ∥ 代数不齐）依赖
+        // 它区分「已调度未算完」与「算完」——调度时盖章会让错误空态闪一帧。
+        _searchedGeneration = _allTxGeneration;
       });
       return;
     }
@@ -170,6 +182,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           .where((e) => e.t.type == 'income')
           .fold(0.0, (sum, e) => sum + (e.t.nativeAmount ?? e.t.amount).abs());
       _isSearching = false;
+      // 搜索「完成」才盖代数章（见上）。
+      _searchedGeneration = _allTxGeneration;
     });
   }
 
@@ -249,7 +263,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     // 更新_allTransactions
     _allTransactions = allTransactions;
     _allTxGeneration++;
-    _searchedGeneration = _allTxGeneration;
+    // _searchedGeneration 的盖章交给 _performSearch（完成时才盖），
+    // 这里不提前盖，避免「数据已到、结果未算」的窗口被误判为已搜完。
     _invalidateFilterRelations();
 
     // 执行搜索筛选
@@ -742,6 +757,34 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                 unawaited(_refreshSearch());
                               },
                             ),
+                          // 字段值条件（F3）：每条一个 chip，单条可移除
+                          // （Actual 范式：筛选可视化 + 逐条撤销）。
+                          for (final cond in _customFieldConditions)
+                            _buildFilterChip(
+                              label: l10n.customFieldFilterChip(
+                                cond.fieldName,
+                                switch (cond) {
+                                  CustomFieldConditionEq(:final value) =>
+                                    value,
+                                  // 区间：[lower, upper) 文案，开上界出「≥lower」。
+                                  CustomFieldConditionBetween(
+                                    :final lower,
+                                    :final upper
+                                  ) =>
+                                    upper == null
+                                        ? '≥$lower'
+                                        : '$lower~$upper',
+                                },
+                              ),
+                              primaryColor: primaryColor,
+                              onDeleted: () {
+                                setState(() => _customFieldConditions = [
+                                      for (final c in _customFieldConditions)
+                                        if (c != cond) c,
+                                    ]);
+                                unawaited(_refreshSearch());
+                              },
+                            ),
                         ],
                       ),
                     ],
@@ -789,7 +832,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     }
                   }
 
-                  if (_isSearching) {
+                  // 加载态覆盖两种窗口：显式搜索中、以及「条件已设（含下钻
+                  // 直达的初始条件）但首查未跑完」—— 后者若按空结果渲染会闪
+                  // 一帧错误的「未找到匹配的结果」空态。
+                  if (_isSearching ||
+                      (_hasAnyFilter &&
+                          _searchedGeneration != _allTxGeneration)) {
                     return Center(
                         child: PiggySpinner(
                             size: 36, color: PiggyTokens.primary(context)));

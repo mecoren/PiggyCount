@@ -41,6 +41,10 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
     final l10n = AppLocalizations.of(context);
     final ledgerId = ref.watch(currentLedgerIdProvider);
     final definitionsAsync = ref.watch(customFieldDefinitionsProvider(ledgerId));
+    // F5：逐字段「已填写 n 笔」——引导用户知道数据完备度（全账本口径，
+    // 不限统计区间）。计数失败时按空 map 渲染（0 笔），不阻塞列表。
+    final filledCounts =
+        ref.watch(customFieldFilledCountsProvider(ledgerId)).value ?? const {};
 
     final hasFields = definitionsAsync.value?.isNotEmpty ?? false;
 
@@ -84,14 +88,15 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
               );
             }
             final ordered = _pendingOrder ?? definitions;
-            return _buildList(ordered, l10n);
+            return _buildList(ordered, l10n, filledCounts);
           },
         ),
       ),
     );
   }
 
-  Widget _buildList(List<CustomFieldDefinition> definitions, AppLocalizations l10n) {
+  Widget _buildList(List<CustomFieldDefinition> definitions,
+      AppLocalizations l10n, Map<String, int> filledCounts) {
     return ReorderableListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
       itemCount: definitions.length,
@@ -117,14 +122,19 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
           _onReorder(definitions, oldIndex, newIndex),
       itemBuilder: (context, index) {
         final def = definitions[index];
-        return _buildTile(def, index, l10n);
+        return _buildTile(def, index, l10n, filledCounts);
       },
     );
   }
 
-  Widget _buildTile(
-      CustomFieldDefinition def, int index, AppLocalizations l10n) {
+  Widget _buildTile(CustomFieldDefinition def, int index, AppLocalizations l10n,
+      Map<String, int> filledCounts) {
     final typeColor = _typeColor(context, def.fieldType);
+    // F5「已填写 n 笔」：类型(+必填徽标) + 计数；syncId 缺失/未统计时按 0。
+    final filled = def.syncId == null ? 0 : (filledCounts[def.syncId] ?? 0);
+    final badge = def.isRequired
+        ? '${_typeLabel(l10n, def.fieldType)} · ${l10n.customFieldRequiredBadge}'
+        : _typeLabel(l10n, def.fieldType);
     // 背景 / 描边 / 圆角交给 Material（而不是外层带背景色的 DecoratedBox）：
     // ListTile 的背景与水波纹绘制在**最近的 Material** 上，套一层带背景色的
     // DecoratedBox 会把它们盖住 —— Flutter 在 debug 下抛
@@ -167,9 +177,8 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
             padding: const EdgeInsets.only(top: 2),
             child: Text(
               // v57：必填字段在类型后追加徽标，列表上一眼可辨。
-              def.isRequired
-                  ? '${_typeLabel(l10n, def.fieldType)} · ${l10n.customFieldRequiredBadge}'
-                  : _typeLabel(l10n, def.fieldType),
+              // F5：尾随「已填写 n 笔」引导数据完备度（全账本口径）。
+              '$badge · ${l10n.customFieldFilledCount(filled)}',
               style: TextStyle(
                 fontSize: PiggyTextTokens.fs12,
                 color: typeColor,

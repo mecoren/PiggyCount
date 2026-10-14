@@ -2364,6 +2364,43 @@
   "customFieldRequiredHint": "記帳時必須填寫該欄位",
   "customFieldRequiredBadge": "必填",
   "customFieldRequiredMissing": "請填寫必填欄位：{names}",
+  "customFieldAnalysisTitle": "欄位分析",
+  "customFieldAnalysisEntry": "欄位分析",
+  "customFieldFilledCount": "已填寫 {count} 筆",
+  "customFieldStatSum": "求和",
+  "customFieldStatAvg": "均值",
+  "customFieldStatMin": "最小",
+  "customFieldStatMax": "最大",
+  "customFieldAnalysisValueDistribution": "值分佈",
+  "customFieldAnalysisMonthlyTrend": "按月趨勢",
+  "customFieldAnalysisValueRank": "值排行",
+  "customFieldAnalysisFillRate": "填寫率",
+  "customFieldAnalysisEmptySubtext": "在記帳時填寫該欄位後，這裡會展示統計",
+  "customFieldExportCsv": "匯出 CSV",
+  "customFieldExportAggregateCsv": "匯出彙總表",
+  "customFieldExportDetailCsv": "匯出明細",
+  "customFieldExportSuccess": "已匯出",
+  "customFieldCsvHeaderFilledCount": "已填寫筆數",
+  "customFieldCsvHeaderStatItem": "統計項",
+  "customFieldCsvHeaderValue": "數值",
+  "customFieldFilterChip": "{field}：{value}",
+  "@customFieldFilledCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@customFieldFilterChip": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "@customFieldRequiredMissing": {
     "placeholders": {
       "names": {

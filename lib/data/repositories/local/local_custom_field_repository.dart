@@ -469,6 +469,28 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
     return 0;
   }
 
+  @override
+  Future<Map<String, int>> countFilledPerField({required int ledgerId}) async {
+    // 一次取本账本全部有值行的 JSON，内存里按 syncId 逐字段计数：
+    // 与统计聚合同款「无 N+1」范式。值有效性判定复用 [CustomFieldValueCodec]
+    // 的规范化语义（null/空白/非法 → 不计），避免和值桶口径分叉。
+    final rows = await (db.select(db.transactions)
+          ..where((t) =>
+              t.ledgerId.equals(ledgerId) & t.customValuesJson.isNotNull()))
+        .get();
+    final counts = <String, int>{};
+    for (final t in rows) {
+      final values = CustomFieldValueCodec.decode(t.customValuesJson);
+      for (final entry in values.entries) {
+        // decode 后仍可能是显式 null 值的键（normalize 已剔除空值，这里再防
+        // 一层：值为 null 的键不算「填写」，与测试契约一致）。
+        if (entry.value == null) continue;
+        counts.update(entry.key, (v) => v + 1, ifAbsent: () => 1);
+      }
+    }
+    return counts;
+  }
+
   // ============================================
   // 内部：值清理与变更登记
   // ============================================

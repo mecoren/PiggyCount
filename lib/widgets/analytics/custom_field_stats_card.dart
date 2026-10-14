@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../pages/analytics/custom_field_analysis_page.dart';
 import '../../providers.dart';
 import '../../providers/custom_field_providers.dart';
 import '../../services/custom_field_stats_service.dart';
@@ -83,6 +84,40 @@ class CustomFieldStatsCard extends ConsumerWidget {
               Text(
                 AppLocalizations.of(context).rangeReportCustomFieldTitle,
                 style: PiggyTextTokens.strongTitle(context),
+              ),
+              const Spacer(),
+              // F2 下钻入口（R5：值桶渲染逐像素不动，仅追加入口）。
+              Semantics(
+                button: true,
+                label: AppLocalizations.of(context).customFieldAnalysisEntry,
+                child: InkWell(
+                  key: const Key('custom-field-analysis-entry'),
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => CustomFieldAnalysisPage(
+                          start: start,
+                          end: end,
+                          type: type,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context).customFieldAnalysisEntry,
+                        style: PiggyTextTokens.caption(context).copyWith(
+                            color: PiggyTokens.textLink(context)),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(Icons.chevron_right,
+                          size: 16, color: PiggyTokens.textLink(context)),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),

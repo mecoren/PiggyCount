@@ -11574,6 +11574,126 @@ abstract class AppLocalizations {
   /// **'Please fill in required fields: {names}'**
   String customFieldRequiredMissing(String names);
 
+  /// No description provided for @customFieldAnalysisTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Field Analysis'**
+  String get customFieldAnalysisTitle;
+
+  /// No description provided for @customFieldAnalysisEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Field Analysis'**
+  String get customFieldAnalysisEntry;
+
+  /// No description provided for @customFieldFilledCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} filled'**
+  String customFieldFilledCount(int count);
+
+  /// No description provided for @customFieldStatSum.
+  ///
+  /// In en, this message translates to:
+  /// **'Sum'**
+  String get customFieldStatSum;
+
+  /// No description provided for @customFieldStatAvg.
+  ///
+  /// In en, this message translates to:
+  /// **'Average'**
+  String get customFieldStatAvg;
+
+  /// No description provided for @customFieldStatMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Min'**
+  String get customFieldStatMin;
+
+  /// No description provided for @customFieldStatMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Max'**
+  String get customFieldStatMax;
+
+  /// No description provided for @customFieldAnalysisValueDistribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Value Distribution'**
+  String get customFieldAnalysisValueDistribution;
+
+  /// No description provided for @customFieldAnalysisMonthlyTrend.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Trend'**
+  String get customFieldAnalysisMonthlyTrend;
+
+  /// No description provided for @customFieldAnalysisValueRank.
+  ///
+  /// In en, this message translates to:
+  /// **'Value Ranking'**
+  String get customFieldAnalysisValueRank;
+
+  /// No description provided for @customFieldAnalysisFillRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill Rate'**
+  String get customFieldAnalysisFillRate;
+
+  /// No description provided for @customFieldAnalysisEmptySubtext.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in this field when recording to see stats here'**
+  String get customFieldAnalysisEmptySubtext;
+
+  /// No description provided for @customFieldExportCsv.
+  ///
+  /// In en, this message translates to:
+  /// **'Export CSV'**
+  String get customFieldExportCsv;
+
+  /// No description provided for @customFieldExportAggregateCsv.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Summary'**
+  String get customFieldExportAggregateCsv;
+
+  /// No description provided for @customFieldExportDetailCsv.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Details'**
+  String get customFieldExportDetailCsv;
+
+  /// No description provided for @customFieldExportSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Exported'**
+  String get customFieldExportSuccess;
+
+  /// No description provided for @customFieldCsvHeaderFilledCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Filled Count'**
+  String get customFieldCsvHeaderFilledCount;
+
+  /// No description provided for @customFieldCsvHeaderStatItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Stat Item'**
+  String get customFieldCsvHeaderStatItem;
+
+  /// No description provided for @customFieldCsvHeaderValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Value'**
+  String get customFieldCsvHeaderValue;
+
+  /// No description provided for @customFieldFilterChip.
+  ///
+  /// In en, this message translates to:
+  /// **'{field}: {value}'**
+  String customFieldFilterChip(String field, String value);
+
   /// No description provided for @tagManageTitle.
   ///
   /// In en, this message translates to:
