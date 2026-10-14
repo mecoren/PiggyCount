@@ -40,6 +40,64 @@ class ChangelogVersion {
 /// 全部版本，最新在前
 const kChangelogVersions = <ChangelogVersion>[
   ChangelogVersion(
+    version: '0.1.7',
+    date: '2026-10-14',
+    summary: '报表支持导出 PDF；投资持仓接入自动行情；洞察新增季度 / 任意区间档位与自定义字段分类型统计；记账支持退款关联与报销状态。',
+    sections: [
+      ChangelogSection(
+        icon: Icons.picture_as_pdf_outlined,
+        title: '报表导出 PDF',
+        items: [
+          '月报 / 年报 / 任意区间报表可导出为 PDF，内嵌中文字体，方便分享与存档',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.trending_up,
+        title: '投资行情',
+        items: [
+          '投资持仓接入自动行情（东方财富数据源），持仓市值随行情自动更新',
+          '新增「行情与投资设置」页，持仓编辑页可直接查看 / 刷新行情',
+          '持仓页骨架与储蓄页统一：顶部汇总卡常驻、纯「+」FAB、主题色描边',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.insights_outlined,
+        title: '洞察与自定义字段',
+        items: [
+          '时间档位新增「季度」与任意起止区间，趋势图按区间长度自动调整粒度',
+          '自定义字段汇总卡升级为分类型统计：金额型求和 / 均值 / 分布，日期型时间分布，文本与单选 / 多选 TopN 占比',
+          '新增「字段分析」下钻页，图表元素可点击下钻到对应交易明细',
+          '明细筛选支持按自定义字段值筛选（金额型支持区间）；支持聚合 + 明细双份 CSV 导出',
+          '自定义字段可设为「必填」，记账时未填写会拦截提交并提示缺失字段',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.edit_note_outlined,
+        title: '记账体验',
+        items: [
+          '记账表单支持物理键盘输入金额（数字 / 小数点 / 退格 / Enter 提交 / Esc 关闭）',
+          '「复刻上一笔」改为只填空缺字段，不再覆盖已填内容；金额型自定义字段不再带出',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.receipt_long_outlined,
+        title: '退款与报销',
+        items: [
+          '交易可关联原交易标注退款，并设置报销状态（待报销 / 已报销）',
+          '列表新增三态徽标，预算按退款行自身分类的负值冲减',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.build_outlined,
+        title: '修复与清理',
+        items: [
+          '修复云同步延迟初始化失败被重复上报为未处理异步错误',
+          '「记账提醒」入口从「自动化」页上移到「我的」页直达；移除纯预览、无切换能力的「应用图标」页',
+        ],
+      ),
+    ],
+  ),
+  ChangelogVersion(
     version: '0.1.6',
     date: '2026-10-12',
     summary: '记账抽屉新增「带出上一笔」，一键复刻上一笔的分类 / 账户 / 备注 / 标签等字段，只补金额即可保存；连续记账自动继承上一笔的分类与账户。',
