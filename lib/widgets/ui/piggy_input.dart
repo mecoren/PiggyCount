@@ -42,14 +42,20 @@ InputDecoration piggyFilledDecoration(
   );
 }
 
-/// 项目统一输入框装饰：**描边式 + 浮动标签**（2026-09-30 起全项目口径）。
+/// 表单输入框的统一圆角档位：介于 `radiusLg`(12) / `radiusXl`(16) 之间，
+/// 与底部按钮行（`PiggySheetActions`）同档，两者同屏时圆角语言一致。
+const double _kFormFieldRadius = 14;
+
+/// 项目统一输入框装饰：**浅灰填充 + 细描边 + 浮动标签**（2026-10-15 起全项目口径）。
 ///
 /// 基准实现：云同步配置三表单（`cloud_service_page.dart` 的 `_CloudConfigSheet`）
 /// 与加密「设置密码」弹窗（`password_setup_dialog.dart`）。
 ///
-/// 表单类输入框一律用它：待机 1px 中性描边、聚焦主题色 2px、`labelText` 浮到
-/// 边框上，内容直接浮在卡片 / 弹窗底色上时也能看清边界（filled 底色与卡片同色
-/// 会让边界消失）。颜色 / 线宽沿用 `OutlineInputBorder` 的 M3 默认推导。
+/// 表单类输入框一律用它：待机浅灰底（`surfaceSecondary`，与取消键同源）+
+/// 1px 中性描边（`borderStrong`），聚焦主题色 1.6px、错误 `error` 色 1 / 1.6，
+/// `labelText` 浮到边框上。填充底让输入区在卡片底色上有明确的「可输入」边界，
+/// 聚焦 / 错误只换描边色与线宽；水平内边距 `p16`，与字段区的 `p20` 留距
+/// 形成内外层次；圆角与底部按钮行同为 14。
 ///
 /// 无边框内嵌输入（标题栏搜索框、选择器内搜索行、金额显示位）用
 /// [piggyFilledDecoration]，不要套描边——见 `AGENTS.md` 输入框规范。
@@ -63,6 +69,10 @@ InputDecoration piggyOutlinedDecoration(
   Widget? suffixIcon,
   Widget? prefixIcon,
 }) {
+  OutlineInputBorder b(Color c, double w) => OutlineInputBorder(
+        borderRadius: BorderRadius.circular(_kFormFieldRadius),
+        borderSide: w == 0 ? BorderSide.none : BorderSide(color: c, width: w),
+      );
   return InputDecoration(
     labelText: label,
     hintText: hint,
@@ -72,9 +82,16 @@ InputDecoration piggyOutlinedDecoration(
     prefixText: prefix,
     suffixIcon: suffixIcon,
     prefixIcon: prefixIcon,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+    filled: true,
+    fillColor: PiggyTokens.surfaceSecondary(context),
+    contentPadding: const EdgeInsets.symmetric(
+      horizontal: PiggyDimens.p16,
+      vertical: 14,
     ),
+    border: b(Colors.transparent, 0),
+    enabledBorder: b(PiggyTokens.borderStrong(context), 1),
+    focusedBorder: b(PiggyTokens.primary(context), 1.6),
+    errorBorder: b(PiggyTokens.error(context), 1),
+    focusedErrorBorder: b(PiggyTokens.error(context), 1.6),
   );
 }

@@ -161,6 +161,68 @@ void main() {
     expect(find.byType(PiggySheetActions), findsOneWidget);
   });
 
+  testWidgets('底部操作行几何：按钮高 37、左右与字段区对齐 20、上下 12、上方 1px 分隔线', (tester) async {
+    await openSheet(tester, 2);
+
+    // PiggySheetCard 的最外盒含左右 / 底部 p16 的悬浮留距，卡片本体从 16 起。
+    final Rect shell = tester.getRect(find.byType(PiggySheetCard));
+    final Rect card = Rect.fromLTRB(
+      shell.left + 16,
+      shell.top,
+      shell.right - 16,
+      shell.bottom - 16,
+    );
+    final Rect cancel = tester.getRect(find.widgetWithText(FilledButton, '取消'));
+    final Rect confirm =
+        tester.getRect(find.widgetWithText(FilledButton, '保存'));
+
+    // 尺寸：高固定 37（8×2 内边距 + fs14 固定行高 21），两键等宽。
+    expect(cancel.height, 37);
+    expect(confirm.height, 37);
+    expect(cancel.width, confirm.width);
+
+    // 位置：按钮左右边界与上方输入框对齐（字段区水平内边距 20），
+    // 上下 12、按钮间距 12。
+    final Rect field = tester.getRect(find.byType(TextField).first);
+    expect(cancel.left, field.left, reason: '取消键左缘必须与输入框左缘成同一条竖线');
+    expect(confirm.right, field.right, reason: '保存键右缘必须与输入框右缘成同一条竖线');
+    expect(cancel.left - card.left, 20);
+    expect(card.right - confirm.right, 20);
+    expect(card.bottom - cancel.bottom, 12);
+    expect(confirm.left - cancel.right, 12);
+
+    // 分隔线：1px、与卡片等宽、距按钮顶 12（操作区与字段区划界）。
+    final Rect divider = tester.getRect(find.byType(Divider));
+    expect(divider.height, 1);
+    expect(divider.width, card.width);
+    expect(cancel.top - divider.bottom, 12);
+  });
+
+  testWidgets('按压反馈：按住整钮居中缩至 95%、松开回弹（无水波纹）', (tester) async {
+    await openSheet(tester, 2);
+
+    final Finder confirm = find.widgetWithText(FilledButton, '保存');
+    final Rect before = tester.getRect(confirm);
+
+    final TestGesture gesture = await tester.startGesture(before.center);
+    // 越过 tapDown 判定（kPressTimeout 100ms）→ 按钮进入按压态。
+    await tester.pump(const Duration(milliseconds: 110));
+    // 缩放过渡 50ms 完成后再量：视觉盒应为原尺寸的 95%。
+    await tester.pump(const Duration(milliseconds: 60));
+    final Rect pressed = tester.getRect(confirm);
+    expect(pressed.height, closeTo(before.height * 0.95, 0.01));
+    expect(pressed.width, closeTo(before.width * 0.95, 0.01));
+    // 居中缩放：中心不动。
+    expect(pressed.center.dx, closeTo(before.center.dx, 0.01));
+    expect(pressed.center.dy, closeTo(before.center.dy, 0.01));
+
+    await gesture.up();
+    await tester.pumpAndSettle();
+    final Rect released = tester.getRect(confirm);
+    expect(released.height, closeTo(before.height, 0.01));
+    expect(released.width, closeTo(before.width, 0.01));
+  });
+
   testWidgets('长表单：在抓取条上向下拖 → 可以关闭抽屉', (tester) async {
     await openSheet(tester, 12);
     final card = tester.getRect(find.byType(PiggySheetCard));

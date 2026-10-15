@@ -18,7 +18,9 @@ import 'sheet_drag.dart';
 /// ┌ 字段区（限高 + 内部滚动，下拉到顶继续拉 = 关闭）┐
 /// └ Flexible(loose) → PiggySheetDragContent → SingleChildScrollView ┘
 /// p20
-/// 「取消｜保存」（PiggySheetActions，**固定在卡片底部**）
+/// ─────── 1px 分隔线（与卡片等宽，操作区与字段区划界）───────
+/// 「取消｜保存」（PiggySheetActions，左右 20 / 上下 12 内边距 —— 边界与
+/// 上方字段区对齐，**固定在卡片底部**）
 /// ```
 ///
 /// 卡片 chrome（键盘避让 / 底部安全区 / 左右留距 / Material）由 [PiggySheetCard]
@@ -149,9 +151,19 @@ class PiggyFormSheet extends StatelessWidget {
               ),
             ),
             const SizedBox(height: PiggyDimens.p20),
+            // 操作区与字段区之间的分隔线：与卡片等宽（不随字段区的 p20
+            // 缩进），把固定在底部的按钮行从滚动内容里视觉断开。
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: PiggyTokens.divider(context),
+            ),
             Padding(
+              // 左右 20 与字段区的水平内边距一致：按钮的左右边界和上方输入框
+              // 对齐成同一条竖线；上下 12 保持操作区的呼吸感。
               padding: const EdgeInsets.symmetric(
                 horizontal: PiggyDimens.p20,
+                vertical: PiggyDimens.p12,
               ),
               child: PiggySheetActions(
                 cancelLabel: cancelLabel,
@@ -161,7 +173,6 @@ class PiggyFormSheet extends StatelessWidget {
                 confirmBusy: confirmBusy,
               ),
             ),
-            const SizedBox(height: PiggyDimens.p20),
           ],
         ),
       ),
