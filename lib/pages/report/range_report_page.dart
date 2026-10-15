@@ -13,6 +13,7 @@ import '../../utils/analytics_scope.dart';
 import '../../utils/format_utils.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/analytics/category_rank_row.dart';
+import '../../widgets/analytics/custom_field_stats_view.dart';
 import '../../widgets/charts/analytics_bar_chart.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/ui/wait_sliding_segmented_control.dart';
@@ -329,7 +330,8 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
                         _card(
                           context,
                           title: l10n.rangeReportCustomFieldTitle,
-                          child: _customFieldStats(context, l10n, data),
+                          child: CustomFieldStatsView(
+                              fields: data.customFields, dim: _dim),
                         ),
                       ],
                     ],
@@ -680,84 +682,6 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
         ],
       ),
     );
-  }
-
-  /// B2(v47)：自定义字段汇总卡内容。每个字段一段：字段名 + 值桶行。
-  /// 桶按当前维度（_dim）金额降序，超过 [_cfTopN] 合并进「其他」。
-  /// 注意：本卡的文字一律走 PiggyTextTokens —— 不新增 fontSize 字面量，
-  /// 避免把 U1 ratchet 基线顶高。
-  Widget _customFieldStats(
-      BuildContext context, AppLocalizations l10n, _ReportData data) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final field in data.customFields) ...[
-          Padding(
-            padding: const EdgeInsets.only(top: 6, bottom: 2),
-            child:
-                Text(field.name, style: PiggyTextTokens.strongTitle(context)),
-          ),
-          ..._customFieldValueRows(context, l10n, field),
-        ],
-      ],
-    );
-  }
-
-  List<Widget> _customFieldValueRows(BuildContext context,
-      AppLocalizations l10n, CustomFieldFieldStats field) {
-    const topN = 8;
-    final all = field.sorted(_dim);
-    final shown = all.take(topN).toList();
-    final rest = all.skip(topN).toList();
-    ({double income, double expense, int count}) mergeRest(
-        List<({String label, double income, double expense, int count})> src) {
-      var income = 0.0, expense = 0.0, count = 0;
-      for (final b in src) {
-        income += b.income;
-        expense += b.expense;
-        count += b.count;
-      }
-      return (income: income, expense: expense, count: count);
-    }
-
-    final buckets = [...shown];
-    if (rest.isNotEmpty) {
-      final merged = mergeRest(rest);
-      buckets.add((
-        label: l10n.commonOther,
-        income: merged.income,
-        expense: merged.expense,
-        count: merged.count
-      ));
-    }
-    return [
-      for (final b in buckets)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(b.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: PiggyTextTokens.body(context)),
-              ),
-              const SizedBox(width: 6),
-              Text(l10n.analyticsTxCountShort(b.count),
-                  style: PiggyTextTokens.caption(context)
-                      .copyWith(color: PiggyTokens.textTertiary(context))),
-              const SizedBox(width: 12),
-              AmountText(
-                value: _dim == 'income' ? b.income : b.expense,
-                signed: false,
-                showCurrency: true,
-                useCompactFormat: true,
-                style: PiggyTextTokens.strongTitle(context),
-              ),
-            ],
-          ),
-        ),
-    ];
   }
 
   /// 标签颜色是用户输入的 `#RRGGBB` / `#AARRGGBB`，脏值回落到调色板。

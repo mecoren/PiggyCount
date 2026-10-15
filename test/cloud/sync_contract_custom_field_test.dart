@@ -298,4 +298,166 @@ void main() {
       expect(CustomFieldOptionsCodec.decode(def.optionsJson), ['C']);
     });
   });
+
+  group('④ 导入 isRequired 的键存在语义（v57 必填）', () {
+    test('解析：缺 isRequired 键 → null（保留本地）；显式 true/false → 值', () {
+      Map<String, dynamic> payloadWith(Object? isRequiredOrNull,
+          {bool includeKey = true}) =>
+          {
+            'version': 15,
+            'items': <dynamic>[],
+            'customFields': [
+              {
+                'syncId': 'cf-1',
+                'name': '税费',
+                'fieldType': 'amount',
+                'sortOrder': 0,
+                if (includeKey) 'isRequired': isRequiredOrNull,
+              },
+            ],
+          };
+
+      final legacy = parseJsonToImportData(jsonEncode(payloadWith(null, includeKey: false)));
+      expect(legacy.customFields.single.isRequired, isNull,
+          reason: '旧快照缺键 → null → 导入侧不得覆盖本地必填设置');
+
+      final required = parseJsonToImportData(jsonEncode(payloadWith(true)));
+      expect(required.customFields.single.isRequired, isTrue);
+
+      final optional = parseJsonToImportData(jsonEncode(payloadWith(false)));
+      expect(optional.customFields.single.isRequired, isFalse,
+          reason: '显式 false 也是云端权威值，必须能覆盖本地 true');
+    });
+
+    test('缺键保留本地必填、显式值覆盖本地', () async {
+      final db = PiggyDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+      final repo = LocalRepository(db);
+      await db.customStatement(
+          "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+      await repo.createDefinition(
+        ledgerId: 1,
+        name: '税费',
+        fieldType: CustomFieldType.amount,
+        syncId: 'cf-1',
+        isRequired: true,
+      );
+
+      // ① 旧快照（缺 isRequired 键）→ 本地必填保留。
+      await dataImportService.importCustomFields(repo, 1, const [
+        ImportCustomField(
+          name: '税费',
+          fieldType: CustomFieldType.amount,
+          syncId: 'cf-1',
+        ),
+      ]);
+      var def = (await repo.getDefinitionsForLedger(1)).single;
+      expect(def.isRequired, isTrue,
+          reason: '旧快照不能清掉本地的必填设置');
+
+      // ② 显式 false → 覆盖本地。
+      await dataImportService.importCustomFields(repo, 1, const [
+        ImportCustomField(
+          name: '税费',
+          fieldType: CustomFieldType.amount,
+          syncId: 'cf-1',
+          isRequired: false,
+        ),
+      ]);
+      def = (await repo.getDefinitionsForLedger(1)).single;
+      expect(def.isRequired, isFalse);
+
+      // ③ 显式 true → 再覆盖回来。
+      await dataImportService.importCustomFields(repo, 1, const [
+        ImportCustomField(
+          name: '税费',
+          fieldType: CustomFieldType.amount,
+          syncId: 'cf-1',
+          isRequired: true,
+        ),
+      ]);
+      def = (await repo.getDefinitionsForLedger(1)).single;
+      expect(def.isRequired, isTrue);
+    });
+
+    test('导出恒写 isRequired 键（含 false）；往返后必填落库且指纹一致',
+        () async {
+      final dbA = PiggyDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(dbA.close);
+      final repoA = LocalRepository(dbA);
+      await dbA.customStatement(
+          "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+      await repoA.createDefinition(
+        ledgerId: 1,
+        name: '税费',
+        fieldType: CustomFieldType.amount,
+        syncId: 'cf-req',
+        isRequired: true,
+      );
+      await repoA.createDefinition(
+        ledgerId: 1,
+        name: '备注值',
+        fieldType: CustomFieldType.text,
+        syncId: 'cf-opt',
+        isRequired: false,
+      );
+
+      final exported = await exportTransactionsJson(dbA, 1);
+      final payload =
+          jsonDecode(exported.jsonStr) as Map<String, dynamic>;
+      final items =
+          (payload['customFields'] as List).cast<Map<String, dynamic>>();
+      final bySync = {for (final f in items) f['syncId'] as String: f};
+      expect(bySync['cf-req']!['isRequired'], isTrue);
+      expect(bySync['cf-opt']!['isRequired'], isFalse,
+          reason: 'false 也必须恒写键 —— 否则「取消必填」无法被快照表达');
+
+      final dbB = PiggyDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(dbB.close);
+      final repoB = LocalRepository(dbB);
+      await dbB.customStatement(
+          "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+      await dataImportService.importData(
+        repoB,
+        1,
+        parseJsonToImportData(exported.jsonStr),
+        defaultCurrency: 'CNY',
+      );
+
+      final defsB = await repoB.getDefinitionsForLedger(1);
+      final byNameB = {for (final d in defsB) d.name: d};
+      expect(byNameB['税费']!.isRequired, isTrue);
+      expect(byNameB['备注值']!.isRequired, isFalse);
+
+      final fpB = contentFingerprintFromMap(
+          jsonDecode((await exportTransactionsJson(dbB, 1)).jsonStr));
+      expect(fpB, contentFingerprintFromMap(payload),
+          reason: '往返后指纹必须一致，否则每轮同步都判「有差异」');
+    });
+
+    test('只改必填标记 → 指纹必须变化（否则永不传播）', () async {
+      final db = PiggyDatabase.forTesting(NativeDatabase.memory());
+      addTearDown(db.close);
+      final repo = LocalRepository(db);
+      await db.customStatement(
+          "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+      await repo.createDefinition(
+        ledgerId: 1,
+        name: '税费',
+        fieldType: CustomFieldType.amount,
+        syncId: 'cf-1',
+        isRequired: false,
+      );
+      final fpBefore = contentFingerprintFromMap(
+          jsonDecode((await exportTransactionsJson(db, 1)).jsonStr));
+
+      final defs = await repo.getDefinitionsForLedger(1);
+      await repo.updateDefinition(defs.single.id, isRequired: true);
+
+      final fpAfter = contentFingerprintFromMap(
+          jsonDecode((await exportTransactionsJson(db, 1)).jsonStr));
+      expect(fpAfter, isNot(fpBefore),
+          reason: '改了 isRequired 指纹却不变 → 必填标记永不跨设备传播');
+    });
+  });
 }

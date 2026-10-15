@@ -35,6 +35,7 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
     int sortOrder = 0,
     String? syncId,
     List<String>? options,
+    bool isRequired = false,
   }) async {
     final trimmed = name.trim();
     final dup = await (db.select(db.customFieldDefinitions)
@@ -60,6 +61,8 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
               syncId: d.Value(effectiveSyncId),
               // 空/未传 → NULL（无选项）。
               optionsJson: d.Value(CustomFieldOptionsCodec.encode(options)),
+              // v57 必填标记（记账表单提交时校验）。
+              isRequired: d.Value(isRequired),
             ),
           );
       await _recordDefinitionChange(
@@ -80,6 +83,7 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
     int? sortOrder,
     String? syncId,
     List<String>? options,
+    bool isRequired = false,
   }) async {
     final trimmed = name.trim();
     // 先按 syncId 锚定（导入/恢复路径的稳定身份优先）。
@@ -107,6 +111,7 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
       sortOrder: sortOrder ?? 0,
       syncId: syncId,
       options: options,
+      isRequired: isRequired,
     );
   }
 
@@ -117,6 +122,7 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
     String? fieldType,
     int? sortOrder,
     List<String>? options,
+    bool? isRequired,
   }) async {
     final row = await getDefinitionById(id);
     if (row == null) return;
@@ -145,6 +151,10 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
         // 非 null = 覆盖（空列表 → encode 返回 null → 列写 NULL = 清空选项）。
         optionsJson: options != null
             ? d.Value(CustomFieldOptionsCodec.encode(options))
+            : const d.Value.absent(),
+        // v57 三态：非 null = 覆盖必填标记；null = 不改动（与 options 同款）。
+        isRequired: isRequired != null
+            ? d.Value(isRequired)
             : const d.Value.absent(),
       ));
       if (row.syncId != null && row.syncId!.isNotEmpty) {
@@ -457,6 +467,28 @@ class LocalCustomFieldRepository implements CustomFieldRepository {
     if (v is BigInt) return v.toInt();
     if (v is num) return v.toInt();
     return 0;
+  }
+
+  @override
+  Future<Map<String, int>> countFilledPerField({required int ledgerId}) async {
+    // 一次取本账本全部有值行的 JSON，内存里按 syncId 逐字段计数：
+    // 与统计聚合同款「无 N+1」范式。值有效性判定复用 [CustomFieldValueCodec]
+    // 的规范化语义（null/空白/非法 → 不计），避免和值桶口径分叉。
+    final rows = await (db.select(db.transactions)
+          ..where((t) =>
+              t.ledgerId.equals(ledgerId) & t.customValuesJson.isNotNull()))
+        .get();
+    final counts = <String, int>{};
+    for (final t in rows) {
+      final values = CustomFieldValueCodec.decode(t.customValuesJson);
+      for (final entry in values.entries) {
+        // decode 后仍可能是显式 null 值的键（normalize 已剔除空值，这里再防
+        // 一层：值为 null 的键不算「填写」，与测试契约一致）。
+        if (entry.value == null) continue;
+        counts.update(entry.key, (v) => v + 1, ifAbsent: () => 1);
+      }
+    }
+    return counts;
   }
 
   // ============================================

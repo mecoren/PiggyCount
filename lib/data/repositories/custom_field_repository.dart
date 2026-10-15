@@ -22,6 +22,7 @@ abstract class CustomFieldRepository {
   /// [fieldType] 取 `amount | text | date | singleSelect | multiSelect`
   /// （见 `CustomFieldType`）。
   /// [options] 仅单选/多选使用；空/未传 → 列写 NULL（无选项）。
+  /// [isRequired] v57 必填标记：记账表单提交时该字段必须已填（默认非必填）。
   Future<int> createDefinition({
     required int ledgerId,
     required String name,
@@ -29,6 +30,7 @@ abstract class CustomFieldRepository {
     int sortOrder = 0,
     String? syncId,
     List<String>? options,
+    bool isRequired = false,
   });
 
   /// 按 name 取定义，不存在则建一条（get-or-create 语义，给导入/恢复用，
@@ -40,16 +42,19 @@ abstract class CustomFieldRepository {
     int? sortOrder,
     String? syncId,
     List<String>? options,
+    bool isRequired = false,
   });
 
   /// 更新定义。null 表示不改动该字段。
   /// [options] 非 null = 覆盖选项（空列表 → 清空为 NULL）；null = 不改动。
+  /// [isRequired] 非 null = 覆盖必填标记；null = 不改动（与 [options] 三态同款）。
   Future<void> updateDefinition(
     int id, {
     String? name,
     String? fieldType,
     int? sortOrder,
     List<String>? options,
+    bool? isRequired,
   });
 
   /// 删除定义，并**同时清理该账本下所有交易里对应该字段的值**。
@@ -130,4 +135,10 @@ abstract class CustomFieldRepository {
 
   /// 该账本下有多少笔交易填了自定义字段值（管理页删字段前提示影响面）。
   Future<int> countTransactionsWithValues(int ledgerId);
+
+  /// 该账本下**逐字段**的已填写笔数：fieldSyncId → 笔数（F5 管理页「已填写
+  /// n 笔」）。口径与 [countTransactionsWithValues] 的「有任一值的交易数」
+  /// 不同——这里是「含该字段有效值的交易数」，值为 null/空串不计；无值的
+  /// 字段不出现在 map 里（调用方按 0 兜底）。
+  Future<Map<String, int>> countFilledPerField({required int ledgerId});
 }

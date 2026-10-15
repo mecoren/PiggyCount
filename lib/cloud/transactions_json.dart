@@ -50,6 +50,15 @@ import 'sync_fingerprint.dart';
 ///   （`shouldRepublishSnapshotForFormatUpgrade`）一次性 force 重传收敛；
 ///   有退款关联或报销状态非 none 且云端仍是 v13 快照时指纹必然不等 → 走正常
 ///   diff / 合并，不会被误判成「仅格式升级」而自动覆盖。
+/// - v15：自定义字段「必填」标记（2026-10-13，`prd/custom_field_required`）——
+///   `customFields` 段每项新增 `isRequired` 键（布尔，**恒写**、含 false，同
+///   v13 `options` 的恒写范式 —— 否则「取消必填」无法被快照表达），导入侧
+///   **键存在语义**：键缺失 = 真·旧快照（v14 及以前不携带该键）→ 保留本地
+///   必填设置；显式值 = 云端权威覆盖。`sync_fingerprint` 的 `customFieldCanon`
+///   同批纳入 `isRequired`（缺键归一 `false`）。同样是**指纹算法值变化**：
+///   无必填字段的账本两端仍相等 → 升级门控一次性 force 重传收敛；有必填字段
+///   且云端仍是 v14 快照时指纹必然不等 → 走正常 diff / 合并，不会被误判成
+///   「仅格式升级」而自动覆盖。
 ///
 /// 消费方契约：凡是读到「云端快照 version < 本常量」的路径，都**不得**把
 /// 「指纹不相等」当作「内容不同」的证据（那是算法口径差异，不是数据差异）。
@@ -57,7 +66,7 @@ import 'sync_fingerprint.dart';
 /// 正常收敛 —— 判定见
 /// `TransactionsSyncManager.shouldRepublishSnapshotForFormatUpgrade`，
 /// 执行见 `StartupSyncChecker` 的状态检查循环。
-const int kSnapshotFormatVersion = 14;
+const int kSnapshotFormatVersion = 15;
 
 /// 账本交易数据的 JSON 导入导出工具
 ///
@@ -525,6 +534,9 @@ Future<ExportedLedgerJson> exportTransactionsJson(
       // 否则「清空选项」无法被快照表达，且类型由 select 改为 text 时两端
       // 永不收敛。缺键仅出现在真·旧快照（见解析侧键存在语义）。
       'options': CustomFieldOptionsCodec.decode(f.optionsJson),
+      // v15 必填：**恒写键**（含 false），否则「取消必填」无法被快照表达。
+      // 缺键仅出现在真·旧快照（见解析侧键存在语义）。
+      'isRequired': f.isRequired,
       'sortOrder': f.sortOrder,
     };
   }).toList();
@@ -1169,6 +1181,14 @@ ImportData parseJsonToImportData(String jsonStr) {
             ? CustomFieldOptionsCodec.normalize(rawOpts)
             : const <String>[];
       }
+      // v15 必填：**键存在语义** —— 键在（含 false）= 云端权威，交给导入侧
+      // 覆盖本地；键缺失 = 真·旧快照（v14 及以前不携带该键），isRequired 传
+      // null → 导入侧保留本地必填设置、不覆盖（旧快照不能清掉本地的必填配置）。
+      bool? isRequired;
+      if (m.containsKey('isRequired')) {
+        final rawReq = m['isRequired'];
+        isRequired = rawReq is bool ? rawReq : null;
+      }
       customFields.add(ImportCustomField(
         name: name,
         fieldType: (rawType != null && CustomFieldType.isValid(rawType))
@@ -1177,6 +1197,7 @@ ImportData parseJsonToImportData(String jsonStr) {
         syncId: _readString(m, 'syncId'),
         sortOrder: _readInt(m, 'sortOrder'),
         options: options,
+        isRequired: isRequired,
       ));
     }
   }

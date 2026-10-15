@@ -23,6 +23,7 @@ CustomFieldDefinition _def(int id, String syncId, String name, String type) =>
       createdAt: DateTime(2026, 1, 1),
       syncId: syncId,
       updatedAt: null,
+      isRequired: false,
     );
 
 typedef Row = ({String type, double nativeAmount, String? customValuesJson});
@@ -139,6 +140,7 @@ void main() {
         createdAt: DateTime(2026, 1, 1),
         syncId: null,
         updatedAt: null,
+        isRequired: false,
       );
       final defs = [
         _def(1, 'live', '有效', 'text'),

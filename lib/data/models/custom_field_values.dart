@@ -194,6 +194,42 @@ class CustomFieldValueCodec {
   static bool equals(Map<String, dynamic>? a, Map<String, dynamic>? b) =>
       canonical(a) == canonical(b);
 
+  /// 值 → 稳定展示标签（值桶键 / 筛选匹配键共用）：同一语义值必须落同一标签。
+  ///
+  /// 日期收敛到 yyyy-MM-dd **仅对 [fieldType] == date 生效**：文本字段的
+  /// 值可能碰巧可被 DateTime.tryParse 解析（如 "2026"），按类型判断才不会
+  /// 把文本值错误改写成日期。不可出标签（null/空串）返回 null。
+  static String? toLabel(dynamic value, String fieldType) {
+    if (value == null) return null;
+    if (value is num) return canonicalValue(value);
+    final s = value.toString().trim();
+    if (s.isEmpty) return null;
+    if (fieldType == CustomFieldType.date) {
+      final parsed = DateTime.tryParse(s);
+      if (parsed != null) {
+        return '${parsed.year.toString().padLeft(4, '0')}-'
+            '${parsed.month.toString().padLeft(2, '0')}-'
+            '${parsed.day.toString().padLeft(2, '0')}';
+      }
+    }
+    return s;
+  }
+
+  /// 值 → 稳定展示标签列表：标量出一个标签；列表值（v54 多选）按每个元素
+  /// 各出一个标签（空/全空 → 空列表）。
+  static List<String> toLabels(dynamic value, String fieldType) {
+    if (value is List) {
+      final out = <String>[];
+      for (final e in value) {
+        final l = toLabel(e, fieldType);
+        if (l != null) out.add(l);
+      }
+      return out;
+    }
+    final l = toLabel(value, fieldType);
+    return l == null ? const [] : [l];
+  }
+
   /// 存储字符串 → 展示文本（编辑表单回显用）。
   ///
   /// 金额按 [fieldType] 无关的通用数字渲染（去掉无意义的尾随 0），日期保留

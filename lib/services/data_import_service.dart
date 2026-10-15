@@ -204,12 +204,18 @@ class ImportCustomField {
   /// - 非 null（含空列表）= 云端权威 → 覆盖本地（空列表 → 清空为 NULL）。
   final List<String>? options;
 
+  /// v15 必填标记。**三态**（与 [options] 同款）：
+  /// - `null` = 键缺失（真·旧快照）→ 导入侧保留本地必填设置、不覆盖；
+  /// - 非 null（含 false）= 云端权威 → 覆盖本地。
+  final bool? isRequired;
+
   const ImportCustomField({
     required this.name,
     this.fieldType = 'text',
     this.syncId,
     this.sortOrder,
     this.options,
+    this.isRequired,
   });
 }
 
@@ -1119,6 +1125,8 @@ class DataImportService {
           sortOrder: field.sortOrder,
           syncId: field.syncId,
           options: field.options,
+          // 新建分支：显式值 = 云端权威；null（旧快照缺键）→ 默认非必填。
+          isRequired: field.isRequired ?? false,
         );
         final created = await repo.getDefinitionById(id);
         if (created != null) {
@@ -1170,7 +1178,13 @@ class DataImportService {
           CustomFieldOptionsCodec.canonical(cloudOptions) !=
               CustomFieldOptionsCodec.canonical(
                   CustomFieldOptionsCodec.decode(current.optionsJson));
-      if (!renaming && !needType && !needSort && !needOptions) continue;
+      // v15 必填对齐：同 options 三态 —— 仅当云端显式携带 isRequired 且与
+      // 本地不等时才写。null（旧快照缺键）→ 保留本地必填设置、不覆盖。
+      final needRequired =
+          field.isRequired != null && field.isRequired != current.isRequired;
+      if (!renaming && !needType && !needSort && !needOptions && !needRequired) {
+        continue;
+      }
 
       // 改名撞车：目标名已被同账本另一字段占用 → 只对齐类型/排序。
       final renameBlocked = renaming && byName.containsKey(field.name);
@@ -1182,6 +1196,8 @@ class DataImportService {
         sortOrder: field.sortOrder,
         // null → 不改动（旧快照）；非 null → 覆盖（含空列表 = 清空选项）。
         options: cloudOptions,
+        // null → 不改动（旧快照）；非 null → 覆盖必填标记。
+        isRequired: field.isRequired,
       );
 
       final updated = await repo.getDefinitionById(current.id);

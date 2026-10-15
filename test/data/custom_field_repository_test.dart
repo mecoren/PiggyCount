@@ -205,6 +205,19 @@ void main() {
       expect(await repo.countTransactionsWithValues(1), 1);
       expect(await repo.countTransactionsWithValues(2), 1);
     });
+
+    test('countFilledPerField 逐字段计数（F5 管理页「已填写 n 笔」）', () async {
+      await seedLedgers();
+      await seedTx(100, 1, valuesJson: '{"cf-1":1.0,"cf-2":"a"}');
+      await seedTx(101, 1, valuesJson: '{"cf-1":2.0}');
+      await seedTx(102, 1); // 无值行不计
+      await seedTx(103, 1, valuesJson: '{"cf-1":null}'); // null 值不算填写
+      await seedTx(200, 2, valuesJson: '{"cf-1":9.0}'); // 其他账本不计
+
+      final counts = await repo.countFilledPerField(ledgerId: 1);
+      expect(counts['cf-1'], 2);
+      expect(counts['cf-2'], 1);
+    });
   });
 
   group('删除定义连带清理值', () {

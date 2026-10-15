@@ -2835,6 +2835,54 @@
   "customFieldTextHint": "Enter text",
   "customFieldAmountHint": "0.00",
   "customFieldSortHint": "Long press to reorder",
+  "customFieldRequiredLabel": "Required",
+  "customFieldRequiredHint": "This field must be filled in when recording",
+  "customFieldRequiredBadge": "Required",
+  "customFieldRequiredMissing": "Please fill in required fields: {names}",
+  "customFieldAnalysisTitle": "Field Analysis",
+  "customFieldAnalysisEntry": "Field Analysis",
+  "customFieldFilledCount": "{count} filled",
+  "customFieldStatSum": "Sum",
+  "customFieldStatAvg": "Average",
+  "customFieldStatMin": "Min",
+  "customFieldStatMax": "Max",
+  "customFieldAnalysisValueDistribution": "Value Distribution",
+  "customFieldAnalysisMonthlyTrend": "Monthly Trend",
+  "customFieldAnalysisValueRank": "Value Ranking",
+  "customFieldAnalysisFillRate": "Fill Rate",
+  "customFieldAnalysisEmptySubtext": "Fill in this field when recording to see stats here",
+  "customFieldExportCsv": "Export CSV",
+  "customFieldExportAggregateCsv": "Export Summary",
+  "customFieldExportDetailCsv": "Export Details",
+  "customFieldExportSuccess": "Exported",
+  "customFieldCsvHeaderFilledCount": "Filled Count",
+  "customFieldCsvHeaderStatItem": "Stat Item",
+  "customFieldCsvHeaderValue": "Value",
+  "customFieldFilterChip": "{field}: {value}",
+  "@customFieldFilledCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@customFieldFilterChip": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@customFieldRequiredMissing": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "tagManageTitle": "Tags",
   "tagManageSubtitle": "Manage transaction tags",
   "tagManageEmpty": "No tags yet",

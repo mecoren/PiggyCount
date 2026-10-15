@@ -87,6 +87,7 @@ CustomFieldDefinition field({
       sortOrder: id,
       createdAt: DateTime(2026, 1, 1),
       syncId: syncId,
+      isRequired: false,
     );
 
 /// 只关心少数几列时的默认参数：一笔挂在「现金」账户上的支出。

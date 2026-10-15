@@ -140,11 +140,12 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   /// 笔」是**表单已经在屏幕上**时用户点按钮触发的，必须由 [didUpdateWidget] 就
   /// 地装填已渲染的表单（表单不关闭、不重建）。
   ///
-  /// 只覆盖「除金额外的字段」：金额 / 原始金额 / 发生日期一律不动（用户口径）。
+  /// 只覆盖「除金额外的字段」（金额 / 原始金额 / 发生日期一律不动），且**仅填
+  /// 目标字段的空缺** —— 已有值的字段保留用户现值（用户口径，2026-10-13）。
   final LastEntryDraft? prefill;
 
   /// 载荷版本号：调用方**每次带出都 +1**，子组件据此判定「这是一次新请求」
-  /// （同一份载荷连点两次也要重新装填）。与 [prefill] 成对使用。
+  /// （同一份载荷连点两次也要重新评估哪些字段还空着）。与 [prefill] 成对使用。
   final int prefillToken;
 
   /// 是否**把数字键盘钉在卡片底部**（2026-10-09）。
@@ -578,9 +579,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         _loadAccountCurrency(widget.initialAccountId!);
       }
     }
-    // 「带出上一笔」：这是**用户显式动作**，最后一手生效（覆盖上面那两条「迟到
-    // 初值」的补写）；只在本表单的类型与该载荷一致时应用 —— 快捷形态下支出 /
-    // 收入两份表单在 IndexedStack 里同时保活，同一份载荷会同时到达两者。
+    // 「带出上一笔」：这是**用户显式动作**，只在本表单的类型与该载荷一致时应用
+    // —— 快捷形态下支出 / 收入两份表单在 IndexedStack 里同时保活，同一份载荷
+    // 会同时到达两者。装填口径是「仅填空缺」，不动已有值（见 [_applyLastEntryPrefill]）。
     final prefill = widget.prefill;
     if (prefill != null &&
         widget.prefillToken != oldWidget.prefillToken &&
@@ -589,43 +590,76 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     }
   }
 
-  /// 把「带出上一笔」载荷就地装进已渲染的表单（字段级覆盖，不重建组件）。
+  /// 把「带出上一笔」载荷就地装进已渲染的表单（**仅填空缺**，不重建组件）。
   ///
-  /// 与构造初值的差别：
+  /// 三条口径（2026-10-13 用户确认）：
   /// - **只覆盖除金额外的字段** —— `_amountStr` / `_originalStr` / `_date` 一律不
-  ///   动（用户口径：复刻上一笔时只需重填金额，日期保持今天）；
-  /// - 覆盖是无条件的（「直接覆盖，不弹确认」）：即便用户已经选过分类 / 账户，
-  ///   也按载荷改掉，因此顺手把 `_categoryPicked` / `_accountPicked` 置真，防止
-  ///   首帧后才解析出的记忆分类 / 默认账户把带出的值顶回去；
-  /// - 自定义字段的 text / date / select 位靠换 `key` 重建分区刷新（见
-  ///   [_customFieldsSeed]），金额位走宿主每帧派生的 `amountTextOverride`，
-  ///   改 [_customValues] 即生效。
+  ///   动（复刻上一笔时只需重填金额，日期保持今天）；
+  /// - **只填空缺**：目标字段当前已有值就保留用户的，不被载荷顶掉。逐字段的
+  ///   「有值」判据见下；
+  /// - 金额类型的自定义字段已由装配方（`_buildLastEntryDraft`）整体剔除，这里
+  ///   天然收不到它们的值。
   ///
-  /// 直接改字段而不 `setState`：本方法只在 [didUpdateWidget] 里同步调用，紧跟
-  /// 其后就有一次 build。
+  /// **有值判据**：
+  /// - 分类 / 账户：以「用户主动选过」为准（`_categoryPicked` / `_accountPicked`），
+  ///   系统预填的默认账户、5 分钟继承来的分类**不算有值**，允许被上一笔替换；
+  /// - 备注：正文非空即算有值（连敏感标记一起保留）；
+  /// - 标签：已选任一标签即算有值；
+  /// - 两个开关：只有**已打开**才算有值 —— 只会把关闭的补上，绝不把用户打开的关掉；
+  /// - 币种：以「用户手选过」为准（`_pickedCurrency` 非空）；
+  /// - 自定义字段：逐个 syncId 判，当前值非空即保留。
+  ///
+  /// 填进分类 / 账户时顺手把 `_categoryPicked` / `_accountPicked` 置真，防止首帧后
+  /// 才解析出的记忆分类 / 默认账户把带出的值顶回去。自定义字段的 text / date /
+  /// select 位靠换 `key` 重建分区刷新（见 [_customFieldsSeed]），金额位走宿主每帧
+  /// 派生的 `amountTextOverride`，改 [_customValues] 即生效。
+  ///
+  /// 直接改字段而不 `setState`：本方法只在 [didUpdateWidget] 里同步调用，紧跟其
+  /// 后就有一次 build。
   void _applyLastEntryPrefill(LastEntryDraft draft) {
-    _category = draft.category;
-    _categoryPicked = true;
-    _selectedAccountId = draft.accountId;
-    _accountPicked = true;
-    if (draft.accountId != null) {
+    // 分类 / 账户：系统预填不算有值（用户口径），只有用户主动选过才保留。
+    if (!_categoryPicked && draft.category != null) {
+      _category = draft.category;
+      _categoryPicked = true;
+    }
+    if (!_accountPicked && draft.accountId != null) {
+      _selectedAccountId = draft.accountId;
+      _accountPicked = true;
       unawaited(_loadAccountCurrency(draft.accountId!));
     }
-    _noteCtrl.text = draft.note ?? '';
-    _noteSensitive = draft.noteSensitive;
-    _selectedTagIds = List<int>.from(draft.tagIds);
-    _excludeFromStats = draft.excludeFromStats;
-    _excludeFromBudget = draft.excludeFromBudget;
-    _pickedCurrency = draft.currencyCode?.toUpperCase();
-    // 自定义字段：值快照与分区种子一起换掉，并清掉「半截键盘串 / 未完成算式」，
-    // 否则旧串会盖住带出的值（[CustomFieldValueCodec] 的显示串回退链见
-    // `_customFieldStr`）。
-    _customValues = Map<String, dynamic>.from(draft.customValues);
-    _customFieldStrs.clear();
-    _accByTarget.remove(_AmountEditTarget.customField);
-    _opByTarget.remove(_AmountEditTarget.customField);
-    _customFieldsSeed = Map<String, dynamic>.from(draft.customValues);
-    _customFieldsSeedToken++;
+    // 备注：已有正文就整组保留（敏感标记随备注走，不单独覆盖）。
+    final note = draft.note ?? '';
+    if (_noteCtrl.text.trim().isEmpty && note.isNotEmpty) {
+      _noteCtrl.text = note;
+      _noteSensitive = draft.noteSensitive;
+    }
+    // 标签：已选过任意标签就保留。
+    if (_selectedTagIds.isEmpty && draft.tagIds.isNotEmpty) {
+      _selectedTagIds = List<int>.from(draft.tagIds);
+    }
+    // 开关：只有「已打开」算有值（默认关 = 空缺），故只会补上、不会关掉。
+    if (draft.excludeFromStats) _excludeFromStats = true;
+    if (draft.excludeFromBudget) _excludeFromBudget = true;
+    // 币种：只有用户手选过才算有值。
+    if (_pickedCurrency == null && draft.currencyCode != null) {
+      _pickedCurrency = draft.currencyCode!.toUpperCase();
+    }
+    // 自定义字段：逐 syncId 仅填空缺（空值在 codec 口径下等于「键不存在」）。
+    var customFilled = false;
+    final merged = Map<String, dynamic>.from(_customValues);
+    for (final entry in draft.customValues.entries) {
+      if (CustomFieldValueCodec.normalizeValue(merged[entry.key]) == null) {
+        merged[entry.key] = entry.value;
+        customFilled = true;
+      }
+    }
+    if (customFilled) {
+      // 金额类型已不在载荷里，故**不清** `_customFieldStrs` / 算式缓存 ——
+      // 清掉会把用户正在输入的自定义金额半成品一起抹掉。
+      _customValues = merged;
+      _customFieldsSeed = Map<String, dynamic>.from(merged);
+      _customFieldsSeedToken++;
+    }
     unawaited(_loadRecentNotes());
   }
 
@@ -1184,6 +1218,32 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
           context,
           AppLocalizations.of(context).transactionSelectCategoryRequired);
       return;
+    }
+
+    // v57 必填校验：设为必填的自定义字段未填 → 拦下并 Toast 提示缺少哪些
+    // 字段（新建 + 编辑交易都拦；周期账单模板 / CSV 导入 / 云端恢复走非本
+    // 提交路径不拦）。已填口径与落库口径一致：键盘串先并入快照，再经
+    // normalize 剔空后看 syncId 是否存在（金额 0 合法）。
+    _applyCustomFieldAmountValues();
+    final requiredDefs = (ref
+                .read(customFieldsForCurrentLedgerProvider)
+                .value ??
+            const <CustomFieldDefinition>[])
+        .where((d) => d.isRequired && (d.syncId ?? '').isNotEmpty)
+        .toList(growable: false);
+    if (requiredDefs.isNotEmpty) {
+      final filled = CustomFieldValueCodec.normalize(_customValues);
+      final missing = [
+        for (final d in requiredDefs)
+          if (!filled.containsKey(d.syncId)) d.name,
+      ];
+      if (missing.isNotEmpty) {
+        showToast(
+            context,
+            AppLocalizations.of(context)
+                .customFieldRequiredMissing(missing.join('、')));
+        return;
+      }
     }
 
     // 正常模式：提交

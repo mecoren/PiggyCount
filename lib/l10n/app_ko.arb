@@ -1951,6 +1951,54 @@
   "customFieldTextHint": "내용을 입력하세요",
   "customFieldAmountHint": "0.00",
   "customFieldSortHint": "길게 눌러 순서 변경",
+  "customFieldRequiredLabel": "필수",
+  "customFieldRequiredHint": "기입 시 반드시 입력해야 하는 필드입니다",
+  "customFieldRequiredBadge": "필수",
+  "customFieldRequiredMissing": "필수 항목을 입력해 주세요: {names}",
+  "customFieldAnalysisTitle": "필드 분석",
+  "customFieldAnalysisEntry": "필드 분석",
+  "customFieldFilledCount": "{count}건 입력",
+  "customFieldStatSum": "합계",
+  "customFieldStatAvg": "평균",
+  "customFieldStatMin": "최소",
+  "customFieldStatMax": "최대",
+  "customFieldAnalysisValueDistribution": "값 분포",
+  "customFieldAnalysisMonthlyTrend": "월별 추세",
+  "customFieldAnalysisValueRank": "값 순위",
+  "customFieldAnalysisFillRate": "입력율",
+  "customFieldAnalysisEmptySubtext": "기록 시 이 필드를 입력하면 통계가 표시됩니다",
+  "customFieldExportCsv": "CSV 내보내기",
+  "customFieldExportAggregateCsv": "요약 표 내보내기",
+  "customFieldExportDetailCsv": "내역 내보내기",
+  "customFieldExportSuccess": "내보냈습니다",
+  "customFieldCsvHeaderFilledCount": "입력된 건수",
+  "customFieldCsvHeaderStatItem": "통계 항목",
+  "customFieldCsvHeaderValue": "값",
+  "customFieldFilterChip": "{field}: {value}",
+  "@customFieldFilledCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@customFieldFilterChip": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@customFieldRequiredMissing": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "tagManageTitle": "태그",
   "tagManageSubtitle": "거래 태그를 관리하세요",
   "tagManageEmpty": "아직 태그가 없습니다",

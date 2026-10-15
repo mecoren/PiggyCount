@@ -2630,6 +2630,54 @@
   "customFieldTextHint": "请输入内容",
   "customFieldAmountHint": "0.00",
   "customFieldSortHint": "长按拖动排序",
+  "customFieldRequiredLabel": "必填",
+  "customFieldRequiredHint": "记账时必须填写该字段",
+  "customFieldRequiredBadge": "必填",
+  "customFieldRequiredMissing": "请填写必填字段：{names}",
+  "customFieldAnalysisTitle": "字段分析",
+  "customFieldAnalysisEntry": "字段分析",
+  "customFieldFilledCount": "已填写 {count} 笔",
+  "customFieldStatSum": "求和",
+  "customFieldStatAvg": "均值",
+  "customFieldStatMin": "最小",
+  "customFieldStatMax": "最大",
+  "customFieldAnalysisValueDistribution": "值分布",
+  "customFieldAnalysisMonthlyTrend": "按月趋势",
+  "customFieldAnalysisValueRank": "值排行",
+  "customFieldAnalysisFillRate": "填写率",
+  "customFieldAnalysisEmptySubtext": "在记账时填写该字段后，这里会展示统计",
+  "customFieldExportCsv": "导出 CSV",
+  "customFieldExportAggregateCsv": "导出汇总表",
+  "customFieldExportDetailCsv": "导出明细",
+  "customFieldExportSuccess": "已导出",
+  "customFieldCsvHeaderFilledCount": "已填写笔数",
+  "customFieldCsvHeaderStatItem": "统计项",
+  "customFieldCsvHeaderValue": "数值",
+  "customFieldFilterChip": "{field}：{value}",
+  "@customFieldFilledCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@customFieldFilterChip": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@customFieldRequiredMissing": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "tagManageTitle": "标签管理",
   "tagManageSubtitle": "管理交易标签",
   "tagManageEmpty": "暂无标签",

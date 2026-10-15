@@ -709,4 +709,28 @@ class LocalStatisticsRepository implements StatisticsRepository {
             ))
         .toList();
   }
+
+  @override
+  Future<int> customFieldStatsTotalCount({
+    required int ledgerId,
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final row = await db.customSelect(
+      'SELECT COUNT(*) AS c FROM transactions '
+      'WHERE ledger_id = ?1 AND exclude_from_stats = 0 '
+      'AND happened_at >= ?2 AND happened_at < ?3',
+      variables: [
+        d.Variable<int>(ledgerId),
+        d.Variable<DateTime>(start),
+        d.Variable<DateTime>(end),
+      ],
+      readsFrom: {db.transactions},
+    ).getSingle();
+    final v = row.data['c'];
+    if (v is int) return v;
+    if (v is BigInt) return v.toInt();
+    if (v is num) return v.toInt();
+    return 0;
+  }
 }

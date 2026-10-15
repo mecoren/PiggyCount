@@ -6414,6 +6414,86 @@ class AppLocalizationsEn extends AppLocalizations {
   String get customFieldSortHint => 'Long press to reorder';
 
   @override
+  String get customFieldRequiredLabel => 'Required';
+
+  @override
+  String get customFieldRequiredHint =>
+      'This field must be filled in when recording';
+
+  @override
+  String get customFieldRequiredBadge => 'Required';
+
+  @override
+  String customFieldRequiredMissing(String names) {
+    return 'Please fill in required fields: $names';
+  }
+
+  @override
+  String get customFieldAnalysisTitle => 'Field Analysis';
+
+  @override
+  String get customFieldAnalysisEntry => 'Field Analysis';
+
+  @override
+  String customFieldFilledCount(int count) {
+    return '$count filled';
+  }
+
+  @override
+  String get customFieldStatSum => 'Sum';
+
+  @override
+  String get customFieldStatAvg => 'Average';
+
+  @override
+  String get customFieldStatMin => 'Min';
+
+  @override
+  String get customFieldStatMax => 'Max';
+
+  @override
+  String get customFieldAnalysisValueDistribution => 'Value Distribution';
+
+  @override
+  String get customFieldAnalysisMonthlyTrend => 'Monthly Trend';
+
+  @override
+  String get customFieldAnalysisValueRank => 'Value Ranking';
+
+  @override
+  String get customFieldAnalysisFillRate => 'Fill Rate';
+
+  @override
+  String get customFieldAnalysisEmptySubtext =>
+      'Fill in this field when recording to see stats here';
+
+  @override
+  String get customFieldExportCsv => 'Export CSV';
+
+  @override
+  String get customFieldExportAggregateCsv => 'Export Summary';
+
+  @override
+  String get customFieldExportDetailCsv => 'Export Details';
+
+  @override
+  String get customFieldExportSuccess => 'Exported';
+
+  @override
+  String get customFieldCsvHeaderFilledCount => 'Filled Count';
+
+  @override
+  String get customFieldCsvHeaderStatItem => 'Stat Item';
+
+  @override
+  String get customFieldCsvHeaderValue => 'Value';
+
+  @override
+  String customFieldFilterChip(String field, String value) {
+    return '$field: $value';
+  }
+
+  @override
   String get tagManageTitle => 'Tags';
 
   @override

@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../providers/budget_providers.dart';
 import '../../data/db.dart';
+import '../../data/models/custom_field_values.dart';
 import '../../data/repositories/transaction_repository.dart'
     show RecentEntryDefaults;
 import '../../models/last_entry_draft.dart';
@@ -577,6 +578,8 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
   /// - 账户：复用 [_validatedAccountId]（删除 / 隐藏 / 币种不符 → 不带出）；
   /// - 标签：走 join 查询，已删除的标签天然不返回，避免悬空 id 在保存时炸外键；
   /// - 自定义字段：直接读交易行上的值（不依赖定义表是否已同步），定义缺了值也还在；
+  ///   **金额类型的自定义字段整个剔除** —— 与「记账金额不带出」同一口径，
+  ///   复刻上一笔时金额类的值一律要用户重填；
   /// - 备注敏感标记：设备本地标记，同文案沿用同一隐私处理（方向是安全侧）。
   ///
   /// **刻意不带出**：金额 / 原始金额 / 折算金额 / 汇率 / 发生日期（保持今天）/
@@ -601,7 +604,26 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
         : await _validatedAccountId(sourceAccountId, ledgerId);
 
     final tags = await repo.getTagsForTransaction(source.id);
-    final customValues = await repo.getValuesForTransaction(source.id);
+    final storedCustomValues = await repo.getValuesForTransaction(source.id);
+
+    // 金额类型的自定义字段（v47 那套「和记账金额一样用自制键盘输入」的字段）
+    // 一律不带出：定义表里 fieldType == amount 的 syncId 集合，把对应键整体剔除。
+    // 用定义表（而非值的形态）判断类型：文本字段也可能存的是数字字符串，
+    // 靠形态猜会误剔。decode 对空值返回 `const {}`（不可变），故这里新建 map
+    // 而不是原地 removeWhere。
+    final amountSyncIds = {
+      for (final def in await repo.getDefinitionsForLedger(ledgerId))
+        if (def.fieldType == CustomFieldType.amount &&
+            (def.syncId ?? '').isNotEmpty)
+          def.syncId!,
+    };
+    final customValues = amountSyncIds.isEmpty
+        ? storedCustomValues
+        : {
+            for (final e in storedCustomValues.entries)
+              if (!amountSyncIds.contains(e.key)) e.key: e.value,
+          };
+
     final sensitiveIds = await ref.read(sensitiveNoteServiceProvider).load();
 
     return LastEntryDraft(

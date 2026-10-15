@@ -138,62 +138,69 @@ class _RangePickerSheetState extends ConsumerState<_RangePickerSheet> {
         DateTimeRange(start: _start, end: _end!),
       ),
       maxHeight: calendarH + 110,
-      child: SizedBox(
-        height: calendarH,
-        child: TableCalendar<void>(
-          locale: Localizations.localeOf(context).toString(),
-          firstDay: widget.firstDate,
-          lastDay: widget.lastDate,
-          focusedDay: _focusedDay,
-          onDaySelected: _onDaySelected,
-          // 滑月后回写展示月（不 setState：下次重建传同值即可，重建由日历自己触发）
-          onPageChanged: (day) => _focusedDay = _day(day),
-          calendarFormat: CalendarFormat.month,
-          startingDayOfWeek: StartingDayOfWeek.monday,
-          availableGestures: AvailableGestures.horizontalSwipe,
-          rowHeight: _rowHeight,
-          daysOfWeekHeight: 30,
-          headerStyle: HeaderStyle(
-            formatButtonVisible: false,
-            titleCentered: true,
-            titleTextStyle:
-                PiggyTextTokens.strongTitle(context).copyWith(fontSize: PiggyTextTokens.fs17),
-            leftChevronIcon: Icon(Icons.chevron_left, color: primary),
-            rightChevronIcon: Icon(Icons.chevron_right, color: primary),
-          ),
-          calendarStyle: CalendarStyle(
-            cellMargin: const EdgeInsets.all(2),
-            outsideDaysVisible: true,
-          ),
-          daysOfWeekStyle: DaysOfWeekStyle(
-            weekdayStyle: PiggyTextTokens.label(context),
-            weekendStyle: PiggyTextTokens.label(context),
-          ),
-          calendarBuilders: CalendarBuilders<void>(
-            // prioritizedBuilder 盖过全部内置 builder（含 today/selected/
-            // range* 与越界格），一处出图，不必逐个 builder 重复判定。
-            prioritizedBuilder: (context, day, focusedDay) {
-              final isOutside = day.month != focusedDay.month;
-              final disabled = _outOfRange(day);
-              final end = _end;
-              final isEdge = isSameDay(day, _start) ||
-                  (end != null && isSameDay(day, end));
-              final inRange = !isEdge &&
-                  end != null &&
-                  _dayIndex(day) > _dayIndex(_start) &&
-                  _dayIndex(day) < _dayIndex(end);
-              return PiggyDateCell(
-                day: day,
-                primaryColor: primary,
-                holiday: isOutside || disabled ? null : holidays[_dateKey(day)],
-                isSelected: isEdge,
-                isInRange: inRange,
-                isToday:
-                    !isOutside && !disabled && isSameDay(day, DateTime.now()),
-                isOutside: isOutside,
-                isDisabled: disabled,
-              );
-            },
+      // 日历与卡片左右边缘留距：p12 与顶栏头部水平内边距同值，也与分类选择器
+      // 网格内容的水平内边距同口径。原先格子直接顶到卡片圆角、最左 / 最右一列
+      // 紧贴边缘。**只加水平方向** —— 高度仍由 calendarH 钉住，不压缩日历。
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: PiggyDimens.p12),
+        child: SizedBox(
+          height: calendarH,
+          child: TableCalendar<void>(
+            locale: Localizations.localeOf(context).toString(),
+            firstDay: widget.firstDate,
+            lastDay: widget.lastDate,
+            focusedDay: _focusedDay,
+            onDaySelected: _onDaySelected,
+            // 滑月后回写展示月（不 setState：下次重建传同值即可，重建由日历自己触发）
+            onPageChanged: (day) => _focusedDay = _day(day),
+            calendarFormat: CalendarFormat.month,
+            startingDayOfWeek: StartingDayOfWeek.monday,
+            availableGestures: AvailableGestures.horizontalSwipe,
+            rowHeight: _rowHeight,
+            daysOfWeekHeight: 30,
+            headerStyle: HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true,
+              titleTextStyle: PiggyTextTokens.strongTitle(context)
+                  .copyWith(fontSize: PiggyTextTokens.fs17),
+              leftChevronIcon: Icon(Icons.chevron_left, color: primary),
+              rightChevronIcon: Icon(Icons.chevron_right, color: primary),
+            ),
+            calendarStyle: CalendarStyle(
+              cellMargin: const EdgeInsets.all(2),
+              outsideDaysVisible: true,
+            ),
+            daysOfWeekStyle: DaysOfWeekStyle(
+              weekdayStyle: PiggyTextTokens.label(context),
+              weekendStyle: PiggyTextTokens.label(context),
+            ),
+            calendarBuilders: CalendarBuilders<void>(
+              // prioritizedBuilder 盖过全部内置 builder（含 today/selected/
+              // range* 与越界格），一处出图，不必逐个 builder 重复判定。
+              prioritizedBuilder: (context, day, focusedDay) {
+                final isOutside = day.month != focusedDay.month;
+                final disabled = _outOfRange(day);
+                final end = _end;
+                final isEdge = isSameDay(day, _start) ||
+                    (end != null && isSameDay(day, end));
+                final inRange = !isEdge &&
+                    end != null &&
+                    _dayIndex(day) > _dayIndex(_start) &&
+                    _dayIndex(day) < _dayIndex(end);
+                return PiggyDateCell(
+                  day: day,
+                  primaryColor: primary,
+                  holiday:
+                      isOutside || disabled ? null : holidays[_dateKey(day)],
+                  isSelected: isEdge,
+                  isInRange: inRange,
+                  isToday:
+                      !isOutside && !disabled && isSameDay(day, DateTime.now()),
+                  isOutside: isOutside,
+                  isDisabled: disabled,
+                );
+              },
+            ),
           ),
         ),
       ),

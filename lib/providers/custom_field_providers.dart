@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../data/db.dart';
 import '../data/models/custom_field_values.dart';
+import '../services/custom_field_stats_service.dart';
 import 'database_providers.dart';
 import 'theme_providers.dart';
 
@@ -61,6 +62,62 @@ final customFieldFilledCountProvider =
   ref.watch(customFieldListRefreshProvider);
   final repo = ref.watch(repositoryProvider);
   return repo.countTransactionsWithValues(ledgerId);
+});
+
+/// 该账本**逐字段**已填写笔数（F5 管理页「已填写 n 笔」）：syncId → 笔数。
+///
+/// 与 [customFieldFilledCountProvider]（有任一字段值的交易数）口径不同——
+/// 管理页按字段表达数据完备度，逐字段计数才有意义。无值字段不在 map 里，
+/// 渲染侧按 0 兜底。
+final customFieldFilledCountsProvider =
+    FutureProvider.family<Map<String, int>, int>((ref, ledgerId) async {
+  ref.watch(customFieldListRefreshProvider);
+  final repo = ref.watch(repositoryProvider);
+  return repo.countFilledPerField(ledgerId: ledgerId);
+});
+
+/// 指定区间内自定义字段值桶聚合（空 = 无定义或无值行）。
+///
+/// 「定义为空跳过值行查询」沿用 range_report_page 的优化（零定义账本不该
+/// 白扫一遍 transactions）。键含 refreshTick，与洞察主链路 memoKey 同源
+/// （U8 语义：新增/编辑交易后卡片数字随下次查询刷新）；autoDispose 对应
+/// 「旧键的 future 无人再读直接丢弃」，不随交互累积。
+final customFieldStatsForRangeProvider = FutureProvider.autoDispose.family<
+    List<CustomFieldFieldStats>,
+    ({int ledgerId, DateTime start, DateTime end, int refreshTick})>(
+    (ref, q) async {
+  ref.watch(customFieldListRefreshProvider);
+  final repo = ref.watch(repositoryProvider);
+  final defs = await repo.getDefinitionsForLedger(q.ledgerId);
+  if (defs.isEmpty) return const [];
+  final rows = await repo.customFieldStatsRows(
+      ledgerId: q.ledgerId, start: q.start, end: q.end);
+  return CustomFieldStatsService.aggregate(defs: defs, rows: rows);
+});
+
+/// 指定区间内自定义字段**分类型**统计（分析页用，prd/custom_field_stats_fullchain）。
+///
+/// 与 [customFieldStatsForRangeProvider] 同款键与失效语义；多取一次区间总笔数
+/// 作填写率分母（见 StatisticsRepository.customFieldStatsTotalCount 注释）。
+/// 无人填写的字段也输出（管理页/分析页字段切换需要）。
+final customFieldStatsDetailProvider = FutureProvider.autoDispose.family<
+    List<FieldStats>,
+    ({int ledgerId, DateTime start, DateTime end, int refreshTick})>(
+    (ref, q) async {
+  ref.watch(customFieldListRefreshProvider);
+  final repo = ref.watch(repositoryProvider);
+  final defs = await repo.getDefinitionsForLedger(q.ledgerId);
+  if (defs.isEmpty) return const [];
+  final results = await Future.wait([
+    repo.customFieldStatsRows(ledgerId: q.ledgerId, start: q.start, end: q.end),
+    repo.customFieldStatsTotalCount(
+        ledgerId: q.ledgerId, start: q.start, end: q.end),
+  ]);
+  final rows =
+      results[0] as List<({String type, double nativeAmount, String? customValuesJson})>;
+  final totalCount = results[1] as int;
+  return CustomFieldStatsService.aggregateDetail(
+      defs: defs, totalCount: totalCount, rows: rows);
 });
 
 /// B1(v47):当前账本的明细行自定义字段角标 —— txId → [(字段名, 展示文本)]。

@@ -384,6 +384,12 @@ class CustomFieldDefinitions extends Table {
   /// 展示与录入门槛顺序,数字越小越靠前(与 Categories/Tags.sortOrder 同义)。
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
+  /// v57: 必填标记（prd/custom_field_required）。true = 手工记账表单提交时该
+  /// 字段必须已填，未填拦截保存并 Toast 提醒。仅约束手工记账口（CSV 导入 /
+  /// 云端恢复 / 周期模板生成等批量路径不拦，避免历史数据回填被卡死）。
+  /// DEFAULT 0：存量字段零回填即「非必填」。
+  BoolColumn get isRequired => boolean().withDefault(const Constant(false))();
+
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   /// 跨设备同步唯一标识 (UUID)。字段值的 JSON 键就是本列。
@@ -789,6 +795,19 @@ const String createTransactionsRefundOfIndexSql =
     'CREATE INDEX IF NOT EXISTS idx_transactions_refund_of_id '
     'ON transactions(refund_of_id);';
 
+/// v57 迁移（自定义字段「必填」列，2026-10-13，prd/custom_field_required）的 DDL。
+///
+/// ⚠️ 同 [addTransactionCreatedAtSql]：必须放在 `@DriftDatabase` 注解**之前**
+/// （注解只作用于紧随其后的声明）。
+///
+/// **为什么公开**：让 `test/data/migration_v57_test.dart` 引用**同一份 SQL**，
+/// 避免测试自己另抄一份字面量后，改实现悄悄骗过测试（同 v55 的理由）。
+///
+/// NOT NULL + DEFAULT 0：SQLite 的 ADD COLUMN 对存量行以默认值填充，零回填即得
+/// 「非必填」正确默认态（纯新增迁移，无用户数据需要搬迁）。
+const String addCustomFieldIsRequiredSql =
+    'ALTER TABLE custom_field_definitions ADD COLUMN is_required INTEGER NOT NULL DEFAULT 0;';
+
 @DriftDatabase(tables: [
   Ledgers,
   Accounts,
@@ -829,7 +848,7 @@ class PiggyDatabase extends _$PiggyDatabase {
 
   @override
   int get schemaVersion =>
-      56; // v56: 退款关联 + 报销状态(F1-b, 2026-10-12, prd/refund_reimbursement) — transactions.refund_of_id(可空自引用,收入行指向被冲正的支出行,同账本 1:1;部分退款台账明确不做) + reimburse_status(none/pending/reimbursed 三态,NOT NULL DEFAULT 'none',存量零回填);两列都进快照/指纹/diff,同步契约格式版本同批 13→14(items 段新增 refundOfId[仅非 null 写键]/reimburseStatus[恒写] 键 + 指纹白名单 + _compareTx 严格比较 + coverage 守门夹具),shouldRepublishSnapshotForFormatUpgrade 按既有语义自动收敛(旧端 v13 内容一致→一次性 force 重传);预算回补口径:分类/总预算 used 把「refund_of_id 非空且 type='income'」的金额按负值冲减,只认退款行自身 category_id、跨月按退款发生月(local_budget_repository 两处 SQL);无 FK 约束(本库未开 FK),原交易软删→归档后指向悬空,UI 显示「原交易已删除」,恢复归档行(PK 不变)关联自然复原,purge 后刻意不清洗;新增 idx_transactions_refund_of_id 服务回补查询与反查; v55: 交易录入时刻 transactions.created_at(**本地专有列**,不进快照/指纹/local_changes;可空、无默认值 —— 只有用户交互式单笔录入 addTransaction 显式写入,批量导入/云恢复/周期模板生成保持 NULL,故它们不作「5 分钟内继承上一笔」的继承源);存量行回填 = happened_at(加 typeof 脏类型守护 + WHERE IS NULL 幂等守卫);新增复合索引 idx_transactions_ledger_created (ledger_id, created_at) 服务窗口查询; v54: 自定义字段新增「单选/多选」类型 — custom_field_definitions.options_json(JSON 字符串数组,NULL=无选项,仅 singleSelect/multiSelect 使用;每个选项只有一个字符串,既是存储值也是显示名);快照格式同批 v12→v13(customFields 段新增 options 键,指纹 customFieldCanon 纳入 options); v53: 储蓄目标(账本私有) — savings_goals 表(ledger_id/name/target_amount/currency/account_id/saved_amount/start_date/target_date/note/sort_order/sync_id):进度来源二选一,account_id 非空=账户模式(进度=该账户余额,币种锁账户币种,故无视图期汇率折算),为空=手动模式(进度=saved_amount,UI「存入/取出」调整);账户删除时 account_id 置 NULL 降级为手动模式,不级联删目标;刻意不建存入明细表(只回答「离目标还差多少」);ledger-scoped 同步实体,快照格式同批 v11→v12(新增 savingsGoals 段 + 段门控 sectionAbsent('savingsGoals', 12)); v52: 投资持仓(手动估值版) — holdings 表:投资账户金额改由 Σ(份额×生效净值) 接管,无持仓时回退 initial_balance(绝不双计);同批一次性预留行情接入字段(market/auto_quote 可同步,quote_price/quote_fetched_at/quote_source_id 为**本地专有缓存列**,不进快照/指纹/local_changes),后期接 A股/美股/加密行情源无需再升 schema 与快照格式版本； v51: 共享账本残留整体移除 — DROP shared_ledger_{categories,accounts,tags} / transaction_tag_overrides 四张死表(镜像表无写入方恒空) + ledgers(my_role/member_count/is_shared/owner_user_id) 与 transactions(category/account/to_account_sync_id_override + tag_sync_ids_override 死列) 八个共享专属列;同步契约三件套(指纹/快照/diff)与守门测试同批收窄; v50: 删除 ledger_members 死表(全库零读写;共享账本协作下线且项目无老用户,无需存量兼容); v49: 日历节假日本地缓存 — holiday_entries(date 主键,整年替换) + holiday_update_meta(单行 1:上次成功/尝试时间、连续失败数、自动更新开关);两张表都是「随时可整表重建」的本地缓存,不进同步白名单/指纹/diff/备份,也不挂 updated_at 触发器(与 exchange_rates 同定位) v48: 索引修复型迁移 — 补建 v10/v11/v12 只写进 onUpgrade 分支、onCreate 遗漏的 transaction_tags ×2 / budgets ×3 / transaction_attachments ×1 索引(2026-09-26 双端实测:新装库 EXPLAIN 报 SCAN transaction_tags,合并路径 tag 批量读固定 ~0.5s); v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
+      57; // v57: 自定义字段必填标记(prd/custom_field_required) — custom_field_definitions.is_required(INTEGER NOT NULL DEFAULT 0,纯新增零回填,存量字段恒非必填);语义=手工记账表单提交时必须已填,未填拦截+Toast(CSV导入/云端恢复/周期模板生成等批量路径不拦);快照格式同批 14→15(customFields 段新增 isRequired 键,恒写含 false,导入键存在三态:缺键=旧快照保留本地/显式值=云端权威覆盖;指纹 customFieldCanon 纳入 isRequired,缺键归一 false),shouldRepublishSnapshotForFormatUpgrade 按既有语义一次性收敛; v56: 退款关联 + 报销状态(F1-b, 2026-10-12, prd/refund_reimbursement) — transactions.refund_of_id(可空自引用,收入行指向被冲正的支出行,同账本 1:1;部分退款台账明确不做) + reimburse_status(none/pending/reimbursed 三态,NOT NULL DEFAULT 'none',存量零回填);两列都进快照/指纹/diff,同步契约格式版本同批 13→14(items 段新增 refundOfId[仅非 null 写键]/reimburseStatus[恒写] 键 + 指纹白名单 + _compareTx 严格比较 + coverage 守门夹具),shouldRepublishSnapshotForFormatUpgrade 按既有语义自动收敛(旧端 v13 内容一致→一次性 force 重传);预算回补口径:分类/总预算 used 把「refund_of_id 非空且 type='income'」的金额按负值冲减,只认退款行自身 category_id、跨月按退款发生月(local_budget_repository 两处 SQL);无 FK 约束(本库未开 FK),原交易软删→归档后指向悬空,UI 显示「原交易已删除」,恢复归档行(PK 不变)关联自然复原,purge 后刻意不清洗;新增 idx_transactions_refund_of_id 服务回补查询与反查; v55: 交易录入时刻 transactions.created_at(**本地专有列**,不进快照/指纹/local_changes;可空、无默认值 —— 只有用户交互式单笔录入 addTransaction 显式写入,批量导入/云恢复/周期模板生成保持 NULL,故它们不作「5 分钟内继承上一笔」的继承源);存量行回填 = happened_at(加 typeof 脏类型守护 + WHERE IS NULL 幂等守卫);新增复合索引 idx_transactions_ledger_created (ledger_id, created_at) 服务窗口查询; v54: 自定义字段新增「单选/多选」类型 — custom_field_definitions.options_json(JSON 字符串数组,NULL=无选项,仅 singleSelect/multiSelect 使用;每个选项只有一个字符串,既是存储值也是显示名);快照格式同批 v12→v13(customFields 段新增 options 键,指纹 customFieldCanon 纳入 options); v53: 储蓄目标(账本私有) — savings_goals 表(ledger_id/name/target_amount/currency/account_id/saved_amount/start_date/target_date/note/sort_order/sync_id):进度来源二选一,account_id 非空=账户模式(进度=该账户余额,币种锁账户币种,故无视图期汇率折算),为空=手动模式(进度=saved_amount,UI「存入/取出」调整);账户删除时 account_id 置 NULL 降级为手动模式,不级联删目标;刻意不建存入明细表(只回答「离目标还差多少」);ledger-scoped 同步实体,快照格式同批 v11→v12(新增 savingsGoals 段 + 段门控 sectionAbsent('savingsGoals', 12)); v52: 投资持仓(手动估值版) — holdings 表:投资账户金额改由 Σ(份额×生效净值) 接管,无持仓时回退 initial_balance(绝不双计);同批一次性预留行情接入字段(market/auto_quote 可同步,quote_price/quote_fetched_at/quote_source_id 为**本地专有缓存列**,不进快照/指纹/local_changes),后期接 A股/美股/加密行情源无需再升 schema 与快照格式版本； v51: 共享账本残留整体移除 — DROP shared_ledger_{categories,accounts,tags} / transaction_tag_overrides 四张死表(镜像表无写入方恒空) + ledgers(my_role/member_count/is_shared/owner_user_id) 与 transactions(category/account/to_account_sync_id_override + tag_sync_ids_override 死列) 八个共享专属列;同步契约三件套(指纹/快照/diff)与守门测试同批收窄; v50: 删除 ledger_members 死表(全库零读写;共享账本协作下线且项目无老用户,无需存量兼容); v49: 日历节假日本地缓存 — holiday_entries(date 主键,整年替换) + holiday_update_meta(单行 1:上次成功/尝试时间、连续失败数、自动更新开关);两张表都是「随时可整表重建」的本地缓存,不进同步白名单/指纹/diff/备份,也不挂 updated_at 触发器(与 exchange_rates 同定位) v48: 索引修复型迁移 — 补建 v10/v11/v12 只写进 onUpgrade 分支、onCreate 遗漏的 transaction_tags ×2 / budgets ×3 / transaction_attachments ×1 索引(2026-09-26 双端实测:新装库 EXPLAIN 报 SCAN transaction_tags,合并路径 tag 批量读固定 ~0.5s); v47: 周期账单模板自定义字段值 recurring_transactions.template_field_values({fieldSyncId: value} JSON 对象,生成实例时注入); v46: 账本自定义字段 — custom_field_definitions(按账本独立定义名称/类型/排序) + transactions.custom_values_json({fieldSyncId: value} JSON 对象,不参与列表/统计); v45: 账本明细原始金额 transactions.original_amount(用户手填,NULL=未填写即按记账金额); v44: 回收站 deleted_transactions(F1 交易建模,软删除搬行而非加列); v43: 同步指标 sync_op_log(审计 P0-1,本地成功率测量) + stale_remote_slots(审计 P1-6,换名收尾补删持久化); v42: 周期账单币种 — recurring_transactions.currency_code(移植 BeeCount #444); v41: local_changes 已推送行存量清理(数据治理 G-LC,双后端实测 6143 行无界增长); v40: transactions/categories/tags/ledgers 补 updated_at 列+UPDATE 触碰触发器(审计 T1); v39: local_changes (ledger_id,pushed_at) 查询索引(审计 C7); v38: 各实体 sync_id 唯一索引(审计 TBL-M1); v37: DROP 死表 sync_state(Supabase 增量游标残留,零读写方); v36: entity_change_watermarks 实体水位表(审计 S3); v35: local_changes 部分唯一索引(F2 加固)
 
   /// WAL 检查点后允许残留的字节数（见 [migration] 的 beforeOpen）。
   /// 公开给回归测试取期望值，别处不要依赖。
@@ -1978,6 +1997,27 @@ class PiggyDatabase extends _$PiggyDatabase {
                 addTransactionReimburseStatusSql);
             await customStatement(createTransactionsRefundOfIndexSql);
             logger.info('DBMigration', 'v56 迁移完成');
+          }
+          if (from < 57) {
+            // v57: 自定义字段「必填」列（2026-10-13，prd/custom_field_required）。
+            //
+            // 背景：自定义字段定义支持设置「必填」，手工记账表单提交时校验。
+            // 必填标记必须随定义跨设备同步，快照格式同批升到 15：
+            // - transactions_json.dart customFields 段新增 isRequired 键
+            //   （恒写、含 false），解析侧键存在三态（缺键 = 真·旧快照 → 保留
+            //   本地；显式值 = 云端权威覆盖）；
+            // - sync_fingerprint.dart customFieldCanon 纳入 isRequired
+            //   （缺键归一 false）；
+            // - sync_contract_custom_field_test.dart 成对守门。
+            // shouldRepublishSnapshotForFormatUpgrade 按既有语义自动收敛
+            // （云端 v14 且内容一致 → 一次性 force 重传，无需新门控代码）。
+            //
+            // 纯新增、零回填：is_required NOT NULL DEFAULT 0，SQLite ADD COLUMN
+            // 对存量行填默认值（存量字段一律「非必填」）。
+            logger.info('DBMigration', '开始迁移到 v57: 自定义字段必填标记');
+            await _addColumnIfMissing('custom_field_definitions', 'is_required',
+                addCustomFieldIsRequiredSql);
+            logger.info('DBMigration', 'v57 迁移完成');
           }
         },
         onCreate: (m) async {
