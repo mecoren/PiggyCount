@@ -127,6 +127,68 @@ void main() {
     expect(amountText(tester), '12.');
   });
 
+  testWidgets('Delete 键与退格同效', (tester) async {
+    await db.customStatement(
+        "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+
+    await type(tester, [LogicalKeyboardKey.digit1, LogicalKeyboardKey.digit2]);
+    expect(amountText(tester), '12');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.delete);
+    await tester.pump();
+    expect(amountText(tester), '1', reason: 'Delete 与退格同效');
+  });
+
+  testWidgets('Esc 键：与标题栏关闭同一动作，关掉弹层', (tester) async {
+    await db.customStatement(
+        "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+    // 推入路由而非直接当 home：Esc 走 maybePop，放在根路由上没得弹、断言不了。
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        repositoryProvider.overrideWithValue(repo),
+        currentLedgerProvider
+            .overrideWith((ref) => Stream<Ledger?>.value(cnyLedger())),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => Scaffold(
+                      body: AmountEditorSheet(
+                        categoryName: '餐饮',
+                        initialDate: DateTime(2026, 9, 18),
+                        ledgerId: 1,
+                        onSubmit: (_) {},
+                      ),
+                    ),
+                  ),
+                ),
+                child: const Text('打开记账'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('打开记账'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AmountEditorSheet), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AmountEditorSheet), findsNothing,
+        reason: 'Esc 与标题栏关闭按钮同动作，应关掉弹层');
+  });
+
   testWidgets('运算符键 + Enter 先当等号求值，不提交', (tester) async {
     await db.customStatement(
         "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");

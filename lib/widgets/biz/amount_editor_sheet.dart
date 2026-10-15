@@ -278,6 +278,8 @@ final Map<int, LogicalKeyboardKey> _kAndroidKeyMap = {
   154: LogicalKeyboardKey.numpadDivide, // KEYCODE_NUMPAD_DIVIDE
   66: LogicalKeyboardKey.enter, // KEYCODE_ENTER
   160: LogicalKeyboardKey.numpadEnter, // KEYCODE_NUMPAD_ENTER
+  112: LogicalKeyboardKey.delete, // KEYCODE_FORWARD_DEL
+  111: LogicalKeyboardKey.escape, // KEYCODE_ESCAPE
 };
 
 class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
@@ -1315,7 +1317,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   ///
   /// 金额位是纯展示组件：没有输入连接，**这条通路不会弹输入法**；物理按键
   /// 只能在这里路由到屏幕小键盘的既有逻辑（[_append] / [_backspace] /
-  /// [_applyOp] / [_doneKeyTap]），触摸动线逐字不变。
+  /// [_applyOp] / [_doneKeyTap]）与弹层关闭，触摸动线逐字不变。
   ///
   /// 两条来源共用同一处理：
   /// - 框架 [HardwareKeyboard]（真机蓝牙键盘 / 桌面端 / widget 测试）；
@@ -1364,7 +1366,8 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       _append('.');
       return true;
     }
-    if (key == LogicalKeyboardKey.backspace) {
+    if (key == LogicalKeyboardKey.backspace ||
+        key == LogicalKeyboardKey.delete) {
       _backspace();
       return true;
     }
@@ -1391,6 +1394,11 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         key == LogicalKeyboardKey.numpadEnter) {
       if (!_isDoneEnabled) return false;
       unawaited(_doneKeyTap());
+      return true;
+    }
+    if (key == LogicalKeyboardKey.escape) {
+      // 与标题栏关闭按钮同一动作：关掉当前这一层记账弹层。
+      Navigator.of(context).maybePop();
       return true;
     }
     return false;
