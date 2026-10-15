@@ -762,6 +762,9 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage> {
       key: ValueKey('quickAmount_$kind'),
       // 抽屉形态：数字键盘钉在卡片底部，只有上半属性区滚动（2026-10-09）。
       pinKeypad: true,
+      // 支出 / 收入两份表单在 IndexedStack 里同时保活，硬件键盘输入只放行
+      // 当前分段这份 —— 否则一次击键会同时输进两份表单（2026-10-15）。
+      hardwareKeysEnabled: _selectedKind == kind,
       // 历史字段：金额表单不再靠它展示/提交分类（改走 displayCategory 与提交
       // 结果里的 category），保留是为了不动其它调用方的签名。
       categoryName: _quickCategoryByKind[kind]?.name ?? '',

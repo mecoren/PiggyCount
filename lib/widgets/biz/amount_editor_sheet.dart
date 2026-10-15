@@ -12,6 +12,7 @@ import '../../data/models/custom_field_values.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/data/note_history_service.dart';
+import '../../services/platform/hardware_key_bridge.dart';
 import '../../models/note_history.dart';
 import '../../models/last_entry_draft.dart';
 import '../../services/attachment_service.dart';
@@ -159,10 +160,20 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   /// 漂移（肌肉记忆失效），「完成」键也会被滚出可视区。快捷记账抽屉传 true。
   final bool pinKeypad;
 
+  /// 是否接收硬件键盘输入（模拟器硬件键盘 / 投屏注入 / 蓝牙键盘，2026-10-15）。
+  ///
+  /// 金额位是纯展示组件（无输入连接，**这条通路不会弹输入法**），物理按键由
+  /// [HardwareKeyboard] 全局监听接住后路由到屏幕小键盘的既有逻辑。快捷抽屉的
+  /// 支出 / 收入两份表单在 IndexedStack 里同时保活，宿主必须**只对当前可见的
+  /// 分段传 true** —— 否则一次击键会同时输进两份表单。其余调用方单实例，默认
+  /// true 即可。
+  final bool hardwareKeysEnabled;
+
   const AmountEditorSheet({
     super.key,
     required this.categoryName,
     this.pinKeypad = false,
+    this.hardwareKeysEnabled = true,
     this.categoryId,
     this.displayCategory,
     this.onPickCategory,
@@ -199,6 +210,74 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
 /// v47 增加 [customField]：自定义字段里的金额位也由这套键盘输入（具体是哪个
 /// 字段另由 `_customFieldSyncId` 指定）。
 enum _AmountEditTarget { amount, original, customField }
+
+/// 硬件键盘数字键 → 字符（主键盘排与小键盘同映射）。
+/// 非 const：LogicalKeyboardKey 无常量相等性，做不了 const map 的键。
+final Map<LogicalKeyboardKey, String> _kHardwareDigits = {
+  LogicalKeyboardKey.digit0: '0',
+  LogicalKeyboardKey.digit1: '1',
+  LogicalKeyboardKey.digit2: '2',
+  LogicalKeyboardKey.digit3: '3',
+  LogicalKeyboardKey.digit4: '4',
+  LogicalKeyboardKey.digit5: '5',
+  LogicalKeyboardKey.digit6: '6',
+  LogicalKeyboardKey.digit7: '7',
+  LogicalKeyboardKey.digit8: '8',
+  LogicalKeyboardKey.digit9: '9',
+  LogicalKeyboardKey.numpad0: '0',
+  LogicalKeyboardKey.numpad1: '1',
+  LogicalKeyboardKey.numpad2: '2',
+  LogicalKeyboardKey.numpad3: '3',
+  LogicalKeyboardKey.numpad4: '4',
+  LogicalKeyboardKey.numpad5: '5',
+  LogicalKeyboardKey.numpad6: '6',
+  LogicalKeyboardKey.numpad7: '7',
+  LogicalKeyboardKey.numpad8: '8',
+  LogicalKeyboardKey.numpad9: '9',
+};
+
+/// Android `KeyEvent.keyCode` → [LogicalKeyboardKey]（原生 Activity 层转发用）。
+///
+/// MuMu 模拟器 / 投屏注入的物理按键进不了 Flutter 框架层，只能由原生
+/// `MainActivity.dispatchKeyEvent` 截获后经 [HardwareKeyBridge] 回传原始 keyCode，
+/// 在这里映射回逻辑键，复用与框架通路完全相同的 [_handleLogicalKey]。常量值取自
+/// `android.view.KeyEvent`（KEYCODE_0=7…KEYCODE_9=16、KEYCODE_NUMPAD_0=144…）。
+final Map<int, LogicalKeyboardKey> _kAndroidKeyMap = {
+  7: LogicalKeyboardKey.digit0,
+  8: LogicalKeyboardKey.digit1,
+  9: LogicalKeyboardKey.digit2,
+  10: LogicalKeyboardKey.digit3,
+  11: LogicalKeyboardKey.digit4,
+  12: LogicalKeyboardKey.digit5,
+  13: LogicalKeyboardKey.digit6,
+  14: LogicalKeyboardKey.digit7,
+  15: LogicalKeyboardKey.digit8,
+  16: LogicalKeyboardKey.digit9,
+  144: LogicalKeyboardKey.numpad0,
+  145: LogicalKeyboardKey.numpad1,
+  146: LogicalKeyboardKey.numpad2,
+  147: LogicalKeyboardKey.numpad3,
+  148: LogicalKeyboardKey.numpad4,
+  149: LogicalKeyboardKey.numpad5,
+  150: LogicalKeyboardKey.numpad6,
+  151: LogicalKeyboardKey.numpad7,
+  152: LogicalKeyboardKey.numpad8,
+  153: LogicalKeyboardKey.numpad9,
+  56: LogicalKeyboardKey.period, // KEYCODE_PERIOD
+  55: LogicalKeyboardKey.comma, // KEYCODE_COMMA
+  158: LogicalKeyboardKey.numpadDecimal, // KEYCODE_NUMPAD_DOT
+  67: LogicalKeyboardKey.backspace, // KEYCODE_DEL
+  81: LogicalKeyboardKey.add, // KEYCODE_PLUS
+  157: LogicalKeyboardKey.numpadAdd, // KEYCODE_NUMPAD_ADD
+  69: LogicalKeyboardKey.minus, // KEYCODE_MINUS
+  156: LogicalKeyboardKey.numpadSubtract, // KEYCODE_NUMPAD_SUBTRACT
+  17: LogicalKeyboardKey.asterisk, // KEYCODE_STAR
+  155: LogicalKeyboardKey.numpadMultiply, // KEYCODE_NUMPAD_MULTIPLY
+  76: LogicalKeyboardKey.slash, // KEYCODE_SLASH
+  154: LogicalKeyboardKey.numpadDivide, // KEYCODE_NUMPAD_DIVIDE
+  66: LogicalKeyboardKey.enter, // KEYCODE_ENTER
+  160: LogicalKeyboardKey.numpadEnter, // KEYCODE_NUMPAD_ENTER
+};
 
 class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   /// 键盘上方与属性区之间的间距（[AmountEditorSheet.pinKeypad] 形态复用同一个值）。
@@ -343,6 +422,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
   /// 点自定义字段的金额位：把下方数字键盘的输入目标切到它。
   void _focusCustomField(String syncId) {
+    _returnToKeypad();
     setState(() {
       if (_customFieldSyncId != syncId) {
         // 换字段：上一个字段遗留的半截算式（累加器/运算符）不能带过来
@@ -366,6 +446,10 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
   // 备注框焦点节点
   final FocusNode _noteFocusNode = FocusNode();
+
+  /// 本表单所在路由：硬件键盘监听靠它判「有没有子界面盖在上面」——
+  /// 分类 / 币种 / 退款选择器等子路由 isCurrent 时本表单不接键。
+  ModalRoute<dynamic>? _route;
 
   // 防重复提交标志
   bool _isSubmitting = false;
@@ -457,11 +541,28 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
     // 加载最近使用的备注
     _loadRecentNotes();
+    HardwareKeyboard.instance.addHandler(_onHardwareKey);
+    // MuMu / 投屏注入进不了框架层：再挂一条原生 Activity 转发通路，并按焦点变化
+    // 动态开关原生捕获（焦点进输入框时放行给框架，避免抢走备注框打字 / 系统键）。
+    HardwareKeyBridge.addListener(_onNativeKey);
+    FocusManager.instance.addListener(_updateKeyCapture);
+    _updateKeyCapture();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _route = ModalRoute.of(context);
+    _updateKeyCapture();
   }
 
   @override
   void didUpdateWidget(covariant AmountEditorSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // 快捷抽屉切换支出 / 收入分段时 hardwareKeysEnabled 会翻转，重算原生捕获归属。
+    if (widget.hardwareKeysEnabled != oldWidget.hardwareKeysEnabled) {
+      _updateKeyCapture();
+    }
     // 新流程（金额表单优先）的调用方可能在首帧之后才解析出记忆分类 / 默认
     // 账户，此处把它们补进已渲染的表单 —— 用户没动过才补，动过就以用户的
     // 选择为准。
@@ -530,6 +631,10 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onHardwareKey);
+    HardwareKeyBridge.removeListener(_onNativeKey);
+    HardwareKeyBridge.setCaptureOwner(this, false);
+    FocusManager.instance.removeListener(_updateKeyCapture);
     _noteFocusNode.dispose();
     super.dispose();
   }
@@ -1023,6 +1128,229 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     SystemSound.play(SystemSoundType.click);
   }
 
+  /// 运算符键作用于**当前输入目标**：不再把焦点抢回记账金额，
+  /// 两个金额位的运算状态各自独立（_accByTarget / _opByTarget）。
+  void _applyOp(String op) {
+    final cur = _parsedActive();
+    if (_op == null) {
+      // 首次点击运算符，将当前值存入累加器
+      _acc = cur;
+    } else {
+      // 左到右:先把上一个运算符算掉
+      _acc = _compute(_acc, _op!, cur);
+    }
+    _op = op;
+    _activeStr = '0';
+    HapticFeedback.selectionClick();
+    SystemSound.play(SystemSoundType.click);
+    setState(() {});
+  }
+
+  /// 等号：完成当前运算，将结果写回当前目标，清空该目标的运算状态。
+  void _applyEquals() {
+    final op = _opByTarget[_editTarget];
+    if (op == null) return; // 没有运算符，不执行
+    final cur = _parsedActive();
+    final total = _compute(_acc, op, cur);
+    _activeStr = _trimZeros(total);
+    _acc = 0;
+    _op = null;
+    _applyCustomFieldAmountValues();
+    HapticFeedback.selectionClick();
+    SystemSound.play(SystemSoundType.click);
+    setState(() {});
+  }
+
+  /// 「完成」键可用性（屏幕键与硬件 Enter 共用）：提交求值钉在**记账金额**，
+  /// 与当前焦点无关（否则焦点在原始金额时会漏算记账侧的算式）。
+  bool get _isDoneEnabled {
+    final total = _isDoneTotal();
+    return (_op != null ? true : total.abs() > 0) && !_isSubmitting;
+  }
+
+  /// 「完成」键（与硬件键盘 Enter）：运算模式下先当等号，否则提交。
+  Future<void> _doneKeyTap() async {
+    if (_op != null) {
+      // 运算模式：点击等号计算结果
+      _applyEquals();
+      return;
+    }
+
+    // 新建记账强制选分类：未选直接拦下并提示（分类位
+    // 已不再预填，用户忘选是高频路径）。编辑存量无分类
+    // 交易时 requireCategory=false，不拦。
+    if (widget.requireCategory && _category == null) {
+      showToast(
+          context,
+          AppLocalizations.of(context).transactionSelectCategoryRequired);
+      return;
+    }
+
+    // 正常模式：提交
+    // 防重复点击
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+
+    // v30:折本位币快照。外币且汇率无效 → 阻断(L8)。
+    final txCurrency = _txCurrency();
+    final ledgerBase = ref.read(currentLedgerCurrencyProvider);
+    double? nativeAmount;
+    if (txCurrency == ledgerBase) {
+      nativeAmount = _isDoneTotal().abs();
+    } else {
+      final r = _currentRate();
+      if (r == null || r <= 0) {
+        setState(() => _isSubmitting = false);
+        showToast(context, AppLocalizations.of(context).txRateMissingHint);
+        return;
+      }
+      nativeAmount = _isDoneTotal().abs() * r;
+    }
+
+    HapticFeedback.lightImpact();
+    SystemSound.play(SystemSoundType.click);
+    // v45 原始金额:空串/非法输入 → null,由仓储层
+    // 在保存时兜底为记账金额(产品口径:每条明细都有
+    // 原始金额)。
+    final ogText = _originalStr.trim();
+    final originalAmount = ogText.isEmpty ? null : double.tryParse(ogText);
+    widget.onSubmit((
+      amount: _isDoneTotal().abs(), // 始终正数
+      note: _noteCtrl.text.isEmpty ? null : _noteCtrl.text,
+      noteSensitive: _noteSensitive,
+      date: _date,
+      accountId: _selectedAccountId,
+      tagIds: _selectedTagIds,
+      pendingAttachments: _pendingAttachments,
+      // 表单内部持有的分类（用户可能刚在本表单里换过）。
+      category: _category,
+      excludeFromStats: _excludeFromStats,
+      excludeFromBudget: _excludeFromBudget,
+      currencyCode: txCurrency,
+      nativeAmount: nativeAmount,
+      originalAmount: originalAmount,
+      // v46 自定义字段:原值与现值都为空 → null
+      // (不改动,避免把别的设备已填的值抹掉);
+      // 否则提交全量快照(空 map = 显式清空)。
+      customValues:
+          (_customValues.isEmpty && widget.initialCustomValues.isEmpty)
+              ? null
+              : Map<String, dynamic>.from(_customValues),
+      // v56 退款关联 + 报销状态（F1-b）
+      refundOfId: _refundOfId,
+      reimburseStatus: _reimburseStatus,
+    ));
+
+    // 注意：不需要在这里重置 _isSubmitting
+    // 因为提交后整个 Sheet 会被关闭，State 会被销毁
+  }
+
+  /// 提交金额：记账金额位的运算求值（与 [_isDoneEnabled] 同口径）。
+  double _isDoneTotal() {
+    final cur = double.tryParse(_amountStr) ?? 0.0;
+    return _amountOp == null ? cur : _compute(_amountAcc, _amountOp!, cur);
+  }
+
+  /// 硬件键盘输入通路（模拟器硬件键盘 / 投屏注入 / 蓝牙键盘）。
+  ///
+  /// 金额位是纯展示组件：没有输入连接，**这条通路不会弹输入法**；物理按键
+  /// 只能在这里路由到屏幕小键盘的既有逻辑（[_append] / [_backspace] /
+  /// [_applyOp] / [_doneKeyTap]），触摸动线逐字不变。
+  ///
+  /// 两条来源共用同一处理：
+  /// - 框架 [HardwareKeyboard]（真机蓝牙键盘 / 桌面端 / widget 测试）；
+  /// - 原生 [HardwareKeyBridge]（MuMu / 投屏注入进不了框架层时的兜底，见桥文档）。
+  ///
+  /// 三道闸门缺一不可（[_shouldHandleHardwareKeys]）：
+  /// [AmountEditorSheet.hardwareKeysEnabled]（IndexedStack 保活的多份表单只放行
+  /// 当前可见那份）；路由 isCurrent（分类 / 币种等子界面盖在上面时不抢键）；焦点
+  /// 不在输入框内（备注 / 自定义文本框打字时不抢键）。
+  bool _onHardwareKey(KeyEvent event) {
+    if (event is KeyUpEvent) return false;
+    if (!_shouldHandleHardwareKeys()) return false;
+    return _handleLogicalKey(event.logicalKey);
+  }
+
+  /// 原生 Activity 层回传的按键（keyCode 为 Android `KeyEvent.keyCode`）。
+  void _onNativeKey(int keyCode) {
+    if (!_shouldHandleHardwareKeys()) return;
+    final key = _kAndroidKeyMap[keyCode];
+    if (key != null) _handleLogicalKey(key);
+  }
+
+  bool _shouldHandleHardwareKeys() {
+    if (!widget.hardwareKeysEnabled) return false;
+    final route = _route;
+    if (route == null || !route.isCurrent) return false;
+    return !_isEditableTextFocused();
+  }
+
+  bool _isEditableTextFocused() {
+    final focusContext = FocusManager.instance.primaryFocus?.context;
+    return focusContext != null &&
+        focusContext.findAncestorWidgetOfExactType<EditableText>() != null;
+  }
+
+  /// 把逻辑键路由到屏幕小键盘逻辑；返回 true = 本次按键已被消费。
+  bool _handleLogicalKey(LogicalKeyboardKey key) {
+    final digit = _kHardwareDigits[key];
+    if (digit != null) {
+      _append(digit);
+      return true;
+    }
+    if (key == LogicalKeyboardKey.period ||
+        key == LogicalKeyboardKey.comma ||
+        key == LogicalKeyboardKey.numpadDecimal) {
+      _append('.');
+      return true;
+    }
+    if (key == LogicalKeyboardKey.backspace) {
+      _backspace();
+      return true;
+    }
+    if (key == LogicalKeyboardKey.add || key == LogicalKeyboardKey.numpadAdd) {
+      _applyOp('+');
+      return true;
+    }
+    if (key == LogicalKeyboardKey.minus ||
+        key == LogicalKeyboardKey.numpadSubtract) {
+      _applyOp('-');
+      return true;
+    }
+    if (key == LogicalKeyboardKey.asterisk ||
+        key == LogicalKeyboardKey.numpadMultiply) {
+      _applyOp('×');
+      return true;
+    }
+    if (key == LogicalKeyboardKey.slash ||
+        key == LogicalKeyboardKey.numpadDivide) {
+      _applyOp('÷');
+      return true;
+    }
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      if (!_isDoneEnabled) return false;
+      unawaited(_doneKeyTap());
+      return true;
+    }
+    return false;
+  }
+
+  /// 重新计算是否让原生 Activity 捕获按键：仅当本表单可接键（[_shouldHandleHardwareKeys]）
+  /// 时才开启捕获，否则原生放行给框架（备注框打字、BACK 等系统键不受影响）。
+  void _updateKeyCapture() {
+    HardwareKeyBridge.setCaptureOwner(this, _shouldHandleHardwareKeys());
+  }
+
+  /// 点金额位 = 回到键盘输入，主动收起输入框焦点。
+  ///
+  /// 金额位是纯展示、不可聚焦：点它**不会**自动清掉备注 / 自定义文本框的焦点。
+  /// 若不主动 unfocus，闸门（[_isEditableTextFocused]）会一直判「输入框持有焦点」，
+  /// 原生捕获保持关闭、硬件键再也回不到金额位 —— 表现为「选过备注后键盘输不进金额」。
+  void _returnToKeypad() {
+    FocusManager.instance.primaryFocus?.unfocus();
+  }
+
   // 旧 _toggleSign 已废弃，符号由类别含义决定
 
   // _setToday 移除，改为点击日历按钮选择日期
@@ -1106,39 +1434,6 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
     double parsed() => double.tryParse(_amountStr) ?? 0.0;
 
-    void applyOp(String op) {
-      // 运算符作用于**当前输入目标**：不再把焦点抢回记账金额，
-      // 两个金额位的运算状态各自独立（_accByTarget / _opByTarget）。
-      final cur = _parsedActive();
-      if (_op == null) {
-        // 首次点击运算符，将当前值存入累加器
-        _acc = cur;
-      } else {
-        // 左到右:先把上一个运算符算掉
-        _acc = _compute(_acc, _op!, cur);
-      }
-      _op = op;
-      _activeStr = '0';
-      HapticFeedback.selectionClick();
-      SystemSound.play(SystemSoundType.click);
-      setState(() {});
-    }
-
-    // 计算等号：完成当前运算，将结果写回当前目标，清空该目标的运算状态
-    void applyEquals() {
-      final op = _opByTarget[_editTarget];
-      if (op == null) return; // 没有运算符，不执行
-      final cur = _parsedActive();
-      final total = _compute(_acc, op, cur);
-      _activeStr = _trimZeros(total);
-      _acc = 0;
-      _op = null;
-      _applyCustomFieldAmountValues();
-      HapticFeedback.selectionClick();
-      SystemSound.play(SystemSoundType.click);
-      setState(() {});
-    }
-
     Widget keyBtn(String label, {Color? bg, Color? fg, VoidCallback? onTap}) {
       return Padding(
         // 供 widget 测试定位数字键（金额输入目标切换回归）。
@@ -1191,16 +1486,16 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
           borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
           child: InkWell(
             borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-            onTap: () => applyOp(activeOp),
+            onTap: () => _applyOp(activeOp),
             // 双击 / 长按都是「切到另一组运算符并直接应用」(一步用上另一个);
             // applyOp 内部已带触感/声音。
             onDoubleTap: () {
               onToggle();
-              applyOp(isMul ? addSubOp : mulDivOp);
+              _applyOp(isMul ? addSubOp : mulDivOp);
             },
             onLongPress: () {
               onToggle();
-              applyOp(isMul ? addSubOp : mulDivOp);
+              _applyOp(isMul ? addSubOp : mulDivOp);
             },
             child: SizedBox(
               height: 60,
@@ -1311,8 +1606,11 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     Expanded(
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTap: () => setState(
-                            () => _editTarget = _AmountEditTarget.amount),
+                        onTap: () {
+                          _returnToKeypad();
+                          setState(
+                              () => _editTarget = _AmountEditTarget.amount);
+                        },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 120),
                           padding: const EdgeInsets.symmetric(
@@ -1412,8 +1710,11 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                 Expanded(
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: () => setState(
-                        () => _editTarget = _AmountEditTarget.original),
+                    onTap: () {
+                      _returnToKeypad();
+                      setState(
+                          () => _editTarget = _AmountEditTarget.original);
+                    },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 120),
                       height: 40,
@@ -1602,17 +1903,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     ),
                   );
               Widget doneKey() {
-                // 提交的是**记账金额**：求值必须用记账金额位的运算状态，
-                // 与当前焦点无关（否则焦点在原始金额时会漏算记账侧的算式）。
-                final cur = parsed();
-                final total = _amountOp == null
-                    ? cur
-                    : _compute(_amountAcc, _amountOp!, cur);
-
                 // 当前焦点位仍在运算中时，「完成」先当等号用。
                 final isInCalcMode = _op != null;
-                final isEnabled =
-                    (isInCalcMode ? true : total.abs() > 0) && !_isSubmitting;
+                final isEnabled = _isDoneEnabled;
 
                 return Padding(
                   padding: const EdgeInsets.all(6),
@@ -1623,92 +1916,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-                      onTap: isEnabled
-                          ? () async {
-                              if (isInCalcMode) {
-                                // 运算模式：点击等号计算结果
-                                applyEquals();
-                                return;
-                              }
-
-                              // 新建记账强制选分类：未选直接拦下并提示（分类位
-                              // 已不再预填，用户忘选是高频路径）。编辑存量无分类
-                              // 交易时 requireCategory=false，不拦。
-                              if (widget.requireCategory && _category == null) {
-                                showToast(
-                                    context,
-                                    AppLocalizations.of(context)
-                                        .transactionSelectCategoryRequired);
-                                return;
-                              }
-
-                              // 正常模式：提交
-                              // 防重复点击
-                              if (_isSubmitting) return;
-                              setState(() => _isSubmitting = true);
-
-                              // v30:折本位币快照。外币且汇率无效 → 阻断(L8)。
-                              final txCurrency = _txCurrency();
-                              final ledgerBase =
-                                  ref.read(currentLedgerCurrencyProvider);
-                              double? nativeAmount;
-                              if (txCurrency == ledgerBase) {
-                                nativeAmount = total.abs();
-                              } else {
-                                final r = _currentRate();
-                                if (r == null || r <= 0) {
-                                  setState(() => _isSubmitting = false);
-                                  showToast(
-                                      context,
-                                      AppLocalizations.of(context)
-                                          .txRateMissingHint);
-                                  return;
-                                }
-                                nativeAmount = total.abs() * r;
-                              }
-
-                              HapticFeedback.lightImpact();
-                              SystemSound.play(SystemSoundType.click);
-                              // v45 原始金额:空串/非法输入 → null,由仓储层
-                              // 在保存时兜底为记账金额(产品口径:每条明细都有
-                              // 原始金额)。
-                              final ogText = _originalStr.trim();
-                              final originalAmount = ogText.isEmpty
-                                  ? null
-                                  : double.tryParse(ogText);
-                              widget.onSubmit((
-                                amount: total.abs(), // 始终正数
-                                note: _noteCtrl.text.isEmpty
-                                    ? null
-                                    : _noteCtrl.text,
-                                noteSensitive: _noteSensitive,
-                                date: _date,
-                                accountId: _selectedAccountId,
-                                tagIds: _selectedTagIds,
-                                pendingAttachments: _pendingAttachments,
-                                // 表单内部持有的分类（用户可能刚在本表单里换过）。
-                                category: _category,
-                                excludeFromStats: _excludeFromStats,
-                                excludeFromBudget: _excludeFromBudget,
-                                currencyCode: txCurrency,
-                                nativeAmount: nativeAmount,
-                                originalAmount: originalAmount,
-                                // v46 自定义字段:原值与现值都为空 → null
-                                // (不改动,避免把别的设备已填的值抹掉);
-                                // 否则提交全量快照(空 map = 显式清空)。
-                                customValues: (_customValues.isEmpty &&
-                                        widget.initialCustomValues.isEmpty)
-                                    ? null
-                                    : Map<String, dynamic>.from(_customValues),
-                                // v56 退款关联 + 报销状态（F1-b）
-                                refundOfId: _refundOfId,
-                                reimburseStatus: _reimburseStatus,
-                              ));
-
-                              // 注意：不需要在这里重置 _isSubmitting
-                              // 因为提交后整个 Sheet 会被关闭，State 会被销毁
-                            }
-                          : null,
+                      onTap: isEnabled ? _doneKeyTap : null,
                       child: SizedBox(
                         height: 60,
                         child: Center(

@@ -26,8 +26,15 @@ class MainActivity: FlutterFragmentActivity() {
     private val SECURITY_CHANNEL = "com.wait.piggycount/security"
     private val LOGGER_CHANNEL = "com.piggycount.logger"
     private val SHARE_CHANNEL = "com.wait.piggycount/share"
+    private val KEYS_CHANNEL = "com.wait.piggycount/hardware_keys"
 
     private var screenshotObserver: ScreenshotObserver? = null
+
+    // 金额抽屉是否请求捕获硬件按键（MuMu / 投屏注入进不了 Flutter 框架层，改由
+    // Activity.dispatchKeyEvent 截获数字/运算/退格/回车键转发给 Dart，见
+    // lib/services/platform/hardware_key_bridge.dart）。
+    private var hardwareKeyCapture = false
+    private var keysChannel: MethodChannel? = null
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
@@ -162,6 +169,18 @@ class MainActivity: FlutterFragmentActivity() {
             LoggerPlugin.error("MainActivity", "这是一条 ERROR 日志")
         }, 2000)
 
+        // 硬件按键转发的MethodChannel（金额抽屉捕获开关）
+        keysChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, KEYS_CHANNEL)
+        keysChannel!!.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "setCapture" -> {
+                    hardwareKeyCapture = call.argument<Boolean>("enabled") ?: false
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
         // 截图监听的MethodChannel
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SCREENSHOT_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -254,6 +273,38 @@ class MainActivity: FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    /**
+     * Activity 级按键分发：金额抽屉请求捕获时，把数字 / 运算 / 退格 / 回车键转发给
+     * Dart 并吞掉（返回 true），避免与 Flutter 框架通路重复处理；其余按键（含 BACK）
+     * 一律放行给 super，系统导航与备注框打字不受影响。
+     *
+     * MuMu 模拟器 / 投屏注入的物理按键进不了 FlutterView.dispatchKeyEvent（框架
+     * HardwareKeyboard 收不到），但这条 Activity 级路径是活的，故在此兜底转发。
+     */
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (hardwareKeyCapture && isCapturedKey(event.keyCode)) {
+            if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                keysChannel?.invokeMethod("onKeyDown", mapOf("keyCode" to event.keyCode))
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    /** 金额抽屉会消费的 Android keyCode 集合（与 Dart 侧 `_kAndroidKeyMap` 对齐）。 */
+    private fun isCapturedKey(keyCode: Int): Boolean = when (keyCode) {
+        in 7..16,          // KEYCODE_0 .. KEYCODE_9
+        in 144..153,       // KEYCODE_NUMPAD_0 .. KEYCODE_NUMPAD_9
+        56, 55, 158,       // PERIOD / COMMA / NUMPAD_DOT
+        67,                // DEL（退格）
+        81, 157,           // PLUS / NUMPAD_ADD
+        69, 156,           // MINUS / NUMPAD_SUBTRACT
+        17, 155,           // STAR / NUMPAD_MULTIPLY
+        76, 154,           // SLASH / NUMPAD_DIVIDE
+        66, 160 -> true    // ENTER / NUMPAD_ENTER
+        else -> false
     }
 
     /**
