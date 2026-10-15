@@ -212,76 +212,6 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
 /// 字段另由 `_customFieldSyncId` 指定）。
 enum _AmountEditTarget { amount, original, customField }
 
-/// 硬件键盘数字键 → 字符（主键盘排与小键盘同映射）。
-/// 非 const：LogicalKeyboardKey 无常量相等性，做不了 const map 的键。
-final Map<LogicalKeyboardKey, String> _kHardwareDigits = {
-  LogicalKeyboardKey.digit0: '0',
-  LogicalKeyboardKey.digit1: '1',
-  LogicalKeyboardKey.digit2: '2',
-  LogicalKeyboardKey.digit3: '3',
-  LogicalKeyboardKey.digit4: '4',
-  LogicalKeyboardKey.digit5: '5',
-  LogicalKeyboardKey.digit6: '6',
-  LogicalKeyboardKey.digit7: '7',
-  LogicalKeyboardKey.digit8: '8',
-  LogicalKeyboardKey.digit9: '9',
-  LogicalKeyboardKey.numpad0: '0',
-  LogicalKeyboardKey.numpad1: '1',
-  LogicalKeyboardKey.numpad2: '2',
-  LogicalKeyboardKey.numpad3: '3',
-  LogicalKeyboardKey.numpad4: '4',
-  LogicalKeyboardKey.numpad5: '5',
-  LogicalKeyboardKey.numpad6: '6',
-  LogicalKeyboardKey.numpad7: '7',
-  LogicalKeyboardKey.numpad8: '8',
-  LogicalKeyboardKey.numpad9: '9',
-};
-
-/// Android `KeyEvent.keyCode` → [LogicalKeyboardKey]（原生 Activity 层转发用）。
-///
-/// MuMu 模拟器 / 投屏注入的物理按键进不了 Flutter 框架层，只能由原生
-/// `MainActivity.dispatchKeyEvent` 截获后经 [HardwareKeyBridge] 回传原始 keyCode，
-/// 在这里映射回逻辑键，复用与框架通路完全相同的 [_handleLogicalKey]。常量值取自
-/// `android.view.KeyEvent`（KEYCODE_0=7…KEYCODE_9=16、KEYCODE_NUMPAD_0=144…）。
-final Map<int, LogicalKeyboardKey> _kAndroidKeyMap = {
-  7: LogicalKeyboardKey.digit0,
-  8: LogicalKeyboardKey.digit1,
-  9: LogicalKeyboardKey.digit2,
-  10: LogicalKeyboardKey.digit3,
-  11: LogicalKeyboardKey.digit4,
-  12: LogicalKeyboardKey.digit5,
-  13: LogicalKeyboardKey.digit6,
-  14: LogicalKeyboardKey.digit7,
-  15: LogicalKeyboardKey.digit8,
-  16: LogicalKeyboardKey.digit9,
-  144: LogicalKeyboardKey.numpad0,
-  145: LogicalKeyboardKey.numpad1,
-  146: LogicalKeyboardKey.numpad2,
-  147: LogicalKeyboardKey.numpad3,
-  148: LogicalKeyboardKey.numpad4,
-  149: LogicalKeyboardKey.numpad5,
-  150: LogicalKeyboardKey.numpad6,
-  151: LogicalKeyboardKey.numpad7,
-  152: LogicalKeyboardKey.numpad8,
-  153: LogicalKeyboardKey.numpad9,
-  56: LogicalKeyboardKey.period, // KEYCODE_PERIOD
-  55: LogicalKeyboardKey.comma, // KEYCODE_COMMA
-  158: LogicalKeyboardKey.numpadDecimal, // KEYCODE_NUMPAD_DOT
-  67: LogicalKeyboardKey.backspace, // KEYCODE_DEL
-  81: LogicalKeyboardKey.add, // KEYCODE_PLUS
-  157: LogicalKeyboardKey.numpadAdd, // KEYCODE_NUMPAD_ADD
-  69: LogicalKeyboardKey.minus, // KEYCODE_MINUS
-  156: LogicalKeyboardKey.numpadSubtract, // KEYCODE_NUMPAD_SUBTRACT
-  17: LogicalKeyboardKey.asterisk, // KEYCODE_STAR
-  155: LogicalKeyboardKey.numpadMultiply, // KEYCODE_NUMPAD_MULTIPLY
-  76: LogicalKeyboardKey.slash, // KEYCODE_SLASH
-  154: LogicalKeyboardKey.numpadDivide, // KEYCODE_NUMPAD_DIVIDE
-  66: LogicalKeyboardKey.enter, // KEYCODE_ENTER
-  160: LogicalKeyboardKey.numpadEnter, // KEYCODE_NUMPAD_ENTER
-  112: LogicalKeyboardKey.delete, // KEYCODE_FORWARD_DEL
-  111: LogicalKeyboardKey.escape, // KEYCODE_ESCAPE
-};
-
 class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   /// 键盘上方与属性区之间的间距（[AmountEditorSheet.pinKeypad] 形态复用同一个值）。
   static const double _keypadGap = 10;
@@ -1336,7 +1266,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   /// 原生 Activity 层回传的按键（keyCode 为 Android `KeyEvent.keyCode`）。
   void _onNativeKey(int keyCode) {
     if (!_shouldHandleHardwareKeys()) return;
-    final key = _kAndroidKeyMap[keyCode];
+    final key = logicalKeyFromAndroidKeyCode(keyCode);
     if (key != null) _handleLogicalKey(key);
   }
 
@@ -1355,7 +1285,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
   /// 把逻辑键路由到屏幕小键盘逻辑；返回 true = 本次按键已被消费。
   bool _handleLogicalKey(LogicalKeyboardKey key) {
-    final digit = _kHardwareDigits[key];
+    final digit = kHardwareDigits[key];
     if (digit != null) {
       _append(digit);
       return true;

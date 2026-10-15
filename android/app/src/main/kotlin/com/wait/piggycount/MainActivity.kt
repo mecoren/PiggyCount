@@ -293,7 +293,15 @@ class MainActivity: FlutterFragmentActivity() {
         return super.dispatchKeyEvent(event)
     }
 
-    /** 金额抽屉会消费的 Android keyCode 集合（与 Dart 侧 `_kAndroidKeyMap` 对齐）。 */
+    /**
+     * 金额抽屉 / 日期时间滚轮抽屉会消费的 Android keyCode 集合
+     * （与 Dart 侧 `kAndroidKeyMap` 对齐）。
+     *
+     * 刻意不含 KEYCODE_TAB(61) / KEYCODE_FORWARD_DEL(112) / KEYCODE_ESCAPE(111)：
+     * 原生捕获命中的键一律被吞（return true），吞 TAB 会破坏系统级键盘导航与
+     * 无障碍，这三个键在真机蓝牙键盘 / 桌面端 / 测试里走框架层通路本来就能收到，
+     * 不该为了模拟器去牺牲系统键。
+     */
     private fun isCapturedKey(keyCode: Int): Boolean = when (keyCode) {
         in 7..16,          // KEYCODE_0 .. KEYCODE_9
         in 144..153,       // KEYCODE_NUMPAD_0 .. KEYCODE_NUMPAD_9
@@ -303,6 +311,7 @@ class MainActivity: FlutterFragmentActivity() {
         69, 156,           // MINUS / NUMPAD_SUBTRACT
         17, 155,           // STAR / NUMPAD_MULTIPLY
         76, 154,           // SLASH / NUMPAD_DIVIDE
+        19, 20, 21, 22,    // DPAD_UP / DPAD_DOWN / DPAD_LEFT / DPAD_RIGHT
         66, 160 -> true    // ENTER / NUMPAD_ENTER
         else -> false
     }

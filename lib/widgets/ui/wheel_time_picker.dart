@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
 import 'haptics.dart';
 import 'picker_sheet.dart';
+import 'wheel_key_input.dart';
 
 /// 时间选择抽屉（左小时 / 右分钟）。
 ///
@@ -32,7 +33,8 @@ Future<TimeOfDay?> showWheelTimePicker(
   );
 }
 
-class _WheelTimePickerState extends State<WheelTimePicker> {
+class _WheelTimePickerState extends State<WheelTimePicker>
+    with WheelKeyInputMixin<WheelTimePicker> {
   late int hour;
   late int minute;
   late FixedExtentScrollController _hourCtrl;
@@ -55,19 +57,60 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
   }
 
   @override
+  List<WheelKeyColumn> buildKeyColumns() => [
+        WheelKeyColumn(
+          width: 2,
+          minOf: () => 0,
+          maxOf: () => 23,
+          currentOf: () => hour,
+          onApply: (v) => _applyHour(v, syncWheel: true),
+        ),
+        WheelKeyColumn(
+          width: 2,
+          minOf: () => 0,
+          maxOf: () => 59,
+          currentOf: () => minute,
+          onApply: (v) => _applyMinute(v, syncWheel: true),
+        ),
+      ];
+
+  @override
+  void confirmFromKeyboard() =>
+      Navigator.pop(context, TimeOfDay(hour: hour, minute: minute));
+
+  /// 设值 + 落位。
+  ///
+  /// [syncWheel] 只在键盘通路为 true：触摸通路绝不能跳自己那一列 —— 用户正在抛掷
+  /// 滚轮时 `jumpToItem` 会把动量打断（既有实现只同步「别的」列，口径保留）。
+  void _applyHour(int v, {bool syncWheel = false}) {
+    setState(() => hour = v);
+    if (syncWheel) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _hourCtrl.jumpToItem(v));
+    }
+  }
+
+  void _applyMinute(int v, {bool syncWheel = false}) {
+    setState(() => minute = v);
+    if (syncWheel) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _minuteCtrl.jumpToItem(v));
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return PiggyPickerSheet(
       title: l10n.commonSelectTime,
-      onConfirm: () =>
-          Navigator.pop(context, TimeOfDay(hour: hour, minute: minute)),
+      onConfirm: confirmFromKeyboard,
       // 与 WheelDatePicker 同一口径：itemExtent 52、可见 3 项、字号 18
       child: SizedBox(
         height: 156,
         child: Row(
           children: [
             Expanded(
-              child: _hourColumn(context),
+              child: keyColumn(0, _hourColumn(context)),
             ),
             Text(
               ':',
@@ -78,7 +121,7 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
               ),
             ),
             Expanded(
-              child: _minuteColumn(context),
+              child: keyColumn(1, _minuteColumn(context)),
             ),
           ],
         ),
@@ -92,7 +135,7 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
       scrollController: _hourCtrl,
       onSelectedItemChanged: (index) {
         PiggyHaptics.selection();
-        setState(() => hour = index);
+        _applyHour(index);
       },
       children: [
         for (int h = 0; h < 24; h++)
@@ -113,7 +156,7 @@ class _WheelTimePickerState extends State<WheelTimePicker> {
       scrollController: _minuteCtrl,
       onSelectedItemChanged: (index) {
         PiggyHaptics.selection();
-        setState(() => minute = index);
+        _applyMinute(index);
       },
       children: [
         for (int m = 0; m < 60; m++)
