@@ -40,6 +40,30 @@ class ChangelogVersion {
 /// 全部版本，最新在前
 const kChangelogVersions = <ChangelogVersion>[
   ChangelogVersion(
+    version: '0.1.8',
+    date: '2026-10-15',
+    summary: '记账键盘输入更稳：模拟器 / 投屏注入按键也能输入，运算后 Enter 先求值、Esc 关闭弹层；表单抽屉按钮与输入框样式全项目统一。',
+    sections: [
+      ChangelogSection(
+        icon: Icons.keyboard_outlined,
+        title: '键盘输入增强',
+        items: [
+          '模拟器 / 投屏工具注入的物理按键也能直接输入金额（原生按键转发兜底）',
+          '物理键盘支持 + - × ÷ 运算，运算中按 Enter 先当等号求值；Delete 键当退格、Esc 关掉弹层',
+          '备注等文本输入框聚焦时键盘按键不被金额位抢走',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.brush_outlined,
+        title: '表单样式统一',
+        items: [
+          '表单抽屉底部按钮统一为双等宽大按钮，按下有缩放反馈，取消 / 确认对比更清晰',
+          '表单输入框统一为浅灰填充 + 细描边，聚焦时主题色高亮、标签上浮',
+        ],
+      ),
+    ],
+  ),
+  ChangelogVersion(
     version: '0.1.7',
     date: '2026-10-14',
     summary: '报表支持导出 PDF；投资持仓接入自动行情；洞察新增季度 / 任意区间档位与自定义字段分类型统计；记账支持退款关联与报销状态。',
