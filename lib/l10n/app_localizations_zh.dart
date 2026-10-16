@@ -894,6 +894,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analyticsAmountMetricNoteCustomField => '自定义字段口径 · 未填写该字段的明细不参与统计';
 
   @override
+  String get analyticsTimeMetricTitle => '统计时间';
+
+  @override
+  String get analyticsTimeMetricHappenedAt => '记账时间';
+
+  @override
+  String get analyticsTimeMetricHappenedAtDesc => '按每笔的记账时间统计（默认）';
+
+  @override
+  String get analyticsTimeMetricCustomField => '自定义字段';
+
+  @override
+  String analyticsTimeMetricCustomFieldDesc(String name) {
+    return '按「$name」的日期统计，未填写该字段的明细不参与统计';
+  }
+
+  @override
+  String get analyticsTimeMetricNote => '自定义字段口径 · 未填写该字段的明细不参与统计';
+
+  @override
   String analyticsSwitchTo(String type) {
     return '切换到$type';
   }
@@ -10086,6 +10106,26 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get analyticsAmountMetricNoteCustomField => '自訂欄位口徑 · 未填寫該欄位的明細不列入統計';
+
+  @override
+  String get analyticsTimeMetricTitle => '統計時間';
+
+  @override
+  String get analyticsTimeMetricHappenedAt => '記帳時間';
+
+  @override
+  String get analyticsTimeMetricHappenedAtDesc => '按每筆的記帳時間統計（預設）';
+
+  @override
+  String get analyticsTimeMetricCustomField => '自訂欄位';
+
+  @override
+  String analyticsTimeMetricCustomFieldDesc(String name) {
+    return '按「$name」的日期統計，未填寫該欄位的明細不列入統計';
+  }
+
+  @override
+  String get analyticsTimeMetricNote => '自訂欄位口徑 · 未填寫該欄位的明細不列入統計';
 
   @override
   String analyticsSwitchTo(String type) {

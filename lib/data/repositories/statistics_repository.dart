@@ -1,4 +1,5 @@
 import '../models/analytics_amount_metric.dart';
+import '../models/analytics_time_metric.dart';
 import '../models/transaction_original_amount.dart';
 
 /// 统计Repository接口
@@ -13,6 +14,16 @@ import '../models/transaction_original_amount.dart';
 /// 聚合都必须转发 [AnalyticsAmountMetric.sqlRowFilter]（SQL 侧）或
 /// [AnalyticsAmountMetric.matches]（Dart 侧取行的路径）—— 只换金额表达式
 /// 不算改完。
+///
+/// [timeMetric] 是**统计时间口径**（记账时间 / 某日期型自定义字段），默认
+/// [AnalyticsTimeMetric.happenedAt]（行为逐字不变）。自定义字段时间口径下，
+/// 区间判定与分桶键都改取该字段的日期（日粒度），且**没填该字段的明细整行
+/// 排除** —— 每处聚合都必须转发 [AnalyticsTimeMetric.rangeSql]（区间）、
+/// [AnalyticsTimeMetric.sqlDayExpr]（分桶）与
+/// [AnalyticsTimeMetric.sqlRowFilter]（不划区间的聚合也需排除无值行）。
+///
+/// 两个口径**正交**：一处聚合可以同时按「自定义字段金额」与「自定义字段时间」
+/// 取值，行集合由时间口径与两者的行过滤共同决定。
 abstract class StatisticsRepository {
   /// 数据库是否支持 json 函数（自定义字段口径的硬依赖，见
   /// [supportsCustomFieldAmountMetric]）。
@@ -25,6 +36,7 @@ abstract class StatisticsRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric,
+    AnalyticsTimeMetric timeMetric,
   });
 
   /// 按分类统计（支持二级分类展开），count 为该分类下的记账笔数
@@ -38,6 +50,7 @@ abstract class StatisticsRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric,
+    AnalyticsTimeMetric timeMetric,
   });
 
   /// 按天统计（指定时间范围和类型）
@@ -47,6 +60,7 @@ abstract class StatisticsRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric,
+    AnalyticsTimeMetric timeMetric,
   });
 
   /// 按月统计（指定年份和类型）
@@ -60,13 +74,19 @@ abstract class StatisticsRepository {
     required String type,
     required int year,
     AnalyticsAmountMetric amountMetric,
+    AnalyticsTimeMetric timeMetric,
   });
 
   /// 按年统计（所有年份，指定类型）
+  ///
+  /// **不划区间**（年序列由数据自身的最早/最晚年份决定）——自定义字段时间
+  /// 口径下必须靠 [AnalyticsTimeMetric.sqlRowFilter] 排除无该字段值的行，
+  /// 否则 `date(NULL)` 会变成一个独立的空标签年。
   Future<List<({int year, double total})>> totalsByYearSeries({
     required int ledgerId,
     required String type,
     AnalyticsAmountMetric amountMetric,
+    AnalyticsTimeMetric timeMetric,
   });
 
   /// 按标签统计（指定时间范围和类型），total 按金额降序由调用方排。
@@ -80,6 +100,7 @@ abstract class StatisticsRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric,
+    AnalyticsTimeMetric timeMetric,
   });
 
   /// 获取指定时间范围的收支总额
@@ -88,6 +109,7 @@ abstract class StatisticsRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric,
+    AnalyticsTimeMetric timeMetric,
   });
 
   /// 获取指定月份的收支总额
@@ -206,6 +228,7 @@ abstract class StatisticsRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric,
+    AnalyticsTimeMetric timeMetric,
   });
 
   /// 区间内计入统计的交易总笔数（同 [customFieldStatsRows] 口径：排除
@@ -215,5 +238,6 @@ abstract class StatisticsRepository {
     required int ledgerId,
     required DateTime start,
     required DateTime end,
+    AnalyticsTimeMetric timeMetric,
   });
 }

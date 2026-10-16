@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/models/analytics_amount_metric.dart';
+import 'package:piggycount/data/models/analytics_time_metric.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/pages/analytics/custom_field_analysis_page.dart';
 import 'package:piggycount/providers.dart';
@@ -49,13 +50,15 @@ void main() {
     required List<CustomFieldFieldStats> data,
     DateTime? start,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
     List<
             ({
               int ledgerId,
               DateTime start,
               DateTime end,
               int refreshTick,
-              AnalyticsAmountMetric amountMetric
+              AnalyticsAmountMetric amountMetric,
+              AnalyticsTimeMetric timeMetric
             })>?
         calls,
   }) {
@@ -83,6 +86,7 @@ void main() {
             end: DateTime(2026, 1, 8),
             type: type,
             amountMetric: amountMetric,
+            timeMetric: timeMetric,
           ),
         ),
       ),
@@ -140,7 +144,8 @@ void main() {
       DateTime start,
       DateTime end,
       int refreshTick,
-      AnalyticsAmountMetric amountMetric
+      AnalyticsAmountMetric amountMetric,
+      AnalyticsTimeMetric timeMetric
     })>[];
     await tester.pumpWidget(host(
         type: 'expense',
@@ -188,7 +193,8 @@ void main() {
       DateTime start,
       DateTime end,
       int refreshTick,
-      AnalyticsAmountMetric amountMetric
+      AnalyticsAmountMetric amountMetric,
+      AnalyticsTimeMetric timeMetric
     })>[];
     await tester.pumpWidget(host(
         type: 'expense',
@@ -206,5 +212,32 @@ void main() {
     expect(calls.length, 2);
     expect(calls[0].amountMetric, AnalyticsAmountMetric.recorded);
     expect(calls[1].amountMetric, AnalyticsAmountMetric.original);
+  });
+
+  testWidgets('查询键含统计时间口径：卡内区间与页面其余卡片同源', (tester) async {
+    final calls = <({
+      int ledgerId,
+      DateTime start,
+      DateTime end,
+      int refreshTick,
+      AnalyticsAmountMetric amountMetric,
+      AnalyticsTimeMetric timeMetric
+    })>[];
+    await tester.pumpWidget(host(
+        type: 'expense',
+        data: [field('渠道', 1, 0)],
+        calls: calls));
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpWidget(host(
+        type: 'expense',
+        data: [field('渠道', 1, 0)],
+        timeMetric: AnalyticsTimeMetric.customField('f-date'),
+        calls: calls));
+    await tester.pump(const Duration(seconds: 3));
+
+    // 换时间口径 = 换键重查（漏传会让本卡按记账时间、页面其余卡片按字段日期）
+    expect(calls.length, 2);
+    expect(calls[0].timeMetric, AnalyticsTimeMetric.happenedAt);
+    expect(calls[1].timeMetric, AnalyticsTimeMetric.customField('f-date'));
   });
 }

@@ -922,6 +922,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'Custom field basis · entries without this field are excluded';
 
   @override
+  String get analyticsTimeMetricTitle => 'Statistics time';
+
+  @override
+  String get analyticsTimeMetricHappenedAt => 'Recorded time';
+
+  @override
+  String get analyticsTimeMetricHappenedAtDesc =>
+      'Count by each entry\'s recorded time (default)';
+
+  @override
+  String get analyticsTimeMetricCustomField => 'Custom field';
+
+  @override
+  String analyticsTimeMetricCustomFieldDesc(String name) {
+    return 'Count by the date in \"$name\"; entries without this field are excluded';
+  }
+
+  @override
+  String get analyticsTimeMetricNote =>
+      'Custom field basis · entries without this field are excluded';
+
+  @override
   String analyticsSwitchTo(String type) {
     return 'Switch to $type';
   }

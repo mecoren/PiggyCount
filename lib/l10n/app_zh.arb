@@ -484,6 +484,12 @@
     }
   },
   "analyticsAmountMetricNoteCustomField": "自定义字段口径 · 未填写该字段的明细不参与统计",
+  "analyticsTimeMetricTitle": "统计时间",
+  "analyticsTimeMetricHappenedAt": "记账时间",
+  "analyticsTimeMetricHappenedAtDesc": "按每笔的记账时间统计（默认）",
+  "analyticsTimeMetricCustomField": "自定义字段",
+  "analyticsTimeMetricCustomFieldDesc": "按「{name}」的日期统计，未填写该字段的明细不参与统计",
+  "analyticsTimeMetricNote": "自定义字段口径 · 未填写该字段的明细不参与统计",
   "analyticsSwitchTo": "切换到{type}",
   "analyticsAllYears": "全部年份",
   "splashAppName": "小猪记账",

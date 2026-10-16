@@ -267,6 +267,28 @@ class CustomFieldValueCodec {
   }
 }
 
+/// 自定义字段 syncId → SQLite JSON 路径（`$."<syncId>"`）；不合法返回 null。
+///
+/// **白名单式**校验：只接受 UUID 变体允许的字符集（字母 / 数字 / `-` / `_`），
+/// 其它字符一律视为不可用 —— syncId 来自云同步，理论上可能被改坏，而它会被
+/// 直接拼进 SQL 字面量与 JSON 路径（见 `AnalyticsAmountMetric` /
+/// `AnalyticsTimeMetric`）。返回 null 的调用方应退化为「该口径没有数据」，
+/// 而不是把 SQL 拼坏。
+///
+/// 引号形式：UUID 里的 `-` 在裸路径下能否解析依赖 SQLite 实现细节，双引号
+/// 标签是 JSON 路径文法里明确支持的写法。
+String? sqliteJsonPathForField(String syncId) {
+  if (syncId.isEmpty || syncId.length > 64) return null;
+  for (final unit in syncId.codeUnits) {
+    final isDigit = unit >= 0x30 && unit <= 0x39;
+    final isUpper = unit >= 0x41 && unit <= 0x5A;
+    final isLower = unit >= 0x61 && unit <= 0x7A;
+    final isDashOrUnderscore = unit == 0x2D || unit == 0x5F;
+    if (!isDigit && !isUpper && !isLower && !isDashOrUnderscore) return null;
+  }
+  return '\$."$syncId"';
+}
+
 /// v54 自定义字段「选项列表」的编解码与规范化（定义侧数据）。
 ///
 /// 选项以 JSON 字符串数组落在 `custom_field_definitions.options_json`

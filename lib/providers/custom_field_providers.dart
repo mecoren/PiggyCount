@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../data/db.dart';
 import '../data/models/analytics_amount_metric.dart';
+import '../data/models/analytics_time_metric.dart';
 import '../data/models/custom_field_values.dart';
 import '../services/custom_field_stats_service.dart';
 import 'database_providers.dart';
@@ -100,7 +101,8 @@ final customFieldStatsForRangeProvider = FutureProvider.autoDispose.family<
       DateTime start,
       DateTime end,
       int refreshTick,
-      AnalyticsAmountMetric amountMetric
+      AnalyticsAmountMetric amountMetric,
+      AnalyticsTimeMetric timeMetric
     })>((ref, q) async {
   ref.watch(customFieldListRefreshProvider);
   final repo = ref.watch(repositoryProvider);
@@ -110,7 +112,8 @@ final customFieldStatsForRangeProvider = FutureProvider.autoDispose.family<
       ledgerId: q.ledgerId,
       start: q.start,
       end: q.end,
-      amountMetric: q.amountMetric);
+      amountMetric: q.amountMetric,
+      timeMetric: q.timeMetric);
   return CustomFieldStatsService.aggregate(defs: defs, rows: rows);
 });
 
@@ -126,7 +129,8 @@ final customFieldStatsDetailProvider = FutureProvider.autoDispose.family<
       DateTime start,
       DateTime end,
       int refreshTick,
-      AnalyticsAmountMetric amountMetric
+      AnalyticsAmountMetric amountMetric,
+      AnalyticsTimeMetric timeMetric
     })>((ref, q) async {
   ref.watch(customFieldListRefreshProvider);
   final repo = ref.watch(repositoryProvider);
@@ -137,9 +141,13 @@ final customFieldStatsDetailProvider = FutureProvider.autoDispose.family<
         ledgerId: q.ledgerId,
         start: q.start,
         end: q.end,
-        amountMetric: q.amountMetric),
+        amountMetric: q.amountMetric,
+        timeMetric: q.timeMetric),
     repo.customFieldStatsTotalCount(
-        ledgerId: q.ledgerId, start: q.start, end: q.end),
+        ledgerId: q.ledgerId,
+        start: q.start,
+        end: q.end,
+        timeMetric: q.timeMetric),
   ]);
   final rows =
       results[0] as List<({String type, double nativeAmount, String? customValuesJson})>;

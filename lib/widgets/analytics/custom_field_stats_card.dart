@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/analytics_amount_metric.dart';
+import '../../data/models/analytics_time_metric.dart';
 import '../../l10n/app_localizations.dart';
 import '../../pages/analytics/custom_field_analysis_page.dart';
 import '../../providers.dart';
@@ -30,6 +31,7 @@ class CustomFieldStatsCard extends ConsumerWidget {
     required this.end,
     required this.type,
     required this.amountMetric,
+    this.timeMetric = AnalyticsTimeMetric.happenedAt,
   });
 
   final DateTime start;
@@ -42,6 +44,10 @@ class CustomFieldStatsCard extends ConsumerWidget {
   /// 金额口径：卡内金额列与页面其余卡片同源（原始金额口径下本卡也按原始金额）。
   final AnalyticsAmountMetric amountMetric;
 
+  /// 统计时间口径：区间判定与页面其余卡片同源（按字段日期统计时，本卡也按
+  /// 同一字段的日期划区间 —— 否则同一页的卡片之间会对不上账）。
+  final AnalyticsTimeMetric timeMetric;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (type == 'balance') return const SizedBox.shrink();
@@ -52,6 +58,7 @@ class CustomFieldStatsCard extends ConsumerWidget {
           end: end,
           refreshTick: ref.watch(statsRefreshProvider),
           amountMetric: amountMetric,
+          timeMetric: timeMetric,
         )))
             .when(
       data: (d) => d,
@@ -90,6 +97,7 @@ class CustomFieldStatsCard extends ConsumerWidget {
                   end: end,
                   type: type,
                   amountMetric: amountMetric,
+                  timeMetric: timeMetric,
                 ),
               ),
             );

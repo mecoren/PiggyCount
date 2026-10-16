@@ -908,6 +908,26 @@ class AppLocalizationsKo extends AppLocalizations {
       '사용자 정의 필드 기준 · 해당 필드가 없는 항목은 제외';
 
   @override
+  String get analyticsTimeMetricTitle => '집계 시간';
+
+  @override
+  String get analyticsTimeMetricHappenedAt => '기록 시간';
+
+  @override
+  String get analyticsTimeMetricHappenedAtDesc => '각 항목의 기록 시간 기준 집계(기본)';
+
+  @override
+  String get analyticsTimeMetricCustomField => '사용자 정의 필드';
+
+  @override
+  String analyticsTimeMetricCustomFieldDesc(String name) {
+    return '\"$name\"의 날짜 기준 집계, 해당 필드가 없는 항목은 제외';
+  }
+
+  @override
+  String get analyticsTimeMetricNote => '사용자 정의 필드 기준 · 해당 필드가 없는 항목은 제외';
+
+  @override
   String analyticsSwitchTo(String type) {
     return '$type(으)로 전환';
   }

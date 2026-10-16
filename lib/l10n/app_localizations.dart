@@ -1686,6 +1686,42 @@ abstract class AppLocalizations {
   /// **'Custom field basis · entries without this field are excluded'**
   String get analyticsAmountMetricNoteCustomField;
 
+  /// No description provided for @analyticsTimeMetricTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics time'**
+  String get analyticsTimeMetricTitle;
+
+  /// No description provided for @analyticsTimeMetricHappenedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded time'**
+  String get analyticsTimeMetricHappenedAt;
+
+  /// No description provided for @analyticsTimeMetricHappenedAtDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Count by each entry\'s recorded time (default)'**
+  String get analyticsTimeMetricHappenedAtDesc;
+
+  /// No description provided for @analyticsTimeMetricCustomField.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom field'**
+  String get analyticsTimeMetricCustomField;
+
+  /// No description provided for @analyticsTimeMetricCustomFieldDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Count by the date in \"{name}\"; entries without this field are excluded'**
+  String analyticsTimeMetricCustomFieldDesc(String name);
+
+  /// No description provided for @analyticsTimeMetricNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom field basis · entries without this field are excluded'**
+  String get analyticsTimeMetricNote;
+
   /// No description provided for @analyticsSwitchTo.
   ///
   /// In en, this message translates to:

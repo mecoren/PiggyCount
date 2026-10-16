@@ -484,6 +484,19 @@
     }
   },
   "analyticsAmountMetricNoteCustomField": "Custom field basis · entries without this field are excluded",
+  "analyticsTimeMetricTitle": "Statistics time",
+  "analyticsTimeMetricHappenedAt": "Recorded time",
+  "analyticsTimeMetricHappenedAtDesc": "Count by each entry's recorded time (default)",
+  "analyticsTimeMetricCustomField": "Custom field",
+  "analyticsTimeMetricCustomFieldDesc": "Count by the date in \"{name}\"; entries without this field are excluded",
+  "@analyticsTimeMetricCustomFieldDesc": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "analyticsTimeMetricNote": "Custom field basis · entries without this field are excluded",
   "analyticsSwitchTo": "Switch to {type}",
   "@analyticsSwitchTo": {
     "placeholders": {

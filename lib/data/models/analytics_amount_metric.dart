@@ -183,7 +183,8 @@ final class _OriginalAmountMetric extends AnalyticsAmountMetric {
 /// 「按天 / 按月 / 按分类」多轮分组里被反复取值，缓存把「每种取值组合解析
 /// 一次」作为上界（与 `customFieldValueBadgesProvider` 同款做法）。
 final class _CustomFieldAmountMetric extends AnalyticsAmountMetric {
-  _CustomFieldAmountMetric(this.fieldSyncId) : path = _jsonPath(fieldSyncId);
+  _CustomFieldAmountMetric(this.fieldSyncId)
+      : path = sqliteJsonPathForField(fieldSyncId);
 
   @override
   final String fieldSyncId;
@@ -196,22 +197,6 @@ final class _CustomFieldAmountMetric extends AnalyticsAmountMetric {
   @override
   String get storageValue =>
       '${AnalyticsAmountMetric.customPrefix}$fieldSyncId';
-
-  /// syncId → JSON 路径。**白名单式**校验：只接受 UUID 变体允许的字符集，
-  /// 其它字符一律视为不可用（syncId 来自云同步，理论上可能被改坏）。
-  static String? _jsonPath(String syncId) {
-    if (syncId.isEmpty || syncId.length > 64) return null;
-    for (final unit in syncId.codeUnits) {
-      final isDigit = unit >= 0x30 && unit <= 0x39;
-      final isUpper = unit >= 0x41 && unit <= 0x5A;
-      final isLower = unit >= 0x61 && unit <= 0x7A;
-      final isDashOrUnderscore = unit == 0x2D || unit == 0x5F;
-      if (!isDigit && !isUpper && !isLower && !isDashOrUnderscore) return null;
-    }
-    // 引号形式：UUID 里的 '-' 在裸路径下能否解析依赖 SQLite 实现细节，
-    // 双引号标签是 JSON 路径文法里明确支持的写法。
-    return '\$."$syncId"';
-  }
 
   /// 该明细填的字段值（未填 / 非数值 → null）。
   double? valueOf(Transaction t) {

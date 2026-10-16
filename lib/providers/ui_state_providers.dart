@@ -16,6 +16,7 @@ import 'smart_billing_providers.dart';
 import 'quick_entry_providers.dart';
 import '../data/db.dart';
 import '../data/models/analytics_amount_metric.dart';
+import '../data/models/analytics_time_metric.dart';
 import '../utils/month_range.dart';
 import '../services/data/recurring_transaction_service.dart';
 import '../services/billing/post_processor.dart';
@@ -85,6 +86,35 @@ final analyticsAmountMetricInitProvider = FutureProvider<void>((ref) async {
       (prev, next) async {
     await prefs.setString(
         AnalyticsAmountMetric.prefsKey, next.storageValue);
+  });
+});
+
+// ---------- Analytics 时间口径（记账时间 / 日期型自定义字段） ----------
+
+/// 洞察页的**全局**统计时间口径。
+///
+/// 与 [analyticsAmountMetricProvider] 同款理由：口径一旦分叉就会出现「洞察页
+/// 按字段日期、另一处按记账时间」，用户对不上账。全局单值 + 洞察页同一枚 chip
+/// 修改它，页面内所有取数（总额 / 趋势 / 分类构成 / 自定义字段汇总卡）都带上
+/// 它（见 [AnalyticsTimeMetric] 的口径文档）。
+///
+/// **作用范围**：吃这个口径的是洞察页的统计链路（`LocalStatisticsRepository`
+/// 的区间聚合与 `countByTypeInRange`）；月度总览 / 小组件等其它入口仍按记账
+/// 时间 —— 它表达的是「洞察页看哪一段时间」，不改账本自身的时间轴。
+final analyticsTimeMetricProvider = StateProvider<AnalyticsTimeMetric>(
+    (ref) => AnalyticsTimeMetric.happenedAt);
+
+/// 时间口径持久化初始化（pref 读取 + 变更写回），与金额口径同款。
+final analyticsTimeMetricInitProvider = FutureProvider<void>((ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  final saved = prefs.getString(AnalyticsTimeMetric.prefsKey);
+  if (saved != null) {
+    ref.read(analyticsTimeMetricProvider.notifier).state =
+        AnalyticsTimeMetric.fromStorage(saved);
+  }
+  ref.listen<AnalyticsTimeMetric>(analyticsTimeMetricProvider,
+      (prev, next) async {
+    await prefs.setString(AnalyticsTimeMetric.prefsKey, next.storageValue);
   });
 });
 
@@ -236,6 +266,8 @@ final appSplashInitProvider = FutureProvider<void>((ref) async {
       ref.watch(hideAmountsInitProvider.future),
       // 洞察/报表金额口径（pref 读取 + 变更写回）
       ref.watch(analyticsAmountMetricInitProvider.future),
+      // 洞察页统计时间口径（pref 读取 + 变更写回）
+      ref.watch(analyticsTimeMetricInitProvider.future),
       ref.watch(compactAmountInitProvider.future),
       ref.watch(showTransactionTimeInitProvider.future),
       ref.watch(noteDisplayModeInitProvider.future),

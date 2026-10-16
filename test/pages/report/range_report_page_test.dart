@@ -22,6 +22,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:piggycount/cloud/sync_service.dart';
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/models/analytics_amount_metric.dart';
+import 'package:piggycount/data/models/analytics_time_metric.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/pages/report/range_report_page.dart';
@@ -45,6 +46,7 @@ class _GatedRepository extends LocalRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) async {
     if (blocked) await gate.future;
     return super.totalsByDay(
@@ -53,6 +55,7 @@ class _GatedRepository extends LocalRepository {
       start: start,
       end: end,
       amountMetric: amountMetric,
+      timeMetric: timeMetric,
     );
   }
 }
