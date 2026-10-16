@@ -1,6 +1,7 @@
 /// 分享海报数据计算服务
 library;
 
+import '../../data/models/analytics_amount_metric.dart';
 import '../../data/repositories/base_repository.dart';
 import '../../utils/month_range.dart';
 import '../ui/avatar_service.dart';
@@ -13,9 +14,13 @@ class SharePosterDataService {
   const SharePosterDataService(this.repository);
 
   /// 计算年度总结海报数据
+  ///
+  /// [amountMetric] 与洞察页 / 区间报表同源（全局口径）：海报上的数字必须跟
+  /// 界面上看到的对得上，否则用户会以为导出把数据算错了。
   Future<YearSummaryPosterData> calculateYearSummary({
     required int ledgerId,
     required int year,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
     // 时间范围:年 = 12 个自定义周期(design D4),[start, end) 半开
     final ledger = await repository.getLedgerById(ledgerId);
@@ -49,8 +54,16 @@ class SharePosterDataService {
     // totalsByMonth 单条 SQL 按周期标签月聚合（income/expense 各一次，
     // 并行发起）；startDay>1 的月份归属口径不变。
     final rows = await Future.wait([
-      repository.totalsByMonth(ledgerId: ledgerId, type: 'income', year: year),
-      repository.totalsByMonth(ledgerId: ledgerId, type: 'expense', year: year),
+      repository.totalsByMonth(
+          ledgerId: ledgerId,
+          type: 'income',
+          year: year,
+          amountMetric: amountMetric),
+      repository.totalsByMonth(
+          ledgerId: ledgerId,
+          type: 'expense',
+          year: year,
+          amountMetric: amountMetric),
     ]);
     double totalIncome = 0.0;
     double totalExpense = 0.0;
@@ -80,6 +93,7 @@ class SharePosterDataService {
       type: 'expense',
       start: startDate,
       end: endDate,
+      amountMetric: amountMetric,
     );
 
     final incomeCategories = await repository.totalsByCategory(
@@ -87,6 +101,7 @@ class SharePosterDataService {
       type: 'income',
       start: startDate,
       end: endDate,
+      amountMetric: amountMetric,
     );
 
     // 转换为CategoryTotal并计算占比
@@ -129,6 +144,7 @@ class SharePosterDataService {
     required int ledgerId,
     required int year,
     required int month,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
     // 时间范围:按账本起始日的记账周期 [当月sd日, 次月sd日)。
     // startDate 的 year/month 与标签一致,可直接作 monthlyTotals 的标签参数。
@@ -146,6 +162,7 @@ class SharePosterDataService {
     final (totalIncome, totalExpense) = await repository.monthlyTotals(
       ledgerId: ledgerId,
       month: startDate,
+      amountMetric: amountMetric,
     );
 
     // 2. 计算上月支出(用于环比)
@@ -154,6 +171,7 @@ class SharePosterDataService {
       final (_, prevExpense) = await repository.monthlyTotals(
         ledgerId: ledgerId,
         month: prevMonthStart,
+        amountMetric: amountMetric,
       );
 
       if (prevExpense > 0) {
@@ -178,6 +196,7 @@ class SharePosterDataService {
       type: 'expense',
       start: startDate,
       end: endDate,
+      amountMetric: amountMetric,
     );
 
     final incomeCategories = await repository.totalsByCategory(
@@ -185,6 +204,7 @@ class SharePosterDataService {
       type: 'income',
       start: startDate,
       end: endDate,
+      amountMetric: amountMetric,
     );
 
     // 转换为CategoryTotal并计算占比
@@ -223,6 +243,7 @@ class SharePosterDataService {
   /// 计算账本总结海报数据
   Future<LedgerSummaryPosterData> calculateLedgerSummary({
     required int ledgerId,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
     // 获取账本统计信息（包含余额和交易数）
     final ledgerStats = await repository.getLedgerStats(ledgerId: ledgerId);
@@ -237,6 +258,7 @@ class SharePosterDataService {
     final yearSeries = await repository.totalsByYearSeries(
       ledgerId: ledgerId,
       type: 'expense',
+      amountMetric: amountMetric,
     );
 
     // 计算所有年份的收入和支出
@@ -258,6 +280,7 @@ class SharePosterDataService {
         final (income, expense) = await repository.monthlyTotals(
           ledgerId: ledgerId,
           month: monthStart,
+          amountMetric: amountMetric,
         );
         totalIncome += income;
         totalExpense += expense;
@@ -300,6 +323,7 @@ class SharePosterDataService {
       type: 'expense',
       start: startDate,
       end: endDate,
+      amountMetric: amountMetric,
     );
 
     final incomeCategories = await repository.totalsByCategory(
@@ -307,6 +331,7 @@ class SharePosterDataService {
       type: 'income',
       start: startDate,
       end: endDate,
+      amountMetric: amountMetric,
     );
 
     // 转换为CategoryTotal并计算占比

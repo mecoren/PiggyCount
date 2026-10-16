@@ -13,6 +13,7 @@ import '../../utils/widget_capture.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/posters/annual_report_poster.dart';
 import '../../data/db.dart';
+import '../../data/models/analytics_amount_metric.dart';
 import '../../services/export/share_poster_types.dart';
 import '../../services/export/share_poster_service.dart';
 import '../../services/data/category_service.dart';
@@ -61,9 +62,12 @@ final annualReportDataProvider =
   final repo = ref.watch(repositoryProvider);
   final db = ref.watch(databaseProvider);
 
+  // 金额口径（全局持久化）：与洞察页 / 区间报表 / 海报 / PDF 同源
+  final amountMetric = ref.watch(analyticsAmountMetricProvider);
+
   // 获取年度收支总额
-  final (income, expense) =
-      await repo.yearlyTotals(ledgerId: ledgerId, year: year);
+  final (income, expense) = await repo.yearlyTotals(
+      ledgerId: ledgerId, year: year, amountMetric: amountMetric);
 
   if (income == 0 && expense == 0) {
     return null; // 无数据
@@ -96,6 +100,7 @@ final annualReportDataProvider =
     type: 'expense',
     start: startDate,
     end: endDate,
+    amountMetric: amountMetric,
   );
 
   // 计算总支出用于百分比
@@ -125,7 +130,7 @@ final annualReportDataProvider =
     "CASE WHEN CAST(strftime('%d', happened_at, 'unixepoch', 'localtime') AS INTEGER) >= ?3 "
     "THEN 'start of month' ELSE '-1 month' END) AS label, "
     'type AS type, '
-    'COALESCE(native_amount, amount) AS v '
+    '${amountMetric.sqlExpr()} AS v '
     'FROM transactions '
     'WHERE ledger_id = ?1 AND exclude_from_stats = 0 '
     'AND happened_at >= ?2 AND happened_at < ?4) '
@@ -437,6 +442,20 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
       child: Column(
         children: [
           _buildHeader(l10n),
+          // 非默认金额口径时的口径说明：整屏是主题色底，白色小字不走 token
+          // （token 的 caption 在深色主题色上不可读）。
+          if (ref.watch(analyticsAmountMetricProvider) !=
+              AnalyticsAmountMetric.recorded)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                l10n.analyticsAmountMetricNote,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontSize: PiggyTextTokens.fs12,
+                ),
+              ),
+            ),
           Expanded(
             child: PageView(
               controller: _pageController,

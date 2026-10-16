@@ -1632,6 +1632,42 @@ abstract class AppLocalizations {
   /// **'Swipe left/right to change period'**
   String get analyticsSwipeHint;
 
+  /// No description provided for @analyticsAmountMetricTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount basis'**
+  String get analyticsAmountMetricTitle;
+
+  /// No description provided for @analyticsAmountMetricRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded'**
+  String get analyticsAmountMetricRecorded;
+
+  /// No description provided for @analyticsAmountMetricRecordedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Count by recorded amount (converted to base currency)'**
+  String get analyticsAmountMetricRecordedDesc;
+
+  /// No description provided for @analyticsAmountMetricOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get analyticsAmountMetricOriginal;
+
+  /// No description provided for @analyticsAmountMetricOriginalDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Count by original amount; entries without one fall back to the recorded amount'**
+  String get analyticsAmountMetricOriginalDesc;
+
+  /// No description provided for @analyticsAmountMetricNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Original basis · unfilled entries use the recorded amount'**
+  String get analyticsAmountMetricNote;
+
   /// No description provided for @analyticsSwitchTo.
   ///
   /// In en, this message translates to:

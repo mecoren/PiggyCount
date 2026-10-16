@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:intl/intl.dart';
 
 import '../data/db.dart';
+import '../data/models/analytics_amount_metric.dart';
 import '../data/models/custom_field_values.dart';
 import '../services/custom_field_stats_service.dart';
 import 'database_providers.dart';
@@ -84,14 +85,22 @@ final customFieldFilledCountsProvider =
 /// 「旧键的 future 无人再读直接丢弃」，不随交互累积。
 final customFieldStatsForRangeProvider = FutureProvider.autoDispose.family<
     List<CustomFieldFieldStats>,
-    ({int ledgerId, DateTime start, DateTime end, int refreshTick})>(
-    (ref, q) async {
+    ({
+      int ledgerId,
+      DateTime start,
+      DateTime end,
+      int refreshTick,
+      AnalyticsAmountMetric amountMetric
+    })>((ref, q) async {
   ref.watch(customFieldListRefreshProvider);
   final repo = ref.watch(repositoryProvider);
   final defs = await repo.getDefinitionsForLedger(q.ledgerId);
   if (defs.isEmpty) return const [];
   final rows = await repo.customFieldStatsRows(
-      ledgerId: q.ledgerId, start: q.start, end: q.end);
+      ledgerId: q.ledgerId,
+      start: q.start,
+      end: q.end,
+      amountMetric: q.amountMetric);
   return CustomFieldStatsService.aggregate(defs: defs, rows: rows);
 });
 
@@ -102,14 +111,23 @@ final customFieldStatsForRangeProvider = FutureProvider.autoDispose.family<
 /// 无人填写的字段也输出（管理页/分析页字段切换需要）。
 final customFieldStatsDetailProvider = FutureProvider.autoDispose.family<
     List<FieldStats>,
-    ({int ledgerId, DateTime start, DateTime end, int refreshTick})>(
-    (ref, q) async {
+    ({
+      int ledgerId,
+      DateTime start,
+      DateTime end,
+      int refreshTick,
+      AnalyticsAmountMetric amountMetric
+    })>((ref, q) async {
   ref.watch(customFieldListRefreshProvider);
   final repo = ref.watch(repositoryProvider);
   final defs = await repo.getDefinitionsForLedger(q.ledgerId);
   if (defs.isEmpty) return const [];
   final results = await Future.wait([
-    repo.customFieldStatsRows(ledgerId: q.ledgerId, start: q.start, end: q.end),
+    repo.customFieldStatsRows(
+        ledgerId: q.ledgerId,
+        start: q.start,
+        end: q.end,
+        amountMetric: q.amountMetric),
     repo.customFieldStatsTotalCount(
         ledgerId: q.ledgerId, start: q.start, end: q.end),
   ]);

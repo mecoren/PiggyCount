@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' as d;
 
 import '../../db.dart';
+import '../../models/analytics_amount_metric.dart';
 import '../../models/transaction_original_amount.dart';
 import '../../../utils/month_range.dart';
 import '../statistics_repository.dart';
@@ -18,6 +19,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
     final q = (db.select(db.transactions)
           ..where((t) =>
@@ -39,8 +41,8 @@ class LocalStatisticsRepository implements StatisticsRepository {
       final id = c?.id;
       names[id] = c?.name ?? '未分类';
       icons[id] = c?.icon;
-      map.update(id, (v) => v + (t.nativeAmount ?? t.amount),
-          ifAbsent: () => t.nativeAmount ?? t.amount);
+      map.update(id, (v) => v + amountMetric.amountOf(t),
+          ifAbsent: () => amountMetric.amountOf(t));
     }
     final list = map.entries
         .map((e) => (id: e.key, name: names[e.key] ?? '未分类', icon: icons[e.key], total: e.value))
@@ -56,6 +58,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
     final q = (db.select(db.transactions)
           ..where((t) =>
@@ -94,8 +97,8 @@ class LocalStatisticsRepository implements StatisticsRepository {
         );
       }
 
-      map.update(id, (v) => v + (t.nativeAmount ?? t.amount),
-          ifAbsent: () => t.nativeAmount ?? t.amount);
+      map.update(id, (v) => v + amountMetric.amountOf(t),
+          ifAbsent: () => amountMetric.amountOf(t));
       countMap.update(id, (v) => v + 1, ifAbsent: () => 1);
     }
 
@@ -122,6 +125,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
     // SQL 分组聚合（此前全量加载日期范围内交易行再 Dart 循环累加）。
     // 分组键与旧实现严格一致：本地时区的日界（date(happened_at, 'unixepoch',
@@ -129,7 +133,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     // 结果补零保证 [start, end) 区间逐日连续。
     final rows = await db.customSelect(
       "SELECT date(happened_at, 'unixepoch', 'localtime') AS day, "
-      'SUM(COALESCE(native_amount, amount)) AS total '
+      'SUM(${amountMetric.sqlExpr()}) AS total '
       'FROM transactions '
       'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0 '
       'AND happened_at >= ?3 AND happened_at < ?4 '
@@ -161,6 +165,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required int ledgerId,
     required String type,
     required int year,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
     final sd = await _monthStartDayOf(ledgerId);
     final yr = yearRangeFor(year, sd);
@@ -172,7 +177,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
       "SELECT strftime('%Y-%m', happened_at, 'unixepoch', 'localtime', "
       "CASE WHEN CAST(strftime('%d', happened_at, 'unixepoch', 'localtime') AS INTEGER) >= ?4 "
       "THEN 'start of month' ELSE '-1 month' END) AS label, "
-      'SUM(COALESCE(native_amount, amount)) AS total '
+      'SUM(${amountMetric.sqlExpr()}) AS total '
       'FROM transactions '
       'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0 '
       'AND happened_at >= ?3 AND happened_at < ?5 '
@@ -203,6 +208,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
   Future<List<({int year, double total})>> totalsByYearSeries({
     required int ledgerId,
     required String type,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
     final sd = await _monthStartDayOf(ledgerId);
     // SQL 聚合（此前**无任何时间过滤**全量载入该账本全部交易行）。
@@ -214,7 +220,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
       "strftime('%Y', happened_at, 'unixepoch', 'localtime', "
       "CASE WHEN CAST(strftime('%d', happened_at, 'unixepoch', 'localtime') AS INTEGER) >= ?3 "
       "THEN 'start of month' ELSE '-1 month' END) AS label, "
-      'COALESCE(native_amount, amount) AS v '
+      '${amountMetric.sqlExpr()} AS v '
       'FROM transactions '
       'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0) '
       'SELECT label, SUM(v) AS total FROM labeled GROUP BY label ORDER BY label',
@@ -243,7 +249,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
   /// 所以各行之和通常 **大于** 该区间总额，这是标签不互斥的口径而非 bug）。
   ///
   /// 取数走 `transaction_tags → tags` 主表路；外键未启用、`native_amount`
-  /// 可空 → 与既有统计一样 `COALESCE(native_amount, amount)`。
+  /// 可空 → 与既有统计一样走 [AnalyticsAmountMetric.sqlExpr]（本位币折算）。
   @override
   Future<List<({int id, String name, String? color, double total, int count})>>
       totalsByTag({
@@ -251,13 +257,14 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
     int ival(dynamic v) => v is num ? v.toInt() : (v is BigInt ? v.toInt() : 0);
     double dval(dynamic v) => v is num ? v.toDouble() : (v is BigInt ? v.toDouble() : 0.0);
 
     final rows = await db.customSelect(
       'SELECT tg.id AS id, tg.name AS name, tg.color AS color, '
-      'COUNT(*) AS cnt, SUM(COALESCE(t.native_amount, t.amount)) AS total '
+      'COUNT(*) AS cnt, SUM(${amountMetric.sqlExpr(alias: 't')}) AS total '
       'FROM transaction_tags tt '
       'INNER JOIN transactions t ON t.id = tt.transaction_id '
       'INNER JOIN tags tg ON tg.id = tt.tag_id '
@@ -291,17 +298,19 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required int ledgerId,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
+    final expr = amountMetric.sqlExpr();
     // 使用 SQL 聚合查询，比查出全部数据再累加快得多
     final result = await db.customSelect(
       '''
-      SELECT
-        COALESCE(SUM(CASE WHEN type = 'income' THEN COALESCE(native_amount, amount) ELSE 0 END), 0) AS income,
-        COALESCE(SUM(CASE WHEN type = 'expense' THEN COALESCE(native_amount, amount) ELSE 0 END), 0) AS expense
-      FROM transactions
-      WHERE ledger_id = ?1 AND happened_at >= ?2 AND happened_at < ?3
-        AND exclude_from_stats = 0
-      ''',
+     SELECT
+       COALESCE(SUM(CASE WHEN type = 'income' THEN $expr ELSE 0 END), 0) AS income,
+       COALESCE(SUM(CASE WHEN type = 'expense' THEN $expr ELSE 0 END), 0) AS expense
+     FROM transactions
+     WHERE ledger_id = ?1 AND happened_at >= ?2 AND happened_at < ?3
+       AND exclude_from_stats = 0
+     ''',
       variables: [
         d.Variable<int>(ledgerId),
         d.Variable<DateTime>(start),
@@ -332,19 +341,21 @@ class LocalStatisticsRepository implements StatisticsRepository {
   Future<(double income, double expense)> monthlyTotals({
     required int ledgerId,
     required DateTime month,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
     final sd = await _monthStartDayOf(ledgerId);
     final range = periodForLabel(month.year, month.month, sd);
     final start = range.start;
     final end = range.end;
+    final expr = amountMetric.sqlExpr();
 
     // 使用 SQL 聚合查询，比查出全部数据再累加快得多
     final result = await db.customSelect(
       '''
-      SELECT
-        COALESCE(SUM(CASE WHEN type = 'income' THEN COALESCE(native_amount, amount) ELSE 0 END), 0) AS income,
-        COALESCE(SUM(CASE WHEN type = 'expense' THEN COALESCE(native_amount, amount) ELSE 0 END), 0) AS expense
-      FROM transactions
+     SELECT
+       COALESCE(SUM(CASE WHEN type = 'income' THEN $expr ELSE 0 END), 0) AS income,
+       COALESCE(SUM(CASE WHEN type = 'expense' THEN $expr ELSE 0 END), 0) AS expense
+     FROM transactions
       WHERE ledger_id = ?1 AND happened_at >= ?2 AND happened_at < ?3
         AND exclude_from_stats = 0
       ''',
@@ -365,19 +376,21 @@ class LocalStatisticsRepository implements StatisticsRepository {
   Future<(double income, double expense)> yearlyTotals({
     required int ledgerId,
     required int year,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
     final sd = await _monthStartDayOf(ledgerId);
     final range = yearRangeFor(year, sd);
     final start = range.start;
     final end = range.end;
+    final expr = amountMetric.sqlExpr();
 
     // 使用 SQL 聚合查询，比查出全部数据再累加快得多
     final result = await db.customSelect(
       '''
-      SELECT
-        COALESCE(SUM(CASE WHEN type = 'income' THEN COALESCE(native_amount, amount) ELSE 0 END), 0) AS income,
-        COALESCE(SUM(CASE WHEN type = 'expense' THEN COALESCE(native_amount, amount) ELSE 0 END), 0) AS expense
-      FROM transactions
+     SELECT
+       COALESCE(SUM(CASE WHEN type = 'income' THEN $expr ELSE 0 END), 0) AS income,
+       COALESCE(SUM(CASE WHEN type = 'expense' THEN $expr ELSE 0 END), 0) AS expense
+     FROM transactions
       WHERE ledger_id = ?1 AND happened_at >= ?2 AND happened_at < ?3
         AND exclude_from_stats = 0
       ''',
@@ -685,10 +698,11 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required int ledgerId,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
     final rows = await db.customSelect(
       'SELECT type AS type, '
-      'COALESCE(native_amount, amount) AS total, '
+      '${amountMetric.sqlExpr()} AS total, '
       'custom_values_json AS custom_values_json '
       'FROM transactions '
       'WHERE ledger_id = ?1 AND exclude_from_stats = 0 '

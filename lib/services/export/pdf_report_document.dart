@@ -18,6 +18,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import '../../data/models/analytics_amount_metric.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
 import '../../utils/format_utils.dart';
@@ -209,7 +210,15 @@ class _PdfReportLayout {
         pw.SizedBox(height: 3),
         pw.Row(children: [
           pw.Expanded(
-              child: pw.Text(l10n.pdfReportFooterNote, style: _captionStyle)),
+              child: pw.Text(
+            // 非默认金额口径时补一句口径说明：报表数字与界面一致，
+            // 但没有这行的话「比记账金额小」会被当成导出算错。
+            data.amountMetric == AnalyticsAmountMetric.recorded
+                ? l10n.pdfReportFooterNote
+                : '${l10n.pdfReportFooterNote} · '
+                    '${l10n.analyticsAmountMetricNote}',
+            style: _captionStyle,
+          )),
           pw.Text(
             l10n.pdfReportPageOf(ctx.pageNumber, ctx.pagesCount),
             style: _captionStyle,

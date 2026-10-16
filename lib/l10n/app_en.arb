@@ -468,6 +468,12 @@
   "analyticsTotalAmount": "Total",
   "analyticsNoDataSubtext": "Swipe left/right to switch periods, or tap button to toggle income/expense",
   "analyticsSwipeHint": "Swipe left/right to change period",
+  "analyticsAmountMetricTitle": "Amount basis",
+  "analyticsAmountMetricRecorded": "Recorded",
+  "analyticsAmountMetricRecordedDesc": "Count by recorded amount (converted to base currency)",
+  "analyticsAmountMetricOriginal": "Original",
+  "analyticsAmountMetricOriginalDesc": "Count by original amount; entries without one fall back to the recorded amount",
+  "analyticsAmountMetricNote": "Original basis · unfilled entries use the recorded amount",
   "analyticsSwitchTo": "Switch to {type}",
   "@analyticsSwitchTo": {
     "placeholders": {

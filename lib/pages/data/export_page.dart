@@ -13,6 +13,7 @@ import '../../data/repositories/base_repository.dart';
 import '../../data/db.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/ui/wait_sliding_segmented_control.dart';
+import '../../widgets/analytics/amount_metric_chip.dart';
 import '../../widgets/biz/biz.dart';
 import '../../services/export/ledger_csv.dart';
 import '../../services/export/pdf_report_service.dart';
@@ -127,6 +128,15 @@ class _ExportPageState extends ConsumerState<ExportPage> {
           ],
           onValueChanged: (value) => setState(() => _pdfKind = value),
         ),
+        const SizedBox(height: 12),
+        // 金额口径（全局，与洞察页 / 区间报表同一枚 chip）：PDF 数字随它走，
+        // 报表页与导出口径必须一致（报销 / 对账场景）。说明另起一行 —— 与 chip
+        // 同排会被挤成半句（窄屏）。
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: AmountMetricChip(compact: false),
+        ),
+        const AmountMetricNote(padding: EdgeInsets.only(top: 6)),
         const SizedBox(height: 12),
         // 周期行：与区间报表页的「区间卡」同款（点整行换周期）
         Material(
@@ -297,6 +307,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         start: start,
         end: end,
         l10n: l10n,
+        amountMetric: ref.read(analyticsAmountMetricProvider),
       );
       final bytes = await PdfReportService.generatePdf(
         data: data,

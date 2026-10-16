@@ -889,6 +889,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsSwipeHint => 'Swipe left/right to change period';
 
   @override
+  String get analyticsAmountMetricTitle => 'Amount basis';
+
+  @override
+  String get analyticsAmountMetricRecorded => 'Recorded';
+
+  @override
+  String get analyticsAmountMetricRecordedDesc =>
+      'Count by recorded amount (converted to base currency)';
+
+  @override
+  String get analyticsAmountMetricOriginal => 'Original';
+
+  @override
+  String get analyticsAmountMetricOriginalDesc =>
+      'Count by original amount; entries without one fall back to the recorded amount';
+
+  @override
+  String get analyticsAmountMetricNote =>
+      'Original basis · unfilled entries use the recorded amount';
+
+  @override
   String analyticsSwitchTo(String type) {
     return 'Switch to $type';
   }

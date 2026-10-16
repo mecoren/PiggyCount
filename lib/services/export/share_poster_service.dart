@@ -101,6 +101,7 @@ class SharePosterService {
       final data = await dataService.calculateYearSummary(
         ledgerId: ledgerId,
         year: year,
+        amountMetric: ref.read(analyticsAmountMetricProvider),
       );
 
       // 数据计算存在异步间隙，使用context生成海报前需确认其仍然挂载
@@ -133,6 +134,7 @@ class SharePosterService {
         ledgerId: ledgerId,
         year: year,
         month: month,
+        amountMetric: ref.read(analyticsAmountMetricProvider),
       );
 
       // 数据计算存在异步间隙，使用context生成海报前需确认其仍然挂载
@@ -161,6 +163,7 @@ class SharePosterService {
 
       final data = await dataService.calculateLedgerSummary(
         ledgerId: ledgerId,
+        amountMetric: ref.read(analyticsAmountMetricProvider),
       );
 
       // 数据计算存在异步间隙，使用context生成海报前需确认其仍然挂载
@@ -498,6 +501,7 @@ class _PosterCarouselPreviewDialogState
     final data = await dataService.calculateYearSummary(
       ledgerId: ledgerId,
       year: targetYear,
+      amountMetric: ref.read(analyticsAmountMetricProvider),
     );
 
     return await _generatePosterFromWidget(
@@ -526,6 +530,7 @@ class _PosterCarouselPreviewDialogState
       ledgerId: ledgerId,
       year: targetYear,
       month: targetMonth,
+      amountMetric: ref.read(analyticsAmountMetricProvider),
     );
 
     return await _generatePosterFromWidget(
@@ -547,6 +552,7 @@ class _PosterCarouselPreviewDialogState
 
     final data = await dataService.calculateLedgerSummary(
       ledgerId: ledgerId,
+      amountMetric: ref.read(analyticsAmountMetricProvider),
     );
 
     return await _generatePosterFromWidget(

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' as d;
 import 'package:uuid/uuid.dart';
 
 import '../../db.dart';
+import '../../models/analytics_amount_metric.dart';
 import '../../models/transaction_original_amount.dart';
 import '../../../cloud/sync/change_tracker.dart';
 import '../../../services/currency/rate_math.dart';
@@ -2978,12 +2979,14 @@ class LocalRepository extends BaseRepository {
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) =>
           _statisticsRepo.totalsByCategory(
             ledgerId: ledgerId,
             type: type,
             start: start,
             end: end,
+            amountMetric: amountMetric,
           );
 
   @override
@@ -3002,12 +3005,14 @@ class LocalRepository extends BaseRepository {
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) =>
       _statisticsRepo.totalsByCategoryWithHierarchy(
         ledgerId: ledgerId,
         type: type,
         start: start,
         end: end,
+        amountMetric: amountMetric,
       );
 
   @override
@@ -3016,12 +3021,14 @@ class LocalRepository extends BaseRepository {
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) =>
       _statisticsRepo.totalsByDay(
         ledgerId: ledgerId,
         type: type,
         start: start,
         end: end,
+        amountMetric: amountMetric,
       );
 
   @override
@@ -3029,21 +3036,25 @@ class LocalRepository extends BaseRepository {
     required int ledgerId,
     required String type,
     required int year,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) =>
       _statisticsRepo.totalsByMonth(
         ledgerId: ledgerId,
         type: type,
         year: year,
+        amountMetric: amountMetric,
       );
 
   @override
   Future<List<({int year, double total})>> totalsByYearSeries({
     required int ledgerId,
     required String type,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) =>
       _statisticsRepo.totalsByYearSeries(
         ledgerId: ledgerId,
         type: type,
+        amountMetric: amountMetric,
       );
 
   @override
@@ -3060,12 +3071,14 @@ class LocalRepository extends BaseRepository {
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) =>
       _statisticsRepo.totalsByTag(
         ledgerId: ledgerId,
         type: type,
         start: start,
         end: end,
+        amountMetric: amountMetric,
       );
 
   @override
@@ -3073,31 +3086,37 @@ class LocalRepository extends BaseRepository {
     required int ledgerId,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) =>
       _statisticsRepo.totalsInRange(
         ledgerId: ledgerId,
         start: start,
         end: end,
+        amountMetric: amountMetric,
       );
 
   @override
   Future<(double income, double expense)> monthlyTotals({
     required int ledgerId,
     required DateTime month,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) =>
       _statisticsRepo.monthlyTotals(
         ledgerId: ledgerId,
         month: month,
+        amountMetric: amountMetric,
       );
 
   @override
   Future<(double income, double expense)> yearlyTotals({
     required int ledgerId,
     required int year,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) =>
       _statisticsRepo.yearlyTotals(
         ledgerId: ledgerId,
         year: year,
+        amountMetric: amountMetric,
       );
 
   // v45 原始金额偏差（口径见 StatisticsRepository 声明）。
@@ -3209,11 +3228,13 @@ class LocalRepository extends BaseRepository {
     required int ledgerId,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) =>
       _statisticsRepo.customFieldStatsRows(
         ledgerId: ledgerId,
         start: start,
         end: end,
+        amountMetric: amountMetric,
       );
 
   @override

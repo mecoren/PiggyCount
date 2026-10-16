@@ -15,6 +15,7 @@ import 'update_providers.dart';
 import 'smart_billing_providers.dart';
 import 'quick_entry_providers.dart';
 import '../data/db.dart';
+import '../data/models/analytics_amount_metric.dart';
 import '../utils/month_range.dart';
 import '../services/data/recurring_transaction_service.dart';
 import '../services/billing/post_processor.dart';
@@ -60,6 +61,32 @@ final checkUpdateLoadingProvider = StateProvider<bool>((ref) => false);
 
 // 下载进度状态
 final downloadProgressProvider = StateProvider<UpdateProgress?>((ref) => null);
+
+// ---------- Analytics 金额口径（记账金额 / 原始金额） ----------
+
+/// 洞察 / 报表的**全局**金额口径。
+///
+/// 为什么是全局而不是各页各自的页面状态：口径一旦分叉就会出现「洞察页按原始
+/// 金额、区间报表按记账金额、导出 PDF 又是第三个」，用户对不上账。全局单值 +
+/// 洞察页/区间报表/导出页同一枚 chip 修改它，天然保证「读数到哪都一致」
+/// （见 [AnalyticsAmountMetric] 的口径文档）。
+final analyticsAmountMetricProvider = StateProvider<AnalyticsAmountMetric>(
+    (ref) => AnalyticsAmountMetric.recorded);
+
+/// 金额口径持久化初始化（pref 读取 + 变更写回），与 hideAmounts 等开关同款。
+final analyticsAmountMetricInitProvider = FutureProvider<void>((ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  final saved = prefs.getString(AnalyticsAmountMetric.prefsKey);
+  if (saved != null) {
+    ref.read(analyticsAmountMetricProvider.notifier).state =
+        AnalyticsAmountMetric.fromStorage(saved);
+  }
+  ref.listen<AnalyticsAmountMetric>(analyticsAmountMetricProvider,
+      (prev, next) async {
+    await prefs.setString(
+        AnalyticsAmountMetric.prefsKey, next.storageValue);
+  });
+});
 
 // ---------- Analytics 提示持久化（本地 SharedPreferences） ----------
 final analyticsHeaderHintDismissedProvider =
@@ -207,6 +234,8 @@ final appSplashInitProvider = FutureProvider<void>((ref) async {
       ref.watch(appInitProvider.future),
       ref.watch(fontScaleInitProvider.future),
       ref.watch(hideAmountsInitProvider.future),
+      // 洞察/报表金额口径（pref 读取 + 变更写回）
+      ref.watch(analyticsAmountMetricInitProvider.future),
       ref.watch(compactAmountInitProvider.future),
       ref.watch(showTransactionTimeInitProvider.future),
       ref.watch(noteDisplayModeInitProvider.future),

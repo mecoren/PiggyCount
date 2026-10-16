@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/models/analytics_amount_metric.dart';
 import '../../l10n/app_localizations.dart';
 import '../../pages/analytics/custom_field_analysis_page.dart';
 import '../../providers.dart';
@@ -25,6 +26,7 @@ class CustomFieldStatsCard extends ConsumerWidget {
     required this.start,
     required this.end,
     required this.type,
+    required this.amountMetric,
   });
 
   final DateTime start;
@@ -33,6 +35,9 @@ class CustomFieldStatsCard extends ConsumerWidget {
   /// 洞察视角：'expense' | 'income' | 'balance'（balance 隐藏本卡）。
   /// 同时作为值桶排序/金额展示维度（expense/income）。
   final String type;
+
+  /// 金额口径：卡内金额列与页面其余卡片同源（原始金额口径下本卡也按原始金额）。
+  final AnalyticsAmountMetric amountMetric;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,6 +48,7 @@ class CustomFieldStatsCard extends ConsumerWidget {
           start: start,
           end: end,
           refreshTick: ref.watch(statsRefreshProvider),
+          amountMetric: amountMetric,
         )))
             .when(
       data: (d) => d,
@@ -100,6 +106,7 @@ class CustomFieldStatsCard extends ConsumerWidget {
                           start: start,
                           end: end,
                           type: type,
+                          amountMetric: amountMetric,
                         ),
                       ),
                     );

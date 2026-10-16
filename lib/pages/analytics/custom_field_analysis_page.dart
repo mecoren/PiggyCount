@@ -10,6 +10,7 @@ import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../providers/custom_field_providers.dart';
+import '../../data/models/analytics_amount_metric.dart';
 import '../../services/custom_field_stats_service.dart';
 import '../../services/export/csv_builder.dart';
 import '../../services/export/custom_field_stats_csv.dart';
@@ -36,6 +37,7 @@ class CustomFieldAnalysisPage extends ConsumerStatefulWidget {
     required this.start,
     required this.end,
     required this.type,
+    this.amountMetric = AnalyticsAmountMetric.recorded,
     this.fieldSyncId,
     this.onDrillDown,
     this.onExportCsv,
@@ -48,6 +50,9 @@ class CustomFieldAnalysisPage extends ConsumerStatefulWidget {
   /// 洞察视角：'expense' | 'income' | 'balance'（balance 走支出展示兜底，
   /// 入口卡在结余视角已隐藏，正常到不了这里）。
   final String type;
+
+  /// 金额口径（与洞察卡同源）：金额型字段的求和/分布随之切换。
+  final AnalyticsAmountMetric amountMetric;
 
   /// 初始选中字段；null/不存在时默认第一个字段。
   final String? fieldSyncId;
@@ -79,6 +84,7 @@ class _CustomFieldAnalysisPageState
       start: widget.start,
       end: widget.end,
       refreshTick: ref.watch(statsRefreshProvider),
+      amountMetric: widget.amountMetric,
     )));
 
     return Scaffold(

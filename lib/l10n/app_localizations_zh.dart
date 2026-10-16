@@ -865,6 +865,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analyticsSwipeHint => '左右滑动切换周期';
 
   @override
+  String get analyticsAmountMetricTitle => '金额口径';
+
+  @override
+  String get analyticsAmountMetricRecorded => '记账金额';
+
+  @override
+  String get analyticsAmountMetricRecordedDesc => '按记账金额统计（本位币折算）';
+
+  @override
+  String get analyticsAmountMetricOriginal => '原始金额';
+
+  @override
+  String get analyticsAmountMetricOriginalDesc => '按原始金额统计，未填写原始金额的明细按记账金额计';
+
+  @override
+  String get analyticsAmountMetricNote => '原始金额口径 · 未填写按记账金额计';
+
+  @override
   String analyticsSwitchTo(String type) {
     return '切换到$type';
   }
@@ -10028,6 +10046,24 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get analyticsSwipeHint => '左右滑動切換週期';
+
+  @override
+  String get analyticsAmountMetricTitle => '金額口徑';
+
+  @override
+  String get analyticsAmountMetricRecorded => '記帳金額';
+
+  @override
+  String get analyticsAmountMetricRecordedDesc => '按記帳金額統計（本位幣折算）';
+
+  @override
+  String get analyticsAmountMetricOriginal => '原始金額';
+
+  @override
+  String get analyticsAmountMetricOriginalDesc => '按原始金額統計，未填寫原始金額的明細按記帳金額計';
+
+  @override
+  String get analyticsAmountMetricNote => '原始金額口徑 · 未填寫按記帳金額計';
 
   @override
   String analyticsSwitchTo(String type) {

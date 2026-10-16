@@ -5,10 +5,12 @@
 /// 排版用 `test/services/pdf_report_document_test.dart` 拿手写夹具跑通；
 /// 两边都只依赖这一层纯数据，不必为了测排版去搭数据库。
 ///
-/// 统计口径全部沿用既有 SQL 聚合（`COALESCE(native_amount, amount)` +
+/// 统计口径全部沿用既有 SQL 聚合（[AnalyticsAmountMetric.sqlExpr] +
 /// `exclude_from_stats = 0` + 半开区间 `[start, end)`），与洞察页 / 区间报表页
 /// **同源** —— 报表导出的数必须能跟界面上看到的对得上（报销 / 对账场景）。
 library;
+
+import '../../data/models/analytics_amount_metric.dart';
 
 /// 一份报表的全部数据。
 class PdfReportData {
@@ -25,6 +27,7 @@ class PdfReportData {
     required this.buckets,
     required this.byMonth,
     required this.entries,
+    this.amountMetric = AnalyticsAmountMetric.recorded,
   });
 
   /// 账本名（报表头展示）。
@@ -56,6 +59,10 @@ class PdfReportData {
 
   /// 明细（按时间**升序**，与账单核对顺序一致）。含转账。
   final List<PdfReportEntry> entries;
+
+  /// 金额口径（记账金额 / 原始金额）。非默认口径时 PDF 页脚会印出口径说明，
+  /// 否则「数字比界面小」会被当成导出算错。
+  final AnalyticsAmountMetric amountMetric;
 
   /// 结余 = 收入 − 支出。
   double get balance => income - expense;

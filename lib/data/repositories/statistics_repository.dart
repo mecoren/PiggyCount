@@ -1,7 +1,12 @@
+import '../models/analytics_amount_metric.dart';
 import '../models/transaction_original_amount.dart';
 
 /// 统计Repository接口
 /// 定义统计相关的所有数据操作
+///
+/// [amountMetric] 是**统计金额口径**（记账金额 / 原始金额），默认
+/// [AnalyticsAmountMetric.recorded] —— 不传参的老调用方行为逐字不变。
+/// 表达式本身在 [AnalyticsAmountMetric.sqlExpr] 单点定义，这里只做透传。
 abstract class StatisticsRepository {
   /// 按分类统计（指定时间范围和类型）
   Future<List<({int? id, String name, String? icon, double total})>> totalsByCategory({
@@ -9,15 +14,19 @@ abstract class StatisticsRepository {
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric,
   });
 
   /// 按分类统计（支持二级分类展开），count 为该分类下的记账笔数
+  ///
+  /// [count] 是**笔数**，与 [amountMetric] 无关：口径只换金额，不换笔数。
   Future<List<({int? id, String name, String? icon, int? parentId, int level, double total, int count})>>
       totalsByCategoryWithHierarchy({
     required int ledgerId,
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric,
   });
 
   /// 按天统计（指定时间范围和类型）
@@ -26,6 +35,7 @@ abstract class StatisticsRepository {
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric,
   });
 
   /// 按月统计（指定年份和类型）
@@ -38,12 +48,14 @@ abstract class StatisticsRepository {
     required int ledgerId,
     required String type,
     required int year,
+    AnalyticsAmountMetric amountMetric,
   });
 
   /// 按年统计（所有年份，指定类型）
   Future<List<({int year, double total})>> totalsByYearSeries({
     required int ledgerId,
     required String type,
+    AnalyticsAmountMetric amountMetric,
   });
 
   /// 按标签统计（指定时间范围和类型），total 按金额降序由调用方排。
@@ -56,6 +68,7 @@ abstract class StatisticsRepository {
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric,
   });
 
   /// 获取指定时间范围的收支总额
@@ -63,6 +76,7 @@ abstract class StatisticsRepository {
     required int ledgerId,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric,
   });
 
   /// 获取指定月份的收支总额
@@ -72,12 +86,14 @@ abstract class StatisticsRepository {
   Future<(double income, double expense)> monthlyTotals({
     required int ledgerId,
     required DateTime month,
+    AnalyticsAmountMetric amountMetric,
   });
 
   /// 获取指定年份的收支总额
   Future<(double income, double expense)> yearlyTotals({
     required int ledgerId,
     required int year,
+    AnalyticsAmountMetric amountMetric,
   });
 
   // --- v45 原始金额偏差 ---------------------------------------------------
@@ -170,12 +186,15 @@ abstract class StatisticsRepository {
   /// Dart 侧做 —— 值以 JSON 散落在行上，SQL 无 JSON1 依赖；行数受
   /// custom_values_json IS NOT NULL 过滤约束，绝大多数账本为 0 行）。
   /// 口径与既有统计一致：排除「不计收支」，金额取
-  /// `COALESCE(native_amount, amount)`（本位币折算）。
+  /// [AnalyticsAmountMetric.sqlExpr]（本位币折算的所选口径）。
+  /// 返回记录里的 `nativeAmount` 即**所选口径下的金额**（字段名沿用历史，
+  /// 不再只是本色 native）。
   Future<List<({String type, double nativeAmount, String? customValuesJson})>>
       customFieldStatsRows({
     required int ledgerId,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric,
   });
 
   /// 区间内计入统计的交易总笔数（同 [customFieldStatsRows] 口径：排除

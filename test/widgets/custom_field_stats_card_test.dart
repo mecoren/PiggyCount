@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/models/analytics_amount_metric.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/providers.dart';
 import 'package:piggycount/providers/custom_field_providers.dart';
@@ -46,7 +47,16 @@ void main() {
     required String type,
     required List<CustomFieldFieldStats> data,
     DateTime? start,
-    List<({int ledgerId, DateTime start, DateTime end, int refreshTick})>? calls,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    List<
+            ({
+              int ledgerId,
+              DateTime start,
+              DateTime end,
+              int refreshTick,
+              AnalyticsAmountMetric amountMetric
+            })>?
+        calls,
   }) {
     return ProviderScope(
       overrides: [
@@ -68,6 +78,7 @@ void main() {
             start: start ?? DateTime(2026, 1, 1),
             end: DateTime(2026, 1, 8),
             type: type,
+            amountMetric: amountMetric,
           ),
         ),
       ),
@@ -120,8 +131,13 @@ void main() {
   });
 
   testWidgets('查询键含账本/起止/refreshTick，换区间即换键重查', (tester) async {
-    final calls =
-        <({int ledgerId, DateTime start, DateTime end, int refreshTick})>[];
+    final calls = <({
+      int ledgerId,
+      DateTime start,
+      DateTime end,
+      int refreshTick,
+      AnalyticsAmountMetric amountMetric
+    })>[];
     await tester.pumpWidget(host(
         type: 'expense',
         data: [field('渠道', 1, 0)],
@@ -139,5 +155,31 @@ void main() {
     expect(calls[0].ledgerId, 7);
     expect(calls[0].start, DateTime(2026, 1, 1));
     expect(calls[1].start, DateTime(2026, 2, 1));
+  });
+
+  testWidgets('查询键含金额口径：卡内金额与页面其余卡片同源', (tester) async {
+    final calls = <({
+      int ledgerId,
+      DateTime start,
+      DateTime end,
+      int refreshTick,
+      AnalyticsAmountMetric amountMetric
+    })>[];
+    await tester.pumpWidget(host(
+        type: 'expense',
+        data: [field('渠道', 1, 0)],
+        calls: calls));
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpWidget(host(
+        type: 'expense',
+        data: [field('渠道', 1, 0)],
+        amountMetric: AnalyticsAmountMetric.original,
+        calls: calls));
+    await tester.pump(const Duration(seconds: 3));
+
+    // 换口径 = 换键重查（不换就是要拿到「界面按 A 口径、卡片按 B 口径」的 bug）
+    expect(calls.length, 2);
+    expect(calls[0].amountMetric, AnalyticsAmountMetric.recorded);
+    expect(calls[1].amountMetric, AnalyticsAmountMetric.original);
   });
 }

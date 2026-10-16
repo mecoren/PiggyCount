@@ -877,6 +877,25 @@ class AppLocalizationsKo extends AppLocalizations {
   String get analyticsSwipeHint => '좌우로 스와이프해 기간 전환';
 
   @override
+  String get analyticsAmountMetricTitle => '금액 기준';
+
+  @override
+  String get analyticsAmountMetricRecorded => '기록 금액';
+
+  @override
+  String get analyticsAmountMetricRecordedDesc => '기록 금액 기준 집계(기준 통화 환산)';
+
+  @override
+  String get analyticsAmountMetricOriginal => '원본 금액';
+
+  @override
+  String get analyticsAmountMetricOriginalDesc =>
+      '원본 금액 기준 집계, 미입력 항목은 기록 금액으로 계산';
+
+  @override
+  String get analyticsAmountMetricNote => '원본 금액 기준 · 미입력은 기록 금액으로 계산';
+
+  @override
   String analyticsSwitchTo(String type) {
     return '$type(으)로 전환';
   }

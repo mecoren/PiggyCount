@@ -19,6 +19,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../data/db.dart';
+import '../../data/models/analytics_amount_metric.dart';
 import '../../data/repositories/base_repository.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/analytics_category_rollup.dart';
@@ -91,17 +92,38 @@ class PdfReportService {
     required DateTime start,
     required DateTime end,
     required AppLocalizations l10n,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
     final rows = await Future.wait<dynamic>([
-      repo.totalsInRange(ledgerId: ledgerId, start: start, end: end),
+      repo.totalsInRange(
+          ledgerId: ledgerId,
+          start: start,
+          end: end,
+          amountMetric: amountMetric),
       repo.totalsByDay(
-          ledgerId: ledgerId, type: 'expense', start: start, end: end),
+          ledgerId: ledgerId,
+          type: 'expense',
+          start: start,
+          end: end,
+          amountMetric: amountMetric),
       repo.totalsByDay(
-          ledgerId: ledgerId, type: 'income', start: start, end: end),
+          ledgerId: ledgerId,
+          type: 'income',
+          start: start,
+          end: end,
+          amountMetric: amountMetric),
       repo.totalsByCategoryWithHierarchy(
-          ledgerId: ledgerId, type: 'expense', start: start, end: end),
+          ledgerId: ledgerId,
+          type: 'expense',
+          start: start,
+          end: end,
+          amountMetric: amountMetric),
       repo.totalsByCategoryWithHierarchy(
-          ledgerId: ledgerId, type: 'income', start: start, end: end),
+          ledgerId: ledgerId,
+          type: 'income',
+          start: start,
+          end: end,
+          amountMetric: amountMetric),
       repo.getTransactionsByDateRange(
           ledgerId: ledgerId, startDate: start, endDate: end),
       repo.getLedgerById(ledgerId),
@@ -133,6 +155,7 @@ class PdfReportService {
           rows[3] as List<_CategoryRow>, repo, l10n, 'expense'),
       incomeCategories: await _categories(
           rows[4] as List<_CategoryRow>, repo, l10n, 'income'),
+      amountMetric: amountMetric,
       buckets: _buckets(
         rows[1] as List<_DayTotal>,
         rows[2] as List<_DayTotal>,

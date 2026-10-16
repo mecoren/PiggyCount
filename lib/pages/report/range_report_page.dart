@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../data/db.dart' as db;
+import '../../data/models/analytics_amount_metric.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../services/custom_field_stats_service.dart';
@@ -12,6 +13,7 @@ import '../../utils/analytics_category_rollup.dart';
 import '../../utils/analytics_scope.dart';
 import '../../utils/format_utils.dart';
 import '../../widgets/biz/biz.dart';
+import '../../widgets/analytics/amount_metric_chip.dart';
 import '../../widgets/analytics/category_rank_row.dart';
 import '../../widgets/analytics/custom_field_stats_view.dart';
 import '../../widgets/charts/analytics_bar_chart.dart';
@@ -98,22 +100,47 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
   /// 转圈，ListView 也不被销毁重建（滚动位置、分段控件胶囊动画都保住）。
   _ReportData? _lastData;
 
-  Future<_ReportData> _load(int ledgerId) async {
+  Future<_ReportData> _load(
+      int ledgerId, AnalyticsAmountMetric amountMetric) async {
     final repo = ref.read(repositoryProvider);
     final (momStart, momEnd) = RangeReportPage.momWindow(_start, _end);
     final (yoyStart, yoyEnd) = RangeReportPage.yoyWindow(_start, _end);
     final days = _end.difference(_start).inDays;
     final byMonth = days > RangeReportPage.dayChartLimit;
     final results = await Future.wait<dynamic>([
-      repo.totalsInRange(ledgerId: ledgerId, start: _start, end: _end),
-      repo.totalsInRange(ledgerId: ledgerId, start: momStart, end: momEnd),
-      repo.totalsInRange(ledgerId: ledgerId, start: yoyStart, end: yoyEnd),
+      repo.totalsInRange(
+          ledgerId: ledgerId,
+          start: _start,
+          end: _end,
+          amountMetric: amountMetric),
+      repo.totalsInRange(
+          ledgerId: ledgerId,
+          start: momStart,
+          end: momEnd,
+          amountMetric: amountMetric),
+      repo.totalsInRange(
+          ledgerId: ledgerId,
+          start: yoyStart,
+          end: yoyEnd,
+          amountMetric: amountMetric),
       repo.totalsByDay(
-          ledgerId: ledgerId, type: _dim, start: _start, end: _end),
+          ledgerId: ledgerId,
+          type: _dim,
+          start: _start,
+          end: _end,
+          amountMetric: amountMetric),
       repo.totalsByCategoryWithHierarchy(
-          ledgerId: ledgerId, type: _dim, start: _start, end: _end),
+          ledgerId: ledgerId,
+          type: _dim,
+          start: _start,
+          end: _end,
+          amountMetric: amountMetric),
       repo.totalsByTag(
-          ledgerId: ledgerId, type: _dim, start: _start, end: _end),
+          ledgerId: ledgerId,
+          type: _dim,
+          start: _start,
+          end: _end,
+          amountMetric: amountMetric),
       repo.countByTypeInRange(
           ledgerId: ledgerId, type: _dim, start: _start, end: _end),
     ]);
@@ -126,7 +153,10 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
             String? customValuesJson
           })>[]
         : await repo.customFieldStatsRows(
-            ledgerId: ledgerId, start: _start, end: _end);
+            ledgerId: ledgerId,
+            start: _start,
+            end: _end,
+            amountMetric: amountMetric);
     final customFieldStats =
         CustomFieldStatsService.aggregate(defs: cfDefs, rows: cfRows);
     final rawSeries = results[3] as List<({DateTime day, double total})>;
@@ -157,9 +187,10 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
 
   /// 三级取数：同键复用已发查询 → 维度缓存同帧命中 → 都没有才真查库
   /// （键含区间/维度/账本/刷新 tick，交互每次变化才产生新键）。
-  Future<_ReportData> _futureFor(int ledgerId, int refreshTick) {
+  Future<_ReportData> _futureFor(
+      int ledgerId, int refreshTick, AnalyticsAmountMetric amountMetric) {
     final scope = '$ledgerId|${_start.microsecondsSinceEpoch}'
-        '|${_end.microsecondsSinceEpoch}|$refreshTick';
+        '|${_end.microsecondsSinceEpoch}|$refreshTick|${amountMetric.name}';
     if (_dimCacheScope != scope) {
       _dimCacheScope = scope;
       _dimCache.clear();
@@ -169,7 +200,7 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
     if (_futureKey == key && _future != null) return _future!;
     final cached = _dimCache[dim];
     if (cached != null) return SynchronousFuture(cached);
-    final f = _load(ledgerId).then((data) {
+    final f = _load(ledgerId, amountMetric).then((data) {
       // 慢响应不能污染缓存：期间区间已经换掉的话，它的数属于旧 scope。
       if (_dimCacheScope == scope) _dimCache[dim] = data;
       _lastData = data;
@@ -226,6 +257,8 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
     final l10n = AppLocalizations.of(context);
     final ledgerId = ref.watch(currentLedgerIdProvider);
     final refreshTick = ref.watch(statsRefreshProvider);
+    // 金额口径（全局，与洞察页同一枚 chip 改同一个值）
+    final amountMetric = ref.watch(analyticsAmountMetricProvider);
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
@@ -238,7 +271,7 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
       body: Padding(
         padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 80),
         child: FutureBuilder<_ReportData>(
-          future: _futureFor(ledgerId, refreshTick),
+          future: _futureFor(ledgerId, refreshTick, amountMetric),
           builder: (context, snap) {
             if (snap.hasError) {
               return Center(
@@ -272,26 +305,39 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
                     const SizedBox(height: 12),
                     _compareCard(context, l10n, data),
                     const SizedBox(height: 12),
-                    // 支出/收入维度：项目通用 tab 样式（WaitSlidingSegmentedControl），
-                    // 与洞察页同款（固定宽度 + 紧凑高度）。切换只有胶囊滑动，无闪动。
-                    SizedBox(
-                      width: 168,
-                      child: WaitSlidingSegmentedControl<String>(
-                        selected: _dim,
-                        height: 32,
-                        fontSize: PiggyTextTokens.fs13,
-                        segments: [
-                          WaitSlidingSegment(
-                            value: 'expense',
-                            label: l10n.homeExpense,
+                    // 支出/收入维度 + 金额口径：项目通用 tab 样式
+                    // （WaitSlidingSegmentedControl），与洞察页同款；口径 chip
+                    // 改的是同一个全局值，本页数字随之重算（缓存键含口径）。
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 168,
+                          child: WaitSlidingSegmentedControl<String>(
+                            selected: _dim,
+                            height: 32,
+                            fontSize: PiggyTextTokens.fs13,
+                            segments: [
+                              WaitSlidingSegment(
+                                value: 'expense',
+                                label: l10n.homeExpense,
+                              ),
+                              WaitSlidingSegment(
+                                value: 'income',
+                                label: l10n.homeIncome,
+                              ),
+                            ],
+                            onValueChanged: (value) =>
+                                setState(() => _dim = value),
                           ),
-                          WaitSlidingSegment(
-                            value: 'income',
-                            label: l10n.homeIncome,
-                          ),
-                        ],
-                        onValueChanged: (value) => setState(() => _dim = value),
-                      ),
+                        ),
+                        const SizedBox(width: 8),
+                        const AmountMetricChip(),
+                      ],
+                    ),
+                    // 口径说明单独一行：该行余宽不足以放下整句（会截断成半句），
+                    // 故放到下方独立小字行。
+                    const AmountMetricNote(
+                      padding: EdgeInsets.only(top: 6),
                     ),
                     if (data.txCount == 0)
                       Padding(

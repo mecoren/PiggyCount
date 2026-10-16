@@ -10,6 +10,7 @@ import '../../widgets/charts/line_chart.dart';
 import '../../widgets/charts/analytics_bar_chart.dart';
 import '../../widgets/charts/category_pie_chart.dart';
 import '../../widgets/analytics/analytics_summary.dart';
+import '../../widgets/analytics/amount_metric_chip.dart';
 import '../../widgets/analytics/category_rank_row.dart';
 import '../../widgets/analytics/custom_field_stats_card.dart';
 import '../../widgets/analytics/insight_card.dart';
@@ -18,6 +19,7 @@ import '../../l10n/app_localizations.dart';
 import '../../services/export/share_poster_service.dart';
 import '../../services/system/logger_service.dart';
 import '../../data/db.dart' as db;
+import '../../data/models/analytics_amount_metric.dart';
 import '../report/range_report_page.dart';
 import '../../utils/analytics_scope.dart';
 import '../../utils/month_range.dart';
@@ -440,6 +442,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     final selMonth = ref.watch(selectedMonthProvider);
     // 统计刷新 tick：当有新增/编辑/删除时我们会 +1，这里监听以触发重建和重新拉取
     final refreshTick = ref.watch(statsRefreshProvider);
+    // 金额口径（记账金额 / 原始金额，全局持久化）：所有取数与缓存键都带上它
+    final amountMetric = ref.watch(analyticsAmountMetricProvider);
     final now = DateTime.now();
     final sd = ref.watch(currentMonthStartDayProvider);
     // 时间范围 + 同比上期窗口：周期计算收拢在 analytics_scope.dart 纯函数
@@ -463,43 +467,69 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     // 调用即执行，原实现每次 setState 都白发 4~6 条聚合 SQL，命中时结果
     // 被 _rememberAnalyticsFuture 丢弃；命中时闭包不执行，占位 future 安全。
     final scopeKey = '${start.millisecondsSinceEpoch}|'
-        '${end.millisecondsSinceEpoch}|$refreshTick|$ledgerId';
+        '${end.millisecondsSinceEpoch}|$refreshTick|$ledgerId|'
+        '${amountMetric.name}';
     final memoKey = '$_type|$scopeKey';
+
     // 命中 = 已发查询复用 或 口径缓存已有结果，两种都不必再建查询。
     final memoHit = _resultCache.containsKey(memoKey) ||
         (_lastAnalyticsKey == memoKey && _lastAnalyticsFuture != null);
 
     if (!memoHit) {
+      // 全部聚合都带上当前金额口径 —— 汇总卡 / 图表 / 环形图 / 排行同源，
+      // 少传一处就会出现「总额按原始金额、分类构成按记账金额」的对不上账。
+      final metric = amountMetric;
       // 主序列路由由 seriesKind 决定：week/month=日、year=月、all=年序列
       if (_type == 'balance') {
         // 结余模式：同时获取收入和支出数据
         switch (_scope.seriesKind) {
           case AnalyticsSeriesKind.day:
             incomeSeriesFuture = repo.totalsByDay(
-                ledgerId: ledgerId, type: 'income', start: start, end: end);
+                ledgerId: ledgerId,
+                type: 'income',
+                start: start,
+                end: end,
+                amountMetric: metric);
             expenseSeriesFuture = repo.totalsByDay(
-                ledgerId: ledgerId, type: 'expense', start: start, end: end);
+                ledgerId: ledgerId,
+                type: 'expense',
+                start: start,
+                end: end,
+                amountMetric: metric);
           case AnalyticsSeriesKind.month:
             incomeSeriesFuture = repo.totalsByMonth(
-                ledgerId: ledgerId, type: 'income', year: selMonth.year);
+                ledgerId: ledgerId,
+                type: 'income',
+                year: selMonth.year,
+                amountMetric: metric);
             expenseSeriesFuture = repo.totalsByMonth(
-                ledgerId: ledgerId, type: 'expense', year: selMonth.year);
+                ledgerId: ledgerId,
+                type: 'expense',
+                year: selMonth.year,
+                amountMetric: metric);
           case AnalyticsSeriesKind.yearSeries:
-            incomeSeriesFuture =
-                repo.totalsByYearSeries(ledgerId: ledgerId, type: 'income');
-            expenseSeriesFuture =
-                repo.totalsByYearSeries(ledgerId: ledgerId, type: 'expense');
+            incomeSeriesFuture = repo.totalsByYearSeries(
+                ledgerId: ledgerId, type: 'income', amountMetric: metric);
+            expenseSeriesFuture = repo.totalsByYearSeries(
+                ledgerId: ledgerId, type: 'expense', amountMetric: metric);
         }
         seriesFuture = Future.value([]); // 占位
       } else {
         // 收入或支出模式
         seriesFuture = switch (_scope.seriesKind) {
           AnalyticsSeriesKind.day => repo.totalsByDay(
-              ledgerId: ledgerId, type: _type, start: start, end: end),
+              ledgerId: ledgerId,
+              type: _type,
+              start: start,
+              end: end,
+              amountMetric: metric),
           AnalyticsSeriesKind.month => repo.totalsByMonth(
-              ledgerId: ledgerId, type: _type, year: selMonth.year),
-          AnalyticsSeriesKind.yearSeries =>
-            repo.totalsByYearSeries(ledgerId: ledgerId, type: _type),
+              ledgerId: ledgerId,
+              type: _type,
+              year: selMonth.year,
+              amountMetric: metric),
+          AnalyticsSeriesKind.yearSeries => repo.totalsByYearSeries(
+              ledgerId: ledgerId, type: _type, amountMetric: metric),
         };
       }
 
@@ -511,10 +541,15 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
         final w = chartSeriesWindow(_scope,
             anchor: anchor, range: _customRange, startDay: sd);
         if (w == null) {
-          return repo.totalsByYearSeries(ledgerId: ledgerId, type: type);
+          return repo.totalsByYearSeries(
+              ledgerId: ledgerId, type: type, amountMetric: metric);
         }
         return repo.totalsByDay(
-            ledgerId: ledgerId, type: type, start: w.start, end: w.end);
+            ledgerId: ledgerId,
+            type: type,
+            start: w.start,
+            end: w.end,
+            amountMetric: metric);
       }
 
       if (_type == 'balance') {
@@ -548,6 +583,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         style: PiggyTextTokens.title(context),
                       ),
                       const Spacer(),
+                      // 金额口径（记账金额 / 原始金额）：放在标题行右侧，
+                      // 不加高头部（该行高度由右侧 IconButton 决定，chip 仅 30）。
+                      const AmountMetricChip(),
+                      const SizedBox(width: 4),
                       // F2 自定义区间报表入口（任意起止 + 环比/同比 + 标签维度）
                       Tooltip(
                         message:
@@ -750,6 +789,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               ],
             ),
           ),
+          // 非默认金额口径的说明行（默认口径下零高，不占版面）
+          const AmountMetricNote(),
           // v30 L11:检测到未折算外币交易 → 补折算横幅(用户确认后按当前汇率重算)
           _buildRecalcForeignBanner(context),
           // v30 折算脚注(01 §五):账本含外币交易时说明统计口径
@@ -785,7 +826,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                               expenseSeriesFuture!,
                               prevStart,
                               prevEnd,
-                              chartSeriesFuture)
+                              chartSeriesFuture,
+                              amountMetric)
                           : _loadCategoryData(
                               repo,
                               ledgerId,
@@ -795,7 +837,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                               seriesFuture,
                               prevStart,
                               prevEnd,
-                              chartSeriesFuture))
+                              chartSeriesFuture,
+                              amountMetric))
                       .then((loaded) => (shape, loaded));
                 },
               ),
@@ -1470,6 +1513,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         start: start,
                         end: end,
                         type: _type,
+                        amountMetric: amountMetric,
                       ),
                     ],
                   ),
@@ -1643,18 +1687,31 @@ Future<InOutInsightsData> _loadCategoryData(
   DateTime? prevStart,
   DateTime? prevEnd,
   Future<dynamic> chartSeriesFuture,
+  AnalyticsAmountMetric amountMetric,
 ) async {
   final prevTotalsFuture = (prevStart != null && prevEnd != null)
-      ? repo.totalsInRange(ledgerId: ledgerId, start: prevStart, end: prevEnd)
+      ? repo.totalsInRange(
+          ledgerId: ledgerId,
+          start: prevStart,
+          end: prevEnd,
+          amountMetric: amountMetric)
       : Future.value((0.0, 0.0));
   final results = await Future.wait<dynamic>([
     repo.totalsByCategoryWithHierarchy(
-        ledgerId: ledgerId, type: type, start: start, end: end),
+        ledgerId: ledgerId,
+        type: type,
+        start: start,
+        end: end,
+        amountMetric: amountMetric),
     seriesFuture,
     repo.countByTypeInRange(
         ledgerId: ledgerId, type: type, start: start, end: end),
     // 本期收支（结余用）
-    repo.totalsInRange(ledgerId: ledgerId, start: start, end: end),
+    repo.totalsInRange(
+        ledgerId: ledgerId,
+        start: start,
+        end: end,
+        amountMetric: amountMetric),
     prevTotalsFuture,
     chartSeriesFuture,
   ]);
@@ -1697,13 +1754,22 @@ Future<BalanceInsightsData> _loadBalanceData(
   DateTime? prevStart,
   DateTime? prevEnd,
   Future<dynamic> chartSeriesFuture,
+  AnalyticsAmountMetric amountMetric,
 ) async {
   final prevTotalsFuture = (prevStart != null && prevEnd != null)
-      ? repo.totalsInRange(ledgerId: ledgerId, start: prevStart, end: prevEnd)
+      ? repo.totalsInRange(
+          ledgerId: ledgerId,
+          start: prevStart,
+          end: prevEnd,
+          amountMetric: amountMetric)
       : Future.value((0.0, 0.0));
   final results = await Future.wait<dynamic>([
     repo.totalsByCategoryWithHierarchy(
-        ledgerId: ledgerId, type: 'expense', start: start, end: end),
+        ledgerId: ledgerId,
+        type: 'expense',
+        start: start,
+        end: end,
+        amountMetric: amountMetric),
     seriesFuture,
     repo.countByTypeInRange(
         ledgerId: ledgerId, type: 'expense', start: start, end: end),
