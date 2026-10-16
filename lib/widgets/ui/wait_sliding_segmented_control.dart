@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../styles/tokens.dart';
+import 'segmented_control.dart';
 
 /// 滑块式分段选择器（wait 系公共组件）
 ///
@@ -85,10 +85,10 @@ class _WaitSlidingSegmentedControlState<T>
     final accentColor = widget.accentColor ?? colorScheme.primary;
 
     // 圆角令牌：外层轨道使用 radiusLg（12px，与按钮/菜单项同级）；
-    // 内层胶囊半径 = 外圆角 - 3px（胶囊 top/bottom 各 3px 内边距），
-    // 使胶囊贴合外层曲率，视觉上呈「内嵌胶囊」效果。
-    final double outerRadius = PiggyDimens.radiusLg;
-    final double thumbRadius = outerRadius - 3;
+    // 内层胶囊半径 = 外圆角 - 内边距，使胶囊贴合外层曲率，视觉上呈「内嵌胶囊」
+    // 效果。轨道底 / 胶囊 / 文字色 / 高光线全部取 segmented_control.dart 里的
+    // 同源零件（洞察页的统计口径条也用同一套，两处必须长得一样）。
+    const double inset = kPiggySegmentTrackInset;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -103,11 +103,11 @@ class _WaitSlidingSegmentedControlState<T>
         // 拇指位置：拖拽时跟随手指，非拖拽时对齐选中分段
         final double thumbLeft;
         if (_isDragging) {
-          thumbLeft = _dragThumbIndex * segmentWidth + 3;
+          thumbLeft = _dragThumbIndex * segmentWidth + inset;
         } else {
-          thumbLeft = selectedIndex * segmentWidth + 3;
+          thumbLeft = selectedIndex * segmentWidth + inset;
         }
-        final thumbWidth = segmentWidth - 6;
+        final thumbWidth = segmentWidth - inset * 2;
 
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -150,79 +150,40 @@ class _WaitSlidingSegmentedControlState<T>
           child: Container(
             height: widget.height,
             // 95% 中性实色背景（与底部导航栏/头部统一），消除 BackdropFilter 模糊开销
-            decoration: BoxDecoration(
-              color: PiggyTokens.tabBarBackground(context),
-              borderRadius: BorderRadius.circular(outerRadius),
-              // 细微边框用于界定轨道
-              border: Border.all(
-                color: colorScheme.outline.withValues(alpha: 0.3),
-                width: 0.5,
-              ),
-            ),
+            decoration: piggySegmentTrackDecoration(context),
             child: Stack(
               children: [
                 // 顶部折射高光线（呼应头部语言）
-                Positioned(
+                const Positioned(
                   top: 0,
                   left: 0,
                   right: 0,
-                  child: Container(
-                    height: 0.5,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [
-                          Colors.white.withValues(alpha: 0.0),
-                          Colors.white.withValues(alpha: 0.35),
-                          Colors.white.withValues(alpha: 0.0),
-                        ],
-                      ),
-                    ),
-                  ),
+                  child: PiggySegmentTrackHighlight(),
                 ),
                       // 滑动强调色胶囊
                       _isDragging
                           ? Positioned(
                               left: thumbLeft,
-                              top: 3,
-                              bottom: 3,
+                              top: inset,
+                              bottom: inset,
                               width: thumbWidth,
                               child: Container(
-                                decoration: BoxDecoration(
-                                  color: accentColor,
-                                  borderRadius: BorderRadius.circular(thumbRadius),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: accentColor.withValues(alpha: 0.35),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
+                                decoration: piggySegmentPillDecoration(
+                                    context, accentColor),
                               ),
                             )
                           : AnimatedPositioned(
                               duration: const Duration(milliseconds: 220),
                               curve: Curves.easeInOutCubic,
                               left: selectedIndex >= 0
-                                  ? selectedIndex * segmentWidth + 3
+                                  ? selectedIndex * segmentWidth + inset
                                   : 0,
-                              top: 3,
-                              bottom: 3,
-                              width: segmentWidth - 6,
+                              top: inset,
+                              bottom: inset,
+                              width: segmentWidth - inset * 2,
                               child: Container(
-                                decoration: BoxDecoration(
-                                  color: accentColor,
-                                  borderRadius: BorderRadius.circular(thumbRadius),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: accentColor.withValues(alpha: 0.35),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
+                                decoration: piggySegmentPillDecoration(
+                                    context, accentColor),
                               ),
                             ),
                       // 选项标签 + 分割线
@@ -260,9 +221,9 @@ class _WaitSlidingSegmentedControlState<T>
                                             style: TextStyle(
                                               fontSize: widget.fontSize,
                                               fontWeight: FontWeight.w500,
-                                              color: isSelected
-                                                  ? colorScheme.surface
-                                                  : colorScheme.onSurfaceVariant,
+                                              color: piggySegmentTextColor(
+                                                  context,
+                                                  selected: isSelected),
                                             ),
                                             child: Text(segment.label),
                                           ),

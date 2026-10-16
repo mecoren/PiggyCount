@@ -50,6 +50,101 @@ Color piggySelectableTextColor(
         ? (primaryColor ?? PiggyTokens.primary(context))
         : PiggyTokens.textSecondary(context);
 
+// ---------- 「轨道 + 滑块」式分段控件的一套同源零件 ----------
+//
+// 滑块分段控件（[WaitSlidingSegmentedControl]）与洞察页标题行的「统计口径条」
+// （`MetricSegment`）必须长得一样：同一屏里两个分段控件若各画一套，就会像两个
+// 体系。这里把轨道底、胶囊、轨道内边距、文字色、顶部高光线抽成唯一真值。
+
+/// 轨道内边距（胶囊四周留白）与胶囊圆角外扩量，改一处两处一起变。
+const double kPiggySegmentTrackInset = 3;
+
+/// 分段控件的**轨道装饰**：95% 中性实色底（与头部/底部导航统一）+ 细描边。
+BoxDecoration piggySegmentTrackDecoration(BuildContext context) => BoxDecoration(
+      color: PiggyTokens.tabBarBackground(context),
+      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+      // 细微边框用于界定轨道
+      border: Border.all(
+        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+        width: 0.5,
+      ),
+    );
+
+/// 选中项（滑块 / 轨内非默认口径那一段）的**强调色胶囊**装饰。
+BoxDecoration piggySegmentPillDecoration(BuildContext context, Color accent) =>
+    BoxDecoration(
+      color: accent,
+      borderRadius: BorderRadius.circular(
+          PiggyDimens.radiusLg - kPiggySegmentTrackInset),
+      boxShadow: [
+        BoxShadow(
+          color: accent.withValues(alpha: 0.35),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+
+/// 与 [piggySegmentPillDecoration] 配套的文字色（选中 = 表面色，未选 = 次级）。
+Color piggySegmentTextColor(BuildContext context, {required bool selected}) =>
+    selected
+        ? Theme.of(context).colorScheme.surface
+        : Theme.of(context).colorScheme.onSurfaceVariant;
+
+/// 轨道顶部的折射高光线（呼应头部语言），由调用方决定摆放位置。
+class PiggySegmentTrackHighlight extends StatelessWidget {
+  const PiggySegmentTrackHighlight({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: 0.5,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.0),
+              Colors.white.withValues(alpha: 0.35),
+              Colors.white.withValues(alpha: 0.0),
+            ],
+          ),
+        ),
+      );
+}
+
+/// 分段控件的**轨道**（底 + 细描边 + 顶部高光线）：把 [child] 放进轨道里。
+///
+/// [WaitSlidingSegmentedControl] 的内层结构比较特别（滑块要跟随拖拽），保持
+/// 自己的 Container/Stack 只复用上面的装饰函数；这个组件给「不需要滑块、只需
+/// 一个轨道把几段装起来」的用法（如洞察页的统计口径条）。
+class PiggySegmentTrack extends StatelessWidget {
+  const PiggySegmentTrack({
+    super.key,
+    required this.height,
+    required this.child,
+  });
+
+  final double height;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        height: height,
+        decoration: piggySegmentTrackDecoration(context),
+        child: Stack(
+          children: [
+            const Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: PiggySegmentTrackHighlight(),
+            ),
+            child,
+          ],
+        ),
+      );
+}
+
 /// 等宽分段控件：2~3 个互斥选项并排，选中项 = 主色描边 + 12% 主色底。
 ///
 /// 为什么不用 `ChoiceChip`：Chip 自带留白且各自成块，两三个并排就会显得零碎，
