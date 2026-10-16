@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../db.dart';
 import '../../models/analytics_amount_metric.dart';
+import '../../models/analytics_time_metric.dart';
 import '../../models/transaction_original_amount.dart';
 import '../../../cloud/sync/change_tracker.dart';
 import '../../../services/currency/rate_math.dart';
@@ -1215,6 +1216,7 @@ class LocalRepository extends BaseRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) =>
       _transactionRepo.countByTypeInRange(
         ledgerId: ledgerId,
@@ -1222,6 +1224,7 @@ class LocalRepository extends BaseRepository {
         start: start,
         end: end,
         amountMetric: amountMetric,
+        timeMetric: timeMetric,
       );
 
   @override
@@ -1425,9 +1428,13 @@ class LocalRepository extends BaseRepository {
     required int ledgerId,
     required DateTime startDate,
     required DateTime endDate,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) =>
       _transactionRepo.getTransactionsByDateRange(
-          ledgerId: ledgerId, startDate: startDate, endDate: endDate);
+          ledgerId: ledgerId,
+          startDate: startDate,
+          endDate: endDate,
+          timeMetric: timeMetric);
 
   @override
   Future<List<String>> getTransactionDatesByMonth({
@@ -2982,6 +2989,7 @@ class LocalRepository extends BaseRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) =>
           _statisticsRepo.totalsByCategory(
             ledgerId: ledgerId,
@@ -2989,6 +2997,7 @@ class LocalRepository extends BaseRepository {
             start: start,
             end: end,
             amountMetric: amountMetric,
+            timeMetric: timeMetric,
           );
 
   @override
@@ -3008,6 +3017,7 @@ class LocalRepository extends BaseRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) =>
       _statisticsRepo.totalsByCategoryWithHierarchy(
         ledgerId: ledgerId,
@@ -3015,6 +3025,7 @@ class LocalRepository extends BaseRepository {
         start: start,
         end: end,
         amountMetric: amountMetric,
+        timeMetric: timeMetric,
       );
 
   @override
@@ -3024,6 +3035,7 @@ class LocalRepository extends BaseRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) =>
       _statisticsRepo.totalsByDay(
         ledgerId: ledgerId,
@@ -3031,6 +3043,7 @@ class LocalRepository extends BaseRepository {
         start: start,
         end: end,
         amountMetric: amountMetric,
+        timeMetric: timeMetric,
       );
 
   @override
@@ -3039,12 +3052,14 @@ class LocalRepository extends BaseRepository {
     required String type,
     required int year,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) =>
       _statisticsRepo.totalsByMonth(
         ledgerId: ledgerId,
         type: type,
         year: year,
         amountMetric: amountMetric,
+        timeMetric: timeMetric,
       );
 
   @override
@@ -3052,11 +3067,13 @@ class LocalRepository extends BaseRepository {
     required int ledgerId,
     required String type,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) =>
       _statisticsRepo.totalsByYearSeries(
         ledgerId: ledgerId,
         type: type,
         amountMetric: amountMetric,
+        timeMetric: timeMetric,
       );
 
   @override
@@ -3074,6 +3091,7 @@ class LocalRepository extends BaseRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) =>
       _statisticsRepo.totalsByTag(
         ledgerId: ledgerId,
@@ -3081,6 +3099,7 @@ class LocalRepository extends BaseRepository {
         start: start,
         end: end,
         amountMetric: amountMetric,
+        timeMetric: timeMetric,
       );
 
   @override
@@ -3089,12 +3108,14 @@ class LocalRepository extends BaseRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) =>
       _statisticsRepo.totalsInRange(
         ledgerId: ledgerId,
         start: start,
         end: end,
         amountMetric: amountMetric,
+        timeMetric: timeMetric,
       );
 
   @override
@@ -3235,12 +3256,14 @@ class LocalRepository extends BaseRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) =>
       _statisticsRepo.customFieldStatsRows(
         ledgerId: ledgerId,
         start: start,
         end: end,
         amountMetric: amountMetric,
+        timeMetric: timeMetric,
       );
 
   @override
@@ -3248,11 +3271,13 @@ class LocalRepository extends BaseRepository {
     required int ledgerId,
     required DateTime start,
     required DateTime end,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) =>
       _statisticsRepo.customFieldStatsTotalCount(
         ledgerId: ledgerId,
         start: start,
         end: end,
+        timeMetric: timeMetric,
       );
 
   // ============================================

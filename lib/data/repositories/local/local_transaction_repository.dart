@@ -11,6 +11,7 @@ import '../../db.dart';
 import '../../../utils/month_range.dart';
 import '../../../models/note_history.dart';
 import '../../models/analytics_amount_metric.dart';
+import '../../models/analytics_time_metric.dart';
 import '../../models/custom_field_values.dart';
 import '../transaction_repository.dart';
 import '../../../services/system/logger_service.dart';
@@ -1060,19 +1061,26 @@ class LocalTransactionRepository implements TransactionRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) async {
     // 口径行过滤：自定义字段口径下「没填该字段」的明细不计入笔数
     // （默认口径为空串，SQL 逐字不变）。
-    final filter = amountMetric.sqlRowFilter();
+    final amountFilter = amountMetric.sqlRowFilter();
+    // 时间口径自带的行过滤（自定义字段时间口径下「没填该字段」的明细同样
+    // 不计入笔数）。绑定值与占位符恒为两个，见 `AnalyticsTimeMetric.rangeBinds`。
+    final timeFilter = timeMetric.sqlRowFilter();
     final row = await db.customSelect(
       'SELECT COUNT(*) AS c FROM transactions WHERE ledger_id = ?1 AND type = ?2 '
-      'AND happened_at >= ?3 AND happened_at < ?4'
-      '${filter.isEmpty ? '' : ' AND $filter'}',
+      'AND ${timeMetric.rangeSql(start: start, end: end, startVar: '?3', endVar: '?4')}'
+      '${amountFilter.isEmpty ? '' : ' AND $amountFilter'}'
+      '${timeFilter.isEmpty ? '' : ' AND $timeFilter'}',
       variables: [
         d.Variable<int>(ledgerId),
         d.Variable<String>(type),
-        d.Variable<DateTime>(start),
-        d.Variable<DateTime>(end),
+        for (final v in timeMetric.rangeBinds(start, end))
+          v is DateTime
+              ? d.Variable<DateTime>(v)
+              : d.Variable<String>(v as String),
       ],
       readsFrom: {db.transactions},
     ).getSingle();
@@ -1429,12 +1437,19 @@ class LocalTransactionRepository implements TransactionRepository {
     required int ledgerId,
     required DateTime startDate,
     required DateTime endDate,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) async {
-    // 查询时间范围内的所有交易
+    // 查询时间范围内的所有交易。
+    // 默认口径保持历史的闭区间 BETWEEN（调用方自己收半开）；自定义字段时间
+    // 口径按与统计口径一致的日粒度半开区间（见接口文档，调用方用
+    // AnalyticsTimeMetric.inRange 收口即可与这里同义）。
     final transactions = await (db.select(db.transactions)
           ..where((t) =>
               t.ledgerId.equals(ledgerId) &
-              t.happenedAt.isBetweenValues(startDate, endDate))
+              (timeMetric.isDefault
+                  ? t.happenedAt.isBetweenValues(startDate, endDate)
+                  : d.CustomExpression<bool>(timeMetric.rangeSqlInlined(
+                      start: startDate, end: endDate))))
           ..orderBy([
             (t) => d.OrderingTerm(
                   expression: t.happenedAt,

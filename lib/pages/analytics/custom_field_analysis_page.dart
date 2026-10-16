@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../providers/custom_field_providers.dart';
 import '../../data/models/analytics_amount_metric.dart';
+import '../../data/models/analytics_time_metric.dart';
 import '../../services/custom_field_stats_service.dart';
 import '../../services/export/csv_builder.dart';
 import '../../services/export/custom_field_stats_csv.dart';
@@ -38,6 +39,7 @@ class CustomFieldAnalysisPage extends ConsumerStatefulWidget {
     required this.end,
     required this.type,
     this.amountMetric = AnalyticsAmountMetric.recorded,
+    this.timeMetric = AnalyticsTimeMetric.happenedAt,
     this.fieldSyncId,
     this.onDrillDown,
     this.onExportCsv,
@@ -53,6 +55,10 @@ class CustomFieldAnalysisPage extends ConsumerStatefulWidget {
 
   /// 金额口径（与洞察卡同源）：金额型字段的求和/分布随之切换。
   final AnalyticsAmountMetric amountMetric;
+
+  /// 统计时间口径（与洞察卡同源）：区间按记账时间还是某个日期型自定义字段
+  /// 判定。不透传的话，从洞察卡下钻进来的数字会与卡片对不上账。
+  final AnalyticsTimeMetric timeMetric;
 
   /// 初始选中字段；null/不存在时默认第一个字段。
   final String? fieldSyncId;
@@ -85,6 +91,7 @@ class _CustomFieldAnalysisPageState
       end: widget.end,
       refreshTick: ref.watch(statsRefreshProvider),
       amountMetric: widget.amountMetric,
+      timeMetric: widget.timeMetric,
     )));
 
     return Scaffold(
@@ -160,6 +167,7 @@ class _CustomFieldAnalysisPageState
         ledgerId: ledgerId,
         startDate: widget.start,
         endDate: widget.end,
+        timeMetric: widget.timeMetric,
       ),
     ]);
     final defs = results[0] as List<CustomFieldDefinition>;
@@ -173,13 +181,15 @@ class _CustomFieldAnalysisPageState
               Account? account,
             })>;
     // 与聚合同口径：半开区间 [start, end) + 排除「不计收支」（customFieldStatsRows
-    // 的 WHERE 条件）。getTransactionsByDateRange 是闭区间 BETWEEN，这里收口
-    // 到半开，避免明细行比汇总行多出边界那一笔。
+    // 的 WHERE 条件），且时间轴同源（默认口径按记账时间；选了自定义字段时间
+    // 口径时按该字段的日期 —— 否则屏幕上按字段日期汇总、导出的明细却按记账
+    // 时间取行）。getTransactionsByDateRange 默认口径是闭区间 BETWEEN（收口到
+    // 半开，避免明细行比汇总行多出边界那一笔），自定义字段时间口径本身就是
+    // 半开，`inRange` 对两种口径都与取数 SQL 同义。
     final rows = [
       for (final r in txs)
         if (!r.t.excludeFromStats &&
-            !r.t.happenedAt.isBefore(widget.start) &&
-            r.t.happenedAt.isBefore(widget.end))
+            widget.timeMetric.inRange(r.t, start: widget.start, end: widget.end))
           r.t,
     ];
     return buildCustomFieldDetailCsvRows(l10n: l10n, defs: defs, txs: rows);

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' as d;
 
 import '../db.dart';
 import '../models/analytics_amount_metric.dart';
+import '../models/analytics_time_metric.dart';
 import '../../models/note_history.dart';
 
 /// 「5 分钟内再次记账继承上一笔默认值」的窗口长度（**唯一来源**：UI 与测试共用）。
@@ -485,12 +486,22 @@ abstract class TransactionRepository {
   /// [amountMetric] 只用于**行过滤**：自定义字段口径下「没填该字段」的明细
   /// 不计入笔数（记账金额 / 原始金额口径零影响）。笔数必须与同页金额同口径，
   /// 否则「¥500 / 8 笔」里的笔数会跟金额对不上账。
+  ///
+  /// [timeMetric] 只用于**区间判定**（`[start, end)`，日粒度）：自定义字段时间
+  /// 口径下按该字段的日期划区间，且没填该字段的明细同样不计入笔数 —— 笔数必须
+  /// 与同页金额同口径。
+  ///
+  /// **历史语义（有意保留）**：本方法**不过滤 `exclude_from_stats`**（「不计
+  /// 收支」的明细也算笔数），而 `totalsInRange` 等同页金额聚合会过滤 —— 即
+  /// 「¥500 / 8 笔」里的笔数分母比金额集合略宽。改它会动到报表页已有数字，故
+  /// 保持现状。
   Future<int> countByTypeInRange({
     required int ledgerId,
     required String type,
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric,
+    AnalyticsTimeMetric timeMetric,
   });
 
   /// 获取账本的所有交易记录
@@ -577,7 +588,13 @@ abstract class TransactionRepository {
     required DateTime date,
   });
 
-  /// 获取指定时间范围的交易列表（用于日历当月列表）
+  /// 获取指定时间范围的交易列表（用于日历当月列表 / 明细导出）。
+  ///
+  /// **区间语义**：默认口径是**闭区间** `[startDate, endDate]`（`BETWEEN`，
+  /// 历史行为，调用方自己收到半开）；自定义字段时间口径下没有「当天的什么时刻」
+  /// 可言，改用与统计口径一致的**日粒度半开区间** `[startDate, endDate)`
+  /// （见 [AnalyticsTimeMetric.rangeSqlInlined]）—— 调用方收口时应用
+  /// [AnalyticsTimeMetric.inRange]，它对两种口径都与这里的 SQL 同义。
   Future<List<({
     Transaction t,
     Category? category,
@@ -588,6 +605,7 @@ abstract class TransactionRepository {
     required int ledgerId,
     required DateTime startDate,
     required DateTime endDate,
+    AnalyticsTimeMetric timeMetric,
   });
 
   /// 获取指定月份所有有交易的日期列表

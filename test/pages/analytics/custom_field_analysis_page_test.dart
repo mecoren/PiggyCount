@@ -19,6 +19,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:piggycount/data/db.dart';
+import 'package:piggycount/data/models/analytics_time_metric.dart';
 import 'package:piggycount/data/models/custom_field_values.dart';
 import 'package:piggycount/data/repositories/base_repository.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
@@ -36,6 +37,10 @@ import 'package:piggycount/widgets/charts/line_chart.dart';
 /// 明细导出会经 repository 拉区间交易与字段定义。
 class FakeRepo implements BaseRepository {
   final List<CustomFieldDefinition> defs;
+
+  /// 明细导出的取数口径留痕：断言页面把**统计时间口径**透传给了明细取数
+  /// （漏传就会出现「汇总按字段日期、导出明细按记账时间」）。
+  final List<AnalyticsTimeMetric> timeMetrics = [];
 
   FakeRepo(this.defs);
 
@@ -56,8 +61,11 @@ class FakeRepo implements BaseRepository {
     required int ledgerId,
     required DateTime startDate,
     required DateTime endDate,
-  }) async =>
-      const [];
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+  }) async {
+    timeMetrics.add(timeMetric);
+    return const [];
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -337,6 +345,7 @@ void main() {
     required List<FieldStats> data,
     required FakeRepo repo,
     required CustomFieldCsvExport onExportCsv,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) =>
       ProviderScope(
         overrides: [
@@ -353,6 +362,7 @@ void main() {
             start: DateTime(2026, 1, 1),
             end: DateTime(2026, 1, 8),
             type: 'expense',
+            timeMetric: timeMetric,
             onExportCsv: onExportCsv,
           ),
         ),
@@ -406,6 +416,38 @@ void main() {
     // 明细表头 = 时间/类型/金额/备注 + 字段定义列
     expect(calls.last.rows.first, hasLength(5));
     expect(calls.last.rows.first.last, '押金');
+  });
+
+  testWidgets('明细导出吃页面的统计时间口径（汇总与明细同时间轴）', (tester) async {
+    final calls = <({CustomFieldCsvKind kind, List<List<dynamic>> rows})>[];
+    final repo = FakeRepo([
+      CustomFieldDefinition(
+        id: 1,
+        ledgerId: 7,
+        name: '押金',
+        fieldType: CustomFieldType.amount,
+        sortOrder: 0,
+        createdAt: DateTime(2026, 1, 1),
+        syncId: 'f-water',
+        isRequired: false,
+      ),
+    ]);
+    await tester.pumpWidget(hostWithRepo(
+      data: [amountField()],
+      repo: repo,
+      timeMetric: AnalyticsTimeMetric.customField('f-date'),
+      onExportCsv: (kind, rows) => calls.add((kind: kind, rows: rows)),
+    ));
+    await tester.pump(const Duration(seconds: 3));
+
+    await tester.tap(find.byTooltip(l10n.customFieldExportCsv));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.customFieldExportDetailCsv));
+    await tester.pump(const Duration(seconds: 3));
+
+    // 漏传就会让「汇总按字段日期、导出的明细按记账时间」——正是本口径要消灭的
+    expect(repo.timeMetrics.last,
+        AnalyticsTimeMetric.customField('f-date'));
   });
 
   testWidgets('无数据：导出菜单不出现', (tester) async {
