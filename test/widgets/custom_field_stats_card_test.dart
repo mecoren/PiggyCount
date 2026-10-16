@@ -16,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/models/analytics_amount_metric.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
+import 'package:piggycount/pages/analytics/custom_field_analysis_page.dart';
 import 'package:piggycount/providers.dart';
 import 'package:piggycount/providers/custom_field_providers.dart';
 import 'package:piggycount/services/custom_field_stats_service.dart';
@@ -68,6 +69,9 @@ void main() {
           calls?.add(q);
           return data;
         }),
+        // 下钻页只 watch 这一个数据源；注入空结果让「整卡可点」用例能
+        // 真正 push 页面而不碰真实 drift。
+        customFieldStatsDetailProvider.overrideWith((ref, q) async => const []),
       ],
       child: MaterialApp(
         locale: const Locale('zh'),
@@ -155,6 +159,27 @@ void main() {
     expect(calls[0].ledgerId, 7);
     expect(calls[0].start, DateTime(2026, 1, 1));
     expect(calls[1].start, DateTime(2026, 2, 1));
+  });
+
+  testWidgets('整卡可点：点卡片主体（标题/值桶行）也能进字段分析页', (tester) async {
+    await tester.pumpWidget(host(
+        type: 'expense', data: [field('渠道', 300, 50)], calls: []));
+    await tester.pump(const Duration(seconds: 3));
+
+    final card = find.byKey(const Key('custom-field-stats-card'));
+    final rect = tester.getRect(card);
+
+    // 热区 = 整卡（此前只有右上角那行小字的 InkWell，点主体无反应 ——
+    // 无障碍树却把整卡合并成一个 clickable 节点）。
+    final titleRect = tester.getRect(find.text(l10n.rangeReportCustomFieldTitle));
+    final rowRect = tester.getRect(find.text('渠道'));
+    expect(rect.contains(titleRect.center), isTrue);
+    expect(rect.contains(rowRect.center), isTrue);
+
+    // 点值桶行（离右上角最远处）也要能下钻
+    await tester.tapAt(rowRect.center);
+    await tester.pumpAndSettle();
+    expect(find.byType(CustomFieldAnalysisPage), findsOneWidget);
   });
 
   testWidgets('查询键含金额口径：卡内金额与页面其余卡片同源', (tester) async {
