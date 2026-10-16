@@ -468,7 +468,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     // 被 _rememberAnalyticsFuture 丢弃；命中时闭包不执行，占位 future 安全。
     final scopeKey = '${start.millisecondsSinceEpoch}|'
         '${end.millisecondsSinceEpoch}|$refreshTick|$ledgerId|'
-        '${amountMetric.name}';
+        '${amountMetric.storageValue}';
     final memoKey = '$_type|$scopeKey';
 
     // 命中 = 已发查询复用 或 口径缓存已有结果，两种都不必再建查询。
@@ -1705,7 +1705,11 @@ Future<InOutInsightsData> _loadCategoryData(
         amountMetric: amountMetric),
     seriesFuture,
     repo.countByTypeInRange(
-        ledgerId: ledgerId, type: type, start: start, end: end),
+        ledgerId: ledgerId,
+        type: type,
+        start: start,
+        end: end,
+        amountMetric: amountMetric),
     // 本期收支（结余用）
     repo.totalsInRange(
         ledgerId: ledgerId,
@@ -1772,11 +1776,19 @@ Future<BalanceInsightsData> _loadBalanceData(
         amountMetric: amountMetric),
     seriesFuture,
     repo.countByTypeInRange(
-        ledgerId: ledgerId, type: 'expense', start: start, end: end),
+        ledgerId: ledgerId,
+        type: 'expense',
+        start: start,
+        end: end,
+        amountMetric: amountMetric),
     incomeSeriesFuture,
     expenseSeriesFuture,
     repo.countByTypeInRange(
-        ledgerId: ledgerId, type: 'income', start: start, end: end),
+        ledgerId: ledgerId,
+        type: 'income',
+        start: start,
+        end: end,
+        amountMetric: amountMetric),
     prevTotalsFuture,
     chartSeriesFuture,
   ]);

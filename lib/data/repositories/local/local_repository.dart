@@ -1214,12 +1214,14 @@ class LocalRepository extends BaseRepository {
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) =>
       _transactionRepo.countByTypeInRange(
         ledgerId: ledgerId,
         type: type,
         start: start,
         end: end,
+        amountMetric: amountMetric,
       );
 
   @override
@@ -3094,6 +3096,10 @@ class LocalRepository extends BaseRepository {
         end: end,
         amountMetric: amountMetric,
       );
+
+  @override
+  Future<bool> supportsCustomFieldAmountMetric() =>
+      _statisticsRepo.supportsCustomFieldAmountMetric();
 
   @override
   Future<(double income, double expense)> monthlyTotals({

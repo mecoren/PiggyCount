@@ -910,6 +910,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Original basis · unfilled entries use the recorded amount';
 
   @override
+  String get analyticsAmountMetricCustomField => 'Custom field';
+
+  @override
+  String analyticsAmountMetricCustomFieldDesc(String name) {
+    return 'Count by \"$name\" amount; entries without this field are excluded';
+  }
+
+  @override
+  String get analyticsAmountMetricNoteCustomField =>
+      'Custom field basis · entries without this field are excluded';
+
+  @override
   String analyticsSwitchTo(String type) {
     return 'Switch to $type';
   }

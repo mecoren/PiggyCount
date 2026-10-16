@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import '../../db.dart';
 import '../../../utils/month_range.dart';
 import '../../../models/note_history.dart';
+import '../../models/analytics_amount_metric.dart';
 import '../../models/custom_field_values.dart';
 import '../transaction_repository.dart';
 import '../../../services/system/logger_service.dart';
@@ -1058,9 +1059,15 @@ class LocalTransactionRepository implements TransactionRepository {
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
   }) async {
+    // 口径行过滤：自定义字段口径下「没填该字段」的明细不计入笔数
+    // （默认口径为空串，SQL 逐字不变）。
+    final filter = amountMetric.sqlRowFilter();
     final row = await db.customSelect(
-      'SELECT COUNT(*) AS c FROM transactions WHERE ledger_id = ?1 AND type = ?2 AND happened_at >= ?3 AND happened_at < ?4',
+      'SELECT COUNT(*) AS c FROM transactions WHERE ledger_id = ?1 AND type = ?2 '
+      'AND happened_at >= ?3 AND happened_at < ?4'
+      '${filter.isEmpty ? '' : ' AND $filter'}',
       variables: [
         d.Variable<int>(ledgerId),
         d.Variable<String>(type),

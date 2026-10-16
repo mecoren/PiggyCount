@@ -896,6 +896,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get analyticsAmountMetricNote => '원본 금액 기준 · 미입력은 기록 금액으로 계산';
 
   @override
+  String get analyticsAmountMetricCustomField => '사용자 정의 필드';
+
+  @override
+  String analyticsAmountMetricCustomFieldDesc(String name) {
+    return '\"$name\" 금액 기준 집계, 해당 필드가 없는 항목은 제외';
+  }
+
+  @override
+  String get analyticsAmountMetricNoteCustomField =>
+      '사용자 정의 필드 기준 · 해당 필드가 없는 항목은 제외';
+
+  @override
   String analyticsSwitchTo(String type) {
     return '$type(으)로 전환';
   }

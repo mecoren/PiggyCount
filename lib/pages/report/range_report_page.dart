@@ -142,7 +142,11 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
           end: _end,
           amountMetric: amountMetric),
       repo.countByTypeInRange(
-          ledgerId: ledgerId, type: _dim, start: _start, end: _end),
+          ledgerId: ledgerId,
+          type: _dim,
+          start: _start,
+          end: _end,
+          amountMetric: amountMetric),
     ]);
     // B2(v47):自定义字段汇总。定义非空才查值行(绝大多数账本零定义,少一次查询)。
     final cfDefs = await repo.getDefinitionsForLedger(ledgerId);
@@ -190,7 +194,8 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
   Future<_ReportData> _futureFor(
       int ledgerId, int refreshTick, AnalyticsAmountMetric amountMetric) {
     final scope = '$ledgerId|${_start.microsecondsSinceEpoch}'
-        '|${_end.microsecondsSinceEpoch}|$refreshTick|${amountMetric.name}';
+        '|${_end.microsecondsSinceEpoch}|$refreshTick|'
+        '${amountMetric.storageValue}';
     if (_dimCacheScope != scope) {
       _dimCacheScope = scope;
       _dimCache.clear();

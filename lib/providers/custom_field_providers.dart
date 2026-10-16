@@ -57,6 +57,16 @@ final transactionCustomValuesProvider =
   return repo.getValuesForTransaction(transactionId);
 });
 
+/// 「自定义字段金额口径」是否可用（数据库 json 函数探针，见
+/// `StatisticsRepository.supportsCustomFieldAmountMetric`）。
+///
+/// false 时口径抽屉**不提供**自定义字段选项：该口径靠 `json_extract` 取值，
+/// 探针失败会让整条口径链以「读数全 0」静默失效，宁可不提供也不给一个必然
+/// 出错的选项。非 autoDispose：探针结果同进程内只算一次。
+final customFieldAmountMetricSupportedProvider = FutureProvider<bool>((ref) {
+  return ref.watch(repositoryProvider).supportsCustomFieldAmountMetric();
+});
+
 /// 该账本已填自定义字段值的交易条数（删字段前提示影响面）。
 final customFieldFilledCountProvider =
     FutureProvider.family<int, int>((ref, ledgerId) async {

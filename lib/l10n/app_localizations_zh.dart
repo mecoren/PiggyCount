@@ -883,6 +883,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analyticsAmountMetricNote => '原始金额口径 · 未填写按记账金额计';
 
   @override
+  String get analyticsAmountMetricCustomField => '自定义字段';
+
+  @override
+  String analyticsAmountMetricCustomFieldDesc(String name) {
+    return '按「$name」金额统计，未填写该字段的明细不参与统计';
+  }
+
+  @override
+  String get analyticsAmountMetricNoteCustomField => '自定义字段口径 · 未填写该字段的明细不参与统计';
+
+  @override
   String analyticsSwitchTo(String type) {
     return '切换到$type';
   }
@@ -10064,6 +10075,17 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get analyticsAmountMetricNote => '原始金額口徑 · 未填寫按記帳金額計';
+
+  @override
+  String get analyticsAmountMetricCustomField => '自訂欄位';
+
+  @override
+  String analyticsAmountMetricCustomFieldDesc(String name) {
+    return '按「$name」金額統計，未填寫該欄位的明細不列入統計';
+  }
+
+  @override
+  String get analyticsAmountMetricNoteCustomField => '自訂欄位口徑 · 未填寫該欄位的明細不列入統計';
 
   @override
   String analyticsSwitchTo(String type) {

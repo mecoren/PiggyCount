@@ -1668,6 +1668,24 @@ abstract class AppLocalizations {
   /// **'Original basis · unfilled entries use the recorded amount'**
   String get analyticsAmountMetricNote;
 
+  /// No description provided for @analyticsAmountMetricCustomField.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom field'**
+  String get analyticsAmountMetricCustomField;
+
+  /// No description provided for @analyticsAmountMetricCustomFieldDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Count by \"{name}\" amount; entries without this field are excluded'**
+  String analyticsAmountMetricCustomFieldDesc(String name);
+
+  /// No description provided for @analyticsAmountMetricNoteCustomField.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom field basis · entries without this field are excluded'**
+  String get analyticsAmountMetricNoteCustomField;
+
   /// No description provided for @analyticsSwitchTo.
   ///
   /// In en, this message translates to:

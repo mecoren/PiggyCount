@@ -13,6 +13,41 @@ class LocalStatisticsRepository implements StatisticsRepository {
 
   LocalStatisticsRepository(this.db);
 
+  /// JSON 函数可用性（探针结果缓存）。
+  bool? _jsonSupported;
+
+  @override
+  Future<bool> supportsCustomFieldAmountMetric() async {
+    final cached = _jsonSupported;
+    if (cached != null) return cached;
+    // 纯常量查询：只看 `json_type` 能否解析这个 JSON 路径，不碰业务表。
+    // 自定义字段口径靠 `json_type` / `json_extract` 取值 —— SQLite 3.38 起
+    // JSON 函数进核心（本项目两端的 sqlite3 均高于该版本），但一旦某个平台
+    // 的库被编译成 `SQLITE_OMIT_JSON`，整条口径链会以「读数为 0」的形式
+    // 静默失效，故显式探测一次，UI 据结果决定是否提供该口径。
+    try {
+      final row = await db
+          .customSelect(
+            r"""SELECT json_type('{"a":1}', '$.a') AS t""",
+            readsFrom: const {},
+          )
+          .getSingle();
+      return _jsonSupported = row.read<String?>('t') != null;
+    } catch (_) {
+      return _jsonSupported = false;
+    }
+  }
+
+  /// 口径附加行过滤（含前导 `AND`；空串 = 不过滤），供各 SQL 拼进 `WHERE`。
+  ///
+  /// 只对「自定义字段金额」口径非空：没填该字段的明细必须整行排除。漏掉它
+  /// 这些行会以金额 0 混进**笔数与百分比分母** —— 总额看着变小，占比却
+  /// 仍然是「按全部明细」的，用户对不上账（见 [AnalyticsAmountMetric]）。
+  static String _metricFilter(AnalyticsAmountMetric m, {String alias = ''}) {
+    final f = m.sqlRowFilter(alias: alias);
+    return f.isEmpty ? '' : ' AND $f';
+  }
+
   @override
   Future<List<({int? id, String name, String? icon, double total})>> totalsByCategory({
     required int ledgerId,
@@ -37,6 +72,10 @@ class LocalStatisticsRepository implements StatisticsRepository {
     final icons = <int?, String?>{};
     for (final r in rows) {
       final t = r.readTable(db.transactions);
+      // 口径行判定：自定义字段口径要整行丢掉「没填该字段」的明细 ——
+      // Drift 查询构造器这条路绕不过 SQL 侧过滤，判在这里（与 sqlRowFilter
+      // 同义）。漏了它，环形图/排行榜会把没填的行按 0 算进笔数与百分比。
+      if (!amountMetric.matches(t)) continue;
       final c = r.readTableOrNull(db.categories);
       final id = c?.id;
       names[id] = c?.name ?? '未分类';
@@ -78,6 +117,9 @@ class LocalStatisticsRepository implements StatisticsRepository {
 
     for (final r in rows) {
       final t = r.readTable(db.transactions);
+      // 口径行判定（同上方 totalsByCategory）：没填该字段的明细整行丢掉，
+      // 否则它们会以 0 混进排行榜的「n 笔」与百分比分母。
+      if (!amountMetric.matches(t)) continue;
       final c = r.readTableOrNull(db.categories);
       final id = c?.id;
 
@@ -135,7 +177,8 @@ class LocalStatisticsRepository implements StatisticsRepository {
       "SELECT date(happened_at, 'unixepoch', 'localtime') AS day, "
       'SUM(${amountMetric.sqlExpr()}) AS total '
       'FROM transactions '
-      'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0 '
+      'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0'
+      '${_metricFilter(amountMetric)} '
       'AND happened_at >= ?3 AND happened_at < ?4 '
       'GROUP BY day',
       variables: [
@@ -179,7 +222,8 @@ class LocalStatisticsRepository implements StatisticsRepository {
       "THEN 'start of month' ELSE '-1 month' END) AS label, "
       'SUM(${amountMetric.sqlExpr()}) AS total '
       'FROM transactions '
-      'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0 '
+      'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0'
+      '${_metricFilter(amountMetric)} '
       'AND happened_at >= ?3 AND happened_at < ?5 '
       "GROUP BY label HAVING substr(label, 1, 4) = ?6",
       variables: [
@@ -222,7 +266,8 @@ class LocalStatisticsRepository implements StatisticsRepository {
       "THEN 'start of month' ELSE '-1 month' END) AS label, "
       '${amountMetric.sqlExpr()} AS v '
       'FROM transactions '
-      'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0) '
+      'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0'
+      '${_metricFilter(amountMetric)}) '
       'SELECT label, SUM(v) AS total FROM labeled GROUP BY label ORDER BY label',
       variables: [
         d.Variable<int>(ledgerId),
@@ -268,7 +313,8 @@ class LocalStatisticsRepository implements StatisticsRepository {
       'FROM transaction_tags tt '
       'INNER JOIN transactions t ON t.id = tt.transaction_id '
       'INNER JOIN tags tg ON tg.id = tt.tag_id '
-      'WHERE t.ledger_id = ?1 AND t.type = ?2 AND t.exclude_from_stats = 0 '
+      'WHERE t.ledger_id = ?1 AND t.type = ?2 AND t.exclude_from_stats = 0'
+      '${_metricFilter(amountMetric, alias: 't')} '
       'AND t.happened_at >= ?3 AND t.happened_at < ?4 '
       'GROUP BY tg.id',
       variables: [
@@ -309,7 +355,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
        COALESCE(SUM(CASE WHEN type = 'expense' THEN $expr ELSE 0 END), 0) AS expense
      FROM transactions
      WHERE ledger_id = ?1 AND happened_at >= ?2 AND happened_at < ?3
-       AND exclude_from_stats = 0
+       AND exclude_from_stats = 0${_metricFilter(amountMetric)}
      ''',
       variables: [
         d.Variable<int>(ledgerId),
@@ -357,7 +403,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
        COALESCE(SUM(CASE WHEN type = 'expense' THEN $expr ELSE 0 END), 0) AS expense
      FROM transactions
       WHERE ledger_id = ?1 AND happened_at >= ?2 AND happened_at < ?3
-        AND exclude_from_stats = 0
+        AND exclude_from_stats = 0${_metricFilter(amountMetric)}
       ''',
       variables: [
         d.Variable<int>(ledgerId),
@@ -392,7 +438,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
        COALESCE(SUM(CASE WHEN type = 'expense' THEN $expr ELSE 0 END), 0) AS expense
      FROM transactions
       WHERE ledger_id = ?1 AND happened_at >= ?2 AND happened_at < ?3
-        AND exclude_from_stats = 0
+        AND exclude_from_stats = 0${_metricFilter(amountMetric)}
       ''',
       variables: [
         d.Variable<int>(ledgerId),
@@ -705,7 +751,8 @@ class LocalStatisticsRepository implements StatisticsRepository {
       '${amountMetric.sqlExpr()} AS total, '
       'custom_values_json AS custom_values_json '
       'FROM transactions '
-      'WHERE ledger_id = ?1 AND exclude_from_stats = 0 '
+      'WHERE ledger_id = ?1 AND exclude_from_stats = 0'
+      '${_metricFilter(amountMetric)} '
       'AND custom_values_json IS NOT NULL '
       'AND happened_at >= ?2 AND happened_at < ?3',
       variables: [

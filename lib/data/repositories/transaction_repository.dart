@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' as d;
 
 import '../db.dart';
+import '../models/analytics_amount_metric.dart';
 import '../../models/note_history.dart';
 
 /// 「5 分钟内再次记账继承上一笔默认值」的窗口长度（**唯一来源**：UI 与测试共用）。
@@ -480,11 +481,16 @@ abstract class TransactionRepository {
   Future<int> purgeDeletedTransactionsForLedger(int ledgerId);
 
   /// 获取指定类型和时间范围内的交易数量
+  ///
+  /// [amountMetric] 只用于**行过滤**：自定义字段口径下「没填该字段」的明细
+  /// 不计入笔数（记账金额 / 原始金额口径零影响）。笔数必须与同页金额同口径，
+  /// 否则「¥500 / 8 笔」里的笔数会跟金额对不上账。
   Future<int> countByTypeInRange({
     required int ledgerId,
     required String type,
     required DateTime start,
     required DateTime end,
+    AnalyticsAmountMetric amountMetric,
   });
 
   /// 获取账本的所有交易记录

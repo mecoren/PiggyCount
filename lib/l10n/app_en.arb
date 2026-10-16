@@ -474,6 +474,16 @@
   "analyticsAmountMetricOriginal": "Original",
   "analyticsAmountMetricOriginalDesc": "Count by original amount; entries without one fall back to the recorded amount",
   "analyticsAmountMetricNote": "Original basis · unfilled entries use the recorded amount",
+  "analyticsAmountMetricCustomField": "Custom field",
+  "analyticsAmountMetricCustomFieldDesc": "Count by \"{name}\" amount; entries without this field are excluded",
+  "@analyticsAmountMetricCustomFieldDesc": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "analyticsAmountMetricNoteCustomField": "Custom field basis · entries without this field are excluded",
   "analyticsSwitchTo": "Switch to {type}",
   "@analyticsSwitchTo": {
     "placeholders": {

@@ -4,10 +4,20 @@ import '../models/transaction_original_amount.dart';
 /// 统计Repository接口
 /// 定义统计相关的所有数据操作
 ///
-/// [amountMetric] 是**统计金额口径**（记账金额 / 原始金额），默认
-/// [AnalyticsAmountMetric.recorded] —— 不传参的老调用方行为逐字不变。
-/// 表达式本身在 [AnalyticsAmountMetric.sqlExpr] 单点定义，这里只做透传。
+/// [amountMetric] 是**统计金额口径**（记账金额 / 原始金额 / 某金额型自定义
+/// 字段），默认 [AnalyticsAmountMetric.recorded] —— 不传参的老调用方行为
+/// 逐字不变。表达式与行过滤都在 [AnalyticsAmountMetric] 单点定义，这里只做
+/// 透传。
+///
+/// **自定义字段口径会改动笔数与分母**（没填该字段的明细整行排除），所以每处
+/// 聚合都必须转发 [AnalyticsAmountMetric.sqlRowFilter]（SQL 侧）或
+/// [AnalyticsAmountMetric.matches]（Dart 侧取行的路径）—— 只换金额表达式
+/// 不算改完。
 abstract class StatisticsRepository {
+  /// 数据库是否支持 json 函数（自定义字段口径的硬依赖，见
+  /// [supportsCustomFieldAmountMetric]）。
+  Future<bool> supportsCustomFieldAmountMetric();
+
   /// 按分类统计（指定时间范围和类型）
   Future<List<({int? id, String name, String? icon, double total})>> totalsByCategory({
     required int ledgerId,
@@ -19,7 +29,8 @@ abstract class StatisticsRepository {
 
   /// 按分类统计（支持二级分类展开），count 为该分类下的记账笔数
   ///
-  /// [count] 是**笔数**，与 [amountMetric] 无关：口径只换金额，不换笔数。
+  /// [count] 是**笔数**：记账金额 / 原始金额口径下与口径无关（只换金额），
+  /// 自定义字段口径下随行过滤收窄（= 填了该字段的笔数）。
   Future<List<({int? id, String name, String? icon, int? parentId, int level, double total, int count})>>
       totalsByCategoryWithHierarchy({
     required int ledgerId,

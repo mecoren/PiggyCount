@@ -375,6 +375,195 @@ void main() {
     expect(defaulted, explicit);
   });
 
+  // --- 自定义字段金额口径 ---------------------------------------------------
+
+  test('json 能力探针：json_type/json_extract 可用，且 UUID 式键（含 -）能取到值',
+      () async {
+    final stat = repo; // LocalRepository 转发统计仓
+    expect(await stat.supportsCustomFieldAmountMetric(), isTrue);
+
+    final lid = await seedLedger();
+    const sid = '3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b';
+    await add(lid, amount: 100, customValues: const {sid: 30});
+    // 键带引号也能落库（值本身经 codec 规范化），但口径路径必须能取到它
+    final rows = await db.select(db.transactions).get();
+    expect(rows.single.customValuesJson, contains(sid));
+  });
+
+  test('自定义字段口径：只算填了该字段的明细，金额取字段值（SQL 侧全链路）',
+      () async {
+    final lid = await seedLedger();
+    await add(lid, amount: 100, original: 100, customValues: const {'f-water': 30});
+    await add(lid, amount: 200, customValues: const {'f-water': 70});
+    // 没填该字段：整行排除（不是按 0 计）
+    await add(lid, amount: 500);
+    // 该字段是字符串（脏数据 / 类型不匹配）：不可求和，同样排除
+    await add(lid, amount: 900, customValues: const {'f-water': '40'});
+
+    final custom = AnalyticsAmountMetric.customField('f-water');
+    final recordedTotals = await repo.totalsInRange(
+        ledgerId: lid, start: start, end: end);
+    final customTotals = await repo.totalsInRange(
+        ledgerId: lid, start: start, end: end, amountMetric: custom);
+
+    expect(recordedTotals.$2, closeTo(1700, 1e-9));
+    expect(customTotals.$2, closeTo(100, 1e-9)); // 30 + 70
+    expect(customTotals.$1, closeTo(0, 1e-9));
+
+    // 日/月桶：同一行集，金额取字段值
+    final day = await repo.totalsByDay(
+        ledgerId: lid,
+        type: 'expense',
+        start: start,
+        end: end,
+        amountMetric: custom);
+    expect(day.fold<double>(0, (s, e) => s + e.total), closeTo(100, 1e-9));
+
+    final month = await repo.totalsByMonth(
+        ledgerId: lid, type: 'expense', year: 2026, amountMetric: custom);
+    expect(month.fold<double>(0, (s, e) => s + e.total), closeTo(100, 1e-9));
+
+    // 笔数同口径：只有 2 笔填了该字段
+    final count = await repo.countByTypeInRange(
+        ledgerId: lid,
+        type: 'expense',
+        start: start,
+        end: end,
+        amountMetric: custom);
+    expect(count, 2);
+  });
+
+  test('自定义字段口径：Dart 侧聚合（分类/标签）同样按行过滤，与 SQL 侧一致',
+      () async {
+    final lid = await seedLedger();
+    final cid = await db.into(db.categories).insert(
+        CategoriesCompanion.insert(name: '餐饮', kind: 'expense'));
+    final tagId = await db.into(db.tags).insert(TagsCompanion.insert(name: '超市'));
+    final a = await add(
+        lid, amount: 100, categoryId: cid, customValues: const {'f-water': 30});
+    final b = await add(lid, amount: 500, categoryId: cid); // 无字段值
+    await repo.updateTransactionTags(transactionId: a, tagIds: [tagId]);
+    await repo.updateTransactionTags(transactionId: b, tagIds: [tagId]);
+
+    final custom = AnalyticsAmountMetric.customField('f-water');
+
+    // totalsByCategory / totalsByCategoryWithHierarchy 是 Drift 构造器逐行累加，
+    // 走 Dart 侧 matches()，漏判会把无值行按 0 算进笔数。
+    final cats = await repo.totalsByCategory(
+        ledgerId: lid,
+        type: 'expense',
+        start: start,
+        end: end,
+        amountMetric: custom);
+    expect(cats.single.total, closeTo(30, 1e-9));
+
+    final hier = await repo.totalsByCategoryWithHierarchy(
+        ledgerId: lid,
+        type: 'expense',
+        start: start,
+        end: end,
+        amountMetric: custom);
+    final row = hier.firstWhere((r) => r.name == '餐饮');
+    expect(row.total, closeTo(30, 1e-9));
+    expect(row.count, 1); // 不是 2
+
+    // SQL 侧标签聚合结果必须与 Dart 侧一致
+    final tags = await repo.totalsByTag(
+        ledgerId: lid,
+        type: 'expense',
+        start: start,
+        end: end,
+        amountMetric: custom);
+    expect(tags.single.total, closeTo(30, 1e-9));
+    expect(tags.single.count, 1);
+  });
+
+  test('自定义字段口径：非金额字段 / 不存在的字段 → 无行参与（读数 0，不按 0 计）',
+      () async {
+    final lid = await seedLedger();
+    await add(lid, amount: 100, customValues: const {'f-note': '外卖'});
+    await add(lid, amount: 200, customValues: const {'f-note': '打车'});
+
+    for (final sid in ['f-note', 'never-exists']) {
+      final m = AnalyticsAmountMetric.customField(sid);
+      final totals = await repo.totalsInRange(
+          ledgerId: lid, start: start, end: end, amountMetric: m);
+      expect(totals.$2, closeTo(0, 1e-9), reason: '$sid 不该有金额');
+      final count = await repo.countByTypeInRange(
+          ledgerId: lid,
+          type: 'expense',
+          start: start,
+          end: end,
+          amountMetric: m);
+      expect(count, 0, reason: '$sid 不该有笔数');
+    }
+  });
+
+  test('自定义字段口径：和金额为 0 的合法值仍参与统计（0 是合法金额）', () async {
+    final lid = await seedLedger();
+    await add(lid, amount: 100, customValues: const {'f-water': 0});
+
+    final m = AnalyticsAmountMetric.customField('f-water');
+    final count = await repo.countByTypeInRange(
+        ledgerId: lid,
+        type: 'expense',
+        start: start,
+        end: end,
+        amountMetric: m);
+    expect(count, 1); // 「填了 0」≠「没填」
+    final totals = await repo.totalsInRange(
+        ledgerId: lid, start: start, end: end, amountMetric: m);
+    expect(totals.$2, closeTo(0, 1e-9));
+  });
+
+  test('自定义字段口径：Dart 侧 amountOf 与 SQL 侧 sqlExpr 同值', () async {
+    final lid = await seedLedger();
+    await add(lid, amount: 100, customValues: const {'f-water': 12.5});
+    await add(lid, amount: 300, original: 400, customValues: const {'f-water': 7.5});
+
+    final m = AnalyticsAmountMetric.customField('f-water');
+    final rows = await db.select(db.transactions).get();
+    final dartSum = rows
+        .where(m.matches)
+        .fold<double>(0, (s, t) => s + m.amountOf(t));
+
+    final sqlTotals = await repo.totalsInRange(
+        ledgerId: lid, start: start, end: end, amountMetric: m);
+    expect(dartSum, closeTo(20, 1e-9));
+    expect(sqlTotals.$2, closeTo(dartSum, 1e-9));
+  });
+
+  test('自定义字段口径：storageValue / fromStorage 往返，脏值回落默认口径', () {
+    const sid = '3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b';
+    final m = AnalyticsAmountMetric.customField(sid);
+    expect(m.storageValue, 'custom:$sid');
+    expect(AnalyticsAmountMetric.fromStorage(m.storageValue), m);
+    expect(m.fieldSyncId, sid);
+    expect(m.isDefault, isFalse);
+    // 空 syncId / 非字符串 / 未知值 → 默认口径
+    expect(AnalyticsAmountMetric.fromStorage('custom:'), recorded);
+    expect(AnalyticsAmountMetric.fromStorage('custom:  '), recorded);
+    expect(AnalyticsAmountMetric.fromStorage(12), recorded);
+    // 相同 syncId 的两个实例判等（provider 键 / 缓存键依赖它）
+    expect(AnalyticsAmountMetric.customField(sid), m);
+    expect(m.hashCode, AnalyticsAmountMetric.customField(sid).hashCode);
+    expect(m == AnalyticsAmountMetric.customField('other'), isFalse);
+  });
+
+  test('自定义字段口径：syncId 含引号 / 点 → 路径不可用，读数恒 0（不拼坏 SQL）',
+      () async {
+    final evil = AnalyticsAmountMetric.customField('a"b.c');
+    expect(evil.sqlExpr(), '0');
+    expect(evil.sqlRowFilter(), '0');
+
+    final lid = await seedLedger();
+    await add(lid, amount: 100, customValues: const {'a"b.c': 50});
+    // 查询不抛异常，且没有任何行参与
+    final totals = await repo.totalsInRange(
+        ledgerId: lid, start: start, end: end, amountMetric: evil);
+    expect(totals, (0.0, 0.0));
+  });
+
   test('口径与 OriginalAmountMetric 正交，不互相覆盖', () async {
     final lid = await seedLedger();
     await add(lid, amount: 100, original: 120, native: 700, currency: 'USD');
