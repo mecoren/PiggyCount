@@ -21,6 +21,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:piggycount/cloud/sync_service.dart';
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/models/analytics_amount_metric.dart';
+import 'package:piggycount/data/models/analytics_time_metric.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/pages/main/analytics_page.dart';
@@ -44,6 +45,7 @@ class _GatedRepository extends LocalRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
+    AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) async {
     if (blocked) await gate.future;
     return super.totalsByDay(
@@ -52,6 +54,7 @@ class _GatedRepository extends LocalRepository {
       start: start,
       end: end,
       amountMetric: amountMetric,
+      timeMetric: timeMetric,
     );
   }
 }
@@ -102,10 +105,11 @@ void main() {
 
   tearDown(() async => db.close());
 
-  Future<void> pump(WidgetTester tester, {LocalRepository? repository}) async {
+  Future<void> pump(WidgetTester tester,
+      {LocalRepository? repository, Size size = const Size(1200, 6000)}) async {
     // 页面是 ListView，默认 800×600 视口装不下趋势/分类构成卡，未构建的
     // sliver 里文本找不到。把逻辑高度拉大一次性全渲染。
-    tester.view.physicalSize = const Size(1200, 6000);
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -142,6 +146,38 @@ void main() {
     expect(find.text('支出趋势'), findsOneWidget);
     // 本期支出 200+100+50 = 350
     expect(find.text('350.00'), findsWidgets);
+  });
+
+  testWidgets('窄屏（360dp）+ 两枚口径 chip：标题行不溢出', (tester) async {
+    // 有日期型字段时统计时间 chip 才会出现（它在标题行与金额 chip 并排）。
+    // 360dp 窄屏 + 4 字字段名是最挤的组合：两枚 chip + 标题 + 右侧两个
+    // IconButton 放不下，必须可滚动/可压缩，而不是整行溢出红条。
+    await db.into(db.customFieldDefinitions).insert(
+        CustomFieldDefinitionsCompanion.insert(
+      ledgerId: 1,
+      name: '消费日期',
+      fieldType: 'date',
+      syncId: const d.Value('f-date'),
+    ));
+
+    await pump(tester, size: const Size(1080, 6000)); // 360dp × dpr 3
+
+    // 溢出会让 flutter_test 直接失败（RenderFlex overflowed），到达这里即无溢出
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('amount-metric-chip')), findsOneWidget);
+    expect(find.byKey(const Key('time-metric-chip')), findsOneWidget);
+    // 两枚 chip 都要**完整可见**：右缘不压右侧的日历 / 分享按钮，左缘不越过标题
+    // （曾经的横向滚动方案会按 reverse 贴右、把左边的金额 chip 裁成「额▾」，
+    // 392dp 真机实测到过；等比缩放方案下两枚始终在槽位内）
+    expect(
+      tester.getRect(find.byKey(const Key('time-metric-chip'))).right,
+      lessThanOrEqualTo(tester.getRect(find.byIcon(Icons.date_range_outlined)).left),
+    );
+    expect(
+      tester.getRect(find.byKey(const Key('amount-metric-chip'))).left,
+      greaterThanOrEqualTo(
+          tester.getRect(find.byIcon(Icons.bar_chart_outlined)).right),
+    );
   });
 
   // 闪动回归：切口径在途帧保留上一份同口径结果，不塌成整屏转圈。
