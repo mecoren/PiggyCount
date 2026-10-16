@@ -11,6 +11,7 @@ import '../../widgets/charts/analytics_bar_chart.dart';
 import '../../widgets/charts/category_pie_chart.dart';
 import '../../widgets/analytics/analytics_summary.dart';
 import '../../widgets/analytics/amount_metric_chip.dart';
+import '../../widgets/analytics/metric_segment.dart';
 import '../../widgets/analytics/time_metric_chip.dart';
 import '../../widgets/analytics/category_rank_row.dart';
 import '../../widgets/analytics/custom_field_stats_card.dart';
@@ -608,28 +609,42 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         AppLocalizations.of(context).tabInsights,
                         style: PiggyTextTokens.title(context),
                       ),
-                      const Spacer(),
-                      // 金额口径（记账金额 / 原始金额）+ 统计时间口径（记账时间 /
-                      // 日期型自定义字段）：放在标题行右侧，不加高头部（该行高度由
-                      // 右侧 IconButton 决定，chip 仅 30）；无日期型字段时时间
-                      // chip 自己零宽（见 TimeMetricChip）。
+                      // 统计口径条：金额口径（记账金额 / 原始金额）+ 统计时间口径
+                      // （记账时间 / 日期型自定义字段）装进**同一个轨道**，与下方
+                      // 周/月/季度… 的滑块分段控件同源（同轨道底 / 同圆角 / 同主色
+                      // 胶囊表示「非默认口径」）。2026-10-16 用户反馈：两枚自带
+                      // 描边的独立小胶囊与下方控件像两个体系、太突兀。
                       //
-                      // 可用宽度随标题 / 屏幕宽度 / 字段名长短变化，360dp 窄屏 +
-                      // 长字段名放不下两枚（实测溢出 25px），故给它们一个能整体
-                      // **等比缩**的弹性槽位：贴右对齐、放不下时两枚一起缩到装得
-                      // 下，既不整行溢出红条，也不会像横向滚动那样把左边的金额
-                      // chip 裁成「额▾」（392dp 真机实测）—— 见 analytics_page_test
-                      // 的窄屏回归（右缘不压按钮 + 左缘不越过标题）。
+                      // 2026-10-16 二次修订（用户：「选完对应的文字后大小会变，
+                      // 而且好丑」）：这里**去掉 Spacer、去掉整条等比缩放**——
+                      // - 原来标题与口径条之间夹一个 `Spacer`，它与口径条各分一半
+                      //   剩余宽度，360dp 窄屏只留给口径条 89.5dp（而内容要 187dp）；
+                      // - 原来靠 `FittedBox(BoxFit.scaleDown)` 兜底，于是文案一换
+                      //   缩放比例就换（「记账金额」0.48 / 「水费」0.67），字号在
+                      //   6dp / 8.7dp 之间跳，既跳且糊。
+                      // 现在口径条独占剩余宽度、封顶 [kMetricBarMaxWidth]，两段由
+                      // `Expanded` 等分、超长文案走省略号：**切口径时整条尺寸不变**，
+                      // 只有文字与胶囊底色变化。无日期型字段时时间那段不参与 flex
+                      // （见 TimeMetricChip），金额段独占同一个槽位，仍不超上限。
+                      const SizedBox(width: 12),
                       Flexible(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
+                        child: Align(
                           alignment: Alignment.centerRight,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              AmountMetricChip(),
-                              TimeMetricChip(),
-                            ],
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(
+                                maxWidth: kMetricBarMaxWidth),
+                            child: PiggySegmentTrack(
+                              height: kMetricBarHeight,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.max,
+                                children: const [
+                                  AmountMetricChip(
+                                      style: MetricChipStyle.segment),
+                                  TimeMetricChip(
+                                      style: MetricChipStyle.segment),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),

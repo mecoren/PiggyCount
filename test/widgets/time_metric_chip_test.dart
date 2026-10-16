@@ -21,6 +21,9 @@ import 'package:piggycount/data/models/custom_field_values.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/providers.dart';
 import 'package:piggycount/providers/custom_field_providers.dart';
+import 'package:piggycount/styles/tokens.dart';
+import 'package:piggycount/widgets/analytics/metric_segment.dart';
+import 'package:piggycount/widgets/ui/segmented_control.dart';
 import 'package:piggycount/widgets/analytics/time_metric_chip.dart';
 
 void main() {
@@ -130,6 +133,80 @@ void main() {
 
     expect(find.byKey(const Key('time-metric-chip')), findsNothing);
     expect(find.text(l10n.analyticsTimeMetricHappenedAt), findsNothing);
+  });
+
+  /// 轨内段形态（洞察页「统计口径条」）：装进 [PiggySegmentTrack] 里。
+  Future<ProviderContainer> pumpSegmentChip(
+    WidgetTester tester, {
+    List<CustomFieldDefinition>? defs,
+  }) async {
+    final container = ProviderContainer(overrides: [
+      customFieldsForCurrentLedgerProvider
+          .overrideWith((ref) async => defs ?? defaultDefs()),
+      customFieldAmountMetricSupportedProvider.overrideWith((ref) async => true),
+    ]);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          // 与洞察页标题行同一结构：口径条封顶（[kMetricBarMaxWidth]）+ 段由
+          // `Expanded` 等分 —— 段宽由槽位给出，不再随文案长度变。
+          home: Scaffold(
+            body: Center(
+              child: ConstrainedBox(
+                constraints:
+                    const BoxConstraints(maxWidth: kMetricBarMaxWidth),
+                child: PiggySegmentTrack(
+                  height: kMetricBarHeight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: const [
+                      TimeMetricChip(style: MetricChipStyle.segment),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    return container;
+  }
+
+  testWidgets('轨内形态：有日期型字段时渲染为一段，非默认口径 = 主色胶囊',
+      (tester) async {
+    final container = await pumpSegmentChip(tester);
+    expect(find.byKey(const Key('time-metric-chip')), findsOneWidget);
+
+    BoxDecoration? segDecoration() => tester
+            .widget<AnimatedContainer>(find.descendant(
+              of: find.byType(MetricSegment),
+              matching: find.byType(AnimatedContainer),
+            ))
+            .decoration
+        as BoxDecoration?;
+
+    // 默认口径：透明底（与未选中的分段一样）
+    expect(segDecoration(), isNull);
+
+    final context = tester.element(find.byType(MetricSegment));
+    container.read(analyticsTimeMetricProvider.notifier).state =
+        AnalyticsTimeMetric.customField('f-date');
+    await tester.pumpAndSettle();
+
+    expect(segDecoration()?.color, PiggyTokens.primary(context));
+    expect(find.text('入住日'), findsOneWidget); // 段内文案取字段名
+
+    // 轨内段共用同一份抽屉选项
+    await tester.tap(find.byKey(const Key('time-metric-chip')));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.analyticsTimeMetricTitle), findsOneWidget);
   });
 
   testWidgets('点击 chip 开抽屉：内置「记账时间」+ 日期型字段（其它类型不进）',

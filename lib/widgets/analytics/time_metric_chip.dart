@@ -9,6 +9,7 @@ import '../../providers.dart';
 import '../../providers/custom_field_providers.dart';
 import '../../styles/tokens.dart';
 import '../ui/ui.dart';
+import 'metric_segment.dart';
 
 /// 统计时间口径 chip：显示当前口径，点开底部抽屉单选。
 ///
@@ -25,10 +26,18 @@ import '../ui/ui.dart';
 /// 口径值存在全局 [analyticsTimeMetricProvider]（持久化），所以它在重启后
 /// 保留；换到没有该字段的账本时由陈旧口径守卫回落默认（见下）。
 class TimeMetricChip extends ConsumerWidget {
-  const TimeMetricChip({super.key, this.compact = true});
+  const TimeMetricChip({
+    super.key,
+    this.compact = true,
+    this.style = MetricChipStyle.pill,
+  });
 
   /// 紧凑档：高度 30（与洞察页标题行的金额口径 chip / 圆形按钮齐平）。
+  /// **仅 pill 形态生效**：轨道内的一段高度由轨道决定。
   final bool compact;
+
+  /// 形态：独立描边胶囊（默认）或轨道内的一段（洞察页统计口径条）。
+  final MetricChipStyle style;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -67,6 +76,21 @@ class TimeMetricChip extends ConsumerWidget {
         ? PiggyTokens.textSecondary(context)
         : PiggyTokens.primary(context);
 
+    // 轨道内的一段（洞察页统计口径条）：非默认口径 = 主色胶囊，与金额口径
+    // 那一段、下方分段控件的选中段同款。**用 `Expanded` 交出宽度**（口径条的
+    // 几段等分），段宽因此不随文案长度变 —— 详见 [MetricSegment] 的类注释。
+    // 本段隐藏时（无日期型字段）返回零宽的非 flex 子树，不占轨道里的槽位。
+    if (style == MetricChipStyle.segment) {
+      return Expanded(
+        child: MetricSegment(
+          key: const Key('time-metric-chip'),
+          label: labelOf(l10n, metric, fields),
+          active: !isDefault,
+          onTap: () => showSheet(context, ref),
+        ),
+      );
+    }
+
     final chip = Material(
       color: PiggyTokens.surface(context),
       shape: RoundedRectangleBorder(
@@ -76,32 +100,7 @@ class TimeMetricChip extends ConsumerWidget {
       child: InkWell(
         key: const Key('time-metric-chip'),
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-        onTap: () async {
-          await showPiggyOptionSheet<AnalyticsTimeMetric>(
-            context: context,
-            title: l10n.analyticsTimeMetricTitle,
-            selected: metric,
-            options: [
-              PiggyOptionSheetItem(
-                value: AnalyticsTimeMetric.happenedAt,
-                title: l10n.analyticsTimeMetricHappenedAt,
-                desc: l10n.analyticsTimeMetricHappenedAtDesc,
-                icon: Icons.schedule,
-              ),
-              // 日期型自定义字段：一个字段一项（描述里点明「未填写不参与
-              // 统计」—— 这是该口径与默认口径最容易踩的语义差异）。
-              for (final f in fields)
-                PiggyOptionSheetItem(
-                  value: AnalyticsTimeMetric.customField(f.syncId!),
-                  title: f.name,
-                  desc: l10n.analyticsTimeMetricCustomFieldDesc(f.name),
-                  icon: Icons.event_outlined,
-                ),
-            ],
-            onSelected: (v) =>
-                ref.read(analyticsTimeMetricProvider.notifier).state = v,
-          );
-        },
+        onTap: () => showSheet(context, ref),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: SizedBox(
@@ -131,6 +130,38 @@ class TimeMetricChip extends ConsumerWidget {
     // 与左邻的金额口径 chip 留 6 的间隔（两枚都是描边胶囊，贴在一起会被看成一
     // 个分段控件）。间隔加在「不渲染」分支之后 —— 本 chip 隐藏时不留空档。
     return Padding(padding: const EdgeInsets.only(left: 6), child: chip);
+  }
+
+  /// 打开统计时间口径抽屉（pill 形态与轨内段形态共用同一份选项与语义）。
+  static Future<void> showSheet(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
+    final metric = ref.read(analyticsTimeMetricProvider);
+    final fields =
+        dateFieldsOf(ref.read(customFieldsForCurrentLedgerProvider).value);
+    await showPiggyOptionSheet<AnalyticsTimeMetric>(
+      context: context,
+      title: l10n.analyticsTimeMetricTitle,
+      selected: metric,
+      options: [
+        PiggyOptionSheetItem(
+          value: AnalyticsTimeMetric.happenedAt,
+          title: l10n.analyticsTimeMetricHappenedAt,
+          desc: l10n.analyticsTimeMetricHappenedAtDesc,
+          icon: Icons.schedule,
+        ),
+        // 日期型自定义字段：一个字段一项（描述里点明「未填写不参与统计」
+        // —— 这是该口径与默认口径最容易踩的语义差异）。
+        for (final f in fields)
+          PiggyOptionSheetItem(
+            value: AnalyticsTimeMetric.customField(f.syncId!),
+            title: f.name,
+            desc: l10n.analyticsTimeMetricCustomFieldDesc(f.name),
+            icon: Icons.event_outlined,
+          ),
+      ],
+      onSelected: (v) =>
+          ref.read(analyticsTimeMetricProvider.notifier).state = v,
+    );
   }
 
   /// 当前账本的**日期型**自定义字段（`date` 类型且有 syncId）—— 只有这类

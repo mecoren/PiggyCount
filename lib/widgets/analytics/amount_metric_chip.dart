@@ -9,6 +9,7 @@ import '../../providers.dart';
 import '../../providers/custom_field_providers.dart';
 import '../../styles/tokens.dart';
 import '../ui/ui.dart';
+import 'metric_segment.dart';
 
 /// 金额口径 chip：显示当前口径，点开底部抽屉单选。
 ///
@@ -24,11 +25,20 @@ import '../ui/ui.dart';
 /// 口径值存在全局 [analyticsAmountMetricProvider]（持久化），所以洞察页、
 /// 区间报表、导出页上的同一枚 chip 改的是同一个值 —— 读数到哪都一致。
 class AmountMetricChip extends ConsumerWidget {
-  const AmountMetricChip({super.key, this.compact = true});
+  const AmountMetricChip({
+    super.key,
+    this.compact = true,
+    this.style = MetricChipStyle.pill,
+  });
 
   /// 紧凑档：高度 30（与洞察页导航行的圆形箭头 / 收支胶囊齐平）。
-  /// 传 false 时高度 36，用于报表页的常规行。
+  /// 传 false 时高度 36，用于报表页的常规行。**仅 pill 形态生效**：轨道内的
+  /// 一段高度由轨道决定（见 [kMetricBarSegmentHeight]）。
   final bool compact;
+
+  /// 形态：独立描边胶囊（默认，报表页 / 导出页）或轨道内的一段（洞察页的
+  /// 统计口径条，见 [MetricSegment]）。
+  final MetricChipStyle style;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -62,6 +72,20 @@ class AmountMetricChip extends ConsumerWidget {
         ? PiggyTokens.textSecondary(context)
         : PiggyTokens.primary(context);
 
+    // 轨道内的一段（洞察页统计口径条）：非默认口径 = 主色胶囊，与下方分段
+    // 控件的选中段同款。**用 `Expanded` 交出宽度**（口径条的几段等分），段宽
+    // 因此不随文案长度变 —— 详见 [MetricSegment] 的类注释。
+    if (style == MetricChipStyle.segment) {
+      return Expanded(
+        child: MetricSegment(
+          key: const Key('amount-metric-chip'),
+          label: labelOf(l10n, metric, fields),
+          active: !isDefault,
+          onTap: () => showSheet(context, ref),
+        ),
+      );
+    }
+
     return Material(
       color: PiggyTokens.surface(context),
       shape: RoundedRectangleBorder(
@@ -71,45 +95,7 @@ class AmountMetricChip extends ConsumerWidget {
       child: InkWell(
         key: const Key('amount-metric-chip'),
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-        onTap: () async {
-          // 探针在开抽屉前取（通常已就绪，毫秒级）：json 函数不可用时
-          // 不提供自定义字段选项，而不是给一个必然读数为 0 的口径。
-          final supported = await ref
-              .read(customFieldAmountMetricSupportedProvider.future)
-              .catchError((_) => false);
-          if (!context.mounted) return;
-          await showPiggyOptionSheet<AnalyticsAmountMetric>(
-            context: context,
-            title: l10n.analyticsAmountMetricTitle,
-            selected: metric,
-            options: [
-              PiggyOptionSheetItem(
-                value: AnalyticsAmountMetric.recorded,
-                title: l10n.analyticsAmountMetricRecorded,
-                desc: l10n.analyticsAmountMetricRecordedDesc,
-                icon: Icons.account_balance_wallet_outlined,
-              ),
-              PiggyOptionSheetItem(
-                value: AnalyticsAmountMetric.original,
-                title: l10n.analyticsAmountMetricOriginal,
-                desc: l10n.analyticsAmountMetricOriginalDesc,
-                icon: Icons.receipt_long_outlined,
-              ),
-              // 金额型自定义字段：一个字段一项（描述里点明「未填写不参与
-              // 统计」—— 这是该口径与前两者最容易踩的语义差异）。
-              if (supported)
-                for (final f in fields)
-                  PiggyOptionSheetItem(
-                    value: AnalyticsAmountMetric.customField(f.syncId!),
-                    title: f.name,
-                    desc: l10n.analyticsAmountMetricCustomFieldDesc(f.name),
-                    icon: Icons.sell_outlined,
-                  ),
-            ],
-            onSelected: (v) =>
-                ref.read(analyticsAmountMetricProvider.notifier).state = v,
-          );
-        },
+        onTap: () => showSheet(context, ref),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
           child: SizedBox(
@@ -135,6 +121,51 @@ class AmountMetricChip extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// 打开金额口径抽屉（pill 形态与轨内段形态共用同一份选项与语义）。
+  static Future<void> showSheet(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
+    final metric = ref.read(analyticsAmountMetricProvider);
+    // 探针在开抽屉前取（通常已就绪，毫秒级）：json 函数不可用时
+    // 不提供自定义字段选项，而不是给一个必然读数为 0 的口径。
+    final supported = await ref
+        .read(customFieldAmountMetricSupportedProvider.future)
+        .catchError((_) => false);
+    if (!context.mounted) return;
+    final fields =
+        amountFieldsOf(ref.read(customFieldsForCurrentLedgerProvider).value);
+    await showPiggyOptionSheet<AnalyticsAmountMetric>(
+      context: context,
+      title: l10n.analyticsAmountMetricTitle,
+      selected: metric,
+      options: [
+        PiggyOptionSheetItem(
+          value: AnalyticsAmountMetric.recorded,
+          title: l10n.analyticsAmountMetricRecorded,
+          desc: l10n.analyticsAmountMetricRecordedDesc,
+          icon: Icons.account_balance_wallet_outlined,
+        ),
+        PiggyOptionSheetItem(
+          value: AnalyticsAmountMetric.original,
+          title: l10n.analyticsAmountMetricOriginal,
+          desc: l10n.analyticsAmountMetricOriginalDesc,
+          icon: Icons.receipt_long_outlined,
+        ),
+        // 金额型自定义字段：一个字段一项（描述里点明「未填写不参与统计」
+        // —— 这是该口径与前两者最容易踩的语义差异）。
+        if (supported)
+          for (final f in fields)
+            PiggyOptionSheetItem(
+              value: AnalyticsAmountMetric.customField(f.syncId!),
+              title: f.name,
+              desc: l10n.analyticsAmountMetricCustomFieldDesc(f.name),
+              icon: Icons.sell_outlined,
+            ),
+      ],
+      onSelected: (v) =>
+          ref.read(analyticsAmountMetricProvider.notifier).state = v,
     );
   }
 

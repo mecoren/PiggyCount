@@ -27,6 +27,8 @@ import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/pages/main/analytics_page.dart';
 import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/providers/sync_providers.dart';
+import 'package:piggycount/providers/ui_state_providers.dart';
+import 'package:piggycount/widgets/ui/segmented_control.dart';
 import 'package:piggycount/widgets/ui/wait_sliding_segmented_control.dart';
 import 'package:piggycount/widgets/ui/piggy_spinner.dart';
 
@@ -105,7 +107,7 @@ void main() {
 
   tearDown(() async => db.close());
 
-  Future<void> pump(WidgetTester tester,
+  Future<ProviderContainer> pump(WidgetTester tester,
       {LocalRepository? repository, Size size = const Size(1200, 6000)}) async {
     // 页面是 ListView，默认 800×600 视口装不下趋势/分类构成卡，未构建的
     // sliver 里文本找不到。把逻辑高度拉大一次性全渲染。
@@ -129,6 +131,7 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
+    return container;
   }
 
   /// 切到「收入」段（页面同款 tab 样式；页面上多处出现「收入」，限定在控件内）。
@@ -148,10 +151,11 @@ void main() {
     expect(find.text('350.00'), findsWidgets);
   });
 
-  testWidgets('窄屏（360dp）+ 两枚口径 chip：标题行不溢出', (tester) async {
+  testWidgets('窄屏（360dp）+ 两枚口径 chip：标题行不溢出、口径条不被缩放',
+      (tester) async {
     // 有日期型字段时统计时间 chip 才会出现（它在标题行与金额 chip 并排）。
     // 360dp 窄屏 + 4 字字段名是最挤的组合：两枚 chip + 标题 + 右侧两个
-    // IconButton 放不下，必须可滚动/可压缩，而不是整行溢出红条。
+    // IconButton 放不下，必须压缩到槽位内，而不是整行溢出红条。
     await db.into(db.customFieldDefinitions).insert(
         CustomFieldDefinitionsCompanion.insert(
       ledgerId: 1,
@@ -166,9 +170,21 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('amount-metric-chip')), findsOneWidget);
     expect(find.byKey(const Key('time-metric-chip')), findsOneWidget);
+    // 两个口径入口装在同一款轨道里（与下方 周/月/季度… 滑块分段控件同源：
+    // 轨道装饰与主色胶囊都取 segmented_control.dart 里的同一套函数）
+    expect(find.byType(PiggySegmentTrack), findsOneWidget);
+    for (final key in const ['amount-metric-chip', 'time-metric-chip']) {
+      expect(
+        find.descendant(
+          of: find.byType(PiggySegmentTrack),
+          matching: find.byKey(Key(key)),
+        ),
+        findsOneWidget,
+      );
+    }
     // 两枚 chip 都要**完整可见**：右缘不压右侧的日历 / 分享按钮，左缘不越过标题
     // （曾经的横向滚动方案会按 reverse 贴右、把左边的金额 chip 裁成「额▾」，
-    // 392dp 真机实测到过；等比缩放方案下两枚始终在槽位内）
+    // 392dp 真机实测到过）
     expect(
       tester.getRect(find.byKey(const Key('time-metric-chip'))).right,
       lessThanOrEqualTo(tester.getRect(find.byIcon(Icons.date_range_outlined)).left),
@@ -178,6 +194,55 @@ void main() {
       greaterThanOrEqualTo(
           tester.getRect(find.byIcon(Icons.bar_chart_outlined)).right),
     );
+    // **不再等比缩放整条**：旧实现在这个屏宽下用 FittedBox 把整条缩到 0.48
+    // （字号 ≈6dp）。被缩放时实渲染宽会明显小于布局宽，这里逐层兜住。
+    void expectNotScaled(Finder f) => expect(
+          tester.getRect(f).width,
+          moreOrLessEquals(tester.getSize(f).width, epsilon: 0.5),
+        );
+    expectNotScaled(find.byType(PiggySegmentTrack));
+    expectNotScaled(find.byKey(const Key('amount-metric-chip')));
+    expectNotScaled(find.byKey(const Key('time-metric-chip')));
+    // 两段等分：金额段与时间段同宽（段宽由槽位给出，不随文案长短变）
+    expect(
+      tester.getSize(find.byKey(const Key('amount-metric-chip'))).width,
+      moreOrLessEquals(
+          tester.getSize(find.byKey(const Key('time-metric-chip'))).width,
+          epsilon: 0.5),
+    );
+  });
+
+  testWidgets('切口径：口径条尺寸与字号都不变（不整条缩放、不按内容自适应）',
+      (tester) async {
+    // 用户在 360dp 真机上的反馈「选完对应的文字后大小会变，而且好丑」：
+    // 旧实现靠 FittedBox(scaleDown) 兜底，文案一换缩放比例就换
+    // （「记账金额」0.48 ↔ 「水费」0.67），字号在 6dp / 8.7dp 之间跳。
+    await db.into(db.customFieldDefinitions).insert(
+        CustomFieldDefinitionsCompanion.insert(
+      ledgerId: 1,
+      name: '水费',
+      fieldType: 'amount',
+      syncId: const d.Value('f-water'),
+    ));
+    final container = await pump(tester, size: const Size(1080, 6000));
+
+    final track = tester.getSize(find.byType(PiggySegmentTrack));
+    final seg = tester.getSize(find.byKey(const Key('amount-metric-chip')));
+    final recorded = find.text('记账金额');
+    expect(tester.getRect(recorded).width,
+        moreOrLessEquals(tester.getSize(recorded).width, epsilon: 0.5));
+
+    // 切到金额型自定义字段口径（文案 4 字 → 2 字）
+    container.read(analyticsAmountMetricProvider.notifier).state =
+        AnalyticsAmountMetric.customField('f-water');
+    await tester.pumpAndSettle();
+
+    // 整条口径条与段的尺寸纹丝不动；换的只有文字与底色
+    expect(tester.getSize(find.byType(PiggySegmentTrack)), track);
+    expect(tester.getSize(find.byKey(const Key('amount-metric-chip'))), seg);
+    final water = find.text('水费');
+    expect(tester.getRect(water).width,
+        moreOrLessEquals(tester.getSize(water).width, epsilon: 0.5));
   });
 
   // 闪动回归：切口径在途帧保留上一份同口径结果，不塌成整屏转圈。

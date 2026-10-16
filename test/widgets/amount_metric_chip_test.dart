@@ -22,7 +22,10 @@ import 'package:piggycount/data/models/custom_field_values.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/providers.dart';
 import 'package:piggycount/providers/custom_field_providers.dart';
+import 'package:piggycount/styles/tokens.dart';
 import 'package:piggycount/widgets/analytics/amount_metric_chip.dart';
+import 'package:piggycount/widgets/analytics/metric_segment.dart';
+import 'package:piggycount/widgets/ui/segmented_control.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -100,6 +103,104 @@ void main() {
     await tester.pumpAndSettle();
     return container;
   }
+
+  /// 轨内段形态（洞察页「统计口径条」）：装进 [PiggySegmentTrack] 里。
+  Future<ProviderContainer> pumpSegmentChip(WidgetTester tester) async {
+    final container = ProviderContainer(overrides: [
+      customFieldsForCurrentLedgerProvider.overrideWith((ref) async => defaultDefs()),
+      customFieldAmountMetricSupportedProvider.overrideWith((ref) async => true),
+    ]);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          // 与洞察页标题行同一结构：口径条封顶（[kMetricBarMaxWidth]）+ 段由
+          // `Expanded` 等分 —— 段宽由槽位给出，不再随文案长度变。
+          home: Scaffold(
+            body: Center(
+              child: ConstrainedBox(
+                constraints:
+                    const BoxConstraints(maxWidth: kMetricBarMaxWidth),
+                child: PiggySegmentTrack(
+                  height: kMetricBarHeight,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: const [
+                      AmountMetricChip(style: MetricChipStyle.segment),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    return container;
+  }
+
+  testWidgets('轨内形态：默认口径无胶囊，非默认口径 = 主色胶囊（与分段控件同源）',
+      (tester) async {
+    final container = await pumpSegmentChip(tester);
+
+    // 段内的胶囊容器（MetricSegment 里唯一的 AnimatedContainer）
+    BoxDecoration? segDecoration() => tester
+            .widget<AnimatedContainer>(find.descendant(
+              of: find.byType(MetricSegment),
+              matching: find.byType(AnimatedContainer),
+            ))
+            .decoration
+        as BoxDecoration?;
+
+    // 默认口径：透明底，与未选中的分段一样
+    expect(segDecoration(), isNull);
+
+    container.read(analyticsAmountMetricProvider.notifier).state =
+        AnalyticsAmountMetric.original;
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byType(MetricSegment));
+    final deco = segDecoration();
+    expect(deco, isNotNull);
+    // 与滑块分段控件的选中段同源（同一套 decoration 函数 → 同色同圆角）
+    expect(deco!.color, PiggyTokens.primary(context));
+    expect(deco.borderRadius,
+        BorderRadius.circular(PiggyDimens.radiusLg - kPiggySegmentTrackInset));
+
+    // 轨内段同样点开抽屉（pill / segment 共用一份选项与回调）
+    await tester.tap(find.byKey(const Key('amount-metric-chip')));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.analyticsAmountMetricTitle), findsOneWidget);
+    // 「原始金额」同时出现在段内文案与抽屉选项行
+    expect(find.text(l10n.analyticsAmountMetricOriginal), findsNWidgets(2));
+  });
+
+  testWidgets('轨内形态：切口径后段宽不变（不按内容自适应、不缩放）', (tester) async {
+    // 用户反馈「选完对应的文字后大小会变」的回归：旧实现每段宽度跟着文案长度
+    // 走（「记账金额」≈69 ↔ 「水费」≈42），外面再套 FittedBox(scaleDown) 兜底，
+    // 于是切口径 = 整条尺寸跳一次、缩放比例也跳一次。现在段宽由槽位等分给出。
+    final container = await pumpSegmentChip(tester);
+
+    final widthBefore =
+        tester.getSize(find.byKey(const Key('amount-metric-chip')));
+    final textBefore = find.text(l10n.analyticsAmountMetricRecorded);
+    // 未被缩放：实渲染宽 == 布局宽（缩放会小于布局宽）
+    expect(tester.getRect(textBefore).width, tester.getSize(textBefore).width);
+
+    container.read(analyticsAmountMetricProvider.notifier).state =
+        AnalyticsAmountMetric.customField('f-water');
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(find.byKey(const Key('amount-metric-chip'))),
+        widthBefore);
+    final textAfter = find.text('水费');
+    expect(tester.getRect(textAfter).width, tester.getSize(textAfter).width);
+  });
 
   testWidgets('默认口径：chip 显示「记账金额」，说明行零高不占版面', (tester) async {
     final container = await pumpChip(tester);
