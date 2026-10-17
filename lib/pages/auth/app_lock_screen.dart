@@ -25,11 +25,21 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   String? _lockoutMessage;
   // wipe 执行后禁用键盘：数据已清，停留锁屏待用户重启
   bool _wiped = false;
+  // S2：PIN 长度（4 / 6），从安全存储读取；默认 4 兼容旧安装。
+  int _pinLength = AppLockService.kDefaultPinLength;
 
   @override
   void initState() {
     super.initState();
     _checkBiometric();
+    _loadPinLength();
+  }
+
+  Future<void> _loadPinLength() async {
+    final length = await AppLockService.getPinLength();
+    if (mounted && length != _pinLength) {
+      setState(() => _pinLength = length);
+    }
   }
 
   Future<void> _checkBiometric() async {
@@ -57,13 +67,13 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   }
 
   void _onNumberTap(String number) {
-    if (_wiped || _pin.length >= 4) return;
+    if (_wiped || _pin.length >= _pinLength) return;
     setState(() {
       _isError = false;
       _lockoutMessage = null;
       _pin += number;
     });
-    if (_pin.length == 4) {
+    if (_pin.length == _pinLength) {
       _verifyPin();
     }
   }
@@ -181,6 +191,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
             SizedBox(height: 32.0.scaled(context, ref)),
             // PIN 圆点
             PinDotIndicator(
+              length: _pinLength,
               filledCount: _pin.length,
               isError: _isError,
             ),

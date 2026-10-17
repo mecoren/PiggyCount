@@ -59,11 +59,10 @@ void main() {
     // 锁定期内正确 PIN 也被拒绝
     expect(await AppLockService.verifyPin('1234'), isFalse);
 
-    // 模拟锁定期结束，正确 PIN 通过并清零
-    await prefs.setInt(
-      'app_lock_lockout_until_ms',
-      DateTime.now().millisecondsSinceEpoch - 1,
-    );
+    // 模拟锁定期结束，正确 PIN 通过并清零。
+    // S3 起锁定截止时间在安全存储（prefs 仅旧版本迁移来源），故这里改安全值。
+    AppLockService.testSecureStore!['app_lock_lockout_until_ms'] =
+        '${DateTime.now().millisecondsSinceEpoch - 1}';
     expect(await AppLockService.isLockedOut(), isFalse);
     expect(await AppLockService.verifyPin('1234'), isTrue);
     expect(await AppLockService.getFailedAttempts(), 0);
@@ -71,8 +70,11 @@ void main() {
 
   test('10 次失败后锁定 5 分钟', () async {
     await AppLockService.setPin('1234');
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('app_lock_failed_count', 9);
+    // S3：计数与锁定时间都在安全存储。这里预置「9 次失败 + 退避已过期」，
+    // 模拟真实第 10 次输错（若时间戳缺失会被防篡改逻辑按次数补回退避）。
+    AppLockService.testSecureStore!['app_lock_failed_count'] = '9';
+    AppLockService.testSecureStore!['app_lock_lockout_until_ms'] =
+        '${DateTime.now().millisecondsSinceEpoch - 1}';
 
     expect(await AppLockService.verifyPin('0000'), isFalse);
     expect(await AppLockService.getFailedAttempts(), 10);
@@ -108,6 +110,47 @@ void main() {
 
     await AppLockService.setWipeEnabled(true);
     expect(await AppLockService.shouldWipe(), isTrue);
+  });
+
+  test('S2：支持 6 位 PIN，长度随哈希一起存安全存储', () async {
+    await AppLockService.setPin('123456', length: 6);
+
+    expect(await AppLockService.getPinLength(), 6);
+    expect(AppLockService.testSecureStore!['app_lock_pin_length'], '6');
+    expect(await AppLockService.verifyPin('123456'), isTrue);
+    expect(await AppLockService.verifyPin('1234'), isFalse);
+  });
+
+  test('S2：PIN 长度与位数不匹配时拒绝设置', () async {
+    expect(
+      () => AppLockService.setPin('1234', length: 6),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect(
+      () => AppLockService.setPin('123456', length: 4),
+      throwsA(isA<ArgumentError>()),
+    );
+  });
+
+  test('S3：失败计数写安全存储，明文 prefs 被清空', () async {
+    await AppLockService.setPin('1234');
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('app_lock_failed_count', 2);
+
+    expect(await AppLockService.verifyPin('0000'), isFalse);
+    // 迁移 + 自增后落在安全存储
+    expect(AppLockService.testSecureStore!['app_lock_failed_count'], '3');
+    expect(prefs.getInt('app_lock_failed_count'), isNull);
+  });
+
+  test('S3：锁定时间戳丢失时按失败次数补回退避', () async {
+    await AppLockService.setPin('1234');
+    AppLockService.testSecureStore!['app_lock_failed_count'] = '9';
+
+    // 时间戳缺失：不能因为「删掉时间戳」就绕过锁定
+    final remaining = await AppLockService.getLockoutRemaining();
+    expect(remaining.inSeconds, greaterThan(0));
+    expect(await AppLockService.isLockedOut(), isTrue);
   });
 
   test('wipeAllData 删除库文件/附件/prefs/安全存储', () async {

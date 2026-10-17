@@ -26,11 +26,20 @@ class _PinSetupPageState extends ConsumerState<PinSetupPage> {
   String _pin = '';
   String _firstPin = '';
   bool _isError = false;
+  // S2：PIN 长度可选 4 / 6 位。改密时先按已保存长度自动校验旧 PIN。
+  int _pinLength = AppLockService.kDefaultPinLength;
 
   @override
   void initState() {
     super.initState();
     _step = widget.mode == PinSetupMode.change ? 0 : 1;
+    _loadStoredLength();
+  }
+
+  Future<void> _loadStoredLength() async {
+    final stored = await AppLockService.getPinLength();
+    if (!mounted || stored == _pinLength) return;
+    setState(() => _pinLength = stored);
   }
 
   String get _title {
@@ -41,12 +50,12 @@ class _PinSetupPageState extends ConsumerState<PinSetupPage> {
   }
 
   void _onNumberTap(String number) {
-    if (_pin.length >= 4) return;
+    if (_pin.length >= _pinLength) return;
     setState(() {
       _isError = false;
       _pin += number;
     });
-    if (_pin.length == 4) {
+    if (_pin.length == _pinLength) {
       _handlePinComplete();
     }
   }
@@ -81,7 +90,7 @@ class _PinSetupPageState extends ConsumerState<PinSetupPage> {
     } else {
       // 确认 PIN
       if (_pin == _firstPin) {
-        await AppLockService.setPin(_pin);
+        await AppLockService.setPin(_pin, length: _pinLength);
         ref.read(appLockEnabledProvider.notifier).state = true;
         if (mounted) {
           showToast(context, AppLocalizations.of(context).appLockPinSetSuccess);
@@ -111,6 +120,44 @@ class _PinSetupPageState extends ConsumerState<PinSetupPage> {
         });
       }
     });
+  }
+
+  /// 4 位 / 6 位 PIN 选择器（S2，仅新建 PIN 步骤可见）。
+  Widget _buildLengthSelector() {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      children: [
+        Text(
+          l10n.appLockPinLengthTitle,
+          style: TextStyle(
+            fontSize: PiggyTextTokens.fs13.scaled(context, ref),
+            color: PiggyTokens.textSecondary(context),
+          ),
+        ),
+        SizedBox(height: 8.0.scaled(context, ref)),
+        // 用项目统一分段控件（Material SegmentedButton 的圆角/配色与
+        // PiggyDimens/PiggyTokens 不一致，见 custom_field_manage_page 的说明）。
+        PiggySegmentedControl<int>(
+          options: [
+            for (final len in AppLockService.kSupportedPinLengths)
+              PiggySegmentOption<int>(
+                value: len,
+                label: l10n.appLockPinLengthOption(len),
+              ),
+          ],
+          selected: _pinLength,
+          onChanged: (next) {
+            if (next == _pinLength) return;
+            setState(() {
+              _pinLength = next;
+              _pin = '';
+              _firstPin = '';
+              _isError = false;
+            });
+          },
+        ),
+      ],
+    );
   }
 
   @override
@@ -148,9 +195,16 @@ class _PinSetupPageState extends ConsumerState<PinSetupPage> {
                     SizedBox(height: 32.0.scaled(context, ref)),
                     // PIN 圆点
                     PinDotIndicator(
+                      length: _pinLength,
                       filledCount: _pin.length,
                       isError: _isError,
                     ),
+                    // 长度选择（S2）：只在「输入新 PIN」步骤展示，改长度会清空
+                    // 已输入内容（圆点数量随之变化，避免半截 PIN 直接提交）。
+                    if (_step == 1) ...[
+                      SizedBox(height: 24.0.scaled(context, ref)),
+                      _buildLengthSelector(),
+                    ],
                     const Spacer(flex: 1),
                     // 数字键盘
                     Padding(

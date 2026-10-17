@@ -9,10 +9,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/encryption/argon2_key_derivation.dart';
 import '../system/logger_service.dart';
+import 'secure_storage.dart';
 
 class AppLockService {
   static const _keyEnabled = 'app_lock_enabled';
   static const _keyPinHash = 'app_lock_pin_hash';
+  static const _keyPinLength = 'app_lock_pin_length';
   static const _keyBiometricEnabled = 'app_lock_biometric_enabled';
   static const _keyTimeoutSeconds = 'app_lock_timeout_seconds';
   static const _keyLastBackgroundTime = 'app_lock_last_background_time';
@@ -20,17 +22,25 @@ class AppLockService {
   static const _keyLockoutUntil = 'app_lock_lockout_until_ms';
   static const _keyWipeEnabled = 'app_lock_wipe_enabled';
 
-  /// 失败退避阈值：5次后锁30秒，10次后锁5分钟，成功即清零。
+  /// 支持的 PIN 长度（S2）。4 位是默认，6 位把暴力空间从 1e4 提到 1e6；
+  /// 长度本身存安全存储（不随 prefs 被改，避免「改成 6 位但锁屏仍等 4 位」）。
+  static const List<int> kSupportedPinLengths = [4, 6];
+  static const int kDefaultPinLength = 4;
+
+  /// 失败退避：5 次起锁 30 秒，10 次起 5 分钟；之后每多 5 次翻倍
+  /// （10/20/40/60 分钟封顶），成功即清零。递增退避让「挂机试 PIN」
+  /// 的成本随失败次数指数上升，而不是永远停在固定的 5 分钟。
   static const int kLockoutAfterAttempts = 5;
   static const int kExtendedLockoutAfterAttempts = 10;
   static const Duration kLockoutDuration = Duration(seconds: 30);
   static const Duration kExtendedLockoutDuration = Duration(minutes: 5);
+  static const Duration kMaxLockoutDuration = Duration(hours: 1);
 
   /// wipe 阈值：连续失败达此次数且用户开启 wipe 开关时，提供清除数据选项。
   static const int kWipeAfterAttempts = 20;
 
-  // 11.x：Android 侧默认即加密存储（见 secure_key_storage.dart 的说明）
-  static final FlutterSecureStorage _secure = const FlutterSecureStorage();
+  /// S4：统一安全存储口径（iOS 仅本设备 / Android resetOnError）。
+  static const FlutterSecureStorage _secure = piggySecureStorage;
 
   /// 测试注入：内存安全存储（避免平台通道），置非空即启用。
   @visibleForTesting
@@ -91,16 +101,36 @@ class AppLockService {
     return '${base64.encode(salt)}:${base64.encode(hash)}';
   }
 
-  /// 设置 PIN 码（Argon2id + salt，哈希进安全存储）
-  static Future<void> setPin(String pin) async {
+  /// 设置 PIN 码（Argon2id + salt，哈希进安全存储）。
+  ///
+  /// [length] 省略时沿用已保存的长度（旧 PIN 默认 4 位）；显式传入用于
+  /// 创建/改密时选择 4 位或 6 位（[kSupportedPinLengths]）。
+  static Future<void> setPin(String pin, {int? length}) async {
+    final effectiveLength = length ?? await getPinLength();
+    if (!kSupportedPinLengths.contains(effectiveLength)) {
+      throw ArgumentError.value(
+          effectiveLength, 'length', 'PIN 长度必须为 ${kSupportedPinLengths.join(' 或 ')} 位');
+    }
+    if (pin.length != effectiveLength ||
+        !RegExp(r'^\d+$').hasMatch(pin)) {
+      throw ArgumentError('PIN 必须为 $effectiveLength 位数字');
+    }
     final hashed = await _hashPinSecure(pin);
     await _secureWrite(_keyPinHash, hashed);
+    await _secureWrite(_keyPinLength, '$effectiveLength');
     // 清理历史明文残留
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyPinHash);
     await prefs.setBool(_keyEnabled, true);
-    await _clearFailures(prefs);
-    logger.info('AppLock', 'PIN已设置');
+    await _clearFailures();
+    logger.info('AppLock', 'PIN已设置（$effectiveLength 位）');
+  }
+
+  /// 当前 PIN 长度（安全存储；脏值 / 缺失回落 [kDefaultPinLength]）。
+  static Future<int> getPinLength() async {
+    final raw = await _secureRead(_keyPinLength);
+    final parsed = raw == null ? null : int.tryParse(raw);
+    return kSupportedPinLengths.contains(parsed) ? parsed! : kDefaultPinLength;
   }
 
   /// 从安全存储读 PIN 哈希；旧版本明文在 prefs，读到即迁移。
@@ -133,7 +163,6 @@ class AppLockService {
   /// - 旧格式（纯 SHA-256 hex）：验证成功后自动升级为新格式
   /// 失败退避：5次后锁30秒，10次后锁5分钟；锁定期内直接返回 false。
   static Future<bool> verifyPin(String pin) async {
-    final prefs = await SharedPreferences.getInstance();
     if (await isLockedOut()) return false;
     final savedHash = await _readPinHash();
     if (savedHash == null) return false;
@@ -142,7 +171,7 @@ class AppLockService {
       // 新格式: base64(salt):base64(hash)
       final parts = savedHash.split(':');
       if (parts.length != 2) {
-        await _recordFailure(prefs);
+        await _recordFailure();
         return false;
       }
       try {
@@ -150,14 +179,14 @@ class AppLockService {
         final hash = await _argon2.deriveKey(password: pin, salt: salt);
         final ok = _constantTimeEquals(base64.encode(hash), parts[1]);
         if (ok) {
-          await _clearFailures(prefs);
+          await _clearFailures();
         } else {
-          await _recordFailure(prefs);
+          await _recordFailure();
         }
         return ok;
       } catch (e) {
         logger.warning('AppLock', 'PIN 验证异常: $e');
-        await _recordFailure(prefs);
+        await _recordFailure();
         return false;
       }
     }
@@ -168,24 +197,38 @@ class AppLockService {
       logger.info('AppLock', 'PIN 已从 SHA-256 升级为 Argon2id');
       return true;
     }
-    await _recordFailure(prefs);
+    await _recordFailure();
     return false;
   }
 
-  /// 当前失败次数（成功即清零）
-  static Future<int> getFailedAttempts() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyFailedCount) ?? 0;
-  }
+  /// 当前失败次数（成功即清零）。
+  ///
+  /// S3 防篡改：计数与锁定截止时间都在**安全存储**（Keychain / Keystore），
+  /// 不再写 SharedPreferences —— 此前明文 XML / plist 可被 root / ADB 备份
+  /// 直接改成 0，退避与 wipe 阈值形同虚设。旧版本残留的 prefs 值仍会在首次
+  /// 读取时迁移一次，迁移后立即删除明文。
+  static Future<int> getFailedAttempts() => _readFailedCount();
 
-  /// 剩余锁定时间；未锁定返回 Duration.zero
+  /// 剩余锁定时间；未锁定返回 Duration.zero。
+  ///
+  /// 锁定截止时间丢失（旧版本 / 被清）但失败次数已达阈值时，按次数**补回**
+  /// 最小退避 —— 否则「删掉时间戳」就是绕过锁定的捷径。
   static Future<Duration> getLockoutRemaining() async {
-    final prefs = await SharedPreferences.getInstance();
-    final until = prefs.getInt(_keyLockoutUntil);
-    if (until == null) return Duration.zero;
-    final remaining = until - DateTime.now().millisecondsSinceEpoch;
-    if (remaining <= 0) return Duration.zero;
-    return Duration(milliseconds: remaining);
+    final count = await _readFailedCount();
+    if (count < kLockoutAfterAttempts) return Duration.zero;
+
+    final until = await _readLockoutUntil();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (until <= 0) {
+      // 时间戳缺失（旧版本未写 / 被清）：按当前失败次数补回一次退避。
+      // 注意过期（until > 0 且 <= now）不能补 —— 那会让锁定永不过期，
+      // 用户连「错一次再等下一档」的机会都没有。
+      final duration = _lockoutDurationFor(count);
+      if (duration == Duration.zero) return Duration.zero;
+      await _secureWrite(_keyLockoutUntil, '${now + duration.inMilliseconds}');
+      return duration;
+    }
+    return until > now ? Duration(milliseconds: until - now) : Duration.zero;
   }
 
   /// 是否处于锁定退避期
@@ -194,26 +237,69 @@ class AppLockService {
     return remaining > Duration.zero;
   }
 
-  static Future<void> _recordFailure(SharedPreferences prefs) async {
-    final count = (prefs.getInt(_keyFailedCount) ?? 0) + 1;
-    await prefs.setInt(_keyFailedCount, count);
-    if (count >= kExtendedLockoutAfterAttempts) {
-      await prefs.setInt(
-        _keyLockoutUntil,
-        DateTime.now().millisecondsSinceEpoch +
-            kExtendedLockoutDuration.inMilliseconds,
-      );
-    } else if (count >= kLockoutAfterAttempts) {
-      await prefs.setInt(
-        _keyLockoutUntil,
-        DateTime.now().millisecondsSinceEpoch + kLockoutDuration.inMilliseconds,
-      );
-    }
+  /// 第 [count] 次失败应锁多久（成功后清零，不累积历史）。
+  static Duration _lockoutDurationFor(int count) {
+    if (count < kLockoutAfterAttempts) return Duration.zero;
+    if (count < kExtendedLockoutAfterAttempts) return kLockoutDuration;
+    // 10 次起 5 分钟，之后每多 5 次翻倍：5 / 10 / 20 / 40 / 60 分钟封顶。
+    final steps = ((count - kExtendedLockoutAfterAttempts) ~/ 5).clamp(0, 4);
+    final doubled = kExtendedLockoutDuration * (1 << steps);
+    return doubled > kMaxLockoutDuration ? kMaxLockoutDuration : doubled;
   }
 
-  static Future<void> _clearFailures(SharedPreferences prefs) async {
+  static Future<void> _recordFailure() async {
+    final count = (await _readFailedCount()) + 1;
+    await _secureWrite(_keyFailedCount, '$count');
+    final duration = _lockoutDurationFor(count);
+    if (duration > Duration.zero) {
+      await _secureWrite(_keyLockoutUntil,
+          '${DateTime.now().millisecondsSinceEpoch + duration.inMilliseconds}');
+    }
+    // 清掉旧版本明文（迁移已完成），避免「改 prefs 覆盖安全值」的误导。
+    final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyFailedCount);
     await prefs.remove(_keyLockoutUntil);
+  }
+
+  static Future<void> _clearFailures() async {
+    await _secureDelete(_keyFailedCount);
+    await _secureDelete(_keyLockoutUntil);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyFailedCount);
+    await prefs.remove(_keyLockoutUntil);
+  }
+
+  /// 读失败计数（安全存储优先；prefs 仅作旧版本一次性迁移来源）。
+  static Future<int> _readFailedCount() async {
+    final secure = await _secureRead(_keyFailedCount);
+    if (secure != null) return int.tryParse(secure) ?? 0;
+
+    final prefs = await SharedPreferences.getInstance();
+    final legacy = prefs.getInt(_keyFailedCount);
+    if (legacy == null) return 0;
+    await _secureWrite(_keyFailedCount, '$legacy');
+    final legacyUntil = prefs.getInt(_keyLockoutUntil);
+    if (legacyUntil != null &&
+        legacyUntil > DateTime.now().millisecondsSinceEpoch) {
+      await _secureWrite(_keyLockoutUntil, '$legacyUntil');
+    }
+    await prefs.remove(_keyFailedCount);
+    await prefs.remove(_keyLockoutUntil);
+    logger.info('AppLock', '失败计数已从明文迁移到安全存储');
+    return legacy;
+  }
+
+  /// 读锁定截止时间（安全存储优先；prefs 仅旧版本迁移来源）。
+  static Future<int> _readLockoutUntil() async {
+    final secure = await _secureRead(_keyLockoutUntil);
+    if (secure != null) return int.tryParse(secure) ?? 0;
+    final prefs = await SharedPreferences.getInstance();
+    final legacy = prefs.getInt(_keyLockoutUntil) ?? 0;
+    if (legacy > 0) {
+      await _secureWrite(_keyLockoutUntil, '$legacy');
+      await prefs.remove(_keyLockoutUntil);
+    }
+    return legacy;
   }
 
   /// wipe 开关是否开启（默认关闭；普通偏好，非敏感）。
@@ -310,7 +396,8 @@ class AppLockService {
     await prefs.remove(_keyPinHash);
     await prefs.setBool(_keyEnabled, false);
     await prefs.setBool(_keyBiometricEnabled, false);
-    await _clearFailures(prefs);
+    await _secureDelete(_keyPinLength);
+    await _clearFailures();
     logger.info('AppLock', 'PIN已清除，应用锁已禁用');
   }
 
