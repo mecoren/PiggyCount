@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../services/security/secure_storage.dart';
+
 /// 整库加密的**密钥层**（SQLCipher / SQLite3MultipleCiphers）。
 ///
 /// 对应 `prd/sqlcipher_db_encryption/requirements.md` 的 R2（密钥进系统安全区）
@@ -27,9 +29,8 @@ class DatabaseKeyService {
   /// 密钥长度（字节）。32B = 256 位，SQLCipher 推荐值。
   static const int keyBytes = 32;
 
-  // 11.x：Android 侧默认即加密存储（见 secure_key_storage.dart 的说明），
-  // 不再需要显式 encryptedSharedPreferences。
-  static const FlutterSecureStorage _secure = FlutterSecureStorage();
+  // S4：统一安全存储口径（iOS 仅本设备 / Android resetOnError）。
+  static const FlutterSecureStorage _secure = piggySecureStorage;
 
   /// 测试注入：内存安全存储，置非空即启用（避免平台通道）。
   /// 与 `AiPrivacyConsentStore.testSecureStore` 同款。

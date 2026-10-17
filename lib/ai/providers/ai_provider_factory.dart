@@ -9,6 +9,7 @@ import 'ai_provider_config.dart';
 import 'ai_provider_manager.dart';
 import '../privacy/ai_send_confirm.dart';
 import '../../services/system/logger_service.dart';
+import '../../utils/secure_url.dart';
 
 /// AI Provider 工厂类
 ///
@@ -19,13 +20,24 @@ class AIProviderFactory {
 
   static Dio? _dio;
 
-  /// 获取/创建 Dio 实例
+  /// 获取/创建 Dio 实例。
+  ///
+  /// **传输安全 S5**：`Authorization: Bearer <apiKey>` 会随每个请求发出，
+  /// 这里对 Base URL 再做一次兜底校验 —— HTTP 只允许回环地址（本地模型），
+  /// 其余必须 HTTPS。UI 保存时已拦一次；配置导入 / 旧配置同样经过此处。
   static Dio _getDio(AIServiceProviderConfig config) {
+    if (isInsecureRemoteUrl(config.baseUrl)) {
+      throw AIException(
+        '服务商 ${config.name} 的 Base URL 必须使用 HTTPS'
+        '（仅本机回环地址如 http://127.0.0.1 可用 HTTP），'
+        '否则 API Key 会在明文链路上泄露',
+      );
+    }
     _dio ??= Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 60),
       receiveTimeout: const Duration(seconds: 60),
     ));
-    _dio!.options.baseUrl = config.baseUrl;
+    _dio!.options.baseUrl = normalizeCloudUrl(config.baseUrl);
     _dio!.options.headers = {
       'Authorization': 'Bearer ${config.apiKey}',
       'Content-Type': 'application/json',

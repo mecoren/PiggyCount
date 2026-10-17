@@ -21,4 +21,21 @@ void main() {
         'http://dav.example.com/');
     expect(normalizeCloudUrl(''), '');
   });
+
+  test('S5：自配端点强制 HTTPS，仅回环允许明文', () {
+    // 明文远端：拦截
+    expect(isInsecureRemoteUrl('http://api.example.com'), isTrue);
+    expect(isInsecureRemoteUrl('HTTP://192.168.1.10:11434'), isTrue);
+    // HTTPS / 缺协议：放行（缺协议按 https 补全）
+    expect(isInsecureRemoteUrl('https://api.example.com/v1'), isFalse);
+    expect(isInsecureRemoteUrl('api.example.com/v1'), isFalse);
+    expect(isInsecureRemoteUrl(''), isFalse);
+    // 本机回环：允许明文（Ollama / LM Studio）
+    expect(isInsecureRemoteUrl('http://localhost:11434'), isFalse);
+    expect(isInsecureRemoteUrl('http://127.0.0.1:8080/v1'), isFalse);
+    expect(isInsecureRemoteUrl('http://[::1]:8080'), isFalse);
+    // 非 http(s) 协议：拒绝
+    expect(isInsecureRemoteUrl('file:///etc/passwd'), isTrue);
+    expect(isInsecureRemoteUrl('ftp://example.com'), isTrue);
+  });
 }

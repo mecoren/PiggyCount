@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'ai_provider_config.dart';
+import '../../services/security/secure_storage.dart';
 import '../../services/system/logger_service.dart';
 
 /// AI 服务商管理服务
@@ -25,8 +26,8 @@ class AIProviderManager {
   static const String _keyProviders = 'ai_providers_v2';
   static const String _keyBinding = 'ai_capability_binding_v2';
 
-  // 11.x：Android 侧默认即加密存储（见 secure_key_storage.dart 的说明）
-  static const FlutterSecureStorage _secure = FlutterSecureStorage();
+  // S4：统一安全存储口径（iOS 仅本设备 / Android resetOnError）。
+  static const FlutterSecureStorage _secure = piggySecureStorage;
 
   /// 测试注入：内存安全存储，置非空即启用，避免平台通道。
   @visibleForTesting

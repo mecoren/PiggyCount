@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../services/security/secure_storage.dart';
+
 /// 当前 AI 隐私"告知+同意"文案版本。文案实质变更时 +1,可强制用户重新同意。
 const int kAiPrivacyConsentVersion = 1;
 
@@ -14,8 +16,8 @@ class AiPrivacyConsentStore {
 
   static const String prefsKey = 'ai_privacy_consent_version';
 
-  // 11.x：Android 侧默认即加密存储（见 secure_key_storage.dart 的说明）
-  static const FlutterSecureStorage _secure = FlutterSecureStorage();
+  // S4：统一安全存储口径（iOS 仅本设备 / Android resetOnError）。
+  static const FlutterSecureStorage _secure = piggySecureStorage;
 
   /// 测试注入：内存安全存储，置非空即启用，避免平台通道。
   @visibleForTesting

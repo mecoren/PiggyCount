@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../services/security/secure_storage.dart';
+
 /// 加密密钥的安全存储
 ///
 /// 封装 `flutter_secure_storage`，提供密钥和校验块的存取。
@@ -26,21 +28,10 @@ class SecureKeyStorage {
 
   final FlutterSecureStorage _storage;
 
+  /// 默认走全应用统一的安全存储实例（S4，见 `secure_storage.dart`）。
+  /// 单测可注入 mock；生产路径不要另建 `FlutterSecureStorage()`。
   SecureKeyStorage({FlutterSecureStorage? storage})
-      : _storage = storage ??
-            const FlutterSecureStorage(
-              // iOS: 禁止 iCloud Keychain 同步（synchronizable=false），
-              // 密钥绑定本设备；使用 first_unlock_this_device 避免设备被锁后无法解密
-              iOptions: IOSOptions(
-                accessibility: KeychainAccessibility.first_unlock_this_device,
-                synchronizable: false,
-              ),
-              // Android: 启用 EncryptedSharedPreferences，旧设备保护更强
-              // 11.x：AndroidOptions 已移除 encryptedSharedPreferences
-              // （10.0 起 Jetpack Security 弃用，改用插件自带 cipher，默认即加密存储）；
-              // resetOnError 现在默认 true，此处显式写出以免依赖默认值。
-              aOptions: AndroidOptions(resetOnError: true),
-            );
+      : _storage = storage ?? piggySecureStorage;
 
   /// 保存 AES-256 密钥（32 字节）
   Future<void> saveKey(List<int> key) async {

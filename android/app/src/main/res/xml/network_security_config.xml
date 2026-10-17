@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  传输安全 S5（2026-10-17）：全局禁止明文 HTTP。
+
+  背景：云同步 provider 已在代码层强制 HTTPS，但 App 还接受用户自配的
+  AI Base URL / 汇率 / 更新源等地址，Dart 侧校验一旦有漏网，明文请求仍能发出去。
+  这里在平台层再加一道兜底：除本机回环（Ollama / LM Studio 等本地模型）
+  之外，任何 http:// 请求都会被 Android 直接拒绝（API 24+）。
+
+  注意：局域网内的自建 AI（如 http://192.168.1.x:11434）也会被拦。
+  需要局域网明文的用户请改用 HTTPS 反向代理 —— 本项目不接受明文凭据传输。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

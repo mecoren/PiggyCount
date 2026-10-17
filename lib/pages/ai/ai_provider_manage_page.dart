@@ -14,6 +14,7 @@ import '../../ai/providers/ai_provider_manager.dart';
 import '../../ai/providers/ai_provider_factory.dart';
 import '../../ai/providers/ai_constants.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/secure_url.dart';
 import '../../utils/website_urls.dart';
 
 /// AI 服务商管理刷新 Provider
@@ -790,6 +791,13 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
         showToast(context, l10n.aiProviderBaseUrlRequired);
         return;
       }
+      // S5 强制 HTTPS：API Key 随请求头发送，明文链路一律拦截；
+      // 本机回环（Ollama / LM Studio）例外。缺协议按 https 补全后保存。
+      if (isInsecureRemoteUrl(_baseUrlController.text.trim())) {
+        showToast(context, l10n.aiProviderBaseUrlMustUseHttps);
+        return;
+      }
+      _baseUrlController.text = normalizeCloudUrl(_baseUrlController.text);
     }
 
     setState(() => _saving = true);
