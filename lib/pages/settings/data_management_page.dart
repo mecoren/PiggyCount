@@ -539,7 +539,8 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
-                            '自定义图标: ${info.customIconCount} 个',
+                            AppLocalizations.of(ctx)
+                                .dataBackupCustomIcons(info.customIconCount),
                             style: PiggyTextTokens.body(ctx).copyWith(
                                 color: PiggyTokens.textSecondary(ctx)),
                           ),
@@ -548,7 +549,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
-                            '包含头像',
+                            AppLocalizations.of(ctx).dataBackupAvatarIncluded,
                             style: PiggyTextTokens.body(ctx).copyWith(
                                 color: PiggyTokens.textSecondary(ctx)),
                           ),
@@ -682,20 +683,22 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
 
       // 头像导入结果
       if (result.avatarImported) {
-        parts.add('头像已导入');
+        parts.add(l10n.dataBackupAvatarImported);
       }
 
       // 自定义图标导入结果
       if (result.customIconsImported > 0 || result.customIconsSkipped > 0) {
-        parts.add(
-            '自定义图标：导入${result.customIconsImported}个${result.customIconsSkipped > 0 ? '，跳过${result.customIconsSkipped}个' : ''}');
+        parts.add(result.customIconsSkipped > 0
+            ? l10n.dataBackupSummaryCustomIcons(
+                result.customIconsImported, result.customIconsSkipped)
+            : l10n.dataBackupCustomIcons(result.customIconsImported));
       }
 
       // 如果没有任何导入结果，显示提示
       if (parts.isEmpty &&
           !result.avatarImported &&
           result.customIconsImported == 0) {
-        parts.add('未导入任何内容');
+        parts.add(l10n.dataBackupNothingImported);
       }
 
       showToast(context, parts.join('；'));

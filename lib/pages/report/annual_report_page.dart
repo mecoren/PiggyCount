@@ -1379,13 +1379,15 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
           ),
           const SizedBox(height: 24),
 
-          // 最高/最低月份
+          // 最高/最低月份（月份名跟随语言，不再写死「N月」）
           Row(
             children: [
               Expanded(
                 child: _buildHighlightCard(
                   label: l10n.annualReportHighestMonth,
-                  value: '$maxMonth月',
+                  value: DateFormat.MMM(
+                          Localizations.localeOf(context).toString())
+                      .format(DateTime(2000, maxMonth)),
                   subValue: '$currencySymbol${formatter.format(maxExpense)}',
                   color: PiggyTokens.error(context),
                 ),
@@ -1394,7 +1396,9 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
               Expanded(
                 child: _buildHighlightCard(
                   label: l10n.annualReportLowestMonth,
-                  value: '$minMonth月',
+                  value: DateFormat.MMM(
+                          Localizations.localeOf(context).toString())
+                      .format(DateTime(2000, minMonth)),
                   subValue: '$currencySymbol${formatter.format(minExpense)}',
                   color: PiggyTokens.success(context),
                 ),
@@ -1506,7 +1510,9 @@ class _AnnualReportPageState extends ConsumerState<AnnualReportPage> {
   Widget _buildPage4SpecialMoments(
       BuildContext context, AnnualReportData data) {
     final l10n = AppLocalizations.of(context);
-    final dateFormatter = DateFormat('MM月dd日');
+    // U1：日期格式跟随界面语言（旧实现写死中文「MM月dd日」）。
+    final dateFormatter =
+        DateFormat.MMMd(Localizations.localeOf(context).toString());
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),

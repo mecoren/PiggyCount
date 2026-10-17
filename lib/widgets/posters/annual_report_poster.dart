@@ -1363,7 +1363,9 @@ class AnnualReportPoster extends StatelessWidget {
   /// Special moments section
   Widget _buildSpecialMomentsSection(BuildContext context, AppLocalizations l10n) {
     final formatter = NumberFormat('#,##0.00', 'zh_CN');
-    final dateFormatter = DateFormat('MM月dd日');
+    // U1：日期格式跟随界面语言（旧实现写死「MM月dd日」，英/韩界面会露出中文）。
+    final dateFormatter =
+        DateFormat.MMMd(Localizations.localeOf(context).toString());
 
     final moments = <({String label, String amount, String note, String date, Color color, IconData icon})>[];
 

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'gradient_backdrop_filter.dart';
 
 /// 液态玻璃两行融合标题栏
@@ -41,7 +42,7 @@ class LiquidGlassTitleBar extends StatefulWidget
     // 第一行 - 搜索
     this.showSearch = false,
     this.onSearchChanged,
-    this.searchHint = '搜索...',
+    this.searchHint,
     this.searchController,
     this.searchFocusNode,
     // 第一行 - 功能键
@@ -110,7 +111,8 @@ class LiquidGlassTitleBar extends StatefulWidget
   // ===== 第一行 - 搜索 =====
   final bool showSearch;
   final ValueChanged<String>? onSearchChanged;
-  final String searchHint;
+  /// 搜索框占位文案；不传时取本地化默认值（U1）。
+  final String? searchHint;
 
   /// 外部传入的搜索 controller（可选，不传则内部创建）
   final TextEditingController? searchController;
@@ -511,7 +513,8 @@ class _LiquidGlassTitleBarState extends State<LiquidGlassTitleBar>
           color: colorScheme.onSurface,
         ),
         decoration: InputDecoration(
-          hintText: widget.searchHint,
+          hintText: widget.searchHint ??
+              AppLocalizations.of(context).searchHintDefault,
           hintStyle: TextStyle(
             fontSize: _Defaults.searchHintFontSize,
             color: colorScheme.onSurfaceVariant,

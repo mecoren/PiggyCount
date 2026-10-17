@@ -10928,7 +10928,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiChatTitle.
   ///
   /// In en, this message translates to:
-  /// **'AI Assistant'**
+  /// **'AI Chat'**
   String get aiChatTitle;
 
   /// No description provided for @aiChatClearHistory.
@@ -17203,6 +17203,282 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please pick a category first'**
   String get transactionSelectCategoryRequired;
+
+  /// No description provided for @cloudStatusUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get cloudStatusUnavailable;
+
+  /// No description provided for @cloudIcloudNoAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Please sign in to your iCloud account in Settings'**
+  String get cloudIcloudNoAccount;
+
+  /// No description provided for @cloudIcloudContainerUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'iCloud container unavailable. Make sure iCloud Drive is enabled'**
+  String get cloudIcloudContainerUnavailable;
+
+  /// No description provided for @logDetailTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get logDetailTime;
+
+  /// No description provided for @logDetailLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Level'**
+  String get logDetailLevel;
+
+  /// No description provided for @logDetailPlatform.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform'**
+  String get logDetailPlatform;
+
+  /// No description provided for @recurringErrorSameAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'From and to accounts must differ'**
+  String get recurringErrorSameAccount;
+
+  /// No description provided for @recurringErrorLedgerRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a ledger'**
+  String get recurringErrorLedgerRequired;
+
+  /// No description provided for @recurringErrorCategoryRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a category'**
+  String get recurringErrorCategoryRequired;
+
+  /// No description provided for @tagPreviewName.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag preview'**
+  String get tagPreviewName;
+
+  /// No description provided for @dataBackupAvatarIncluded.
+  ///
+  /// In en, this message translates to:
+  /// **'Includes avatar'**
+  String get dataBackupAvatarIncluded;
+
+  /// No description provided for @dataBackupAvatarImported.
+  ///
+  /// In en, this message translates to:
+  /// **'Avatar imported'**
+  String get dataBackupAvatarImported;
+
+  /// No description provided for @dataBackupCustomIcons.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom icons: {count}'**
+  String dataBackupCustomIcons(int count);
+
+  /// No description provided for @dataBackupSummaryCustomIcons.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom icons: {imported} imported, {skipped} skipped'**
+  String dataBackupSummaryCustomIcons(int imported, int skipped);
+
+  /// No description provided for @dataBackupNothingImported.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was imported'**
+  String get dataBackupNothingImported;
+
+  /// No description provided for @ledgerPickerTxCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} transactions'**
+  String ledgerPickerTxCount(int count);
+
+  /// No description provided for @searchHintDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Search...'**
+  String get searchHintDefault;
+
+  /// No description provided for @configImportOverwriteWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing will overwrite your current settings. Back them up first.'**
+  String get configImportOverwriteWarning;
+
+  /// No description provided for @attachmentPreviewCloseSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Close attachment preview'**
+  String get attachmentPreviewCloseSemantics;
+
+  /// No description provided for @appLockPinLengthTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN length'**
+  String get appLockPinLengthTitle;
+
+  /// No description provided for @appLockPinLengthOption.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} digits'**
+  String appLockPinLengthOption(int count);
+
+  /// No description provided for @aiProviderBaseUrlMustUseHttps.
+  ///
+  /// In en, this message translates to:
+  /// **'Base URL must use HTTPS (HTTP is only allowed for loopback addresses), otherwise the API key leaks over plaintext'**
+  String get aiProviderBaseUrlMustUseHttps;
+
+  /// No description provided for @catIconGroupBasic.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic'**
+  String get catIconGroupBasic;
+
+  /// No description provided for @catIconGroupFood.
+  ///
+  /// In en, this message translates to:
+  /// **'Food & Dining'**
+  String get catIconGroupFood;
+
+  /// No description provided for @catIconGroupTransport.
+  ///
+  /// In en, this message translates to:
+  /// **'Transport'**
+  String get catIconGroupTransport;
+
+  /// No description provided for @catIconGroupShopping.
+  ///
+  /// In en, this message translates to:
+  /// **'Shopping'**
+  String get catIconGroupShopping;
+
+  /// No description provided for @catIconGroupHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Housing'**
+  String get catIconGroupHome;
+
+  /// No description provided for @catIconGroupDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Devices'**
+  String get catIconGroupDevice;
+
+  /// No description provided for @catIconGroupEntertainment.
+  ///
+  /// In en, this message translates to:
+  /// **'Entertainment'**
+  String get catIconGroupEntertainment;
+
+  /// No description provided for @catIconGroupHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Health'**
+  String get catIconGroupHealth;
+
+  /// No description provided for @catIconGroupEducation.
+  ///
+  /// In en, this message translates to:
+  /// **'Education'**
+  String get catIconGroupEducation;
+
+  /// No description provided for @catIconGroupPet.
+  ///
+  /// In en, this message translates to:
+  /// **'Pets'**
+  String get catIconGroupPet;
+
+  /// No description provided for @catIconGroupBeauty.
+  ///
+  /// In en, this message translates to:
+  /// **'Fashion & Beauty'**
+  String get catIconGroupBeauty;
+
+  /// No description provided for @catIconGroupMisc.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get catIconGroupMisc;
+
+  /// No description provided for @catIconGroupWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Work'**
+  String get catIconGroupWork;
+
+  /// No description provided for @catIconGroupFinance.
+  ///
+  /// In en, this message translates to:
+  /// **'Finance'**
+  String get catIconGroupFinance;
+
+  /// No description provided for @catIconGroupReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewards & Gifts'**
+  String get catIconGroupReward;
+
+  /// No description provided for @catIconGroupInvestment.
+  ///
+  /// In en, this message translates to:
+  /// **'Investment Income'**
+  String get catIconGroupInvestment;
+
+  /// No description provided for @catIconGroupOtherIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Other Income'**
+  String get catIconGroupOtherIncome;
+
+  /// No description provided for @logExportSubject.
+  ///
+  /// In en, this message translates to:
+  /// **'PiggyCount log export'**
+  String get logExportSubject;
+
+  /// No description provided for @cloudReencryptStorageUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud storage is unavailable, so existing cloud ciphertext was not re-encrypted. Connect cloud storage and sync again, otherwise cloud backups cannot be decrypted with the new password.'**
+  String get cloudReencryptStorageUnavailable;
+
+  /// No description provided for @cloudReencryptPartialRolledBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to re-encrypt {count} cloud file(s); the password change was aborted and rolled back.\nYour password is unchanged and the old one still works. Check your network and retry.\nFailed files: {files}'**
+  String cloudReencryptPartialRolledBack(int count, String files);
+
+  /// No description provided for @cloudReencryptPartialRollbackFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to re-encrypt {count} cloud file(s), and the rollback did not complete — both old and new keys may exist in the cloud. Do not delete local data; retry the password change while online to converge.\nThe password change was aborted; the old password still works.\nRollback-failed files: {files}'**
+  String cloudReencryptPartialRollbackFailed(int count, String files);
+
+  /// No description provided for @cloudReencryptMoreFiles.
+  ///
+  /// In en, this message translates to:
+  /// **' and {count} more'**
+  String cloudReencryptMoreFiles(int count);
+
+  /// No description provided for @accountInitialBalanceInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid amount'**
+  String get accountInitialBalanceInvalid;
+
+  /// No description provided for @aiConfigCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration check failed'**
+  String get aiConfigCheckFailed;
 }
 
 class _AppLocalizationsDelegate

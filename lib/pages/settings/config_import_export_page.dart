@@ -954,7 +954,8 @@ class _ImportPreviewDialogState extends State<_ImportPreviewDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '导入将覆盖现有配置，建议先备份当前配置。',
+                    AppLocalizations.of(context)
+                        .configImportOverwriteWarning,
                     style: TextStyle(
                       fontSize: PiggyTextTokens.fs13,
                       color: PiggyTokens.warning(context),

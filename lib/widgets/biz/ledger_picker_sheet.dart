@@ -115,7 +115,8 @@ class LedgerPickerDialog extends ConsumerWidget {
 
         return PiggyOptionRow(
           title: ledger.name,
-          desc: '${ledger.currency} · ${ledger.transactionCount} 笔',
+          desc: '${ledger.currency} · '
+              '${AppLocalizations.of(context).ledgerPickerTxCount(ledger.transactionCount)}',
           isSelected: isSelected,
           primaryColor: primaryColor,
           onTap: () {

@@ -127,7 +127,9 @@ class _TagEditPageState extends ConsumerState<TagEditPage> {
   Widget _buildPreview() {
     return Center(
       child: TagChip(
-        name: _nameController.text.isEmpty ? '标签预览' : _nameController.text,
+        name: _nameController.text.isEmpty
+          ? AppLocalizations.of(context).tagPreviewName
+          : _nameController.text,
         color: _selectedColor,
         size: TagChipSize.large,
       ),

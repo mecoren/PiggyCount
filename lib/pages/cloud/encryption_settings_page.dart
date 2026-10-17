@@ -155,6 +155,15 @@ class _EncryptionSettingsPageState
     }
   }
 
+  /// 「前 5 个 + 等 N 个」的失败文件列表（U1：文案全部进 l10n）。
+  String _fileList(List<String> paths, AppLocalizations l10n) {
+    if (paths.isEmpty) return '';
+    final head = paths.take(5).join(', ');
+    return paths.length > 5
+        ? '$head${l10n.cloudReencryptMoreFiles(paths.length)}'
+        : head;
+  }
+
   Future<void> _onChangePassword() async {
     if (_busy) return;
     final l10n = AppLocalizations.of(context);
@@ -200,8 +209,7 @@ class _EncryptionSettingsPageState
             await AppDialog.warning(
               context,
               title: l10n.cloudSyncEncryptChangePassword,
-              message: '云存储不可用，云端存量密文未能重加密。'
-                  '请连接云存储后重新同步，否则云端备份将无法用新密码解密。',
+              message: l10n.cloudReencryptStorageUnavailable,
             );
           }
         }
@@ -225,20 +233,17 @@ class _EncryptionSettingsPageState
       // SYNC-13：改密部分失败已回滚中止（服务层保证新密钥未激活）。
       // 区分「回滚干净」与「回滚也失败（云端新旧密钥混合）」差异化提示。
       if (mounted) {
+        final failedFiles = _fileList(e.failedPaths, l10n);
         await AppDialog.error(
           context,
           title: l10n.cloudSyncEncryptChangePassword,
           message: e.rollbackClean
-              ? '云端有 ${e.failedPaths.length} 个文件重加密失败，'
-                  '本次改密已中止并回滚。\n'
-                  '当前密码未变更，旧密码仍有效。请检查网络后重试。\n'
-                  '失败文件: ${e.failedPaths.take(5).join(', ')}'
-                  '${e.failedPaths.length > 5 ? ' 等 ${e.failedPaths.length} 个' : ''}'
-              : '云端有 ${e.failedPaths.length} 个文件重加密失败，且回滚未完全'
-                  '成功——云端可能同时存在新旧密钥的密文，请勿删除本地数据，'
-                  '建议联网后重新执行一次改密以收敛状态。\n'
-                  '本次改密已中止，旧密码仍有效。\n'
-                  '回滚失败文件: ${e.rollbackFailedPaths.take(5).join(', ')}',
+              ? l10n.cloudReencryptPartialRolledBack(
+                  e.failedPaths.length, failedFiles)
+              : l10n.cloudReencryptPartialRollbackFailed(
+                  e.failedPaths.length,
+                  _fileList(e.rollbackFailedPaths, l10n),
+                ),
         );
       }
     } catch (e) {

@@ -695,7 +695,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                                           PiggyDimens.radiusSm),
                                     ),
                                     child: Text(
-                                      '不可用',
+                                      AppLocalizations.of(context).cloudStatusUnavailable,
                                       style: PiggyTextTokens.caption(context),
                                     ),
                                   ),
@@ -850,7 +850,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                                           PiggyDimens.radiusSm),
                                     ),
                                     child: Text(
-                                      '不可用',
+                                      AppLocalizations.of(context).cloudStatusUnavailable,
                                       style: PiggyTextTokens.caption(context),
                                     ),
                                   ),
@@ -1344,10 +1344,11 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                 diagnostics['containerAvailable'] ?? false;
             var detailMessage =
                 AppLocalizations.of(context).cloudIcloudNotAvailableMessage;
+            final l10n = AppLocalizations.of(context);
             if (cloudKitStatus == 'noAccount') {
-              detailMessage = '请在设置中登录 iCloud 账号';
+              detailMessage = l10n.cloudIcloudNoAccount;
             } else if (!containerAvailable) {
-              detailMessage = 'iCloud 容器不可用，请确保 iCloud Drive 已开启';
+              detailMessage = l10n.cloudIcloudContainerUnavailable;
             }
             await AppDialog.error(
               context,
@@ -1733,9 +1734,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             final supabaseScheme =
                 Uri.tryParse(config.supabaseUrl!)?.scheme.toLowerCase() ?? '';
             if (supabaseScheme != 'https') {
-              throw Exception('Supabase 地址必须使用 HTTPS'
-                  '（当前为 ${supabaseScheme.isEmpty ? '(无协议)' : '$supabaseScheme://'}，'
-                  'anonKey 将在该链路上明文传输）');
+              throw Exception(l10n.cloudUrlMustBeHttps);
             }
             final testUrl = Uri.parse(
                 '${config.supabaseUrl}/rest/v1/_piggycount_health_check?select=id&limit=1');
@@ -1776,9 +1775,7 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             //   引导用户直接填最终地址）。
             final webdavUrl = Uri.parse(config.webdavUrl!);
             if (webdavUrl.scheme.toLowerCase() != 'https') {
-              throw Exception('WebDAV 地址必须使用 HTTPS'
-                  '（当前为 ${webdavUrl.scheme}://，'
-                  'Basic Auth 凭据将在链路上明文传输）');
+              throw Exception(l10n.cloudUrlMustBeHttps);
             }
             final credentials = base64Encode(
               utf8.encode('${config.webdavUsername}:${config.webdavPassword}'),

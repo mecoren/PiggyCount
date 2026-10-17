@@ -5898,7 +5898,7 @@ class AppLocalizationsKo extends AppLocalizations {
       '스크린샷 자동 기록 기능은 iOS 16에서 도입된 App Intents 프레임워크를 사용합니다. 사용 중인 기기는 이전 버전이라 이 기능을 지원하지 않습니다.\n\n이 기능을 사용하려면 iOS 16 이상으로 업그레이드해 주세요.';
 
   @override
-  String get aiChatTitle => 'AI 어시스턴트';
+  String get aiChatTitle => 'AI 대화';
 
   @override
   String get aiChatClearHistory => '기록 지우기';
@@ -9324,4 +9324,160 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get transactionSelectCategoryRequired => '먼저 카테고리를 선택하세요';
+
+  @override
+  String get cloudStatusUnavailable => '사용할 수 없음';
+
+  @override
+  String get cloudIcloudNoAccount => '설정에서 iCloud 계정에 로그인하세요';
+
+  @override
+  String get cloudIcloudContainerUnavailable =>
+      'iCloud 컨테이너를 사용할 수 없습니다. iCloud Drive가 켜져 있는지 확인하세요';
+
+  @override
+  String get logDetailTime => '시간';
+
+  @override
+  String get logDetailLevel => '수준';
+
+  @override
+  String get logDetailPlatform => '플랫폼';
+
+  @override
+  String get recurringErrorSameAccount => '출금 계좌와 입금 계좌는 같을 수 없습니다';
+
+  @override
+  String get recurringErrorLedgerRequired => '장부를 선택하세요';
+
+  @override
+  String get recurringErrorCategoryRequired => '카테고리를 선택하세요';
+
+  @override
+  String get tagPreviewName => '태그 미리보기';
+
+  @override
+  String get dataBackupAvatarIncluded => '아바타 포함';
+
+  @override
+  String get dataBackupAvatarImported => '아바타를 가져왔습니다';
+
+  @override
+  String dataBackupCustomIcons(int count) {
+    return '사용자 지정 아이콘: $count개';
+  }
+
+  @override
+  String dataBackupSummaryCustomIcons(int imported, int skipped) {
+    return '사용자 지정 아이콘: $imported개 가져옴, $skipped개 건너뜀';
+  }
+
+  @override
+  String get dataBackupNothingImported => '가져온 항목이 없습니다';
+
+  @override
+  String ledgerPickerTxCount(int count) {
+    return '$count건';
+  }
+
+  @override
+  String get searchHintDefault => '검색...';
+
+  @override
+  String get configImportOverwriteWarning =>
+      '가져오면 기존 설정이 덮어씌워집니다. 먼저 현재 설정을 백업하세요.';
+
+  @override
+  String get attachmentPreviewCloseSemantics => '첨부 이미지 미리보기 닫기';
+
+  @override
+  String get appLockPinLengthTitle => 'PIN 자릿수';
+
+  @override
+  String appLockPinLengthOption(int count) {
+    return '$count자리';
+  }
+
+  @override
+  String get aiProviderBaseUrlMustUseHttps =>
+      'Base URL은 HTTPS를 사용해야 합니다(루프백 주소만 HTTP 허용). 그렇지 않으면 API 키가 평문으로 전송됩니다';
+
+  @override
+  String get catIconGroupBasic => '기본';
+
+  @override
+  String get catIconGroupFood => '음식';
+
+  @override
+  String get catIconGroupTransport => '교통';
+
+  @override
+  String get catIconGroupShopping => '쇼핑';
+
+  @override
+  String get catIconGroupHome => '주거';
+
+  @override
+  String get catIconGroupDevice => '통신기기';
+
+  @override
+  String get catIconGroupEntertainment => '엔터테인먼트';
+
+  @override
+  String get catIconGroupHealth => '건강·의료';
+
+  @override
+  String get catIconGroupEducation => '교육';
+
+  @override
+  String get catIconGroupPet => '반려동물';
+
+  @override
+  String get catIconGroupBeauty => '패션·뷰티';
+
+  @override
+  String get catIconGroupMisc => '기타';
+
+  @override
+  String get catIconGroupWork => '직업';
+
+  @override
+  String get catIconGroupFinance => '금융';
+
+  @override
+  String get catIconGroupReward => '보상·선물';
+
+  @override
+  String get catIconGroupInvestment => '투자 수익';
+
+  @override
+  String get catIconGroupOtherIncome => '기타 수입';
+
+  @override
+  String get logExportSubject => 'PiggyCount 로그 내보내기';
+
+  @override
+  String get cloudReencryptStorageUnavailable =>
+      '클라우드 저장소를 사용할 수 없어 기존 클라우드 암호문을 다시 암호화하지 못했습니다. 클라우드 저장소에 연결해 다시 동기화하세요. 그렇지 않으면 새 비밀번호로 클라우드 백업을 복호화할 수 없습니다.';
+
+  @override
+  String cloudReencryptPartialRolledBack(int count, String files) {
+    return '클라우드 파일 $count개를 다시 암호화하지 못해 비밀번호 변경이 중단되고 롤백되었습니다.\n비밀번호는 변경되지 않았으며 기존 비밀번호가 계속 유효합니다. 네트워크를 확인한 후 다시 시도하세요.\n실패 파일: $files';
+  }
+
+  @override
+  String cloudReencryptPartialRollbackFailed(int count, String files) {
+    return '클라우드 파일 $count개를 다시 암호화하지 못했고 롤백도 완료되지 않았습니다. 클라우드에 이전/새 키의 암호문이 함께 있을 수 있으니 로컬 데이터를 삭제하지 말고 온라인 상태에서 비밀번호 변경을 다시 실행하세요.\n비밀번호 변경은 중단되었으며 기존 비밀번호는 계속 유효합니다.\n롤백 실패 파일: $files';
+  }
+
+  @override
+  String cloudReencryptMoreFiles(int count) {
+    return ' 외 $count개';
+  }
+
+  @override
+  String get accountInitialBalanceInvalid => '유효한 금액을 입력하세요';
+
+  @override
+  String get aiConfigCheckFailed => '설정 확인 실패';
 }

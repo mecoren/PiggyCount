@@ -472,7 +472,7 @@ class _RecurringTransactionEditPageState
           _selectedAccountId != null &&
           _selectedToAccountId != null &&
           _selectedAccountId == _selectedToAccountId) {
-        return '转出账户和转入账户不能相同';
+        return l10n.recurringErrorSameAccount;
       }
     }
 
@@ -482,7 +482,7 @@ class _RecurringTransactionEditPageState
   String? _getLedgerErrorText() {
     if (!_hasAttemptedSave) return null;
     if (_selectedLedgerId == null) {
-      return '请选择账本';
+      return AppLocalizations.of(context).recurringErrorLedgerRequired;
     }
     return null;
   }
@@ -490,7 +490,7 @@ class _RecurringTransactionEditPageState
   String? _getCategoryErrorText() {
     if (!_hasAttemptedSave) return null;
     if (_type != 'transfer' && _selectedCategory == null) {
-      return '请选择分类';
+      return AppLocalizations.of(context).recurringErrorCategoryRequired;
     }
     return null;
   }

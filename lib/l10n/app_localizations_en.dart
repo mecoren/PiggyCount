@@ -6078,7 +6078,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Screenshot auto-billing feature uses the App Intents framework introduced in iOS 16. Your device is running an older version and does not support this feature.\n\nPlease upgrade to iOS 16 or later to use this feature.';
 
   @override
-  String get aiChatTitle => 'AI Assistant';
+  String get aiChatTitle => 'AI Chat';
 
   @override
   String get aiChatClearHistory => 'Clear History';
@@ -9589,4 +9589,161 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get transactionSelectCategoryRequired =>
       'Please pick a category first';
+
+  @override
+  String get cloudStatusUnavailable => 'Unavailable';
+
+  @override
+  String get cloudIcloudNoAccount =>
+      'Please sign in to your iCloud account in Settings';
+
+  @override
+  String get cloudIcloudContainerUnavailable =>
+      'iCloud container unavailable. Make sure iCloud Drive is enabled';
+
+  @override
+  String get logDetailTime => 'Time';
+
+  @override
+  String get logDetailLevel => 'Level';
+
+  @override
+  String get logDetailPlatform => 'Platform';
+
+  @override
+  String get recurringErrorSameAccount => 'From and to accounts must differ';
+
+  @override
+  String get recurringErrorLedgerRequired => 'Please select a ledger';
+
+  @override
+  String get recurringErrorCategoryRequired => 'Please select a category';
+
+  @override
+  String get tagPreviewName => 'Tag preview';
+
+  @override
+  String get dataBackupAvatarIncluded => 'Includes avatar';
+
+  @override
+  String get dataBackupAvatarImported => 'Avatar imported';
+
+  @override
+  String dataBackupCustomIcons(int count) {
+    return 'Custom icons: $count';
+  }
+
+  @override
+  String dataBackupSummaryCustomIcons(int imported, int skipped) {
+    return 'Custom icons: $imported imported, $skipped skipped';
+  }
+
+  @override
+  String get dataBackupNothingImported => 'Nothing was imported';
+
+  @override
+  String ledgerPickerTxCount(int count) {
+    return '$count transactions';
+  }
+
+  @override
+  String get searchHintDefault => 'Search...';
+
+  @override
+  String get configImportOverwriteWarning =>
+      'Importing will overwrite your current settings. Back them up first.';
+
+  @override
+  String get attachmentPreviewCloseSemantics => 'Close attachment preview';
+
+  @override
+  String get appLockPinLengthTitle => 'PIN length';
+
+  @override
+  String appLockPinLengthOption(int count) {
+    return '$count digits';
+  }
+
+  @override
+  String get aiProviderBaseUrlMustUseHttps =>
+      'Base URL must use HTTPS (HTTP is only allowed for loopback addresses), otherwise the API key leaks over plaintext';
+
+  @override
+  String get catIconGroupBasic => 'Basic';
+
+  @override
+  String get catIconGroupFood => 'Food & Dining';
+
+  @override
+  String get catIconGroupTransport => 'Transport';
+
+  @override
+  String get catIconGroupShopping => 'Shopping';
+
+  @override
+  String get catIconGroupHome => 'Housing';
+
+  @override
+  String get catIconGroupDevice => 'Devices';
+
+  @override
+  String get catIconGroupEntertainment => 'Entertainment';
+
+  @override
+  String get catIconGroupHealth => 'Health';
+
+  @override
+  String get catIconGroupEducation => 'Education';
+
+  @override
+  String get catIconGroupPet => 'Pets';
+
+  @override
+  String get catIconGroupBeauty => 'Fashion & Beauty';
+
+  @override
+  String get catIconGroupMisc => 'Other';
+
+  @override
+  String get catIconGroupWork => 'Work';
+
+  @override
+  String get catIconGroupFinance => 'Finance';
+
+  @override
+  String get catIconGroupReward => 'Rewards & Gifts';
+
+  @override
+  String get catIconGroupInvestment => 'Investment Income';
+
+  @override
+  String get catIconGroupOtherIncome => 'Other Income';
+
+  @override
+  String get logExportSubject => 'PiggyCount log export';
+
+  @override
+  String get cloudReencryptStorageUnavailable =>
+      'Cloud storage is unavailable, so existing cloud ciphertext was not re-encrypted. Connect cloud storage and sync again, otherwise cloud backups cannot be decrypted with the new password.';
+
+  @override
+  String cloudReencryptPartialRolledBack(int count, String files) {
+    return 'Failed to re-encrypt $count cloud file(s); the password change was aborted and rolled back.\nYour password is unchanged and the old one still works. Check your network and retry.\nFailed files: $files';
+  }
+
+  @override
+  String cloudReencryptPartialRollbackFailed(int count, String files) {
+    return 'Failed to re-encrypt $count cloud file(s), and the rollback did not complete — both old and new keys may exist in the cloud. Do not delete local data; retry the password change while online to converge.\nThe password change was aborted; the old password still works.\nRollback-failed files: $files';
+  }
+
+  @override
+  String cloudReencryptMoreFiles(int count) {
+    return ' and $count more';
+  }
+
+  @override
+  String get accountInitialBalanceInvalid => 'Please enter a valid amount';
+
+  @override
+  String get aiConfigCheckFailed => 'Configuration check failed';
 }

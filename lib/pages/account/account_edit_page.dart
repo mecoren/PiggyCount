@@ -432,7 +432,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                         validator: (value) {
                           if (value != null && value.trim().isNotEmpty) {
                             if (double.tryParse(value.trim()) == null) {
-                              return '请输入有效的金额';
+                              return AppLocalizations.of(context)
+                                  .accountInitialBalanceInvalid;
                             }
                           }
                           return null;

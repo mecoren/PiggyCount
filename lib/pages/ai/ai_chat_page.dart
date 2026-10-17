@@ -99,7 +99,8 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
       logger.error('AIChat', 'API 配置检查失败', e, st);
       if (!mounted) return;
       setState(() {
-        _apiValidation = AIConfigValidationResult.invalid('配置检查失败');
+        _apiValidation = AIConfigValidationResult.invalid(
+            AppLocalizations.of(context).aiConfigCheckFailed);
       });
     }
   }

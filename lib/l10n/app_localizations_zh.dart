@@ -5835,7 +5835,7 @@ class AppLocalizationsZh extends AppLocalizations {
       '截图自动记账功能使用了 iOS 16 引入的 App Intents 框架。您的设备系统版本较低，暂不支持此功能。\n\n请升级到 iOS 16 或更高版本以使用此功能。';
 
   @override
-  String get aiChatTitle => 'AI助手';
+  String get aiChatTitle => 'AI对话';
 
   @override
   String get aiChatClearHistory => '清除对话历史';
@@ -9216,6 +9216,161 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get transactionSelectCategoryRequired => '请先选择分类';
+
+  @override
+  String get cloudStatusUnavailable => '不可用';
+
+  @override
+  String get cloudIcloudNoAccount => '请在设置中登录 iCloud 账号';
+
+  @override
+  String get cloudIcloudContainerUnavailable =>
+      'iCloud 容器不可用，请确保 iCloud Drive 已开启';
+
+  @override
+  String get logDetailTime => '时间';
+
+  @override
+  String get logDetailLevel => '级别';
+
+  @override
+  String get logDetailPlatform => '平台';
+
+  @override
+  String get recurringErrorSameAccount => '转出账户和转入账户不能相同';
+
+  @override
+  String get recurringErrorLedgerRequired => '请选择账本';
+
+  @override
+  String get recurringErrorCategoryRequired => '请选择分类';
+
+  @override
+  String get tagPreviewName => '标签预览';
+
+  @override
+  String get dataBackupAvatarIncluded => '包含头像';
+
+  @override
+  String get dataBackupAvatarImported => '头像已导入';
+
+  @override
+  String dataBackupCustomIcons(int count) {
+    return '自定义图标: $count 个';
+  }
+
+  @override
+  String dataBackupSummaryCustomIcons(int imported, int skipped) {
+    return '自定义图标：导入$imported个，跳过$skipped个';
+  }
+
+  @override
+  String get dataBackupNothingImported => '未导入任何内容';
+
+  @override
+  String ledgerPickerTxCount(int count) {
+    return '$count 笔';
+  }
+
+  @override
+  String get searchHintDefault => '搜索...';
+
+  @override
+  String get configImportOverwriteWarning => '导入将覆盖现有配置，建议先备份当前配置。';
+
+  @override
+  String get attachmentPreviewCloseSemantics => '附件大图预览关闭回执';
+
+  @override
+  String get appLockPinLengthTitle => 'PIN 长度';
+
+  @override
+  String appLockPinLengthOption(int count) {
+    return '$count 位';
+  }
+
+  @override
+  String get aiProviderBaseUrlMustUseHttps =>
+      'Base URL 必须使用 HTTPS（仅本机回环地址可用 HTTP），否则 API Key 会在明文链路上泄露';
+
+  @override
+  String get catIconGroupBasic => '基础';
+
+  @override
+  String get catIconGroupFood => '餐饮美食';
+
+  @override
+  String get catIconGroupTransport => '交通出行';
+
+  @override
+  String get catIconGroupShopping => '购物消费';
+
+  @override
+  String get catIconGroupHome => '居住生活';
+
+  @override
+  String get catIconGroupDevice => '通讯设备';
+
+  @override
+  String get catIconGroupEntertainment => '娱乐休闲';
+
+  @override
+  String get catIconGroupHealth => '健康医疗';
+
+  @override
+  String get catIconGroupEducation => '教育学习';
+
+  @override
+  String get catIconGroupPet => '宠物动物';
+
+  @override
+  String get catIconGroupBeauty => '服装美容';
+
+  @override
+  String get catIconGroupMisc => '其他杂项';
+
+  @override
+  String get catIconGroupWork => '工作职业';
+
+  @override
+  String get catIconGroupFinance => '金融理财';
+
+  @override
+  String get catIconGroupReward => '奖励礼品';
+
+  @override
+  String get catIconGroupInvestment => '投资收益';
+
+  @override
+  String get catIconGroupOtherIncome => '其他收入';
+
+  @override
+  String get logExportSubject => 'PiggyCount 日志导出';
+
+  @override
+  String get cloudReencryptStorageUnavailable =>
+      '云存储不可用，云端存量密文未能重加密。请连接云存储后重新同步，否则云端备份将无法用新密码解密。';
+
+  @override
+  String cloudReencryptPartialRolledBack(int count, String files) {
+    return '云端有 $count 个文件重加密失败，本次改密已中止并回滚。\n当前密码未变更，旧密码仍有效。请检查网络后重试。\n失败文件: $files';
+  }
+
+  @override
+  String cloudReencryptPartialRollbackFailed(int count, String files) {
+    return '云端有 $count 个文件重加密失败，且回滚未完全成功——云端可能同时存在新旧密钥的密文，请勿删除本地数据，建议联网后重新执行一次改密以收敛状态。\n本次改密已中止，旧密码仍有效。\n回滚失败文件: $files';
+  }
+
+  @override
+  String cloudReencryptMoreFiles(int count) {
+    return ' 等 $count 个';
+  }
+
+  @override
+  String get accountInitialBalanceInvalid => '请输入有效的金额';
+
+  @override
+  String get aiConfigCheckFailed => '配置检查失败';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -15049,7 +15204,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
       '截圖自動記帳功能使用了 iOS 16 引入的 App Intents 框架。您的裝置系統版本較低，暫不支援此功能。\n\n請升級到 iOS 16 或更高版本以使用此功能。';
 
   @override
-  String get aiChatTitle => 'AI助手';
+  String get aiChatTitle => 'AI對話';
 
   @override
   String get aiChatClearHistory => '清除對話歷史';
@@ -18431,4 +18586,159 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get transactionSelectCategoryRequired => '請先選擇分類';
+
+  @override
+  String get cloudStatusUnavailable => '不可用';
+
+  @override
+  String get cloudIcloudNoAccount => '請在設定中登入 iCloud 帳號';
+
+  @override
+  String get cloudIcloudContainerUnavailable =>
+      'iCloud 容器不可用，請確認 iCloud Drive 已開啟';
+
+  @override
+  String get logDetailTime => '時間';
+
+  @override
+  String get logDetailLevel => '級別';
+
+  @override
+  String get logDetailPlatform => '平台';
+
+  @override
+  String get recurringErrorSameAccount => '轉出帳戶和轉入帳戶不能相同';
+
+  @override
+  String get recurringErrorLedgerRequired => '請選擇帳本';
+
+  @override
+  String get recurringErrorCategoryRequired => '請選擇分類';
+
+  @override
+  String get tagPreviewName => '標籤預覽';
+
+  @override
+  String get dataBackupAvatarIncluded => '包含頭像';
+
+  @override
+  String get dataBackupAvatarImported => '頭像已匯入';
+
+  @override
+  String dataBackupCustomIcons(int count) {
+    return '自訂圖示: $count 個';
+  }
+
+  @override
+  String dataBackupSummaryCustomIcons(int imported, int skipped) {
+    return '自訂圖示：匯入$imported個，跳過$skipped個';
+  }
+
+  @override
+  String get dataBackupNothingImported => '未匯入任何內容';
+
+  @override
+  String ledgerPickerTxCount(int count) {
+    return '$count 筆';
+  }
+
+  @override
+  String get searchHintDefault => '搜尋...';
+
+  @override
+  String get configImportOverwriteWarning => '匯入將覆蓋現有設定，建議先備份目前設定。';
+
+  @override
+  String get attachmentPreviewCloseSemantics => '關閉附件大圖預覽';
+
+  @override
+  String get appLockPinLengthTitle => 'PIN 長度';
+
+  @override
+  String appLockPinLengthOption(int count) {
+    return '$count 位';
+  }
+
+  @override
+  String get aiProviderBaseUrlMustUseHttps =>
+      'Base URL 必須使用 HTTPS（僅本機回環位址可用 HTTP），否則 API Key 會在明文鏈路上洩露';
+
+  @override
+  String get catIconGroupBasic => '基礎';
+
+  @override
+  String get catIconGroupFood => '餐飲美食';
+
+  @override
+  String get catIconGroupTransport => '交通出行';
+
+  @override
+  String get catIconGroupShopping => '購物消費';
+
+  @override
+  String get catIconGroupHome => '居住生活';
+
+  @override
+  String get catIconGroupDevice => '通訊設備';
+
+  @override
+  String get catIconGroupEntertainment => '娛樂休閒';
+
+  @override
+  String get catIconGroupHealth => '健康醫療';
+
+  @override
+  String get catIconGroupEducation => '教育學習';
+
+  @override
+  String get catIconGroupPet => '寵物動物';
+
+  @override
+  String get catIconGroupBeauty => '服裝美容';
+
+  @override
+  String get catIconGroupMisc => '其他雜項';
+
+  @override
+  String get catIconGroupWork => '工作職業';
+
+  @override
+  String get catIconGroupFinance => '金融理財';
+
+  @override
+  String get catIconGroupReward => '獎勵禮品';
+
+  @override
+  String get catIconGroupInvestment => '投資收益';
+
+  @override
+  String get catIconGroupOtherIncome => '其他收入';
+
+  @override
+  String get logExportSubject => 'PiggyCount 日誌匯出';
+
+  @override
+  String get cloudReencryptStorageUnavailable =>
+      '雲端儲存不可用，雲端既有密文未能重新加密。請連線雲端儲存後重新同步，否則雲端備份將無法用新密碼解密。';
+
+  @override
+  String cloudReencryptPartialRolledBack(int count, String files) {
+    return '雲端有 $count 個檔案重新加密失敗，本次改密已中止並回滾。\n目前密碼未變更，舊密碼仍有效。請檢查網路後重試。\n失敗檔案: $files';
+  }
+
+  @override
+  String cloudReencryptPartialRollbackFailed(int count, String files) {
+    return '雲端有 $count 個檔案重新加密失敗，且回滾未完全成功——雲端可能同時存在新舊金鑰的密文，請勿刪除本機資料，建議連網後重新執行一次改密以收斂狀態。\n本次改密已中止，舊密碼仍有效。\n回滾失敗檔案: $files';
+  }
+
+  @override
+  String cloudReencryptMoreFiles(int count) {
+    return ' 等 $count 個';
+  }
+
+  @override
+  String get accountInitialBalanceInvalid => '請輸入有效的金額';
+
+  @override
+  String get aiConfigCheckFailed => '設定檢查失敗';
 }

@@ -2711,7 +2711,7 @@
   "welcomeImportingAttachment": "Importing attachments...",
   "iosVersionWarningTitle": "Requires iOS 16.0 or later",
   "iosVersionWarningDesc": "Screenshot auto-billing feature uses the App Intents framework introduced in iOS 16. Your device is running an older version and does not support this feature.\n\nPlease upgrade to iOS 16 or later to use this feature.",
-  "aiChatTitle": "AI Assistant",
+  "aiChatTitle": "AI Chat",
   "aiChatClearHistory": "Clear History",
   "aiChatClearHistoryDialogTitle": "Clear Conversation History",
   "aiChatClearHistoryDialogContent": "Are you sure you want to clear all conversation records? This action cannot be undone.",
@@ -4687,5 +4687,109 @@
   "savingsGoalValidationAmountInvalid": "Please enter a valid target amount",
   "savingsGoalValidationAccountRequired": "Please pick a savings account",
   "categoryDeleteReconfirmMessage": "Confirm again: this category will be permanently deleted, together with its subcategories and the budgets / recurring rules that reference it. This cannot be undone.",
-  "transactionSelectCategoryRequired": "Please pick a category first"
+  "transactionSelectCategoryRequired": "Please pick a category first",
+  "cloudStatusUnavailable": "Unavailable",
+  "cloudIcloudNoAccount": "Please sign in to your iCloud account in Settings",
+  "cloudIcloudContainerUnavailable": "iCloud container unavailable. Make sure iCloud Drive is enabled",
+  "logDetailTime": "Time",
+  "logDetailLevel": "Level",
+  "logDetailPlatform": "Platform",
+  "recurringErrorSameAccount": "From and to accounts must differ",
+  "recurringErrorLedgerRequired": "Please select a ledger",
+  "recurringErrorCategoryRequired": "Please select a category",
+  "tagPreviewName": "Tag preview",
+  "dataBackupAvatarIncluded": "Includes avatar",
+  "dataBackupAvatarImported": "Avatar imported",
+  "dataBackupCustomIcons": "Custom icons: {count}",
+  "@dataBackupCustomIcons": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dataBackupSummaryCustomIcons": "Custom icons: {imported} imported, {skipped} skipped",
+  "@dataBackupSummaryCustomIcons": {
+    "placeholders": {
+      "imported": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "dataBackupNothingImported": "Nothing was imported",
+  "ledgerPickerTxCount": "{count} transactions",
+  "@ledgerPickerTxCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchHintDefault": "Search...",
+  "configImportOverwriteWarning": "Importing will overwrite your current settings. Back them up first.",
+  "attachmentPreviewCloseSemantics": "Close attachment preview",
+  "appLockPinLengthTitle": "PIN length",
+  "appLockPinLengthOption": "{count} digits",
+  "@appLockPinLengthOption": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiProviderBaseUrlMustUseHttps": "Base URL must use HTTPS (HTTP is only allowed for loopback addresses), otherwise the API key leaks over plaintext",
+  "catIconGroupBasic": "Basic",
+  "catIconGroupFood": "Food & Dining",
+  "catIconGroupTransport": "Transport",
+  "catIconGroupShopping": "Shopping",
+  "catIconGroupHome": "Housing",
+  "catIconGroupDevice": "Devices",
+  "catIconGroupEntertainment": "Entertainment",
+  "catIconGroupHealth": "Health",
+  "catIconGroupEducation": "Education",
+  "catIconGroupPet": "Pets",
+  "catIconGroupBeauty": "Fashion & Beauty",
+  "catIconGroupMisc": "Other",
+  "catIconGroupWork": "Work",
+  "catIconGroupFinance": "Finance",
+  "catIconGroupReward": "Rewards & Gifts",
+  "catIconGroupInvestment": "Investment Income",
+  "catIconGroupOtherIncome": "Other Income",
+  "logExportSubject": "PiggyCount log export",
+  "cloudReencryptStorageUnavailable": "Cloud storage is unavailable, so existing cloud ciphertext was not re-encrypted. Connect cloud storage and sync again, otherwise cloud backups cannot be decrypted with the new password.",
+  "cloudReencryptPartialRolledBack": "Failed to re-encrypt {count} cloud file(s); the password change was aborted and rolled back.\nYour password is unchanged and the old one still works. Check your network and retry.\nFailed files: {files}",
+  "@cloudReencryptPartialRolledBack": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "files": {
+        "type": "String"
+      }
+    }
+  },
+  "cloudReencryptPartialRollbackFailed": "Failed to re-encrypt {count} cloud file(s), and the rollback did not complete — both old and new keys may exist in the cloud. Do not delete local data; retry the password change while online to converge.\nThe password change was aborted; the old password still works.\nRollback-failed files: {files}",
+  "@cloudReencryptPartialRollbackFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "files": {
+        "type": "String"
+      }
+    }
+  },
+  "cloudReencryptMoreFiles": " and {count} more",
+  "@cloudReencryptMoreFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountInitialBalanceInvalid": "Please enter a valid amount",
+  "aiConfigCheckFailed": "Configuration check failed"
 }

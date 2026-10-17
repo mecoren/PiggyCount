@@ -324,7 +324,7 @@ class _LogCenterPageState extends ConsumerState<LogCenterPage> {
       final text = logger.exportAsText();
       await SharePlus.instance.share(ShareParams(
         text: text,
-        subject: 'PiggyCount 日志导出',
+        subject: AppLocalizations.of(context).logExportSubject,
       ));
     } catch (e) {
       if (mounted) {
@@ -493,6 +493,7 @@ class _LogEntryCard extends ConsumerWidget {
 
   /// 显示日志详情
   void _showLogDetail(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AppDialogShell(
@@ -503,9 +504,9 @@ class _LogEntryCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _DetailRow('时间', log.timestamp.toString()),
-              _DetailRow('级别', log.level.displayName),
-              _DetailRow('平台', log.platform.displayName),
+              _DetailRow(l10n.logDetailTime, log.timestamp.toString()),
+              _DetailRow(l10n.logDetailLevel, log.level.displayName),
+              _DetailRow(l10n.logDetailPlatform, log.platform.displayName),
               const Divider(),
               Text(
                 log.message,

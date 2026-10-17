@@ -1464,6 +1464,34 @@ class _GroupedIconGrid extends StatelessWidget {
     required this.onIconSelected,
   });
 
+  /// 图标分组标题本地化（U1）。
+  ///
+  /// 分组表是**静态缓存**（268 个图标只构建一次），所以标题存的是语言无关的
+  /// key，翻译放在每次 build 时做 —— 否则运行时切换语言会一直显示旧文案。
+  String _localizedIconGroupTitle(BuildContext context, String key) {
+    final l10n = AppLocalizations.of(context);
+    return switch (key) {
+      'basic' => l10n.catIconGroupBasic,
+      'food' => l10n.catIconGroupFood,
+      'transport' => l10n.catIconGroupTransport,
+      'shopping' => l10n.catIconGroupShopping,
+      'home' => l10n.catIconGroupHome,
+      'device' => l10n.catIconGroupDevice,
+      'entertainment' => l10n.catIconGroupEntertainment,
+      'health' => l10n.catIconGroupHealth,
+      'education' => l10n.catIconGroupEducation,
+      'pet' => l10n.catIconGroupPet,
+      'beauty' => l10n.catIconGroupBeauty,
+      'misc' => l10n.catIconGroupMisc,
+      'work' => l10n.catIconGroupWork,
+      'finance' => l10n.catIconGroupFinance,
+      'reward' => l10n.catIconGroupReward,
+      'investment' => l10n.catIconGroupInvestment,
+      'otherIncome' => l10n.catIconGroupOtherIncome,
+      _ => key,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final iconGroups = _getIconGroups();
@@ -1477,7 +1505,7 @@ class _GroupedIconGrid extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
-                group.title,
+                _localizedIconGroupTitle(context, group.title),
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       color: PiggyTokens.primary(context),
                       fontWeight: FontWeight.bold,
@@ -1542,7 +1570,7 @@ class _GroupedIconGrid extends StatelessWidget {
   List<_IconGroup> _buildIconGroups() {
     if (kind == 'expense') {
       return [
-        _IconGroup('基础', [
+        _IconGroup('basic', [
           _IconData('category', Icons.category),
           _IconData('label', Icons.label),
           _IconData('bookmark', Icons.bookmark),
@@ -1550,7 +1578,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('favorite', Icons.favorite),
           _IconData('circle', Icons.circle),
         ]),
-        _IconGroup('餐饮美食', [
+        _IconGroup('food', [
           _IconData('restaurant', Icons.restaurant),
           _IconData('local_dining', Icons.local_dining),
           _IconData('fastfood', Icons.fastfood),
@@ -1570,7 +1598,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('set_meal', Icons.set_meal),
           _IconData('ramen_dining', Icons.ramen_dining),
         ]),
-        _IconGroup('交通出行', [
+        _IconGroup('transport', [
           _IconData('directions_car', Icons.directions_car),
           _IconData('directions_bus', Icons.directions_bus),
           _IconData('directions_subway', Icons.directions_subway),
@@ -1590,7 +1618,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('pedal_bike', Icons.pedal_bike),
           _IconData('car_rental', Icons.car_rental),
         ]),
-        _IconGroup('购物消费', [
+        _IconGroup('shopping', [
           _IconData('shopping_cart', Icons.shopping_cart),
           _IconData('shopping_bag', Icons.shopping_bag),
           _IconData('store', Icons.store),
@@ -1608,7 +1636,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('add_shopping_cart', Icons.add_shopping_cart),
           _IconData('loyalty', Icons.loyalty),
         ]),
-        _IconGroup('居住生活', [
+        _IconGroup('home', [
           _IconData('home', Icons.home),
           _IconData('house', Icons.house),
           _IconData('apartment', Icons.apartment),
@@ -1628,7 +1656,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('roofing', Icons.roofing),
           _IconData('foundation', Icons.foundation),
         ]),
-        _IconGroup('通讯设备', [
+        _IconGroup('device', [
           _IconData('phone', Icons.phone),
           _IconData('smartphone', Icons.smartphone),
           _IconData('phone_android', Icons.phone_android),
@@ -1646,7 +1674,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('router', Icons.router),
           _IconData('cable', Icons.cable),
         ]),
-        _IconGroup('娱乐休闲', [
+        _IconGroup('entertainment', [
           _IconData('movie', Icons.movie),
           _IconData('music_note', Icons.music_note),
           _IconData('sports_esports', Icons.sports_esports),
@@ -1666,7 +1694,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('sports_basketball', Icons.sports_basketball),
           _IconData('sports_tennis', Icons.sports_tennis),
         ]),
-        _IconGroup('健康医疗', [
+        _IconGroup('health', [
           _IconData('local_hospital', Icons.local_hospital),
           _IconData('medical_services', Icons.medical_services),
           _IconData('local_pharmacy', Icons.local_pharmacy),
@@ -1684,7 +1712,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('coronavirus', Icons.coronavirus),
           _IconData('vaccines', Icons.vaccines),
         ]),
-        _IconGroup('教育学习', [
+        _IconGroup('education', [
           _IconData('school', Icons.school),
           _IconData('book', Icons.book),
           _IconData('library_books', Icons.library_books),
@@ -1702,7 +1730,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('language', Icons.language),
           _IconData('quiz', Icons.quiz),
         ]),
-        _IconGroup('宠物动物', [
+        _IconGroup('pet', [
           _IconData('pets', Icons.pets),
           _IconData('cruelty_free', Icons.cruelty_free),
           _IconData('bug_report', Icons.bug_report),
@@ -1715,7 +1743,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('local_florist', Icons.local_florist),
           _IconData('yard', Icons.yard),
         ]),
-        _IconGroup('服装美容', [
+        _IconGroup('beauty', [
           _IconData('checkroom', Icons.checkroom),
           _IconData('face', Icons.face),
           _IconData('face_retouching', Icons.face),
@@ -1728,7 +1756,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('ring_volume', Icons.ring_volume),
           _IconData('gesture', Icons.gesture),
         ]),
-        _IconGroup('其他杂项', [
+        _IconGroup('misc', [
           _IconData('business', Icons.business),
           _IconData('work', Icons.work),
           _IconData('camera_alt', Icons.camera_alt),
@@ -1749,7 +1777,7 @@ class _GroupedIconGrid extends StatelessWidget {
       ];
     } else {
       return [
-        _IconGroup('基础', [
+        _IconGroup('basic', [
           _IconData('category', Icons.category),
           _IconData('label', Icons.label),
           _IconData('bookmark', Icons.bookmark),
@@ -1757,7 +1785,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('favorite', Icons.favorite),
           _IconData('circle', Icons.circle),
         ]),
-        _IconGroup('工作职业', [
+        _IconGroup('work', [
           _IconData('work', Icons.work),
           _IconData('business', Icons.business),
           _IconData('business_center', Icons.business_center),
@@ -1777,7 +1805,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('balance', Icons.balance),
           _IconData('support_agent', Icons.support_agent),
         ]),
-        _IconGroup('金融理财', [
+        _IconGroup('finance', [
           _IconData('account_balance', Icons.account_balance),
           _IconData('account_balance_wallet', Icons.account_balance_wallet),
           _IconData('savings', Icons.savings),
@@ -1797,7 +1825,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('euro', Icons.euro_symbol),
           _IconData('yen', Icons.currency_yen),
         ]),
-        _IconGroup('奖励礼品', [
+        _IconGroup('reward', [
           _IconData('card_giftcard', Icons.card_giftcard),
           _IconData('redeem', Icons.redeem),
           _IconData('wallet', Icons.wallet),
@@ -1815,7 +1843,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('casino', Icons.casino),
           _IconData('confirmation_number', Icons.confirmation_number),
         ]),
-        _IconGroup('投资收益', [
+        _IconGroup('investment', [
           _IconData('apartment', Icons.apartment),
           _IconData('real_estate_agent', Icons.home_work),
           _IconData('home', Icons.home),
@@ -1831,7 +1859,7 @@ class _GroupedIconGrid extends StatelessWidget {
           _IconData('electric_bolt', Icons.electric_bolt),
           _IconData('water_drop', Icons.water_drop),
         ]),
-        _IconGroup('其他收入', [
+        _IconGroup('otherIncome', [
           _IconData('handshake', Icons.handshake),
           _IconData('schedule', Icons.schedule),
           _IconData('undo', Icons.undo),
