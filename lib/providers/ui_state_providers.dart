@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../ai/providers/ai_provider_manager.dart';
 import 'database_providers.dart';
 import 'theme_providers.dart';
 import 'currency_providers.dart';
@@ -491,13 +490,6 @@ class AIAssistantSetter {
   Future<void> setEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(AIConstants.keyAiBillExtractionEnabled, enabled);
-    // 同 ai_config_providers 的 _saveToPrefs —— 让 "AI 助手开关"
-    // 改变也能 push 到 server,跨设备和 web 拿到同样的值。
-    try {
-      AIProviderManager.onConfigChanged?.call();
-    } catch (e) {
-      logger.warning('AIAssistant', 'AI 助手开关变更推送失败(本地已保存)', e);
-    }
   }
 }
 

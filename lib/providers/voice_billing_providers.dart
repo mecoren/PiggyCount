@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../ai/providers/ai_constants.dart';
-import '../ai/providers/ai_provider_manager.dart';
-import '../services/system/logger_service.dart';
 
 /// 语音记账触发方式
 enum VoiceTriggerMode {
@@ -16,7 +14,7 @@ enum VoiceTriggerMode {
   holdToTalk,
 }
 
-/// 触发方式与字符串互转（用于持久化与多设备同步）
+/// 触发方式与字符串互转（用于本地持久化）
 extension VoiceTriggerModeCodec on VoiceTriggerMode {
   String get storageValue {
     switch (this) {
@@ -111,7 +109,6 @@ class VoiceBillingSettingsNotifier extends StateNotifier<VoiceBillingSettings> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
         AIConstants.keyVoiceTriggerMode, mode.storageValue);
-    _notifyConfigChanged();
   }
 
   /// 设置静音判定阈值（毫秒），自动夹取到合法区间
@@ -120,18 +117,9 @@ class VoiceBillingSettingsNotifier extends StateNotifier<VoiceBillingSettings> {
     state = state.copyWith(silenceTimeoutMs: clamped);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(AIConstants.keyVoiceSilenceTimeoutMs, clamped);
-    _notifyConfigChanged();
   }
 
   Future<void> reload() => _load();
-
-  void _notifyConfigChanged() {
-    try {
-      AIProviderManager.onConfigChanged?.call();
-    } catch (e, st) {
-      logger.warning('VoiceBillingSettings', 'onConfigChanged 触发失败: $e', st);
-    }
-  }
 }
 
 final voiceBillingSettingsProvider =

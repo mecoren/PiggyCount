@@ -100,8 +100,8 @@ class _AIPromptEditPageState extends ConsumerState<AIPromptEditPage> {
   }
 
   Future<void> _savePrompt() async {
-    // 走 AIProviderManager.saveCustomPrompt 而不是直接 setString,
-    // 这样 onConfigChanged 能触发把整组 AI 配置推到 server,跨设备同步。
+    // 走 AIProviderManager.saveCustomPrompt 而不是直接 setString，
+    // 统一由管理器负责本地持久化（AI 配置不进云端同步）。
     await AIProviderManager.saveCustomPrompt(_promptController.text);
 
     setState(() {
