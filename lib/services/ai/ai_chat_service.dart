@@ -7,12 +7,15 @@ import '../../l10n/app_localizations.dart';
 import '../data/tag_seed_service.dart';
 import '../system/logger_service.dart';
 import 'ai_bookkeeper.dart';
+import 'ai_quick_command_service.dart';
 
 /// AI 对话服务
 ///
 /// 两种模式:
 /// 1. **对话记账** —— 委托给 [AiBookkeeper.fromText],返回带卡片的 AIResponse
-/// 2. **自由对话** —— 直接调 [AIProviderFactory.chat]
+/// 2. **自由对话 / AI 查账** —— 查账问句先按意图拼
+///    [AIQuickCommandService] 的数据上下文，再连同系统提示词调
+///    [AIProviderFactory.chat]
 ///
 /// 这个 service 现在只剩**意图判定 + 调用编排**,真正的提取/落库逻辑全在
 /// [AiBookkeeper] 里。
@@ -20,9 +23,16 @@ class AIChatService {
   final BaseRepository _repo;
   final AiBookkeeper _bookkeeper;
 
+  /// 查账数据上下文构造器（按账本 id 构造 [AIQuickCommandService]）。
+  ///
+  /// 为 null 时退化成「只有记账能力」的旧行为；接线见
+  /// `lib/providers/ai_chat_providers.dart`。
+  final AIQuickCommandService Function(int ledgerId)? quickCommandServiceFactory;
+
   AIChatService({
     required BaseRepository repo,
     required AiBookkeeper bookkeeper,
+    this.quickCommandServiceFactory,
   })  : _repo = repo,
         _bookkeeper = bookkeeper;
 
@@ -60,7 +70,28 @@ class AIChatService {
           l10n: l10n,
         );
       }
-      return await _handleFreeChat(userInput, languageCode: languageCode);
+
+      // 自由对话：查账问句先按意图拼一份账本数据，随系统提示词一起外发。
+      // 快捷指令（forceChat）的 prompt 本身已带数据段，下面会跳过注入。
+      String? dataContext;
+      final factory = quickCommandServiceFactory;
+      if (!forceChat && factory != null) {
+        try {
+          final context =
+              await factory(ledgerId).buildDataContext(userInput);
+          if (context.trim().isNotEmpty) dataContext = context;
+        } catch (e, st) {
+          // 查账数据构建失败不应阻断对话：退化成「无数据」回答。
+          logger.warning('AIChat', '查账数据上下文构建失败: $e');
+          logger.debug('AIChat', '$st');
+        }
+      }
+
+      return await _handleFreeChat(
+        userInput,
+        languageCode: languageCode,
+        dataContext: dataContext,
+      );
     } catch (e, st) {
       logger.error('AIChat', '处理失败', e, st);
       return AIResponse.error('抱歉,处理失败,请重试');
@@ -84,6 +115,8 @@ class AIChatService {
   // ============================================================
 
   bool _isTransactionIntent(String input) {
+    // 查账问句优先走对话：否则「这个月花了多少」会被关键词 `花` 误判成记账。
+    if (AIQuickCommandService.looksLikeDataQuery(input)) return false;
     final hasAmount = RegExp(r'\d+(?:\.\d+)?').hasMatch(input);
     const keywords = ['买', '花', '消费', '支付', '记账', '付', '收入', '赚', '工资'];
     final hasKeyword = keywords.any((k) => input.contains(k));
@@ -127,19 +160,51 @@ class AIChatService {
     );
   }
 
+  /// 构造自由对话的系统提示词。
+  ///
+  /// 旧版在这里写死「统计、查询等功能暂不支持」，与快捷指令「把数据塞进
+  /// prompt 让 AI 分析」的用法直接冲突 —— AI 收到数据却被告知不要回答。
+  /// 现在改成：**有数据就只依据数据回答，没数据就引导用快捷指令**，
+  /// 同时明确「查账问句不是记账」。
+  String _buildSystemPrompt(String? languageCode, String? dataContext) {
+    final isZh = (languageCode ?? '').startsWith('zh');
+    final buffer = StringBuffer();
+    if (isZh) {
+      buffer.write(
+        '你是小猪记账的 AI 财务助手，既帮助用户记账，也能基于用户账本数据做查账与统计分析。\n'
+        '规则：\n'
+        '1. 如果下方提供了「账本数据」，回答必须只使用这些数据，不得编造金额、分类或记录；数据不足时直接说明缺什么。\n'
+        '2. 如果用户询问统计/查询但数据为空，告诉用户可以用下方的快捷指令（本月支出总结、分类占比分析等）发起查询，或补充时间范围。\n'
+        '3. 不要把查账问句当成记账；只有用户明确描述一笔收支时，才引导记账。\n'
+        '4. 金额保留两位小数，回答简洁，用中文回复。\n',
+      );
+    } else {
+      buffer.write(
+        "You are PiggyCount's AI financial assistant. You help with bookkeeping and also answer questions about the user's ledger data.\n"
+        'Rules:\n'
+        '1. If ledger data is provided below, answer using only that data. Never invent amounts, categories or transactions. If the data is insufficient, say what is missing.\n'
+        '2. If the user asks for statistics but no data is provided, tell them to use the quick-command buttons (monthly summary, category breakdown, etc.) or to specify a time range.\n'
+        '3. Do not treat a data question as a bookkeeping request; only guide bookkeeping when the user clearly describes a transaction.\n'
+        "4. Keep amounts to two decimals and answer concisely in the user's language.\n",
+      );
+    }
+    if (dataContext != null && dataContext.trim().isNotEmpty) {
+      buffer
+        ..write('\n')
+        ..write(dataContext);
+    }
+    return buffer.toString();
+  }
+
   Future<AIResponse> _handleFreeChat(
     String input, {
     String? languageCode,
+    String? dataContext,
   }) async {
-    logger.info('AIChat', '开始自由对话 (语言: ${languageCode ?? "默认"})');
+    logger.info('AIChat',
+        '开始自由对话 (语言: ${languageCode ?? "默认"}, 查账数据: ${dataContext != null ? "有" : "无"})');
     try {
-      final systemPrompt = languageCode == 'en'
-          ? "You are PiggyCount's AI assistant, mainly helping users with bookkeeping. "
-              'If users ask about statistics, queries and other functions, please inform them that they are not supported yet and guide them to use the bookkeeping function. '
-              'Please respond in English.'
-          : '你是小猪记账的AI助手,主要帮助用户记账。'
-              '如果用户询问统计、查询等功能,请告知暂不支持,引导用户使用记账功能。'
-              '请用中文回复。';
+      final systemPrompt = _buildSystemPrompt(languageCode, dataContext);
 
       final response = await AIProviderFactory.chat(
         input,

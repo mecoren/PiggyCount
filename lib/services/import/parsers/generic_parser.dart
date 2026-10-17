@@ -86,6 +86,28 @@ class GenericBillParser implements BillParser {
     return true;
   }
 
+  /// 在前 30 行中查找**同时**包含 [keywords] 的表头行。
+  ///
+  /// Alipay / WeChat / 钱迹 / 随手记等 preset 共用同一套「关键词都要出现」
+  /// 判定；命中不到返回 null，由各 preset 回落到 [findHeaderRow]。
+  int? findHeaderRowByKeywords(List<List<String>> rows, List<String> keywords) {
+    final maxRows = rows.length < 30 ? rows.length : 30;
+    for (int i = 0; i < maxRows; i++) {
+      final row = rows[i];
+      if (row.isEmpty) continue;
+      final cells = row.map((e) => e.toString().trim()).toList();
+      var containsAll = true;
+      for (final keyword in keywords) {
+        if (!cells.any((cell) => cell.contains(keyword))) {
+          containsAll = false;
+          break;
+        }
+      }
+      if (containsAll) return i;
+    }
+    return null;
+  }
+
   /// 将表头文本规范化为字段key
   String? _normalizeToKey(String raw) {
     final s = raw.trim();
@@ -142,7 +164,7 @@ class GenericBillParser implements BillParser {
     if (_containsAny(s, ['二级分类', '子分类', '次分类', 'Subcategory', 'Sub Category'])) {
       return 'sub_category';
     }
-    if (_containsAny(s, ['分类', '类别', '账目名称', '科目', '交易分类', '交易类型'])) {
+    if (_containsAny(s, ['分类', '类别', '账目', '账目名称', '科目', '交易分类', '交易类型'])) {
       return 'category';
     }
     // 标签匹配（注意：不要和分类混淆，"标签"单独作为tags字段）
@@ -168,16 +190,33 @@ class GenericBillParser implements BillParser {
     if (_containsAny(s, ['类型', '收支', '收/支', '方向'])) {
       return 'type';
     }
-    if (_containsAny(
-        s, ['备注', '说明', '标题', '摘要', '附言', '商品名称', '商品说明', '交易对方', '商家'])) {
+    if (_containsAny(s, [
+      '备注',
+      '说明',
+      '标题',
+      '摘要',
+      '附言',
+      '商品名称',
+      '商品说明',
+      '交易对方',
+      '商家',
+      // F6 更多解析器：随手记 / 钱迹 / 银行流水常见列名
+      '付款方',
+      '收款方',
+      '对方',
+      '交易对象',
+      '商户名称',
+      '交易描述',
+    ])) {
       return 'note';
     }
     // 账户匹配：需要区分普通账户、转出账户、转入账户
-    // 注意：必须先匹配具体的转出/转入账户，再匹配通用的"账户"
-    if (_containsAny(s, ['转出账户', 'From Account', 'FromAccount'])) {
+    // 注意：必须先匹配具体的转出/转入账户，再匹配通用的"账户"。
+    // `账户转出` / `账户转入` 是随手记、部分银行流水的写法（主谓倒序）。
+    if (_containsAny(s, ['转出账户', '账户转出', 'From Account', 'FromAccount'])) {
       return 'from_account';
     }
-    if (_containsAny(s, ['转入账户', 'To Account', 'ToAccount'])) {
+    if (_containsAny(s, ['转入账户', '账户转入', 'To Account', 'ToAccount'])) {
       return 'to_account';
     }
     if (_containsAny(s, ['账户', 'Account'])) {

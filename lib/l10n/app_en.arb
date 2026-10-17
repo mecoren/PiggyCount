@@ -821,6 +821,7 @@
   "tooltipRefresh": "Refresh",
   "importTitle": "Import Bills",
   "importBillType": "Bill Type",
+  "importBillTypeAuto": "Auto Detect",
   "importBillTypeGeneric": "Generic CSV",
   "importBillTypeAlipay": "Alipay",
   "importBillTypeWechat": "WeChat",

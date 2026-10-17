@@ -2922,6 +2922,12 @@ abstract class AppLocalizations {
   /// **'Bill Type'**
   String get importBillType;
 
+  /// No description provided for @importBillTypeAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto Detect'**
+  String get importBillTypeAuto;
+
   /// No description provided for @importBillTypeGeneric.
   ///
   /// In en, this message translates to:

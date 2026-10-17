@@ -576,6 +576,7 @@
   "iconCategoryOther": "其他",
   "importTitle": "导入账单",
   "importBillType": "账单类型",
+  "importBillTypeAuto": "自动识别",
   "importBillTypeGeneric": "通用CSV",
   "importBillTypeAlipay": "支付宝",
   "importBillTypeWechat": "微信",

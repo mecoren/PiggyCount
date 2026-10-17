@@ -6,6 +6,7 @@
 library;
 
 import 'package:drift/native.dart';
+import 'package:flutter_market_data_eastmoney/flutter_market_data_eastmoney.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -42,6 +43,18 @@ void main() {
         market: 'SH',
         autoQuote: true,
       );
+
+  test('东财源已装配：具备自动拉取能力且覆盖 SH/SZ/HK/FUND', () {
+    // F4「最后一公里」的守门：源注册进可选列表、capability.isAutomatic
+    // 由 supportedMarkets 非空派生（= 调度器会真的启动），无需密钥。
+    expect(kAvailableQuoteProviderIds, contains(EastmoneyQuoteProvider.id));
+    final provider = EastmoneyQuoteProvider();
+    expect(provider.capability.isAutomatic, isTrue,
+        reason: '非空 supportedMarkets 才能让调度器启动');
+    expect(provider.capability.supportedMarkets,
+        containsAll(<String>['SH', 'SZ', 'HK', 'FUND']));
+    expect(provider.capability.requiresApiKey, isFalse);
+  });
 
   test('换源清旧缓存：切走时清掉旧源写入的缓存', () async {
     final id = await addHolding();

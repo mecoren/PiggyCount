@@ -1556,6 +1556,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importBillType => '账单类型';
 
   @override
+  String get importBillTypeAuto => '自动识别';
+
+  @override
   String get importBillTypeGeneric => '通用CSV';
 
   @override
@@ -10322,7 +10325,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String ledgersClearMessage(String name) {
-    return '將刪除該帳本下所有交易記錄，且不可復原。';
+    return '確定要清空帳本\"$name\"的所有帳單嗎？此操作不可恢復。\n帳本本身會保留，僅刪除帳單資料。';
   }
 
   @override
@@ -10923,6 +10926,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get importBillType => '帳單類型';
+
+  @override
+  String get importBillTypeAuto => '自動識別';
 
   @override
   String get importBillTypeGeneric => '通用CSV';

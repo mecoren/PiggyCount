@@ -1591,6 +1591,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importBillType => 'Bill Type';
 
   @override
+  String get importBillTypeAuto => 'Auto Detect';
+
+  @override
   String get importBillTypeGeneric => 'Generic CSV';
 
   @override

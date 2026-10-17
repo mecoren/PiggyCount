@@ -10,7 +10,11 @@ import '../../styles/tokens.dart';
 import 'import_confirm_page.dart';
 
 /// 账单类型
+///
+/// `auto` 放在首位并作为默认值：先按「支付宝 → 微信 → 钱迹 → 随手记」
+/// 的签名自动识别，全部不匹配再回落通用解析器；识别失败也不会阻塞导入。
 enum BillSourceType {
+  auto, // 自动识别
   generic, // 通用CSV
   alipay, // 支付宝
   wechat, // 微信
@@ -30,7 +34,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   bool _reading = false;
   double? _readProgress; // 0~1
   bool _cancelRead = false;
-  BillSourceType _billType = BillSourceType.generic; // 默认通用CSV
+  BillSourceType _billType = BillSourceType.auto; // 默认自动识别
 
   @override
   void initState() {
@@ -72,6 +76,11 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                         WaitSlidingSegmentedControl<BillSourceType>(
                           selected: _billType,
                           segments: [
+                            WaitSlidingSegment(
+                              value: BillSourceType.auto,
+                              label: AppLocalizations.of(context)
+                                  .importBillTypeAuto,
+                            ),
                             WaitSlidingSegment(
                               value: BillSourceType.generic,
                               label: AppLocalizations.of(context)

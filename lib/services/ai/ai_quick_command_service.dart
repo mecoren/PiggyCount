@@ -29,26 +29,105 @@ class AIQuickCommandService {
   }
 
   /// 获取指定数据类型的数据文本
-  Future<String> _getDataText(
-    QuickCommandDataType type,
-    BuildContext context,
-  ) async {
+  ///
+  /// 数据段全部来自数据库、与 UI 文案无关，因此**不需要** `BuildContext`；
+  /// 去掉它之后自由对话（[AIChatService]）也能复用同一份查账数据。
+  Future<String> _getDataText(QuickCommandDataType type) async {
     switch (type) {
       case QuickCommandDataType.monthlyStats:
-        return await _getMonthlyStatsText(context);
+        return await _getMonthlyStatsText();
       case QuickCommandDataType.categoryStats:
-        return await _getCategoryStatsText(context);
+        return await _getCategoryStatsText();
       case QuickCommandDataType.recentTransactions:
-        return await _getRecentTransactionsText(context);
+        return await _getRecentTransactionsText();
       case QuickCommandDataType.recentTrends:
-        return await _getRecentTrendsText(context);
+        return await _getRecentTrendsText();
       case QuickCommandDataType.none:
         return '';
     }
   }
 
+  /// 是否像「查账 / 统计分析」类问句（而不是描述一笔收支）。
+  ///
+  /// 只认强问句标记：`今天午餐花了50` 没有问句词，仍按记账处理；
+  /// `这个月花了多少` 命中「多少」→ 走查账对话，不再被记成账。
+  static bool looksLikeDataQuery(String input) {
+    final text = input.trim();
+    if (text.isEmpty) return false;
+    const markers = <String>[
+      '多少',
+      '几笔',
+      '统计',
+      '占比',
+      '趋势',
+      '明细',
+      '汇总',
+      '分析',
+      '哪几笔',
+      '哪些',
+      '什么',
+      '怎么样',
+      '如何',
+      '吗',
+      '？',
+      '?',
+      '结余',
+      '储蓄率',
+      '查一下',
+      '查查',
+      '看看',
+      '帮我查',
+      '花了多少',
+    ];
+    return markers.any(text.contains);
+  }
+
+  /// 按问句意图拼装「账本数据」上下文，供自由对话的 AI 查账使用。
+  ///
+  /// 只取与问句相关的数据段，避免每轮都把整本账本塞进提示词；
+  /// 返回空串表示「不是查账问句」。数据段本身已带【】标题，可直接拼接。
+  Future<String> buildDataContext(String userInput) async {
+    if (!looksLikeDataQuery(userInput)) return '';
+
+    final text = userInput;
+    final wanted = <QuickCommandDataType>{
+      // 查账总要先知道本月收支，作为所有分析的基线。
+      QuickCommandDataType.monthlyStats,
+    };
+    if (text.contains('分类') ||
+        text.contains('占比') ||
+        text.contains('花在') ||
+        text.contains('哪类')) {
+      wanted.add(QuickCommandDataType.categoryStats);
+    }
+    if (text.contains('趋势') ||
+        text.contains('上月') ||
+        text.contains('上个月') ||
+        text.contains('对比') ||
+        text.contains('最近几个月') ||
+        text.contains('近三个月')) {
+      wanted.add(QuickCommandDataType.recentTrends);
+    }
+    if (text.contains('最近') ||
+        text.contains('明细') ||
+        text.contains('哪几笔') ||
+        text.contains('记录') ||
+        text.contains('流水')) {
+      wanted.add(QuickCommandDataType.recentTransactions);
+    }
+
+    final parts = <String>[];
+    for (final type in wanted) {
+      final value = await _getDataText(type);
+      if (value.trim().isNotEmpty) parts.add(value.trim());
+    }
+    if (parts.isEmpty) return '';
+    return '【账本数据】（仅以下数据可用，回答时不得编造未提供的数字）\n'
+        '${parts.join('\n\n')}';
+  }
+
   /// 获取本月统计数据文本
-  Future<String> _getMonthlyStatsText(BuildContext context) async {
+  Future<String> _getMonthlyStatsText() async {
     try {
       final now = DateTime.now();
       final sd = await monthStartDayLoader();
@@ -96,7 +175,7 @@ class AIQuickCommandService {
   }
 
   /// 获取分类统计数据文本
-  Future<String> _getCategoryStatsText(BuildContext context) async {
+  Future<String> _getCategoryStatsText() async {
     try {
       final now = DateTime.now();
       final sd = await monthStartDayLoader();
@@ -155,7 +234,7 @@ ${categoryList.join('\n')}
   }
 
   /// 获取最近交易记录文本
-  Future<String> _getRecentTransactionsText(BuildContext context) async {
+  Future<String> _getRecentTransactionsText() async {
     try {
       // 获取最近30天的交易
       final now = DateTime.now();
@@ -205,7 +284,7 @@ ${list.join('\n')}
   }
 
   /// 获取近期趋势数据文本
-  Future<String> _getRecentTrendsText(BuildContext context) async {
+  Future<String> _getRecentTrendsText() async {
     try {
       final now = DateTime.now();
       final sd = await monthStartDayLoader();
@@ -286,7 +365,7 @@ ${trends.join('\n')}
     final dataMap = <String, String>{};
     for (final dataType in command.requiredData) {
       final key = dataType.name;
-      final value = await _getDataText(dataType, context);
+      final value = await _getDataText(dataType);
       dataMap[key] = value;
     }
 

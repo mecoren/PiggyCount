@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../ai/core/ai_extraction_engine.dart';
 import '../services/ai/ai_bookkeeper.dart';
 import '../services/ai/ai_chat_service.dart';
+import '../services/ai/ai_quick_command_service.dart';
 import '../services/billing/bill_creation_service.dart';
 import '../providers.dart';
 import '../data/db.dart';
@@ -37,6 +38,9 @@ final aiChatServiceProvider = Provider<AIChatService>((ref) {
   return AIChatService(
     repo: repo,
     bookkeeper: ref.watch(aiBookkeeperProvider),
+    // AI 查账：自由对话里的查账问句按账本拼数据上下文（与快捷指令同源）。
+    quickCommandServiceFactory: (ledgerId) =>
+        ref.read(aiQuickCommandServiceProvider(ledgerId)),
   );
 });
 

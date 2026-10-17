@@ -14,6 +14,7 @@ import '../../services/import/bill_parser.dart';
 import '../../services/import/parsers/generic_parser.dart';
 import '../../services/import/parsers/alipay_parser.dart';
 import '../../services/import/parsers/wechat_parser.dart';
+import '../../services/import/parsers/auto_parser.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/data_import_service.dart';
 import '../../utils/date_parser.dart';
@@ -101,6 +102,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
   /// 根据账单类型获取解析器
   BillParser _getParser(BillSourceType type) {
     switch (type) {
+      case BillSourceType.auto:
+        return AutoBillParser();
       case BillSourceType.generic:
         return GenericBillParser();
       case BillSourceType.alipay:
