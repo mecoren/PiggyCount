@@ -6,6 +6,12 @@
 > 约定：新增需求请建 `prd/<snake_case_id>/`，两个文件都写。
 > `requirements.md` 是验收依据，缺了它这个需求就无法判定「做完了没有」。
 
+## 本轮（2026-10-14 双端同步回归测试后续）新增
+
+| 目录 | 主题 | 状态 |
+|---|---|---|
+| `attachment_upload_dedupe` | 附件对象上传按 sha256 做**进程内 in-flight 去重**，消除多账本并发写同一 `attachments/<sha256>.bin` 的竞态（2026-10-14 WebDAV 实测暴露的 1 次服务端 DELETE 之根因；无损但白跑流量 + 误计失败） | **已落地（2026-10-17）**：3 个验收单测（R1/R2）+ 既有附件测试合计 23 例全绿，`flutter analyze --fatal-infos` 0 issue；WebDAV 端到端 `DELETE = 0` 待有模拟器环境复跑（当前 `adb devices` 无设备），详见 [design.md](attachment_upload_dedupe/design.md) 实施记录 |
+
 ## 本轮（2026-10-12 缺口盘点后续）新增
 
 | 目录 | 主题 | 状态 |

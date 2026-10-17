@@ -155,6 +155,20 @@ class TransactionsSyncManager implements SyncService {
   /// 空（换后端/加密态后旧集合无意义）。
   ({DateTime at, Set<String> names})? _attachmentNameCache;
 
+  /// sha256 → 正在进行中的附件对象上传。
+  ///
+  /// 同一内容寻址对象可能被多个账本引用，手动全量上传与后台自动同步也可能
+  /// 交叠；两路都会在对方写入会话缓存前判定 remoteHas == false，于是并发
+  /// PUT 同一个 `attachments/<sha>.bin`。WebDAV 上目标被另一路 rename 占用
+  /// 时会抛 WinError 5，失败路自清理临时对象（服务端多一次 DELETE）并误计
+  /// 失败。in-flight 表把「判定需传 → 上传落定」收敛为单路：后来者 await
+  /// 首路 Future，失败不写缓存，下一轮同步仍会重试。
+  final Map<String, Future<void>> _attachmentUploadInflight = {};
+
+  /// 测试缝：累计被合并到在途上传的次数（R3 可观测性断言点）。
+  @visibleForTesting
+  int attachmentUploadMergedCountForTest = 0;
+
   /// drain 重入守卫:恢复完成 / 初始化完成可能几乎同时触发 drain,
   /// 串行执行避免同一 .bin 被并发下载两次。
   bool _isDrainingAttachments = false;
@@ -1637,6 +1651,48 @@ class TransactionsSyncManager implements SyncService {
     _attachmentNameCache?.names.add('$sha.bin');
   }
 
+  /// 上传单个附件对象；同一 sha 的并发调用合并到首路。
+  ///
+  /// 返回 true = 本次真正发起上传；false = 合并到在途上传（由首路完成）。
+  /// 首路失败时异常原样抛给所有等待者，由调用方各自计入 failed；失败不写
+  /// 会话缓存，下一轮同步会重新尝试。
+  Future<bool> _uploadAttachmentOnce({
+    required fcs.CloudProvider provider,
+    required String sha,
+    required String srcPath,
+  }) async {
+    final existing = _attachmentUploadInflight[sha];
+    if (existing != null) {
+      attachmentUploadMergedCountForTest++;
+      logger.info('CloudSync',
+          '附件对象上传合并(同 sha 并发): ${sha.length > 8 ? sha.substring(0, 8) : sha}');
+      await existing;
+      return false;
+    }
+    // 先同步登记 Future 再 await 读文件：读文件会让出事件循环，若等读完
+    // 才登记，两路并发仍会同时通过上面的空检查。
+    final upload = () async {
+      final bytes = await File(srcPath).readAsBytes();
+      // L4：真字节路径优先（S3/WebDAV 实现 BinaryCapableStorage，云端
+      // 对象可直接以二进制读取）；其余后端 base64 兜底（行为同旧版）。
+      // E2EE 装饰器实现 BinaryCapableStorage：encrypt(base64(bytes)) 后
+      // 仍走字符串信封，密文格式与既有同步文件一致。此前恒 base64 文本
+      // 上传，比备份 ZIP 多 ~33% 流量。
+      await provider.storage.uploadBinaryOrFallback(
+          path: pathForAttachmentBin(sha), bytes: bytes);
+      _markAttachmentUploaded(sha);
+    }();
+    _attachmentUploadInflight[sha] = upload;
+    try {
+      await upload;
+      return true;
+    } finally {
+      if (identical(_attachmentUploadInflight[sha], upload)) {
+        _attachmentUploadInflight.remove(sha);
+      }
+    }
+  }
+
   Future<({int uploaded, int skipped, int failed})> uploadAttachmentObjects(
       {required int ledgerId}) async {
     await _ensureInitialized();
@@ -1733,18 +1789,17 @@ class TransactionsSyncManager implements SyncService {
           skipped++;
           return;
         }
-        // L4：真字节路径优先（S3/WebDAV 实现 BinaryCapableStorage，云端
-        // 对象可直接以二进制读取）；其余后端 base64 兜底（行为同旧版）。
-        // E2EE 装饰器实现 BinaryCapableStorage：encrypt(base64(bytes)) 后
-        // 仍走字符串信封，密文格式与既有同步文件一致。此前恒 base64 文本
-        // 上传，比备份 ZIP 多 ~33% 流量。
-        final bytes = await File(srcPath).readAsBytes();
-        await provider.storage.uploadBinaryOrFallback(
-            path: pathForAttachmentBin(sha), bytes: bytes);
-        uploaded++;
-        // P2-2：登记进会话缓存，同会话后续上传（含其他账本同 sha
-        // 去重判断）零网络探测
-        _markAttachmentUploaded(sha);
+        // 同 sha 并发收敛：命中在途上传则合并等待，不重复 PUT。
+        final led = await _uploadAttachmentOnce(
+          provider: provider,
+          sha: sha,
+          srcPath: srcPath,
+        );
+        if (led) {
+          uploaded++;
+        } else {
+          skipped++;
+        }
       } catch (e) {
         failed++;
         logger.warning('CloudSync', '附件对象上传失败 sha256=$sha: $e');
