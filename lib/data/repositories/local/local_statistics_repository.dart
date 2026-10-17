@@ -73,19 +73,6 @@ class LocalStatisticsRepository implements StatisticsRepository {
               : d.Variable<String>(v as String),
       ];
 
-  /// Drift 查询构造器路径的区间条件。
-  ///
-  /// 那条路（分类分布 / 排行榜）走 `d.CustomExpression` 拼字面量 SQL —— 与
-  /// 原生 SQL 路径用同一份 [AnalyticsTimeMetric.rangeSqlInlined]，
-  /// 两条路必须同义（否则同一页的环形图与总额对不上账）。
-  static d.Expression<bool> _timeRangeWhere(
-    AnalyticsTimeMetric m, {
-    required DateTime start,
-    required DateTime end,
-  }) =>
-      d.CustomExpression<bool>(
-          m.rangeSqlInlined(start: start, end: end));
-
   @override
   Future<List<({int? id, String name, String? icon, double total})>> totalsByCategory({
     required int ledgerId,
@@ -95,40 +82,39 @@ class LocalStatisticsRepository implements StatisticsRepository {
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) async {
-    final q = (db.select(db.transactions)
-          ..where((t) =>
-              t.ledgerId.equals(ledgerId) &
-              t.type.equals(type) &
-              t.excludeFromStats.equals(false) &
-              _timeRangeWhere(timeMetric, start: start, end: end)))
-        .join([
-      d.leftOuterJoin(db.categories,
-          db.categories.id.equalsExp(db.transactions.categoryId)),
-    ]);
-    final rows = await q.get();
-    final map = <int?, double>{};
-    final names = <int?, String>{};
-    final icons = <int?, String?>{};
+    // SQL 分组聚合（此前把区间内全部明细读进 Dart 再累加）。
+    // 分组键与旧实现一致：category_id（含 NULL = 未分类），金额走
+    // [AnalyticsAmountMetric.sqlExpr] 的单一真相源，行过滤同时转发金额口径
+    // 与时间口径，保证「环形图 / 排行榜 / 按天」三条聚合口径不分叉。
+    final rows = await db.customSelect(
+      'SELECT t.category_id AS cid, c.name AS name, c.icon AS icon, '
+      'SUM(${amountMetric.sqlExpr(alias: 't')}) AS total '
+      'FROM transactions t '
+      'LEFT JOIN categories c ON t.category_id = c.id '
+      'WHERE t.ledger_id = ?1 AND t.type = ?2 AND t.exclude_from_stats = 0'
+      '${_metricFilter(amountMetric, alias: 't')}'
+      '${_timeFilter(timeMetric, alias: 't')} '
+      'AND ${timeMetric.rangeSql(start: start, end: end, alias: 't', startVar: '?3', endVar: '?4')} '
+      'GROUP BY t.category_id',
+      variables: [
+        d.Variable<int>(ledgerId),
+        d.Variable<String>(type),
+        ..._timeBinds(timeMetric, start, end),
+      ],
+      readsFrom: {db.transactions, db.categories},
+    ).get();
+
+    final list = <({int? id, String name, String? icon, double total})>[];
     for (final r in rows) {
-      final t = r.readTable(db.transactions);
-      // 口径行判定：自定义字段口径要整行丢掉「没填该字段」的明细 ——
-      // Drift 查询构造器这条路绕不过 SQL 侧过滤，判在这里（与 sqlRowFilter
-      // 同义）。漏了它，环形图/排行榜会把没填的行按 0 算进笔数与百分比。
-      if (!amountMetric.matches(t)) continue;
-      // 时间口径同样逐行对账（与 SQL 侧的 date() 同义；SQL 已剪掉区间外的行，
-      // 这里再判一次是为了让「两条实现必须一致」这件事在代码里显式成立）。
-      if (!timeMetric.inRange(t, start: start, end: end)) continue;
-      final c = r.readTableOrNull(db.categories);
-      final id = c?.id;
-      names[id] = c?.name ?? '未分类';
-      icons[id] = c?.icon;
-      map.update(id, (v) => v + amountMetric.amountOf(t),
-          ifAbsent: () => amountMetric.amountOf(t));
+      final id = r.read<int?>('cid');
+      list.add((
+        id: id,
+        name: r.read<String?>('name') ?? '未分类',
+        icon: r.read<String?>('icon'),
+        total: (r.read<double?>('total') ?? 0).toDouble(),
+      ));
     }
-    final list = map.entries
-        .map((e) => (id: e.key, name: names[e.key] ?? '未分类', icon: icons[e.key], total: e.value))
-        .toList()
-      ..sort((a, b) => b.total.compareTo(a.total));
+    list.sort((a, b) => b.total.compareTo(a.total));
     return list;
   }
 
@@ -142,66 +128,52 @@ class LocalStatisticsRepository implements StatisticsRepository {
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
   }) async {
-    final q = (db.select(db.transactions)
-          ..where((t) =>
-              t.ledgerId.equals(ledgerId) &
-              t.type.equals(type) &
-              t.excludeFromStats.equals(false) &
-              _timeRangeWhere(timeMetric, start: start, end: end)))
-        .join([
-      d.leftOuterJoin(db.categories,
-          db.categories.id.equalsExp(db.transactions.categoryId)),
-    ]);
+    // SQL 分组聚合（此前把区间内全部明细读进 Dart 再累加金额与笔数）。
+    // COUNT(*) 与旧实现的「每行 +1」同义：金额口径行过滤已进 WHERE，
+    // 因此自定义字段口径下笔数 = 填了该字段的笔数。
+    final rows = await db.customSelect(
+      'SELECT t.category_id AS cid, c.name AS name, c.icon AS icon, '
+      'c.parent_id AS parent_id, c.level AS level, '
+      'SUM(${amountMetric.sqlExpr(alias: 't')}) AS total, '
+      'COUNT(*) AS cnt '
+      'FROM transactions t '
+      'LEFT JOIN categories c ON t.category_id = c.id '
+      'WHERE t.ledger_id = ?1 AND t.type = ?2 AND t.exclude_from_stats = 0'
+      '${_metricFilter(amountMetric, alias: 't')}'
+      '${_timeFilter(timeMetric, alias: 't')} '
+      'AND ${timeMetric.rangeSql(start: start, end: end, alias: 't', startVar: '?3', endVar: '?4')} '
+      'GROUP BY t.category_id',
+      variables: [
+        d.Variable<int>(ledgerId),
+        d.Variable<String>(type),
+        ..._timeBinds(timeMetric, start, end),
+      ],
+      readsFrom: {db.transactions, db.categories},
+    ).get();
 
-    final rows = await q.get();
-    final map = <int?, double>{};
-    final countMap = <int?, int>{};
-    final categoryInfo = <int?, ({String name, String? icon, int? parentId, int level})>{};
-
+    final list = <({
+      int? id,
+      String name,
+      String? icon,
+      int? parentId,
+      int level,
+      double total,
+      int count
+    })>[];
     for (final r in rows) {
-      final t = r.readTable(db.transactions);
-      // 口径行判定（同上方 totalsByCategory）：没填该字段的明细整行丢掉，
-      // 否则它们会以 0 混进排行榜的「n 笔」与百分比分母。
-      if (!amountMetric.matches(t)) continue;
-      if (!timeMetric.inRange(t, start: start, end: end)) continue;
-      final c = r.readTableOrNull(db.categories);
-      final id = c?.id;
-
-      if (c != null) {
-        categoryInfo[id] = (
-          name: c.name,
-          icon: c.icon,
-          parentId: c.parentId,
-          level: c.level,
-        );
-      } else {
-        categoryInfo[id] = (
-          name: '未分类',
-          icon: null,
-          parentId: null,
-          level: 1,
-        );
-      }
-
-      map.update(id, (v) => v + amountMetric.amountOf(t),
-          ifAbsent: () => amountMetric.amountOf(t));
-      countMap.update(id, (v) => v + 1, ifAbsent: () => 1);
+      final id = r.read<int?>('cid');
+      final parentId = r.read<int?>('parent_id');
+      list.add((
+        id: id,
+        name: r.read<String?>('name') ?? '未分类',
+        icon: r.read<String?>('icon'),
+        parentId: parentId,
+        level: r.read<int?>('level') ?? (parentId == null ? 1 : 2),
+        total: (r.read<double?>('total') ?? 0).toDouble(),
+        count: r.read<int?>('cnt') ?? 0,
+      ));
     }
-
-    final list = map.entries.map((e) {
-      final info = categoryInfo[e.key]!;
-      return (
-        id: e.key,
-        name: info.name,
-        icon: info.icon,
-        parentId: info.parentId,
-        level: info.level,
-        total: e.value,
-        count: countMap[e.key] ?? 0,
-      );
-    }).toList()
-      ..sort((a, b) => b.total.compareTo(a.total));
-
+    list.sort((a, b) => b.total.compareTo(a.total));
     return list;
   }
 

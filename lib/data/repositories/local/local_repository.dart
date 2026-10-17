@@ -5,6 +5,7 @@ import '../../db.dart';
 import '../../models/analytics_amount_metric.dart';
 import '../../models/analytics_time_metric.dart';
 import '../../models/transaction_original_amount.dart';
+import '../../models/transaction_search_query.dart';
 import '../../../cloud/sync/change_tracker.dart';
 import '../../../services/currency/rate_math.dart';
 import '../../../services/system/logger_service.dart';
@@ -1154,6 +1155,22 @@ class LocalRepository extends BaseRepository {
             Account? toAccount
           })>> transactionsWithCategoryAll({int? ledgerId}) =>
       _transactionRepo.transactionsWithCategoryAll(ledgerId: ledgerId);
+
+  /// 搜索条件下推到 SQL（见 `TransactionSearchQuery`）。
+  @override
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> watchTransactionsByQuery({
+    required int ledgerId,
+    required TransactionSearchQuery query,
+  }) =>
+      _transactionRepo.watchTransactionsByQuery(
+          ledgerId: ledgerId, query: query);
 
   /// 转发历史备注聚合查询，保持交易数据访问统一由子仓储处理。
   @override
