@@ -1,10 +1,13 @@
 ---
 title: 接口与数据访问设计
-version: v1.0
-last_updated: 2026-07-25
+version: v1.1
+last_updated: 2026-10-17
 author: wait
 audience: 一年经验的开发者
 ---
+
+> ⚠️ **2026-10-17 同步说明**：本文的 SyncEngine / PiggyCount Cloud / 增量 pull 章节属历史记录；
+> 当前是整账本快照同步（Path A），数据访问层仍以 Repository 为唯一入口。
 
 ## 目录
 

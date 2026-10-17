@@ -153,7 +153,7 @@ flowchart TD
     J --> K[LocalTransactionRepository]
     K --> L[Drift insert]
     L --> M[ChangeTracker]
-    M --> N[SyncEngine.push]
+    M --> N[TransactionsSyncManager 去抖上传]
 ```
 
 记账模块的统一入口是 `repository.addTransaction`,无论输入方式是手动表单、AI 对话、OCR、语音、截图还是桌面小组件,最终都收敛到这个方法。BillCreationService 负责把 AI 提取的 BillInfo 转换为 Transaction 数据并调用 repository。这种设计让输入方式可扩展,而核心数据写入逻辑保持单一。
@@ -358,21 +358,17 @@ AI 对话页面支持撤销记账(通过 `Messages.transactionId` 关联已创�
 | 文件 | 职责 |
 |---|---|
 | `lib/cloud/sync_service.dart` | `SyncService` 抽象接口 + `LocalOnlySyncService` |
-| `lib/cloud/sync/sync_engine.dart` | SyncEngine 主类(1480 行) |
-| `lib/cloud/sync/change_tracker.dart` | ChangeTracker local_changes 表 DAO |
-| `lib/cloud/sync/sync_coordinator.dart` | SyncCoordinator 反应式触发器 |
-| `lib/cloud/sync/sync_conflict_resolver.dart` | LWW 冲突解决 |
-| `lib/cloud/sync/sync_engine_apply.dart` | apply remote change(7 种 entityType) |
-| `lib/cloud/sync/sync_engine_pull.dart` | AppCursorStore + SyncErrorStore + LookupCache |
-| `lib/cloud/sync/sync_engine_realtime.dart` | WS 事件监听 + 防抖调度 |
-| `lib/cloud/sync/sync_engine_serialization.dart` | 实体序列化 + fullPush |
-| `lib/cloud/sync/sync_engine_profile.dart` | profile + avatar 同步 |
-| `lib/cloud/sync/sync_engine_resolvers.dart` | 跨设备 ID 解析 |
-| `lib/cloud/sync/sync_engine_status.dart` | 健康检查 + backfill |
-| `lib/cloud/sync/sync_engine_attachments.dart` | 附件上传/下载/清理 |
-| `lib/cloud/sync/sync_events.dart` | SyncEvent sealed class |
-| `lib/cloud/transactions_sync_manager.dart` | 非 PiggyCount Cloud 的快照同步 manager |
-| `lib/cloud/transactions_json.dart` | fullPull 的 JSON 导入导出 |
+| `lib/cloud/sync/change_tracker.dart` | ChangeTracker：写 `local_changes` |
+| `lib/cloud/transactions_sync_manager.dart` | 整账本快照同步主实现（Path A） |
+| `lib/cloud/transactions_json.dart` | 快照 JSON 导入导出（格式版本 v15） |
+| `lib/cloud/sync_diff_service.dart` | 下载后的 diff 预览 / 应用 |
+| `lib/cloud/sync_fingerprint.dart` | 账本内容指纹 |
+| `lib/cloud/startup_sync_checker.dart` | 启动同步检查（含旧格式一次性重传） |
+| `lib/cloud/provider_factory.dart` | 云 provider 装配 |
+| `lib/cloud/backup/cloud_backup_service.dart` | 云端备份 |
+
+> 2026-10-17：原 `sync_engine*.dart` / `sync_coordinator.dart` / `sync_conflict_resolver.dart`
+> 等文件已随 PiggyCount Cloud / 增量同步下线删除，表中只列存活文件。
 
 ### 3.9 共享账本模块(Shared Ledger)——已移除(2026-10-08)
 
@@ -391,14 +387,18 @@ AI 对话页面支持撤销记账(通过 `Messages.transactionId` 关联已创�
 
 #### 3.10.1 职责
 
-导入模块负责从外部数据源(支付宝/微信/通用 CSV)导入交易;导出模块负责导出 CSV、YAML 配置、海报分享。
+导入模块负责从外部数据源(支付宝 / 微信 / 钱迹 / 随手记 / 通用 CSV)导入交易;导出模块负责导出 CSV、YAML 配置、海报分享。
 
 #### 3.10.2 关键文件
 
 | 文件 | 职责 |
 |---|---|
-| `lib/services/import/bill_parser.dart` | 账单解析(支付宝/微信/通用) |
-| `lib/services/import/data_import_service.dart` | 导入服务 |
+| `lib/services/import/bill_parser.dart` | 解析器抽象接口 |
+| `lib/services/import/parsers/generic_parser.dart` | 通用 CSV 列名映射 |
+| `lib/services/import/parsers/alipay_parser.dart` / `wechat_parser.dart` | 支付宝 / 微信 preset |
+| `lib/services/import/parsers/qianji_parser.dart` / `suishouji_parser.dart` | 钱迹 / 随手记 preset |
+| `lib/services/import/parsers/auto_parser.dart` | 自动识别（按签名选 preset，失败回落通用） |
+| `lib/services/data_import_service.dart` | 导入服务 |
 | `lib/pages/data/import_page.dart` | 导入页 |
 | `lib/pages/data/import_confirm_page.dart` | 导入确认页 |
 | `lib/services/export/` | 导出服务(CSV / YAML / 海报) |
@@ -488,9 +488,9 @@ sequenceDiagram
     participant Engine as AiExtractionEngine
     participant Service as BillCreationService
     participant Repo as LocalRepository
-    participant DB as BeeDatabase
+    participant DB as PiggyDatabase
     participant Tracker as ChangeTracker
-    participant Sync as SyncEngine
+    participant Sync as TransactionsSyncManager
 
     User->>UI: 输入"昨天吃饭 50 元"
     UI->>Engine: extractFromText(input)
@@ -509,10 +509,10 @@ sequenceDiagram
     Service-->>UI: 成功
     UI->>UI: 显示成功 + 撤销按钮
     Tracker-->>Sync: Stream 触发
-    Sync->>Sync: SyncEngine.push 异步
+    Sync->>Sync: 去抖上传整账本快照
 ```
 
-上图展示了完整的 AI 记账流程。用户输入自然语言 → AiExtractionEngine 调用 AI Provider 提取 BillInfo → UI 展示 BillCard 供确认 → BillCreationService 创建交易 → Repository 写库 + ChangeTracker 记录 → SyncEngine 异步推送。整个流程的关键设计是"AI 提取与数据写入解耦",BillInfo 是中间数据模型,可被任何输入方式(对话/OCR/语音/截图)复用。
+上图展示了完整的 AI 记账流程。用户输入自然语言 → AiExtractionEngine 调用 AI Provider 提取 BillInfo → UI 展示 BillCard 供确认 → BillCreationService 创建交易 → Repository 写库 + ChangeTracker 记录 → TransactionsSyncManager 去抖上传整账本快照。整个流程的关键设计是"AI 提取与数据写入解耦",BillInfo 是中间数据模型,可被任何输入方式(对话/OCR/语音/截图)复用。AI 查账（自由对话中的数据问句）另走 `AIQuickCommandService.buildDataContext`，不在记账链路。
 
 依据:`lib/ai/core/ai_extraction_engine.dart`、`lib/services/billing/bill_creation_service.dart`、`lib/pages/ai/ai_chat_page.dart`。
 
@@ -542,7 +542,7 @@ flowchart TD
 
 上图展示了多币种折算流程(v30)。用户创建外币交易时选择币种,系统根据汇率(自动拉取或用户手动覆盖)计算 `nativeAmount`(折算到账本基础币种的金额)。统计时按 `nativeAmount` 汇总,保证不同币种的交易可加总。汇率覆盖(`ExchangeRateOverrides`)是 user-global 同步实体,按币对收敛(不按 syncId),双端离线各建同币对会自动合并。
 
-依据:`lib/data/db.dart` L148 `currencyCode`、L153 `nativeAmount`、`lib/services/currency/exchange_rate_service.dart`、`lib/cloud/sync/sync_engine_apply.dart` `_applyExchangeRateOverrideChange`。
+依据:`lib/data/db.dart` 的 `currencyCode` / `nativeAmount`、`lib/services/currency/exchange_rate_service.dart`、`lib/cloud/sync_diff_service.dart` 的汇率覆盖应用路径。
 
 ---
 
@@ -636,7 +636,7 @@ flowchart TD
 | 2 | AI 执行策略的 6 种类型在代码中的具体实现差异未展开 | §3.7.3 | 阅读 `packages/flutter_ai_kit/lib/src/strategies/` 各文件 |
 | 3 | 桌面小组件的 iOS WidgetExtension 与 Android AppWidgetProvider 实现细节未展开 | §3.11 | 阅读 `ios/PiggyCountWidget/` 与 `android/app/src/main/kotlin/.../PiggyCountWidgetProvider.kt` |
 | 4 | 信用卡账单日 / 还款日提醒的具体触发逻辑未展开 | §3.12.2 | 阅读 `lib/providers/credit_card_reminder_providers.dart` |
-| 5 | 导入模块的支付宝 / 微信 / 通用 CSV 解析规则未展开 | §3.10 | 阅读 `lib/services/import/bill_parser.dart` |
+| 5 | 导入模块的 5 个解析器 preset 规则未展开 | §3.10 | 阅读 `lib/services/import/parsers/` |
 
 ---
 

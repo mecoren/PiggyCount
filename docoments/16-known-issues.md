@@ -1,9 +1,16 @@
 # 16. 已知问题
 
-> 文档版本：v1.0
-> 最后更新：2026-07-25
+> 文档版本：v1.1
+> 最后更新：2026-10-17
 > 作者：wait
 > 信息源：项目源码（本仓库）+ 前 15 篇工程文档中的 [未实现]/[待补充]/[待确认] 标记汇总
+>
+> ⚠️ **2026-10-17 同步说明**：正文保留 2026-07-25 的历史审查结论，但已逐条标注
+> 「已过期 / 已修复」的条目**不再是待办**。本轮同步涉及：PiggyCount Cloud /
+> SyncEngine / 共享账本已整体下线（当前为 Supabase / WebDAV / S3 / iCloud 四种快照
+> 同步）；`schemaVersion` 已到 **58**；搜索已 SQL 下推、统计已 SQL GROUP BY、
+> v58 已补齐查询索引；AI 已支持查账；PIN 已升级 Argon2id；Android 整库加密已启用。
+> 具体以源码与 `AGENTS.md` 为准。
 
 ---
 
@@ -64,40 +71,52 @@
   > 本项目采用 **商业源代码许可证（Business Source License, BSL）**
   > 商业使用需要付费授权
 - **风险**：用户基于 PRIVACY.md 误判许可类型，可能造成商用合规风险
-- **建议修复**：立即修订 PRIVACY.md，将 "MIT License" 改为 "Business Source License (BSL)"
+- **现状（2026-10-17）**：✅ 已修复 —— `PRIVACY.md` 现明确「not MIT-licensed … BSL」，
+  与 `LICENSE`、README 一致。
+- **建议修复（已完成）**：修订 PRIVACY.md，将 "MIT License" 改为 "Business Source License (BSL)"
 
 #### 3.1.3 Supabase / WebDAV / S3 同步方案未在隐私政策中列出
 
-- **声明位置**：[PRIVACY.md:34-48](../PRIVACY.md) 仅列出 Supabase 与 WebDAV 两种
-- **实际实现**：[README.md:141-152](../README.md) 支持 5 种同步方案（PiggyCount Cloud / iCloud / Supabase / WebDAV / S3）
-- **建议修复**：补全 PiggyCount Cloud、iCloud、S3 的隐私声明
+- **现状（2026-10-17）**：README 公开口径为 WebDAV / S3 两种自建方案；代码内另有
+  Supabase / iCloud 后端。PiggyCount Cloud 已整体下线，不再需要为其补声明。
+- **声明位置**：[PRIVACY.md](../PRIVACY.md)
+- **实际实现**：[README.md](../README.md) 的「云同步方案」一节（WebDAV / S3）
+- **建议修复**：补全 iCloud / Supabase 的隐私声明（如仍在产品中暴露）
 
 ### 3.2 PIN 码安全机制薄弱
+
+> ⚠️ **2026-10-17 复核：本条已过期**。PIN 现为 **Argon2id**（3 迭代 / 64MB / 2 并行）+
+> 每次 `setPin` 生成新 16 字节 salt，哈希与 PIN 长度写入 `flutter_secure_storage`；
+> 旧无盐 SHA-256 仅保留在迁移期用于验证旧 PIN，验证成功后自动升级。失败退避也已实现：
+> 5 次锁 30 秒、10 次锁 5 分钟，另有可选 wipe（连续失败达阈值清库）。以下为 2026-07-25
+> 的原始结论，保留备查。
 
 **问题位置**：[lib/services/security/app_lock_service.dart:26-37](../lib/services/security/app_lock_service.dart)
 
 ```dart
 static String hashPin(String pin) {
   final bytes = utf8.encode(pin);
-  return sha256.convert(bytes).toString();  // ← 无 salt、无慢哈希
+  return sha256.convert(bytes).toString();  // ← 历史实现：无 salt、无慢哈希
 }
 ```
 
 #### 3.2.1 无盐 SHA-256 + 4 位 PIN
 
-- **风险**：4 位 PIN 仅 10000 种组合，无盐 SHA-256 可在毫秒级被彩虹表/暴力破解
-- **建议修复**：
+- **现状（2026-10-17）**：✅ 已修复 —— Argon2id + 随机 salt，支持 4/6 位 PIN。
+- **历史风险**：4 位 PIN 仅 10000 种组合，无盐 SHA-256 可在毫秒级被彩虹表/暴力破解
+- **建议修复（已完成）**：
   1. 引入随机 salt（每个用户独立）
   2. 使用 PBKDF2 / bcrypt / Argon2 等慢哈希算法
-  3. 增加 PIN 长度配置（4/6/8 位可选）
+  3. 增加 PIN 长度配置（4/6 位可选）
 
 #### 3.2.2 无失败次数限制
 
-**问题位置**：[lib/pages/auth/app_lock_screen.dart:75-91](../lib/pages/auth/app_lock_screen.dart)
+**问题位置**：[lib/pages/auth/app_lock_screen.dart](../lib/pages/auth/app_lock_screen.dart)
 
-- **现状**：`_verifyPin` 失败仅 500ms 抖动后清空，无失败计数、无指数退避、无 wipe 选项
-- **风险**：PIN 可被无限次暴力尝试
-- **建议修复**：
+- **现状（2026-10-17）**：✅ 已修复 —— 失败 5 次锁 30 秒、10 次锁 5 分钟；
+  连续失败达阈值且用户开启 wipe 开关时清空本机数据。
+- **历史风险**：PIN 可被无限次暴力尝试
+- **建议修复（已完成）**：
   1. 失败 5 次后强制等待 30 秒
   2. 失败 10 次后强制等待 5 分钟
   3. 失败 20 次提供 wipe 选项（用户配置启用）
@@ -124,11 +143,10 @@ LazyDatabase _openConnection() {
     实现与实测证据见其 `design.md` §7。
   - **默认关闭**：不显式开启就不生成密钥，行为与加密前逐字一致。这是刻意的 ——
     凭空建钥会让"库看起来该加密、文件其实还是明文"成为默认状态。
-  - **Android 目前不能开启**：`sqlite3` 的 hook 在 `source: sqlcipher` 下产出的
-    `libsqlcipher.so` **没有被复制进 APK**（实测：APK 内只有 `sqlite3_flutter_libs`
-    打的上游 `libsqlite3.so`），需要自备 `android/app/src/main/jniLibs/`。取库脚本、
-    配方与真机取证见 design §7；是否随包分发那 ~16.5MB 第三方二进制（许可/制品决定）
-    未定，因此 `pubspec.yaml` 保持 `source: system`。
+  - **Android 已于 2026-10-06 启用**：三个 ABI 的 `libsqlcipher.so` 已入库随包分发
+    （`android/app/src/main/jniLibs/`），`hooks.user_defines.sqlite3.name_android: sqlcipher`；
+    实测 APK 内出现 `libsqlcipher.so`、运行态报告 SQLCipher 4.18.0。整库加密仍为
+    **用户手动开启（opt-in，默认关闭）**。
   - **iOS 未验证**：本机无 macOS，留给 CI 首次跑通时验证（同样需要自带库）。
 - **注意**：整库加密只保护**本机落盘**；云端备份/快照的加密是另一条链路（E2EE，
   见 4.2 节与 `lib/domain/encryption/`），两者不要混为一谈。
@@ -143,7 +161,7 @@ LazyDatabase _openConnection() {
 
 - **现状**：全局 Grep `certificatePinning|badCertificateCallback|onCertificateCheck` **零匹配**
 - **风险**：理论上中间人攻击（CA 投毒、企业代理 CA、用户安装的根证书）可解密 HTTPS 流量
-- **影响范围**：所有云同步后端（PiggyCount Cloud / Supabase / WebDAV / S3）与 AI 调用
+- **影响范围**：所有云同步后端（Supabase / WebDAV / S3 / iCloud）与 AI 调用
 - **建议修复**：
   1. 关键服务（如 GitHub Releases 更新检查、PiggyCount Cloud 默认服务）启用证书锁定
   2. 用户自配置服务提供"高级安全模式"选项启用锁定
@@ -202,12 +220,14 @@ LazyDatabase _openConnection() {
 
 ### 4.4 数据库备份未加密
 
-- **现状**：云同步（Supabase/WebDAV/PiggyCount Cloud）上传的是业务数据 JSON / 二进制，未发现任何对备份内容加密后再上传的代码
-- **风险**：备份内容受 HTTPS 传输保护，但服务端可见明文
-- **建议修复**：
+- **现状（2026-10-17）**：✅ 可选 E2EE 已实现 —— `lib/domain/encryption/` 用
+  AES-256-GCM + Argon2id 派生密钥，开启后四后端快照以 `BEECRYPT1:` 密文上传
+  （`EncryptedCloudProvider` 装饰），密钥不上传服务端；关闭时与明文行为一致。
+- **历史风险**：备份内容受 HTTPS 传输保护，但服务端可见明文
+- **建议修复（已完成）**：
   1. 提供可选的"端到端加密备份"功能
-  2. 加密密钥由用户密码派生（PBKDF2），不上传至服务端
-  3. PiggyCount Cloud 已支持 AES-256 备份加密，应作为推荐方案
+  2. 加密密钥由用户密码派生（PBKDF2/Argon2id），不上传至服务端
+  3. PiggyCount Cloud 方案已随云端协同整体下线，不再作为推荐项
 
 ---
 
@@ -224,6 +244,11 @@ LazyDatabase _openConnection() {
   `test/data/repositories/local/transaction_query_benchmark_test.dart` 断言其命中。
   （行号取之于 2026-09-19；`db.dart` 在 B10 加过 `beforeOpen`，日后引用前先 grep
   `idx_transactions_ledger_happened`。）下文保留为历史记录。
+- **2026-10-17 补充**：v58 又补齐 `idx_transactions_ledger_type_happened`、
+  `idx_transactions_account`、`idx_transactions_to_account`、
+  `idx_transactions_ledger_category`、`idx_budgets_ledger_type_enabled_category`、
+  `idx_deleted_transactions_ledger_deleted`；守门测试见
+  `test/data/migration_v58_index_test.dart` 与 `test/performance/sql_query_baseline_test.dart`。
 - **影响**：首页交易列表按时间倒序分页查询的最热路径，数据量增长后会触发全表扫描
 - **建议修复**：在 schemaVersion=32 迁移中补充：
   ```dart
@@ -241,9 +266,11 @@ LazyDatabase _openConnection() {
 
 #### 5.1.3 WAL 模式未显式声明
 
-- **现状**：项目代码中**没有**显式 `PRAGMA journal_mode=WAL` 配置
-- **影响**：不同平台/版本默认值可能不同
-- **建议修复**：在 `DatabaseConnection.delayed` 配置中显式执行 `PRAGMA journal_mode=WAL;`
+- **现状（2026-10-17）**：✅ 已在 `lib/data/db.dart` 的 `beforeOpen` 显式
+  `PRAGMA journal_mode=WAL`，并用 `PRAGMA journal_size_limit=...` 限制 `-wal` 保留上限；
+  `synchronous` 刻意保持 FULL（掉电不丢最后几笔）。
+- **历史风险**：不同平台/版本默认值可能不同
+- **建议修复（已完成）**：在连接初始化时显式执行 `PRAGMA journal_mode=WAL;`
 
 #### 5.1.4 列表 Key 拼接 index
 
@@ -254,6 +281,10 @@ LazyDatabase _openConnection() {
 - **建议修复**：改为纯 `ValueKey(it.t.id)`
 
 ### 5.2 同步引擎潜在风险
+
+> ⚠️ **2026-10-17 复核**：PiggyCount Cloud / SyncEngine / 增量 pull 已整体下线，
+> 当前是整账本快照同步（Path A）。本节关于 LWW、cursor、SyncEngine 的描述属历史记录；
+> 快照路径的冲突处理见 `lib/cloud/sync_diff_service.dart` 与 `sync_restore_guard.dart`。
 
 #### 5.2.1 LWW 冲突解决可能丢数据
 
@@ -280,7 +311,8 @@ LazyDatabase _openConnection() {
 
 #### 5.3.1 集成测试用例少
 
-- **现状**：`integration_test/` 目录下用例数量有限
+- **现状（2026-10-17）**：目录已建立（`integration_test/recent_entry_inherit_test.dart` 等），
+  2026-10-17 又补了设备端搜索 SQL 下推与回收站闭环；用例数量仍在增长。
 - **建议补充**：
   1. 首次启动 → 创建账本 → 添加交易 → 重启验证数据持久化
   2. 离线添加交易 → 联网 → 验证同步成功
@@ -289,11 +321,13 @@ LazyDatabase _openConnection() {
 
 #### 5.3.2 无测试覆盖率工具
 
-- **现状**：未集成 `lcov` / `genhtml` 等覆盖率工具
-- **建议修复**：
+- **现状（2026-10-17）**：✅ 已接入 CI —— `analyze.yml` 用 `flutter test --coverage`，
+  `scripts/coverage_summary.py` 写 Job Summary（行/函数/分支 + 最低 20 文件），并上传
+  `coverage-lcov` artifact；本期只报告不设阈值，脚本已支持 `--fail-under`。
+- **建议修复（已完成 / 待收紧）**：
   1. 在 CI 中添加 `flutter test --coverage`
-  2. 上传至 [codecov.io](https://codecov.io) 或类似服务
-  3. 设定覆盖率阈值（如 70%），低于阈值的 PR 阻止合并
+  2. 上传覆盖率报告（当前用 GitHub Actions artifact，未接 codecov）
+  3. 基线稳定后再设阈值并用 `--fail-under` 阻止低覆盖 PR
 
 ### 5.4 凭证存储改进
 
@@ -306,9 +340,12 @@ LazyDatabase _openConnection() {
 | `cloud_supabase_cfg` | URL+anonKey+email+明文 password | 极高 |
 | `cloud_webdav_cfg` | URL+username+明文 password | 极高 |
 | `cloud_s3_cfg` | endpoint+accessKey+明文 secretKey | 极高 |
-| `cloud_piggycount_cloud_cfg` | baseUrl+email+明文 password | 极高 |
-| PiggyCount Cloud `_sessionStorageKey` | access_token + refresh_token JSON | 极高 |
 | `ai_glm_api_key` / 自定义 provider apiKey | 明文 API Key | 高 |
+
+> 2026-10-17：PiggyCount Cloud 已下线，`cloud_piggycount_cloud_cfg` 与
+> `_sessionStorageKey` 已不在存活代码中；E2EE 密钥已进 `flutter_secure_storage`。
+> 其余云服务凭据是否仍明文存 SharedPreferences，需按当前
+> `config_export_service.dart` 复核后另行处理。
 
 - **建议修复**：全部迁移到 flutter_secure_storage
 
@@ -328,7 +365,7 @@ LazyDatabase _openConnection() {
 
 #### 6.1.1 文件过长
 
-- **现状**：部分文件超过 1000 行（如 [annual_report_page.dart](../lib/pages/report/annual_report_page.dart)、`piggycount_cloud_provider.dart`、`sync_engine.dart`）
+- **现状（2026-10-17）**：部分文件超过 1000 行（如 [annual_report_page.dart](../lib/pages/report/annual_report_page.dart)、`lib/data/db.dart`、`lib/cloud/transactions_sync_manager.dart`、`lib/services/data_import_service.dart`）
 - **建议修复**：按职责拆分为多个文件，单文件控制在 500 行内
 
 #### 6.1.2 TODO/FIXME 标记
@@ -345,11 +382,11 @@ LazyDatabase _openConnection() {
 
 ```yaml
 dependency_overrides:
-  record_platform_interface: 1.2.0
-  image_cropper_platform_interface: 7.1.0
+  jni_flutter: 1.0.3
 ```
 
-- **现状**：为修复 record_linux / image_cropper 兼容性钉死版本
+- **现状（2026-10-17）**：仅钉 `jni_flutter: 1.0.3`（1.0.4 已被 pub 撤回，
+  `path_provider_android` 仍会选到它）；record / image_cropper 的历史 pin 已移除。
 - **风险**：长期不更新可能错过安全修复
 - **建议修复**：跟踪上游 issue，待官方修复后移除 override
 
@@ -385,7 +422,7 @@ lib/
 - **Email**: (Add your email if you want, or remove this section)
 ```
 
-- **建议修复**：填写实际邮箱（如 sunxiaoyes@outlook.com）或删除该字段
+- **建议修复**：填写项目联系邮箱（文档里统一用占位 `user@example.com`，不要写真实个人邮箱）或删除该字段
 
 ### 6.3 平台兼容性
 
@@ -403,8 +440,8 @@ lib/
 
 #### 6.3.3 Web 平台未原生支持
 
-- **现状**：PiggyCount 本身无 Web 端，Web 端由 PiggyCount Cloud 独立项目提供
-- **建议**：在文档中明确说明
+- **现状（2026-10-17）**：PiggyCount 本身无 Web 端；原 PiggyCount Cloud 独立项目已随云端协同下线，本仓库不构建 Web 端。
+- **建议**：文档保持「Android / iOS 客户端」口径，不再提 Cloud Web 端
 
 ### 6.4 国际化不完整
 
@@ -412,8 +449,11 @@ lib/
 
 - **现状**：[lib/l10n/app_ko.arb](../lib/l10n/app_ko.arb) 由社区贡献
 - **风险**：可能存在翻译滞后、错误未及时修复
+- **现状（2026-10-17）**：✅ CI 已加 ARB key 一致性门禁
+  （`scripts/i18n/check_arb_consistency.dart`），4 语言键集合 / 非故意空值 / 占位符不一致会直接红；
+  `flutter gen-l10n` 生成的 locale 文件随仓库提交。
 - **建议**：
-  1. 在 CI 中添加 .arb 文件 key 一致性检查
+  1. 在 CI 中添加 .arb 文件 key 一致性检查（已完成）
   2. 标记未翻译的 key（fallback 到英文）
 
 #### 6.4.2 阿拉伯语/希伯来语 RTL 支持
@@ -426,7 +466,8 @@ lib/
 
 #### 6.5.1 Flutter SDK 版本锁死
 
-- **现状**：CI 中使用 Flutter 3.27.3
+- **现状（2026-10-17）**：Flutter 版本单一来源在 `pubspec.yaml#environment.flutter`
+  （当前 **3.47.6**），CI 用 `flutter-version-file` 读取，不再手写版本号。
 - **风险**：长期不升级错过新特性、安全修复
 - **建议**：定期升级，参考 [13-build-release.md](13-build-release.md)
 
@@ -446,7 +487,7 @@ lib/
 | 同步引擎不支持 P2P | 架构选择，依赖云端中转 | 无网络时无法跨设备同步 |
 | AI 默认使用智谱 GLM | 国内可访问、无需翻墙 | 海外用户需自行配置 OpenAI 等 |
 | 桌面小组件功能有限 | iOS WidgetKit / Android AppWidget 限制 | 仅展示不能交互 |
-| 无 Web 端原生 | 由 PiggyCount Cloud 独立项目提供 | 用户需部署 Cloud |
+| 无 Web 端原生 | 本仓库不构建 Web 端 | 使用 Android / iOS 客户端 |
 
 ### 7.2 已知技术债
 
@@ -460,28 +501,28 @@ lib/
 
 ### 8.1 短期（1-2 个版本）
 
-1. 🔴 修订 PRIVACY.md，删除"Android Keystore"与"MIT License"错误声明
-2. 🔴 引入 flutter_secure_storage，迁移所有敏感凭证
+1. ✅ 修订 PRIVACY.md 的 License 声明（MIT → BSL，已完成）
+2. 🟠 引入 flutter_secure_storage：E2EE 密钥与 PIN 哈希已进安全存储，其余云服务凭据仍待迁移
 3. ~~🟠 启用 Android FLAG_SECURE 截屏保护~~ ✅ 已完成（2026-10-10，并在设置页提供开关）
-4. 🟠 PIN 码添加失败次数限制
+4. ✅ PIN 码失败退避 + wipe 开关（Argon2id，已实现）
 5. 🟠 用户自配置 URL 强制 HTTPS 校验
 
 ### 8.2 中期（季度规划）
 
-1. 🟠 引入 sqlcipher 加密本地数据库
+1. ✅ 启用 SQLCipher 加密本地数据库（Android 2026-10-06 启用，opt-in 默认关闭）
 2. 🟠 AI 调用前敏感数据脱敏
-3. 🟡 transactions 表添加 `(ledger_id, happened_at)` 复合索引
+3. ✅ transactions 表复合索引（v32 + v58 已补齐）
 4. 🟡 长列表添加 RepaintBoundary
-5. 🟡 补充集成测试用例
-6. 🟡 CI 集成测试覆盖率工具
+5. 🟡 补充集成测试用例（目录已建立，持续补充）
+6. ✅ CI 集成测试覆盖率工具（report-only + artifact）
 
 ### 8.3 长期（年度规划）
 
 1. 🟢 关键服务证书锁定
-2. 🟢 同步冲突字段级合并
-3. 🟢 大文件拆分（annual_report_page、sync_engine 等）
+2. 🟢 同步冲突字段级合并（快照同步下语义不同）
+3. 🟢 大文件拆分（annual_report_page、db.dart、transactions_sync_manager 等）
 4. 🟢 文档与代码同步检查机制
-5. 🟢 多语言 .arb 一致性 CI 检查
+5. ✅ 多语言 .arb 一致性 CI 检查（E4 已落地）
 
 ---
 
@@ -505,9 +546,11 @@ lib/
 ## 10. 信息缺口
 
 - **[待确认]** 部分问题来自代码静态审查，可能存在理解偏差，修复前需再次确认
-- **[待补充]** 性能基准测试数据（首屏加载时间、滚动 fps、同步耗时）未在项目内找到，建议建立性能基准
+- **[已补充 2026-10-17]** SQL 层基线在 `test/performance/sql_query_baseline_test.dart`
+  （1 万笔 / 24 个月，EXPLAIN 断言 v58 索引 + 打印耗时）；设备侧首屏 / FPS 基线见
+  `docs/evidence/perf-baseline-2026-10-05.md`。
 - **[待补充]** 用户反馈的高频 Bug 统计未在工程文档中体现，建议定期从 GitHub Issues 提取并更新本文档
-- **[推断]** 同步引擎在弱网/断网恢复场景的具体行为可能存在边界 case，建议补充集成测试覆盖
+- **[推断]** 快照同步（Path A）在弱网/断网恢复场景的边界 case，建议继续补充集成测试覆盖
 
 ---
 

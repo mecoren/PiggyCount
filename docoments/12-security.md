@@ -81,7 +81,7 @@ flowchart TB
         T1[Supabase]
         T2[WebDAV]
         T3[S3]
-        T4[PiggyCount Cloud]
+        T4[iCloud]
         T5[智谱 GLM AI]
     end
 
@@ -129,27 +129,28 @@ LazyDatabase _openConnection() {
 }
 ```
 
-**安全效果**：
+**安全效果（2026-10-17 复核）**：
 - 使用 `getApplicationDocumentsDirectory()`，位于应用私有沙箱（Android `/data/data/<package>/files/`、iOS `Documents/`）
 - 正常情况下其他 App 无法访问 ✓
-- **未加密** ✗
+- **可选整库加密**：Android 自 2026-10-06 起支持 SQLCipher（opt-in，默认关闭）；三 ABI 的
+  `libsqlcipher.so` 已入库随包分发，`hooks.user_defines.sqlite3.name_android: sqlcipher`。
+  上方代码块是 2026-07-25 的明文打开方式，保留为历史记录。
 
 **风险**：
-- 在 root 过的 Android 设备 / 已越狱 iOS 设备 / 备份提取场景下，所有账本数据（金额、备注、账户名、银行卡后四位等）可直接被读取
-- 全局 Grep `sqlcipher|SQLCipher|encrypted.*database` 在 `lib/` 中 **零匹配**
+- 未开启整库加密时，root / 越狱 / 备份提取场景下仍可读取账本数据
+- 历史结论「`sqlcipher` 在 `lib/` 零匹配」已过期（见 `lib/data/encryption/` 与 `db.dart` 的加密开库路径）
 
-#### 4.1.2 Android Keystore / iOS Keychain（未使用）
+#### 4.1.2 Android Keystore / iOS Keychain（已基本使用）
 
-**[未实现]**：全局 Grep `AndroidKeystore|iOSKeychain|Keystore|Keychain` 在 `lib/` 中 **零匹配**。
-
-**关键矛盾**：
-- [PRIVACY.md:93](../PRIVACY.md) 声称 "Authentication credentials are stored securely using Android Keystore"
-- 但代码中 PIN 哈希、API Token、密码全部存储在 `SharedPreferences`（明文 XML 文件）
-- 这是一处**隐私政策与实现不符的严重问题**
+**2026-10-17 复核：已基本实现** —— `flutter_secure_storage` 已用于 PIN 哈希、云服务凭据、
+AI 服务商凭据与 E2EE 密钥（iOS Keychain / Android Keystore）。历史「零匹配」结论已过期。
+仍残留的兼容键见 §4.3 的复核注。
 
 #### 4.1.3 数据库备份加密
 
-**[未实现]**：云同步（Supabase/WebDAV/PiggyCount Cloud）上传的是业务数据 JSON / 二进制，**未发现任何对备份内容加密后再上传的代码**。备份内容受 HTTPS 传输保护，但服务端可见明文。
+**2026-10-17 复核：可选 E2EE 已实现** —— `lib/domain/encryption/` 用 AES-256-GCM + Argon2id，
+开启后快照以 `BEECRYPT1:` 密文上传（`EncryptedCloudProvider`），密钥不上传；关闭时与明文一致。
+PiggyCount Cloud 已下线，四后端为 Supabase / WebDAV / S3 / iCloud。
 
 ---
 
@@ -353,7 +354,7 @@ Future<void> _saveCredentials(String email, String password) async {
 - 汇率：`https://latest.currency-api.pages.dev/...`（exchange_rate_service.dart:61）
 - 文档站：`https://count.beejz.com`（[website_urls.dart:11](../lib/utils/website_urls.dart)）
 
-**[待补充]**：未对用户自配置的 WebDAV/S3/Supabase/PiggyCount Cloud URL 强制 `https://` 协议校验，用户可填入 `http://` 暴露凭证。
+**[待补充]**：未对用户自配置的 WebDAV / S3 / Supabase URL 强制 `https://` 协议校验，用户可填入 `http://` 暴露凭证。
 
 #### 4.4.2 证书锁定（未实现）
 
@@ -361,7 +362,7 @@ Future<void> _saveCredentials(String email, String password) async {
 
 **风险**：
 - 无证书锁定，理论上中间人攻击（CA 投毒、企业代理 CA、用户安装的根证书）可解密 HTTPS 流量
-- 对自部署的 PiggyCount Cloud / WebDAV / S3 尤其敏感
+- 对自部署的 WebDAV / S3 / Supabase 尤其敏感
 
 #### 4.4.3 请求超时
 
@@ -857,7 +858,7 @@ final rows = await db.customSelect(
 | 5 | 配置导出含明文密码/API Key 且无加密 | 高 | 导出文件支持密码加密，或默认不导出凭证 |
 | 6 | ~~无 FLAG_SECURE 截屏保护~~ ✅ 已修复（2026-10-10） | — | `MainActivity` 已落实保护，并在设置页「应用锁 → 防截屏保护」提供开关 |
 | 7 | ~~SQLite 数据库未加密~~ ⚠️ 可开启（默认关闭，2026-10-10 复核） | — | 已具备 SQLCipher 整库加密（见 Checklist 第 1 行），由用户在设置里开启 |
-| 8 | 无证书锁定 | 中 | 对 PiggyCount Cloud 默认域名做证书锁定 |
+| 8 | 无证书锁定 | 中 | 对默认云服务域名做证书锁定 |
 | 9 | AI 数据发送前无脱敏 | 中 | 对账户名/备注做可选脱敏（如掩码）后再发送 |
 | 10 | 路径遍历防护缺失 | 中 | 导入 `custom_icon_path` 等字段时规范化路径 |
 | 11 | 配置导入无来源校验 | 中 | 导入前展示差异预览 + 二次确认 |

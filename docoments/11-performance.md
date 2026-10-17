@@ -1,9 +1,17 @@
 # 11. 性能优化
 
-> 文档版本：v1.0
-> 最后更新：2026-07-25
+> 文档版本：v1.1
+> 最后更新：2026-10-17
 > 作者：wait
 > 信息源：项目源码（本仓库）+ 代码静态审查
+>
+> ⚠️ **2026-10-17 同步说明**：本文是 2026-07-25 的快照，正文大量引用已删除的
+> `sync_engine*.dart` / 增量 pull / LookupCache（PiggyCount Cloud 下线后已不存在）。
+> 当前性能主线：**搜索 SQL 下推**（`TransactionSearchQuery` + `watchTransactionsByQuery`）、
+> **统计 SQL GROUP BY**（`local_statistics_repository.dart`）、**v58 查询索引**；宿主基线见
+> `test/performance/sql_query_baseline_test.dart`，设备侧基线见
+> `docs/evidence/perf-baseline-2026-10-05.md`。正文中 SyncEngine 相关代码位置与
+> 「多级单飞锁 / Lazy prime」属历史记录。
 
 ---
 
@@ -110,7 +118,12 @@ flowchart TB
 
 全部索引使用 `CREATE INDEX IF NOT EXISTS` 幂等保护。
 
-**[待补充]**：`transactions` 表缺少 `(ledger_id, happened_at)` 复合索引，首页交易列表按时间倒序分页查询的最热路径，数据量增长后会触发全表扫描。建议在 schemaVersion=32 迁移中补充。
+**[已补充]**：`(ledger_id, happened_at)` 复合索引在 **v32** 已建
+（`idx_transactions_ledger_happened`）；**v58** 又补齐
+`idx_transactions_ledger_type_happened`、`idx_transactions_account`、
+`idx_transactions_to_account`、`idx_transactions_ledger_category`、
+`idx_budgets_ledger_type_enabled_category`、`idx_deleted_transactions_ledger_deleted`。
+守门：`test/data/migration_v58_index_test.dart`、`test/performance/sql_query_baseline_test.dart`。
 
 #### 4.1.2 后台 Isolate 执行
 
@@ -182,13 +195,16 @@ Future<bool> _applyOneWithBusyRetry(PiggyCountCloudSyncChange ch) async {
 
 #### 4.1.5 WAL 模式
 
-**[未实现]**：项目代码中**没有**显式 `PRAGMA journal_mode=WAL` 配置。但 [db.dart:1247-1252](../lib/data/db.dart) 检测了 `.sqlite-shm` / `.sqlite-wal` 文件存在，说明实际运行时 SQLite 处于 WAL 模式（Drift `NativeDatabase` 默认启用）。
-
-**建议**：显式声明避免不同平台/版本默认值差异。
+**[已实现 2026-10-17]**：`lib/data/db.dart` 的 `beforeOpen` 已显式
+`PRAGMA journal_mode=WAL` + `PRAGMA journal_size_limit=...`；`synchronous` **刻意保持 FULL**
+（不做 `NORMAL`，避免掉电丢最后几笔）。下方为历史结论。
 
 ---
 
 ### 4.2 同步性能
+
+> ⚠️ 2026-10-17：以下 4.2.x 的 SyncEngine / LookupCache / Lazy prime 描述属历史记录；
+> 当前快照同步的下载 / 恢复 / 指纹比对见 `lib/cloud/transactions_sync_manager.dart`。
 
 #### 4.2.1 LookupCache 消除 N+1
 
@@ -407,7 +423,7 @@ void switchToStreamMode() {
 
 - `TransactionListItem` 大量参数支持 const
 - `_kPieColors` const 列表
-- `BeeTokens` / `BeeDimens` 等设计 token 类使用 static const
+- `PiggyTokens` / `PiggyDimens` 等设计 token 类使用 static const
 - `Key('tx-${it.t.id}-$index')`（Dismissible key）
 
 **[待补充]**：拼接 index 进 key 在列表排序变化时会失去复用意义，建议改为纯 `ValueKey(it.t.id)`。
@@ -735,9 +751,9 @@ logger.info('SyncEngine', 'pull: applied ${page.changes.length} changes in ${sw.
 
 | # | 优化项 | 位置 | 优先级 | 预期收益 |
 |---|---|---|---|---|
-| 1 | `(ledger_id, happened_at)` 复合索引 | db.dart transactions 表 | 高 | 首页列表查询从全表扫描 → 索引扫描 |
+| 1 | ✅ `(ledger_id, happened_at)` + v58 查询索引 | db.dart transactions / budgets / deleted_transactions | 已完成 | 首页/搜索/统计从全表扫描 → 索引扫描 |
 | 2 | AI 流式响应 + CancelToken + timeout | ai_bookkeeper.dart | 高 | 改善首字延迟，支持取消 |
-| 3 | 显式 `PRAGMA journal_mode=WAL` + `synchronous=NORMAL` | db.dart `_openConnection` | 中 | 不同平台一致性 |
+| 3 | ✅ 显式 `PRAGMA journal_mode=WAL`（synchronous 保持 FULL） | db.dart `beforeOpen` | 已完成 | 不同平台一致性 |
 | 4 | Riverpod `.select()` 精细化监听 | transaction_list_item.dart 等 | 中 | 减少 rebuild |
 | 5 | 交易列表 RepaintBoundary 包裹 | transaction_list.dart | 中 | 减少滚动重绘 |
 | 6 | AI 结果缓存 | ai_bookkeeper.dart | 中 | 同文本二次识别零延迟 |

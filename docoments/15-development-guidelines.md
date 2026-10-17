@@ -1,15 +1,18 @@
 # 15. 开发规范
 
-> 文档版本：v1.0
-> 最后更新：2026-07-25
+> 文档版本：v1.1
+> 最后更新：2026-10-17
 > 作者：wait
 > 信息源：项目源码（本仓库）+ [docs/contributing/CONTRIBUTING_ZH.md](../docs/contributing/CONTRIBUTING_ZH.md) + [analysis_options.yaml](../analysis_options.yaml) + [docs/design/DESIGN_TOKENS.md](../docs/design/DESIGN_TOKENS.md)
+>
+> ⚠️ **2026-10-17 同步说明**：本文的 SyncEngine / 5 种后端 / schemaVersion=31 已过期；
+> 当前是 4 种快照同步、schemaVersion **58**、Flutter 3.47.6。具体以 `AGENTS.md` 为准。
 
 ---
 
 ## 1. 背景
 
-本文档面向**新加入 PiggyCount 项目的开发者**，系统化整理项目内的开发约定与代码规范。PiggyCount 是一款已有相当规模（lib/ 目录 250+ Dart 文件）的 Flutter 应用，包含五层架构、四层同步引擎、多后端云服务集成、AI 集成、复杂 UI 主题系统等。若开发者仅凭"个人 Dart 经验"提交代码，极易破坏既有架构一致性，造成：
+本文档面向**新加入 PiggyCount 项目的开发者**，系统化整理项目内的开发约定与代码规范。PiggyCount 是一款已有相当规模（lib/ 目录 250+ Dart 文件）的 Flutter 应用，包含分层架构、整账本快照同步、多后端云服务集成、AI 集成、复杂 UI 主题系统等。若开发者仅凭"个人 Dart 经验"提交代码，极易破坏既有架构一致性，造成：
 
 - **架构分层混乱**：在 UI 层直连数据库、在 Repository 中调用 Provider 等
 - **暗黑模式适配缺失**：直接使用 `Colors.white`/`Colors.black54` 而非 Token 系统
@@ -470,7 +473,7 @@ class Transactions extends Table with AutoIncrementMixin {
 
 ### 8.2 Schema 版本与迁移
 
-- 当前 schemaVersion = 31（详见 [07-data-model.md](07-data-model.md)）
+- 当前 schemaVersion = **58**（详见 [07-data-model.md](07-data-model.md)）
 - 新增表/字段必须新增 schemaVersion + MigrationStep
 - 迁移必须幂等（使用 `CREATE INDEX IF NOT EXISTS`、`ALTER TABLE ADD COLUMN` 前判断）
 - 禁止删除字段（向后兼容），若必须删除，使用 `_deprecated_` 前缀保留

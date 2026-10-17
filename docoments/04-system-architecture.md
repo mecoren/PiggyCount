@@ -1,10 +1,15 @@
 ---
 title: 系统架构设计
-version: v1.0
-last_updated: 2026-07-25
+version: v1.1
+last_updated: 2026-10-17
 author: wait
 audience: 一年经验的开发者
 ---
+
+> ⚠️ **2026-10-17 同步说明**：本文的「五层架构 / L3 SyncEngine / 5 种后端」是 2026-07-25 的
+> 快照。PiggyCount Cloud / SyncEngine 已下线；当前是 Provider / TransactionsSyncManager /
+> Riverpod 的快照同步架构，后端为 Supabase / WebDAV / S3 / iCloud 四种，
+> ChangeTracker 统一注入，不再有增量 push/pull 分支。正文涉及 SyncEngine 的章节为历史记录。
 
 ## 目录
 
@@ -131,7 +136,7 @@ flowchart LR
 
 ### 2.3 多后端抽象
 
-PiggyCount 通过 `CloudProvider` 抽象接口支持 5 种同步后端,详见 [06 数据同步与多设备离线机制](./06-data-sync-and-offline.md)。架构上,所有后端实现同一接口,SyncEngine 只与抽象交互:
+PiggyCount 通过 `CloudProvider` 抽象接口支持 4 种快照同步后端,详见 [06 数据同步与多设备离线机制](./06-data-sync-and-offline.md)。架构上,所有后端实现同一接口,`TransactionsSyncManager` 只与抽象交互:
 
 ```mermaid
 classDiagram

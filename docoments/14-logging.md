@@ -309,7 +309,7 @@ logger.debug('Fingerprint', '交易数: ${canon.length}, 指纹: ${fp.substring(
 | `UpdateInstaller` / `UpdateService` | lib/services/update/* | 自更新 |
 | `GitHubMirror` | github_mirror_service.dart | GitHub 镜像测速 |
 | `AIChat` | lib/pages/ai/ai_chat_page.dart | AI 记账 |
-| `avatar_sync` | sync_engine_profile.dart | 头像同步（snake_case 风格） |
+| `avatar_sync` | transactions_sync_manager.dart | 头像同步（snake_case 风格） |
 | `currency_providers` | currency_providers.dart | snake_case 风格 |
 | `OrphanGC` | main.dart | 孤儿文件 GC |
 | `TransactionsJson` / `Fingerprint` | transactions_json.dart | 导出/指纹 |
@@ -461,14 +461,14 @@ logger.info('UpdateService', 'UPDATE_CRASH: 当前flavor: ${const String.fromEnv
 
 | 文件 | Tag | 说明 |
 |---|---|---|
-| `sync_engine_apply.dart` | `SyncEngine` | pull 阶段逐条变更应用，大量 debug |
-| `sync_engine_pull.dart` | `AppCursorStore` / `SyncErrorStore` / `LookupCache` | 分页拉取、错误存储 |
-| `sync_engine_profile.dart` | `avatar_sync` | 头像同步（小写 tag，与 SyncEngine 风格不一致） |
-| `sync_engine_attachments.dart` | `SyncEngine` | 附件/自定义图标上传 |
-| `sync_coordinator.dart` | `SyncCoordinator` | 监听 local_changes |
 | `change_tracker.dart` | `ChangeTracker` | 标记变更已推送 |
 | `sync_diff_service.dart` | `SyncDiff` | 批量 diff 应用 + 耗时 |
-| `transactions_sync_manager.dart` | `CloudSync` | 旧版文件式云同步（与新版 `SyncEngine` 共存） |
+| `transactions_sync_manager.dart` | `CloudSync` | 整账本快照同步（当前主路径） |
+| `sync_fingerprint.dart` | `SyncFingerprint` | 内容指纹计算 |
+| `startup_sync_checker.dart` | `StartupSync` | 启动检查 / 旧格式一次性重传 |
+
+> ⚠️ 2026-10-17：原 `sync_engine_*.dart` / `sync_coordinator.dart` 已随 PiggyCount Cloud
+> 下线删除，表中只列存活文件。
 
 ### 10.3 日志级别一致性
 

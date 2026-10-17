@@ -1,9 +1,15 @@
 # 17. 版本演进
 
-> 文档版本：v1.0
-> 最后更新：2026-07-25
+> 文档版本：v1.1
+> 最后更新：2026-10-17
 > 作者：wait
 > 信息源：项目源码（[lib/data/db.dart](../lib/data/db.dart) MigrationStrategy）+ [pubspec.yaml](../pubspec.yaml) + [README.md](../README.md) + 各模块代码注释
+>
+> ⚠️ **2026-10-17 同步说明**：本文正文只覆盖到 **schemaVersion 31**。之后新增：
+> v32 复合索引、v40 updated_at 触发器、v43 同步指标、v44 回收站、v46 自定义字段、
+> v48 索引修复、v49 节假日缓存、v50/v51 共享账本残留 DROP、v52 持仓、v53 储蓄目标、
+> v56 退款+报销、v57 自定义字段必填、v58 查询索引。当前 **schemaVersion = 58**，
+> 完整迁移块以 `lib/data/db.dart` 为准；同步体系已改为快照（Path A）。
 
 ---
 
@@ -14,13 +20,13 @@ PiggyCount 是一款**持续迭代**的开源记账应用，从最初的"单设�
 1. **理解架构决策的来龙去脉**：为何同步引擎设计为四层？为何有 `*SyncIdOverride` 字段？
 2. **避免重蹈历史覆辙**：v23 移除了"运行时图标推导"的"毒瘤代码"，v24 用幂等 ALTER 修复了 v25 失败导致的卡死
 3. **新功能开发参考**：参考类似功能（如多币种、共享账本）的演进路径，复用既有模式
-4. **数据库迁移设计**：30 个 schemaVersion 迁移步骤是绝佳的学习样本
+4. **数据库迁移设计**：58 个 schemaVersion 迁移步骤是绝佳的学习样本
 
 本文档基于 **schemaVersion 1→31** 的迁移历史（[db.dart:445-1160](../lib/data/db.dart)）与代码注释，重建项目演进时间线。
 
 > ⚠️ **重要说明**：
 > - **应用版本号**（如 3.2.0）与 **schemaVersion**（如 v24）是**独立**的概念
-> - pubspec.yaml 中 `version` 代表**开发主线当前版本**（当前 `0.1.0`），CI 构建时经 `--build-name` / `--build-number` 注入 tag 名，**不再用 sed 覆盖**（详见 [13-build-release.md](13-build-release.md) 与 `AGENTS.md` 的「发版流程」）
+> - pubspec.yaml 中 `version` 代表**开发主线当前版本**（当前 `0.1.9`），CI 构建时经 `--build-name` / `--build-number` 注入 tag 名，**不再用 sed 覆盖**（详见 [13-build-release.md](13-build-release.md) 与 `AGENTS.md` 的「发版流程」）
 > - 项目源码中**未发现 CHANGELOG.md**，应用版本与 schemaVersion 的精确对应关系 [待确认]
 > - 本文以 schemaVersion 为主线，应用版本号为 [推断]
 

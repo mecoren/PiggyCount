@@ -14,6 +14,11 @@
 > ChangeTracker 注入、共享账本的章节均为**历史记录**,不再反映当前实现。
 > 现状请以源码与 `docs/cloud-setup.md` 为准。
 >
+> 📌 **补充(2026-10-17)**：本目录仍是 2026-07 的历史快照，但「会误导人」的硬数字已同步：
+> `schemaVersion` = **58**（v52 持仓 / v53 储蓄目标 / v56 退款+报销 / v57 必填 / v58 索引）；
+> 全量测试 **2589 通过 / 1 跳过**；同步只有快照一条路径（Supabase / WebDAV / S3 / iCloud）。
+> 新增内容以 `AGENTS.md` 与源码为准。
+>
 > 📌 **补充(2026-10-08)**：共享账本的**残留结构**也已清空 —— `ledger_members`
 > (v50)、`shared_ledger_{categories,accounts,tags}` / `transaction_tag_overrides`
 > 三张镜像表与 `ledgers`、`transactions` 上的全部共享专属列(v51)均已迁移 DROP;
@@ -100,7 +105,7 @@
 
 #### [06. 数据同步与离线](06-data-sync-and-offline.md)
 
-**内容**：四层同步架构（Provider 抽象 / Manager / SyncEngine / Riverpod）、5 种同步后端（PiggyCount Cloud / iCloud / Supabase / WebDAV / S3）、push/pull/fullPush/fullPull 流程、离线优先策略、ChangeTracker 设计、单飞锁、LookupCache、Lazy prime 优化。
+**内容**：整账本快照同步架构（Provider / TransactionsSyncManager / Riverpod）、4 种后端（Supabase / WebDAV / S3 / iCloud）、整账本 JSON 上传/下载 + 内容指纹比对、离线优先策略、ChangeTracker 标记脏、单飞锁、LookupCache、Lazy prime 优化。（SyncEngine / Path B / 共享账本已整体下线，相关章节为历史记录。）
 
 **适合读者**：修改同步引擎前必读；理解离线优先架构时参考。
 
@@ -112,7 +117,7 @@
 
 #### [07. 数据模型](07-data-model.md)
 
-**内容**：Drift 表完整 ER 图、字段说明、索引设计、schemaVersion（当前 51，见 lib/data/db.dart）的迁移策略、local_changes / entity_change_watermarks / sync_pull_errors 表的作用。（注：sync_state 表已于 v37 DROP；共享账本镜像表与 `*SyncIdOverride` 列已于 v50 / v51 DROP。）
+**内容**：Drift 表完整 ER 图、字段说明、索引设计、schemaVersion（当前 **58**，见 lib/data/db.dart）的迁移策略、local_changes / entity_change_watermarks / sync_pull_errors 表的作用。（注：sync_state 表已于 v37 DROP；共享账本镜像表与 `*SyncIdOverride` 列已于 v50 / v51 DROP；v58 已补齐查询索引。）
 
 **适合读者**：修改数据库结构前必读；排查数据问题参考。
 
@@ -144,7 +149,7 @@
 
 #### [10. 测试策略](10-testing-strategy.md)
 
-**内容**：测试分层（单元 / Widget / 集成）、测试工具（mocktail / 内存数据库 / FakePiggyCountCloudProvider）、现有覆盖分析（57 文件 451 用例）、测试缺口识别、TDD 建议。
+**内容**：测试分层（单元 / Widget / 集成）、测试工具（mocktail / 内存数据库 / 测试 fake）、现有覆盖分析（2026-10-17 全量 2589 通过 / 1 跳过；CI 用 `flutter test --coverage`）、测试缺口识别、TDD 建议。
 
 **适合读者**：编写测试前参考；评估代码质量时参考。
 
@@ -216,7 +221,7 @@
 
 #### [17. 版本演进](17-version-evolution.md)
 
-**内容**：基于 schemaVersion 1→31 的完整迁移历史，重建项目从单设备基础功能 → 同步基础设施 → 共享账本与多币种的演进时间线。包含每个版本的设计决策、回填策略、历史教训（v23 移除运行时推导、v24 幂等 ALTER 必要性、v30 向后兼容设计）。
+**内容**：基于 schemaVersion 1→58 的完整迁移历史，重建项目从单设备基础功能 → 同步基础设施 → 共享账本与多币种 → 快照同步 → 持仓/储蓄目标/退款报销/查询索引的演进时间线。包含每个版本的设计决策、回填策略、历史教训（v23 移除运行时推导、v24 幂等 ALTER 必要性、v30 向后兼容设计）。
 
 **适合读者**：理解架构决策背景参考；设计新数据库迁移参考。
 
@@ -448,10 +453,10 @@
 | 01 | [项目总览](01-project-overview.md) | 项目背景、核心定位、平台支持 |
 | 02 | [术语表](02-glossary.md) | 业务术语、技术术语、中英对照 |
 | 03 | [技术栈](03-tech-stack.md) | Flutter、Riverpod、Drift、依赖包 |
-| 04 | [系统架构](04-system-architecture.md) | 五层架构、同步引擎、模块依赖 |
+| 04 | [系统架构](04-system-architecture.md) | 分层架构、快照同步、模块依赖 |
 | 05 | [核心模块](05-core-modules.md) | 12 个模块、模块交互 |
-| 06 | [数据同步与离线](06-data-sync-and-offline.md) | 四层同步、5 种后端、push/pull、单飞锁 |
-| 07 | [数据模型](07-data-model.md) | 21 张表、ER 图、迁移策略 |
+| 06 | [数据同步与离线](06-data-sync-and-offline.md) | 快照同步、4 种后端、指纹比对、单飞锁 |
+| 07 | [数据模型](07-data-model.md) | 表清单以 db.dart 为准、ER 图、schema 58 迁移策略 |
 | 08 | [API 与数据访问](08-api-and-data-access.md) | Repository 三层、API 速查 |
 | 09 | [错误处理](09-error-handling.md) | 异常层级、sync_pull_errors、401 refresh |
 | 10 | [测试策略](10-testing-strategy.md) | 测试分层、mocktail、覆盖率 |
@@ -461,7 +466,7 @@
 | 14 | [日志规范](14-logging.md) | LoggerService、级别规范、持久化 |
 | 15 | [开发规范](15-development-guidelines.md) | 代码风格、Design Token、PR 流程 |
 | 16 | [已知问题](16-known-issues.md) | P0-P3 分级、改进路线 |
-| 17 | [版本演进](17-version-evolution.md) | schemaVersion 1→31、迁移模式 |
+| 17 | [版本演进](17-version-evolution.md) | schemaVersion 1→58、迁移模式 |
 
 ---
 

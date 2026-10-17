@@ -1,10 +1,17 @@
 ---
 title: 技术栈全景
-version: v1.0
-last_updated: 2026-07-25
+version: v1.1
+last_updated: 2026-10-17
 author: wait
 audience: 一年经验的开发者
 ---
+
+> ⚠️ **2026-10-17 同步说明**：本文是 2026-07-25 的快照，正文的版本号 / 云后端 /
+> 依赖 pin 已过期。当前版本：Flutter **3.47.6**（`pubspec.yaml#environment.flutter` 单一来源）、
+> Dart `^3.6.0`、Riverpod **3.4.3**、Drift **2.35.1**、schema **58**；`sqlite3_flutter_libs`
+> 已移除，Android 改用 `libsqlcipher.so`（`sqlite3` hooks）；`dependency_overrides` 仅
+> `jni_flutter: 1.0.3`。PiggyCount Cloud / SyncEngine 已下线，同步为 4 后端快照。
+> 正文涉及 Cloud / 旧版本 / 旧 pin 的表格与流程图属历史记录。
 
 ## 目录
 
@@ -70,13 +77,13 @@ flowchart TD
     Root --> Platform[平台集成]
     Root --> Dev[开发工具]
 
-    Core --> C1[Flutter 3.27]
+    Core --> C1[Flutter 3.47]
     Core --> C2[Dart 3.6]
 
-    Data --> D1[Drift 2.20]
-    Data --> D2[sqlite3_flutter_libs]
+    Data --> D1[Drift 2.35]
+    Data --> D2[sqlite3 + libsqlcipher]
 
-    State --> S1[Riverpod 2.5]
+    State --> S1[Riverpod 3.x]
 
     Sync --> Sy1[flutter_cloud_sync 自研]
     Sync --> Sy2[supabase_flutter]
@@ -122,7 +129,7 @@ PiggyCount 采用**保守版本约束**策略:
 
 | 依赖 | 版本 | 用途 | 选型理由 | 备注 |
 |---|---|---|---|---|
-| `flutter` | SDK | UI 框架 | 跨平台、生态成熟、Dart 语言友好 | CI 锁定 3.27.3 |
+| `flutter` | SDK | UI 框架 | 跨平台、生态成熟、Dart 语言友好 | 版本单一来源 `pubspec.yaml`（3.47.6），CI 用 `flutter-version-file` |
 | `sdk: flutter` | — | Flutter SDK | — | `pubspec.yaml` L7 |
 | `sdk: ">=3.6.0 <4.0.0"` | — | Dart SDK 约束 | 使用 Dart 3.6 的 pattern matching / records 等特性 | `pubspec.yaml` L6 |
 
@@ -130,8 +137,7 @@ PiggyCount 采用**保守版本约束**策略:
 
 | 依赖 | 版本 | 用途 | 选型理由 | 替代方案 | 备注 |
 |---|---|---|---|---|---|
-| `flutter_riverpod` | `^2.5.1` | 状态管理 + DI + Stream 监听 | 编译时安全、无 BuildContext 依赖、StreamProvider 原生支持 Drift reactive query | Provider(过时)、Bloc(事件驱动过重)、GetX(争议大) | 全 app 唯一状态管理方案 |
-| `riverpod_annotation` | `^2.3.5` | Riverpod codegen 注解 | 可选,用于生成 `@riverpod` provider | — | `pubspec.yaml` L15 |
+| `flutter_riverpod` | `^3.4.3` | 状态管理 + DI + Stream 监听 | 编译时安全、无 BuildContext 依赖、StreamProvider 原生支持 Drift reactive query | Provider(过时)、Bloc(事件驱动过重)、GetX(争议大) | 全 app 唯一状态管理方案；3.x 迁移见 `AGENTS.md` |
 
 Riverpod 在 PiggyCount 中的典型用法见 `lib/providers/`:
 
@@ -147,7 +153,7 @@ Riverpod 在 PiggyCount 中的典型用法见 `lib/providers/`:
 
 | 依赖 | 版本 | 用途 | 选型理由 | 替代方案 | 备注 |
 |---|---|---|---|---|---|
-| `drift` | `^2.20.2` | SQLite ORM | 类型安全、reactive query(返回 Stream)、code generation、迁移支持完善 | sqflite(裸 SQL,无类型安全)、Isar(NoSQL,生态弱)、Hive(已停止维护) | 核心 ORM |
+| `drift` | `^2.35.1` | SQLite ORM | 类型安全、reactive query(返回 Stream)、code generation、迁移支持完善 | sqflite(裸 SQL,无类型安全)、Isar(NoSQL,生态弱)、Hive(已停止维护) | 核心 ORM |
 | `sqlite3_flutter_libs` | `^0.5.24` | SQLite native 二进制 | Drift 在各平台所需的 SQLite 库 | — | — |
 | `path_provider` | `^2.1.4` | 文件系统路径 | 获取 app 文档目录用于存放 SQLite 文件 | — | — |
 | `path` | `^1.9.0` | 路径处理 | 拼接数据库文件路径 | — | — |
@@ -164,7 +170,8 @@ PiggyCount 的同步能力由自研 `flutter_cloud_sync` 框架提供,位于 `pa
 
 | 子包 | 路径 | 用途 |
 |---|---|---|
-| `flutter_cloud_sync` | `packages/flutter_cloud_sync` | 同步框架核心(含 PiggyCountCloudProvider 内嵌) |
+| `flutter_cloud_sync` | `packages/flutter_cloud_sync` | 同步框架核心（整账本快照，无 Cloud/Realtime） |
+| `flutter_cloud_sync_icloud` | `packages/flutter_cloud_sync_icloud` | iCloud provider |
 | `flutter_cloud_sync_supabase` | `packages/flutter_cloud_sync_supabase` | Supabase provider |
 | `flutter_cloud_sync_webdav` | `packages/flutter_cloud_sync_webdav` | WebDAV provider |
 | `flutter_cloud_sync_s3` | `packages/flutter_cloud_sync_s3` | S3 / R2 / B2 / MinIO / OSS / COS / Kodo provider |
@@ -176,13 +183,12 @@ PiggyCount 的同步能力由自研 `flutter_cloud_sync` 框架提供,位于 `pa
 
 | 依赖 | 版本 | 用途 | 选型理由 | 备注 |
 |---|---|---|---|---|
-| `dio` | `^5.4.3+1` | HTTP 客户端 | 拦截器、FormData、取消 token、超时控制完善 | PiggyCount Cloud 主用 |
+| `dio` | `^5.4.3+1` | HTTP 客户端 | 拦截器、FormData、取消 token、超时控制完善 | OTA / 汇率 / AI 等复杂 HTTP |
 | `http` | `^1.2.2` | 轻量 HTTP | Dart 官方包,无额外依赖 | 部分简单场景使用 |
-| `supabase_flutter` | `^2.5.6` | Supabase SDK | Auth + Storage + Realtime 一站式 | Supabase provider 使用 |
+| `supabase_flutter` | `^2.5.6` | Supabase SDK | Auth + Storage 一站式 | Supabase provider 使用 |
 | `webdav_client` | `^2.0.0` | WebDAV 客户端 | 现成 WebDAV 协议封装 | WebDAV provider 使用 |
-| `web_socket_channel` | `^3.0.1` | WebSocket 客户端 | PiggyCount Cloud Realtime 自实现 WS 客户端 | `piggycount_cloud_provider.dart` |
 
-依据:`pubspec.yaml` L27、L34、L37、L70-71、`packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart` L4151。
+依据:`pubspec.yaml`、`packages/flutter_cloud_sync*` 子包结构。
 
 ### 3.5 AI 集成
 
@@ -273,21 +279,17 @@ PiggyCount 的 AI 能力由自研 `flutter_ai_kit` 框架提供,支持 6 种执�
 ```mermaid
 flowchart TD
     A[main.dart 启动] --> B[ProviderScope 包裹 runApp]
-    B --> C[BeeApp ConsumerWidget]
+    B --> C[PiggyApp ConsumerWidget]
     C --> D{UI 访问数据}
     D --> E[ref.watch repositoryProvider]
-    E --> F[databaseProvider 单例 BeeDatabase]
+    E --> F[databaseProvider 单例 PiggyDatabase]
     F --> G[LocalRepository 实例化]
-    G --> H{判断 activeCloudConfigProvider}
-    H -->|PiggyCount Cloud| I[注入 ChangeTracker]
-    H -->|其他后端| J[不注入 ChangeTracker]
-    I --> K[repositoryProvider 返回带 tracker 的 LocalRepository]
-    J --> L[repositoryProvider 返回普通 LocalRepository]
-    K --> M[UI 调用 repo.addTransaction 等]
-    L --> M
+    G --> H[注入 ChangeTracker]
+    H --> I[repositoryProvider 返回带 tracker 的 LocalRepository]
+    I --> M[UI 调用 repo.addTransaction 等]
 ```
 
-上图展示了 PiggyCount 的依赖注入流程。`main.dart` 在启动时用 `ProviderScope` 包裹 `runApp`,所有 Widget 通过 `ref.watch` / `ref.read` 获取依赖。`repositoryProvider` 是核心入口,内部根据 `activeCloudConfigProvider` 判断是否注入 ChangeTracker:仅 PiggyCount Cloud 后端激活时注入(走增量同步路径),其他后端不注入(走快照备份路径)。这种设计让 Repository 层无需感知同步细节,ChangeTracker 的注入由 Provider 层统一管理。
+上图展示了 PiggyCount 的依赖注入流程。`main.dart` 在启动时用 `ProviderScope` 包裹 `runApp`,所有 Widget 通过 `ref.watch` / `ref.read` 获取依赖。`repositoryProvider` 是核心入口，所有后端统一注入 `ChangeTracker`（user-global / ledger-scoped 两个强类型入口）；同步走整账本快照路径，不再按后端分支。
 
 依据:`lib/main.dart`、`lib/providers/database_providers.dart`。
 
@@ -299,7 +301,7 @@ sequenceDiagram
     participant Ref as WidgetRef
     participant Repo as LocalRepository
     participant SubRepo as LocalTransactionRepository
-    participant DB as BeeDatabase
+    participant DB as PiggyDatabase
     participant SQLite as SQLite Engine
     participant Tracker as ChangeTracker
 
@@ -322,7 +324,10 @@ sequenceDiagram
 
 依据:`lib/data/repositories/local/local_repository.dart`、`lib/cloud/sync/change_tracker.dart`。
 
-### 4.3 网络请求流程(PiggyCount Cloud)
+### 4.3 网络请求流程（历史：PiggyCount Cloud）
+
+> ⚠️ 2026-10-17：PiggyCount Cloud 已下线，本节时序图与 provider 均为历史记录；
+> 当前快照上传 / 下载见 `lib/cloud/transactions_sync_manager.dart`。
 
 ```mermaid
 sequenceDiagram
@@ -365,11 +370,11 @@ PiggyCount Cloud 的网络请求流程内置了 token 自动刷新机制。当�
 
 ### 决策 1:选择 Drift 而非 sqflite / Isar
 
-- **决策内容**:数据层使用 Drift 2.20 作为 SQLite ORM。
+- **决策内容**:数据层使用 Drift 2.35 作为 SQLite ORM。
 - **原因**:
   - **类型安全**:Drift 生成类型安全的表定义与查询,编译时检查字段类型与表名
   - **Reactive query**:Drift 的 `watch()` 返回 `Stream<List<T>>`,数据库变更自动推送,Riverpod `StreamProvider` 原生支持
-  - **迁移支持完善**:`MigrationStrategy` + `schemaVersion` 机制,PiggyCount 已用到 v31
+  - **迁移支持完善**:`MigrationStrategy` + `schemaVersion` 机制,PiggyCount 已用到 v58
   - **Code generation**:`db.g.dart` 自动生成,减少手写样板代码
 - **备选方案**:
   - `sqflite`:裸 SQL,无类型安全,无 reactive query,迁移需手写
@@ -379,11 +384,11 @@ PiggyCount Cloud 的网络请求流程内置了 token 自动刷新机制。当�
   - Drift:学习曲线略陡(codegen + Stream 概念),但长期收益高
   - sqflite:简单直接,但大型项目维护成本高
 - **最终取舍**:Drift,充分利用 reactive query 简化 UI 刷新逻辑。
-- **依据**:`pubspec.yaml` L16-17、`lib/data/db.dart` L445 schemaVersion=31。
+- **依据**:`pubspec.yaml`、`lib/data/db.dart` 的 `schemaVersion`（当前 58）。
 
 ### 决策 2:选择 Riverpod 而非 Bloc / GetX
 
-- **决策内容**:状态管理使用 Riverpod 2.5,不引入其他状态管理库。
+- **决策内容**:状态管理使用 Riverpod 3.x（当前 3.4.3），不引入其他状态管理库。
 - **原因**:
   - **编译时安全**:Riverpod 2.x 完全摆脱 Provider 1.x 的 BuildContext 依赖,无 `ProviderNotFoundException` 运行时错误
   - **DI 一体化**:Riverpod 既是状态管理又是 DI,不需要额外引入 get_it
@@ -400,7 +405,7 @@ PiggyCount Cloud 的网络请求流程内置了 token 自动刷新机制。当�
 
 - **决策内容**:同步能力由自研 `flutter_cloud_sync` 框架提供,而非直接依赖 Supabase SDK。
 - **原因**:
-  - **多后端支持**:PiggyCount 需支持 5 种同步方案,自研框架抽象出 `CloudProvider` 接口,各后端独立实现
+  - **多后端支持**:PiggyCount 需支持 4 种快照同步方案,自研框架抽象出 `CloudProvider` 接口,各后端独立实现
   - **数据主权**:用户应能选择自己的同步后端,而非被锁定在 Supabase
   - **复用性**:`flutter_cloud_sync` 可独立发布,其他 Flutter 应用可复用
   - **可控性**:同步逻辑(冲突解决、cursor、单飞锁)需深度定制,直接用 Supabase 无法实现
@@ -417,7 +422,7 @@ PiggyCount Cloud 的网络请求流程内置了 token 自动刷新机制。当�
 
 - **决策内容**:同时使用 `dio: ^5.4.3+1` 与 `http: ^1.2.2` 两个 HTTP 客户端。
 - **原因**:
-  - **dio**:用于 PiggyCount Cloud,需要拦截器(token 刷新)、FormData(文件上传)、超时控制、取消 token 等高级特性
+  - **dio**:用于 OTA / 汇率 / AI 等复杂 HTTP,需要拦截器、FormData、超时控制、取消 token 等高级特性
   - **http**:用于部分轻量场景(如汇率 API、版本检查),无需 dio 的额外特性,http 是 Dart 官方包无额外依赖
 - **备选方案**:全部用 dio(增加依赖体积)、全部用 http(失去拦截器能力)
 - **最终取舍**:并存,dio 用于复杂场景,http 用于简单场景。
@@ -425,12 +430,12 @@ PiggyCount Cloud 的网络请求流程内置了 token 自动刷新机制。当�
 
 ### 决策 5:钉死部分依赖版本
 
-- **决策内容**:`image_cropper_platform_interface: 7.1.0`、`record_platform_interface: 1.2.0` 不使用 `^` 兼容版本,直接钉死。
+- **决策内容（2026-10-17 修订）**:`dependency_overrides` 仅钉 `jni_flutter: 1.0.3`。
 - **原因**:
-  - `image_cropper_platform_interface 7.2.0` 要求 Flutter >= 3.27.6,而 CI 锁定 3.27.3,会构建失败
-  - `record_platform_interface 1.2.0` 之后的版本引入 record_linux 兼容性问题
-- **备选方案**:升级 Flutter 版本(影响其他依赖)
-- **最终取舍**:钉死版本,等待 Flutter 主版本升级时一并解决。
+  - `jni_flutter 1.0.4` 已被 pub 撤回，但 `path_provider_android` 的 `^1.0.1` 仍会把它选为最高版（镜像源不带 retracted 标记）
+  - record / image_cropper 的历史 pin 已随版本升级移除
+- **备选方案**:等上游替换该依赖后移除 override
+- **最终取舍**:暂时保留 `jni_flutter: 1.0.3`。
 - **依据**:`pubspec.yaml` L94-98、`release.yml` L35。
 
 ---
@@ -441,14 +446,13 @@ PiggyCount Cloud 的网络请求流程内置了 token 自动刷新机制。当�
 
 | 依赖 | 约束 | 原因 | 处理建议 |
 |---|---|---|---|
-| `image_cropper_platform_interface` | `7.1.0`(钉死) | 7.2.0 要求 Flutter >= 3.27.6,CI 是 3.27.3 | 升级 Flutter 时一并放开 |
-| `record_platform_interface` | `1.2.0`(钉死) | 修复 record_linux 兼容问题 | 等待 record 主版本更新 |
+| `jni_flutter` | `1.0.3`(钉死) | 1.0.4 已被 pub 撤回，镜像源仍会选中 | 等上游替换依赖后移除 |
 | `flutter_launcher_icons.ios` | `false` | 0.14.x 会重写 `Contents.json` 格式 | iOS 图标手工维护 |
 
 ### 6.2 Flutter SDK 约束
 
 - **Dart SDK**:`>=3.6.0 <4.0.0`,使用 Dart 3.6 的 pattern matching / records / sealed class 等特性
-- **Flutter SDK**:CI 锁定 `3.27.3`,本地开发建议使用 fvm 管理版本
+- **Flutter SDK**:单一来源 `pubspec.yaml#environment.flutter`（当前 `3.47.6`），CI 用 `flutter-version-file` 读取
 
 依据:`pubspec.yaml` L6、`release.yml` L35。
 

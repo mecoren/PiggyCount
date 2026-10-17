@@ -1,10 +1,16 @@
 ---
 title: 项目全览
-version: v1.0
-last_updated: 2026-07-25
+version: v1.1
+last_updated: 2026-10-17
 author: wait
 audience: 一年经验的开发者
 ---
+
+> ⚠️ **2026-10-17 同步说明**：本文是 2026-07-25 的快照。PiggyCount Cloud / SyncEngine /
+> 共享账本已整体下线；当前是 **Supabase / WebDAV / S3 / iCloud 四种整账本快照同步**
+> （README 公开主推 WebDAV / S3），无 Web 端。平台基线为 Android 7.0+ / iOS 15.5+；
+> Flutter 版本单一来源 `pubspec.yaml`（3.47.6）；schema 已到 58。正文涉及 Cloud /
+> SyncEngine / 实时协同 / 五种方案的章节为历史记录。
 
 ## 目录
 
@@ -23,7 +29,7 @@ audience: 一年经验的开发者
 
 ### 1.1 项目定位
 
-PiggyCount(小猪记账)是一款**轻量、开源、隐私可控**的个人财务管理与支出追踪应用。项目由个人开发者维护,源代码托管于 GitHub:`https://github.com/mecoren/PiggyCount`(本仓库)。应用以 Flutter 构建,同时支持 Android 5.0+ 与 iOS 15.5+,并通过 PiggyCount Cloud 自带 PWA 提供 Web 端访问能力。
+PiggyCount(小猪记账)是一款**轻量、开源、隐私可控**的个人财务管理与支出追踪应用。项目由个人开发者维护,源代码托管于 GitHub:`https://github.com/mecoren/PiggyCount`(本仓库)。应用以 Flutter 构建,支持 Android 7.0+ 与 iOS 15.5+;本仓库不构建 Web 端,原 PiggyCount Cloud PWA 已随云端协同下线。
 
 依据:`README.md` L41-55、`pubspec.yaml` L1-7。
 
@@ -35,7 +41,7 @@ PiggyCount(小猪记账)是一款**轻量、开源、隐私可控**的个人财�
 |---|---|
 | 数据存第三方,无法审计 | 完全开源,代码可审计(`LICENSE` Business Source License) |
 | 隐私可能被分析利用 | 离线优先 + 自建云端,应用本身不收集任何数据 |
-| 服务商倒闭数据丢失 | 数据主权,5 种同步方案任选,数据完全由用户掌控 |
+| 服务商倒闭数据丢失 | 数据主权,4 种快照同步方案任选,数据完全由用户掌控 |
 | 高级功能付费墙 | 完全免费(包括 AI / OCR / 语音记账) |
 | 广告 / 理财推荐 | 零广告 / 零追踪 / 零数据收集 |
 
@@ -48,7 +54,7 @@ PiggyCount(小猪记账)是一款**轻量、开源、隐私可控**的个人财�
 ### 1.4 阅读本文档能获得什么
 
 - 了解 PiggyCount 的整体定位、核心能力、技术选型
-- 掌握 5 种同步方案的差异与适用场景
+- 掌握 4 种快照同步方案的差异与适用场景
 - 理解项目目录组织与分层架构
 - 明确本地优先、隐私优先的设计哲学
 - 快速定位后续深入阅读路径
@@ -75,8 +81,8 @@ flowchart LR
     C --> C2[OCR 拍照]
     C --> C3[语音记账]
     C --> C4[截图自动记账]
-    D --> D1[5 种同步方案]
-    D --> D3[实时协同]
+    D --> D1[4 种快照同步]
+    D --> D3[整账本快照 + 指纹比对]
     E --> E1[账户余额]
     E --> E2[净资产趋势]
     E --> E3[多币种]
@@ -89,25 +95,27 @@ flowchart LR
 
 依据:`README.md` L59-93、`lib/pages/` 目录结构。
 
-### 2.2 五种同步方案
+### 2.2 四种快照同步方案
 
-PiggyCount 提供五种云同步方案,所有方案数据完全由用户掌控:
+PiggyCount 提供四种整账本快照同步方案,所有方案数据完全由用户掌控:
 
 | 方案 | 适用场景 | 特点 | 实现位置 |
 |---|---|---|---|
-| **PiggyCount Cloud** | 多端实时协同 + 自托管 | Docker 一键、秒同步、自带 Web 端、多用户 | `packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart` |
 | **iCloud** | iOS 单平台用户 | 零配置、原生集成 | `packages/flutter_cloud_sync_icloud/` |
 | **Supabase** | 无 NAS 的跨平台用户 | 免费额度充足、配置简单 | `packages/flutter_cloud_sync_supabase/` |
 | **WebDAV** | NAS 用户 | 数据本地化、群晖/绿联云/Nextcloud | `packages/flutter_cloud_sync_webdav/` |
 | **S3 协议** | 灵活云存储 | Cloudflare R2 / AWS S3 / MinIO | `packages/flutter_cloud_sync_s3/` |
 
-依据:`README.md` L141-153、`pubspec.yaml` L64-73。
+> 原 **PiggyCount Cloud** 方案（实时协同 / 多用户 / Web 端）已整体下线，本文不再列为选项。
+> README 对外主推 WebDAV / S3 两种自建方案。
+
+依据:`README.md`、`pubspec.yaml`。
 
 ### 2.3 目标平台与分发渠道
 
-- **Android 5.0+**:Google Play + GitHub APK 直发
+- **Android 7.0+**:Google Play + GitHub APK 直发
 - **iOS 15.5+**:App Store + TestFlight
-- **Web**:PiggyCount Cloud 自带 PWA(需用户自部署 server)
+- **Web**:不支持（本仓库不构建 Web 端）
 - ~~HarmonyOS~~:已停止更新
 
 依据:`README.md` L53-55、`.github/workflows/release.yml`。
@@ -136,7 +144,7 @@ flowchart TD
     Service[Service 层<br/>lib/services - 业务逻辑]
     Repo[Repository 层<br/>lib/data/repositories - 三层抽象]
     DB[(本地 SQLite<br/>lib/data/db.dart - Drift)]
-    Sync[同步引擎<br/>lib/cloud/sync - SyncEngine]
+    Sync[快照同步<br/>lib/cloud - TransactionsSyncManager]
     CloudProvider[Cloud Provider<br/>packages/flutter_cloud_sync*]
 
     UI --> Provider
@@ -212,7 +220,7 @@ sequenceDiagram
     participant Native as 原生层
     participant Provider as Riverpod
     participant DB as 本地 SQLite
-    participant Sync as SyncEngine
+    participant Sync as TransactionsSyncManager
 
     User->>Main: 启动应用
     Main->>Native: 初始化日志/时区/通知/小组件
@@ -223,9 +231,9 @@ sequenceDiagram
     Main->>Provider: runApp(ProviderScope)
     Provider->>DB: SplashPage 触发 appSplashInitProvider
     DB-->>Provider: 数据库就绪 + 种子数据
-    Provider->>Sync: 触发首次云同步
-    Sync->>Sync: Phase1 用户级 + Phase2 账本并行
-    Provider->>User: 显示 BeeApp 主界面
+    Provider->>Sync: 启动检查 / 首次快照同步
+    Sync->>Sync: 下载快照 → SyncDiffService 出 diff
+    Provider->>User: 显示 PiggyApp 主界面
 ```
 
 启动流程分两阶段:第一阶段是 `main.dart` 中的原生初始化(日志、时区、通知、小组件、提醒恢复),保证应用基本可用;第二阶段是 `appSplashInitProvider` 触发的数据库初始化、种子数据写入、周期交易生成、首次云同步。两阶段分离的设计让首屏更快呈现,同步等耗时操作在后台异步执行。
@@ -252,12 +260,12 @@ flowchart TD
     J --> K[repository.addTransaction]
     K --> L[Drift insert 交易表]
     L --> M[ChangeTracker.recordLedgerChange]
-    M --> N[SyncCoordinator 监听变更]
-    N --> O[SyncEngine.push 异步推送]
-    O --> P[PiggyCountCloudProvider HTTP]
+    M --> N[本地快照指纹失效]
+    N --> O[TransactionsSyncManager 去抖上传]
+    O --> P[整账本 JSON 快照到云端]
 ```
 
-记账流程统一收敛到 `repository.addTransaction`,无论输入方式是手动表单、AI 对话、OCR、语音还是截图自动识别。写库后通过 ChangeTracker 记录变更,SyncCoordinator 反应式监听变更表并触发异步推送。这种"写本地 + 异步同步"的设计保证了记账操作的响应速度,即使无网络也能完成记账。
+记账流程统一收敛到 `repository.addTransaction`,无论输入方式是手动表单、AI 对话、OCR、语音还是截图自动识别。写库后通过 ChangeTracker 记录变更，本地内容变化使快照指纹失效，由 `TransactionsSyncManager` 在 2s 窗口内去抖上传整账本 JSON。这种「写本地 + 异步快照同步」的设计保证了记账操作的响应速度，即使无网络也能完成记账。
 
 依据:`lib/pages/transaction/transaction_editor_page.dart`、`lib/services/ai/ai_bookkeeper.dart`、`lib/cloud/sync/change_tracker.dart`。
 
@@ -268,19 +276,18 @@ flowchart TD
 ```mermaid
 flowchart LR
     A[本地写操作] --> B[ChangeTracker 记录]
-    B --> C[SyncCoordinator 触发]
-    C --> D[SyncEngine.push]
-    D --> E[PiggyCountCloudProvider HTTP]
-    E --> F[markPushed]
+    B --> C[本地快照指纹失效]
+    C --> D[TransactionsSyncManager 去抖上传]
+    D --> E[整账本 JSON 快照上传]
 
-    G[WS Realtime 事件] --> H[SyncEngine.pull]
-    H --> I[applyRemoteChange]
-    I --> J[Drift 本地 upsert]
-    J --> K[emit SyncEvent]
-    K --> L[Provider 刷新 UI]
+    F[启动检查 / 手动下载] --> G[下载云端快照]
+    G --> H[SyncDiffService 出 diff]
+    H --> I[用户确认后恢复 / 合并]
+    I --> J[ChangeTracker.withRecordingSuppressed]
+    J --> K[Provider 刷新 UI]
 ```
 
-同步流程分推(push)和拉(pull)两路。推:本地写 → ChangeTracker 记录 → SyncCoordinator 监听 → SyncEngine.push → HTTP 推送到 server → markPushed。拉:WS 事件触发 → SyncEngine.pull → applyRemoteChange 应用到本地 → emit SyncEvent → Provider 刷新 UI。两路独立运行,通过单飞锁防止并发冲突。
+同步是**整账本快照（Path A）**：上传走「本地写 → ChangeTracker 记录 → 指纹失效 → TransactionsSyncManager 去抖上传整账本 JSON」；下载走「启动检查 / 手动下载 → 下载快照 → SyncDiffService 出 diff → 用户确认后恢复 / 合并」。不再有增量 push/pull、WS 实时事件或 cursor。
 
 ---
 
@@ -313,19 +320,19 @@ flowchart LR
 - **最终取舍**:选择 BSL,个人与非商业完全免费,商业需授权。
 - **依据**:`LICENSE` L1-25。
 
-### 决策 3:五种同步方案并存
+### 决策 3:四种快照同步方案并存（2026-10-17 修订）
 
-- **决策内容**:同时支持 PiggyCount Cloud / iCloud / Supabase / WebDAV / S3 五种同步方案。
-- **原因**:不同用户有不同的基础设施偏好(iOS 用户偏好 iCloud、NAS 用户偏好 WebDAV、极客偏好 S3、自托管偏好的选 PiggyCount Cloud),让数据主权真正落到用户手中。
+- **决策内容**:同时支持 iCloud / Supabase / WebDAV / S3 四种整账本快照同步方案。
+- **原因**:不同用户有不同的基础设施偏好(iOS 用户偏好 iCloud、NAS 用户偏好 WebDAV、极客偏好 S3、无 NAS 的跨平台用户选 Supabase),让数据主权真正落到用户手中。
 - **备选方案**:
-  1. 只支持 PiggyCount Cloud(自建服务)
-  2. 只支持 Supabase(第三方 BaaS)
-  3. 五种并存(当前选择)
+  1. 只支持 Supabase(第三方 BaaS)
+  2. 只支持 WebDAV / S3(自建)
+  3. 四种并存(当前选择)
 - **优缺点**:
-  - 单一方案:开发维护成本低,但用户失去选择权,且 PiggyCount Cloud 需用户自部署。
-  - 五种并存:用户选择权最大,但开发维护成本高,五种 provider 能力不均(只有 PiggyCount Cloud 支持实时协同)。
-- **最终取舍**:五种并存,PiggyCount Cloud 作为主推方案提供最完整能力,其他四种作为轻量备份方案。
-- **依据**:`README.md` L141-153、`packages/flutter_cloud_sync*` 子包结构。
+  - 单一方案:开发维护成本低,但用户失去选择权。
+  - 四种并存:用户选择权最大,provider 同构（都是文件级快照），无实时协同差异。
+- **最终取舍**:四种并存；README 公开主推 WebDAV / S3。原 PiggyCount Cloud（实时协同 / 多用户 / Web 端）已整体下线。
+- **依据**:`README.md`、`packages/flutter_cloud_sync*` 子包结构。
 
 ### 决策 4:Riverpod 作为唯一状态管理与 DI 方案
 
@@ -341,8 +348,8 @@ flowchart LR
 
 ### 6.1 项目实际约束
 
-1. **Flutter 版本约束**:SDK `^3.6.0`,CI 锁定 Flutter `3.27.3`。`image_cropper_platform_interface` 钉死 `7.1.0`(因 7.2.0 要求 Flutter >= 3.27.6)。依据:`pubspec.yaml` L6、L94-98、`release.yml` L35。
-2. **目标平台**:仅 iOS / Android(Web 通过 PiggyCount Cloud PWA,不在本仓库构建)。`record_platform_interface` 钉死 `1.2.0` 修复 record_linux 兼容问题。
+1. **Flutter 版本约束**：SDK `^3.6.0`，Flutter 版本单一来源 `pubspec.yaml#environment.flutter`（当前 **3.47.6**），CI 用 `flutter-version-file` 读取。`dependency_overrides` 当前只钉 `jni_flutter: 1.0.3`（1.0.4 已被 pub 撤回）。
+2. **目标平台**：仅 iOS / Android，本仓库不构建 Web 端。
 3. **iOS 图标手工维护**:`flutter_launcher_icons` 配置 `ios: false`,因为 0.14.x 会重写 `Contents.json` 格式。依据:`pubspec.yaml` L102-110。
 4. **Google Play 版本裁剪**:CI 构建时会移除 `REQUEST_INSTALL_PACKAGES`、`READ_MEDIA_IMAGES` 等权限,截屏自动记账功能在 Google Play 版本被砍掉。依据:`release.yml` L166-185。
 
@@ -357,7 +364,7 @@ flowchart LR
 
 1. **隐私优先**:应用本身不收集任何用户数据,不上报崩溃、不内嵌广告 SDK、不做用户行为分析。AI 功能默认关闭,需用户主动配置 AI provider。依据:`PRIVACY.md` L7-13。
 2. **离线可用**:所有核心功能(记账、查询、统计)在无网络环境下完全可用,云同步仅作为增强能力。
-3. **数据主权**:云同步数据完全存储在用户自己的服务器(Supabase 项目 / WebDAV 服务器 / S3 桶 / PiggyCount Cloud 自部署实例),开发者无法访问。
+3. **数据主权**:云同步数据完全存储在用户自己的服务器(Supabase 项目 / WebDAV 服务器 / S3 桶 / iCloud),开发者无法访问。
 
 ---
 

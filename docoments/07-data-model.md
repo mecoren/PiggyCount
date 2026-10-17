@@ -1,7 +1,7 @@
 ---
 title: 数据模型设计
-version: v1.0
-last_updated: 2026-07-25
+version: v1.1
+last_updated: 2026-10-17
 author: wait
 audience: 一年经验的开发者
 ---
@@ -26,12 +26,12 @@ audience: 一年经验的开发者
 PiggyCount 的数据模型是整个应用的基石,涉及:
 
 - Drift 表(业务实体 + 关联表 + 同步表 + AI 表 + 缓存表;数量与清单以 `lib/data/db.dart` 为准)
-- 31 个 schemaVersion(从 v2 到 v31,30 段迁移块)
+- 58 个 schemaVersion(从 v2 到 v58,57 段迁移块;以 `lib/data/db.dart` 为准)
 - 复杂的表间关系(外键、唯一约束、索引)
 - 跨设备同步标识 syncId
 - 多币种支持(currencyCode + nativeAmount)
 
-新加入的贡献者面对 `lib/data/db.dart` 1300+ 行的 schema 定义,常常遇到以下困惑:
+新加入的贡献者面对 `lib/data/db.dart` 2000+ 行的 schema 定义,常常遇到以下困惑:
 
 - 不知道某张表的完整字段与索引
 - 不理解 syncId 与本地 id 的区别
@@ -96,6 +96,12 @@ flowchart TD
 
 上图展示了 PiggyCount 各表的分类。业务实体表是记账应用的核心;关联表实现多对多关系;同步表支撑云快照同步;AI 表存储对话历史;缓存表存汇率(可整表重建)。**共享账本镜像表(`SharedLedger*`)与 `LedgerMembers` 已随该功能整体下线,在 v50 / v51 迁移 DROP(2026-10-08),不再属于 schema** —— 表清单与数量一律以 `lib/data/db.dart` 为准。后续章节按类别详细说明每张表。
 
+> ⚠️ **2026-10-17 同步说明**：上面的「21 张表」是 2026-07-25 的快照。之后新增了
+> `holdings`(v52)、`savings_goals`(v53)、`custom_field_definitions`(v46/v57)、
+> `sync_op_log` / `stale_remote_slots`(v43)、`deleted_transactions`(v44)、
+> `holiday_entries` / `holiday_update_meta`(v49) 等表；表清单以
+> `lib/data/db.dart` 的 `@DriftDatabase` 为准。
+
 ### 2.2 syncId 与本地 id 的区别
 
 PiggyCount 的每张业务表都有两种 id:
@@ -109,11 +115,11 @@ PiggyCount 的每张业务表都有两种 id:
 
 ### 2.3 schemaVersion 与迁移
 
-- **当前 schemaVersion**:`31`(`lib/data/db.dart` L445)
-- **迁移策略**:`MigrationStrategy`(`db.dart` L448-1167)采用 `if (from < N)` 顺序升级模式
-- **onUpgrade**:从 v2 到 v31 共 30 段迁移块,逐版本执行
-- **onCreate**:`m.createAll()` + 创建 `idx_rate_override_pair` 唯一索引
-- **幂等性保障**:`_addColumnIfMissing(table, column, ddl)`(PRAGMA 检查列是否存在)、`_createTableIfMissing(m, tableName, table)`(检查 `sqlite_master`)
+- **当前 schemaVersion**:**58**（`lib/data/db.dart` 的 `schemaVersion` getter；行号会随代码变动，引用前先 grep）
+- **迁移策略**：`MigrationStrategy.onUpgrade` 采用 `if (from < N)` 顺序升级模式
+- **onUpgrade**：从 v2 到 v58，逐版本执行；v52 投资持仓、v53 储蓄目标、v56 退款关联 + 报销状态、v57 自定义字段必填、v58 查询索引补齐
+- **onCreate**：`m.createAll()` + 各版本手工索引（含 v58 的 6 个查询索引，见 `createV58QueryIndexesSql` / `v58IndexSpecs`）
+- **幂等性保障**：`_addColumnIfMissing(table, column, ddl)`(PRAGMA 检查列是否存在)、`_createTableIfMissing(m, tableName, table)`(检查 `sqlite_master`)、`_tableHasColumns(table, columns)`(v58 防御式建索引)
 
 ---
 
@@ -466,16 +472,16 @@ flowchart TD
     J -->|否| L{from < 3}
     K --> L
     L -->|是| M[v3: recurring_transactions 表]
-    L -->|否| N[...继续检查到 v31]
+    L -->|否| N[...继续检查到 v58]
     M --> N
     N --> O[所有迁移块执行完毕]
     O --> P[数据库就绪]
     H --> P
 ```
 
-上图展示了数据库迁移流程。首次安装时走 `onCreate`,创建所有表 + 唯一索引 + 种子数据。已安装用户升级时走 `onUpgrade`,按 `if (from < N)` 顺序执行 v2 到 v31 的迁移块。每个迁移块用 `_addColumnIfMissing` / `_createTableIfMissing` 保证幂等性,避免 partial state 重跑时报 duplicate column / table already exists。
+上图展示了数据库迁移流程。首次安装时走 `onCreate`,创建所有表 + 各版本手工索引 + 种子数据。已安装用户升级时走 `onUpgrade`,按 `if (from < N)` 顺序执行 v2 到 v58 的迁移块。每个迁移块用 `_addColumnIfMissing` / `_createTableIfMissing` / `_tableHasColumns` 保证幂等性,避免 partial state 重跑时报 duplicate column / table already exists。
 
-依据:`lib/data/db.dart` L448-1167 `MigrationStrategy`。
+依据:`lib/data/db.dart` 的 `MigrationStrategy`（行号随代码变动，引用前先 grep）。
 
 ### 4.2 种子数据写入流程
 
@@ -542,7 +548,7 @@ flowchart TD
 
 ### 决策 2:迁移用 if (from < N) 顺序升级
 
-- **决策内容**:`MigrationStrategy.onUpgrade` 采用 `if (from < N)` 顺序升级模式,从 v2 到 v31 共 30 段迁移块。
+- **决策内容**:`MigrationStrategy.onUpgrade` 采用 `if (from < N)` 顺序升级模式,从 v2 到 v58 共 57 段迁移块。
 - **原因**:
   - **顺序升级**:支持跨版本升级(如 v5 → v31 会依次执行 v6/v7/.../v31 所有迁移块)
   - **代码可读**:每段迁移块独立,便于维护
@@ -634,7 +640,7 @@ flowchart TD
 - `test/data/migration_v30_test.dart` 验证 v30 多币种回填 SQL 语义
 - `test/data/exchange_rate_schema_test.dart` 验证汇率表 schema
 - `test/data/sync_pull_errors_schema_test.dart` 验证拉取错误表 schema
-- 其他 29 段迁移块**无独立回归测试**,见 [10 测试策略](./10-testing-strategy.md) 与 [16 已知问题](./16-known-issues.md)
+- 其余迁移块中，v55 / v56 / v57 / v58 等已有独立回归测试；更早的迁移块仍以间接覆盖为主，见 [10 测试策略](./10-testing-strategy.md) 与 [16 已知问题](./16-known-issues.md)
 
 ---
 

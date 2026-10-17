@@ -122,7 +122,7 @@ flowchart TB
 **实现位置**：[pubspec.yaml](../pubspec.yaml)
 
 - **应用名**：`piggycount`（第 1 行）
-- **初始版本**：`version: 0.1.0`（第 4 行，代表开发主线版本；发版时由 tag 经 `--build-name` 注入，**不写回本字段**）
+- **当前版本**：`version: 0.1.9`（第 4 行，代表开发主线版本；发版时由 tag 经 `--build-name` 注入，**不写回本字段**；以 `pubspec.yaml#version` 为准）
 - **Dart SDK**：`^3.6.0`（第 7 行）
 - **关键依赖**：drift、supabase_flutter、flutter_riverpod、flutter_local_notifications、home_widget、webview_flutter、local_auth、record 等
 - **本地路径包**：`flutter_ai_kit`、`flutter_cloud_sync` 及其各后端实现

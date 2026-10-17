@@ -1,10 +1,14 @@
 ---
 title: 术语表与词汇表
-version: v1.0
-last_updated: 2026-07-25
+version: v1.1
+last_updated: 2026-10-17
 author: wait
 audience: 一年经验的开发者
 ---
+
+> ⚠️ **2026-10-17 同步说明**：PiggyCount Cloud / SyncEngine / 增量同步已下线；当前是整账本
+> 快照同步（Path A，Supabase / WebDAV / S3 / iCloud）。本文中 SyncEngine / Cloud 相关术语
+> 为历史记录；schemaVersion 当前 **58**。
 
 ## 目录
 
@@ -158,9 +162,9 @@ flowchart TD
 |---|---|---|---|---|---|
 | 本地数据库 | Local Database | — | **Local Database** | 设备本地的 SQLite 数据库,通过 Drift 访问 | `lib/data/db.dart` `BeeDatabase` 类 |
 | 数据访问层 | Repository | — | **Repository** | 数据访问的抽象接口层,有三层实现 | `lib/data/repositories/` |
-| Drift | Drift | — | **Drift** | Dart 的 SQLite ORM 框架,`drift: ^2.20.2` | `pubspec.yaml` L16 |
-| 模式版本 | schemaVersion | — | **schemaVersion** | 数据库 schema 的版本号,当前 31 | `db.dart` L445 |
-| 迁移 | Migration | — | **Migration** | schemaVersion 升级时的数据迁移逻辑 | `db.dart` L448 `MigrationStrategy` |
+| Drift | Drift | — | **Drift** | Dart 的 SQLite ORM 框架,`drift: ^2.35.1` | `pubspec.yaml` |
+| 模式版本 | schemaVersion | — | **schemaVersion** | 数据库 schema 的版本号,当前 **58** | `lib/data/db.dart` 的 `schemaVersion` getter |
+| 迁移 | Migration | — | **Migration** | schemaVersion 升级时的数据迁移逻辑 | `lib/data/db.dart` 的 `MigrationStrategy` |
 | 种子数据 | Seed Data | — | **Seed Data** | 首次安装时写入的默认分类/账户 | `lib/services/data/seed_service.dart` |
 | 主键 | Primary Key | PK | **主键** | 表的唯一标识,Drift `autoIncrement()` 或自定义 | `db.dart` 各表 |
 | 外键 | Foreign Key | FK | **外键** | 表间关联字段,如 `ledgerId` 关联 `Ledgers.id` | `db.dart` L42、L111 等 |

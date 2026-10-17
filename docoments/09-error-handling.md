@@ -1,10 +1,15 @@
 ---
 title: 错误处理与容错策略
-version: v1.0
-last_updated: 2026-07-25
+version: v1.1
+last_updated: 2026-10-17
 author: wait
 audience: 一年经验的开发者
 ---
+
+> ⚠️ **2026-10-17 同步说明**：PiggyCount Cloud / SyncEngine / 增量 pull / cursor 已整体下线；
+> 当前是整账本快照同步（Path A）。正文中 `SyncEngine.pull`、`appCursor`、`sync_engine_pull.dart`
+> 等描述属历史记录；快照下载/恢复的错误路径见 `lib/cloud/transactions_sync_manager.dart`
+> 与 `lib/cloud/sync_restore_guard.dart`。
 
 ## 目录
 

@@ -6,14 +6,17 @@ author: wait
 audience: 一年经验的开发者
 ---
 
-> ⚠️ **快照说明（2026-10-12 增补）**：本文是 **2026-07-25** 的审计快照（当时 57 个测试
-> 文件 / 451 个用例），文中的数字与「缺口」条目早已不等于现状，请以 `test/`、
-> `pubspec.yaml` 的实际现状为准。已知与现状不符的两处：
-> - 文中多处写「`integration_test/` 目录不存在（依赖已声明但未使用）」—— 该目录**已于
->   2026-10-12 建立**，首个端到端用例 `integration_test/recent_entry_inherit_test.dart`
->   （记账 5 分钟内继承上一笔的分类与账户，11 例，含真机引擎的迁移路径与真实点按
->   保存链路）；运行方式 `flutter test integration_test -d <device> --flavor dev`。
->   `pubspec.yaml` 的 `integration_test` 依赖也从「声明未用」变成真在用。
+> ⚠️ **快照说明（2026-10-17 更新）**：本文正文是 **2026-07-25** 的审计快照（当时 57 个测试
+> 文件 / 451 个用例），文中的数字与「缺口」条目早已不等于现状。**当前全量测试 2589 通过 /
+> 1 跳过**（`flutter test`，2026-10-17 实测），请以 `test/`、`pubspec.yaml` 的实际现状为准。
+> 已知与现状不符的地方：
+> - 文中多处写「`integration_test/` 目录不存在（依赖已声明但未使用）」—— 该目录**已建立**，
+>   现有 `recent_entry_inherit_test.dart`，以及 2026-10-17 新增的设备端
+>   `search_sql_device_test.dart` / `recycle_bin_device_test.dart`；运行方式
+>   `flutter test integration_test -d <device>`。
+> - 「无覆盖率工具 / CI 不跑测试」已过期：`analyze.yml` 跑
+>   `flutter analyze --fatal-infos` + `flutter test --coverage`，覆盖率摘要写 Job Summary 并上传
+>   artifact；另有 ARB 一致性门禁。
 > - 测试文件数与用例数与现状差距很大（见 `test/` 目录实际数量）。
 >
 > 读本文请以「分层思路 / 技术选型 / 方法论」为主。
@@ -37,12 +40,12 @@ audience: 一年经验的开发者
 
 PiggyCount 是一款涉及本地数据库、云同步、AI 调用、附件处理等多个复杂模块的记账应用,测试是保障质量的关键。但项目的测试现状存在以下问题:
 
-- 测试文件 57 个、用例 451 个,但分布不均
-- 无 `integration_test/` 目录(已声明依赖但未使用)
-- 无覆盖率工具配置
-- Widget 测试仅 3 个,核心页面无覆盖
-- db.dart 30 段迁移块只有 v30 有回归测试
-- CI 不跑测试(`.github/workflows/` 无 test.yml)
+- 测试文件 / 用例数持续增长（2026-10-17 全量 2589 通过 / 1 跳过），但分布仍不均
+- `integration_test/` 已建立（`recent_entry_inherit_test.dart` 等），设备端用例仍在补充
+- 覆盖率已接入 CI（report-only，未设阈值）
+- Widget 测试仍偏少，核心页面覆盖待补
+- db.dart 迁移块已到 v58，v55~v58 有独立回归测试，更早的仍以间接覆盖为主
+- CI 已跑测试（`analyze.yml`：analyze + test + coverage + ARB 门禁）
 
 本文档系统梳理 PiggyCount 的测试现状、测试分层、测试技术、信息缺口与建议方案,让一年经验开发者能快速理解和参与测试开发。
 
@@ -54,9 +57,9 @@ PiggyCount 是一款涉及本地数据库、云同步、AI 调用、附件处理
 
 ### 1.3 信息来源
 
-- `test/` 目录 57 个测试文件
+- `test/` 目录（文件数按实际）
 - `pubspec.yaml` 测试依赖
-- `lib/data/db.dart` `BeeDatabase.forTesting` 构造函数
+- `lib/data/db.dart` `PiggyDatabase.forTesting` 构造函数
 - `test/cloud/sync/_fakes/fake_piggycount_cloud_provider.dart` Fake 类
 - `.github/workflows/` CI 配置
 
@@ -96,21 +99,21 @@ flowchart TD
     E2 --> E2X[未实现]
 ```
 
-上图展示了 PiggyCount 的测试分层。单元测试是主体(57 个文件中绝大多数),Widget 测试很少(3 个),集成测试只有 SyncEngine e2e 和迁移测试,端到端测试**完全缺失**(`integration_test/` 目录不存在)。后续章节按层级详细说明。
+上图展示了 PiggyCount 的测试分层。单元测试是主体，Widget 测试仍偏少，集成测试已建立（`integration_test/`：记账继承、搜索 SQL、回收站闭环等），端到端/跨设备流程仍在补充。后续章节按层级详细说明。
 
 ### 2.2 测试统计
 
 | 维度 | 数值 | 备注 |
 |---|---|---|
-| 测试文件总数 | **57 个** `*_test.dart` | — |
-| 测试用例总数 | **451 个** `test()` / `testWidgets()` / `group()` | — |
-| 集成测试目录 | **不存在** | `pubspec.yaml` 已声明 `integration_test` 依赖但未使用 |
-| Widget 测试文件 | **3 个** | `transfer_form_account_hidden_test`、`amount_editor_currency_test`、`header_skins_test` |
-| 测试 fake/辅助文件 | **1 个** | `fake_piggycount_cloud_provider.dart` |
-| 覆盖率工具配置 | **无** | 无 `.coveragerc` / `lcov.info` / `coverage/` |
-| CI 是否跑测试 | **否** | `.github/workflows/` 只有 `issue-lint.yml`、`pullfrog.yml`、`release.yml` |
+| 测试文件总数 | 以 `test/` 实际为准 | 2026-07-25 快照为 57 个 |
+| 测试用例总数 | **2589 通过 / 1 跳过**（2026-10-17） | `flutter test` 全量 |
+| 集成测试目录 | **已建立** | `integration_test/`（recent_entry_inherit、search_sql_device、recycle_bin_device 等） |
+| Widget 测试文件 | 持续增加 | 原 3 个为 2026-07-25 快照 |
+| 测试 fake/辅助文件 | 以 `test/` 为准 | 如 `test/support/fake_notification_util.dart`；Cloud fake 已随 Cloud 下线删除 |
+| 覆盖率工具配置 | **已接入** | `flutter test --coverage` + `scripts/coverage_summary.py` + artifact |
+| CI 是否跑测试 | **是** | `analyze.yml`：analyze + test + coverage + ARB 门禁 |
 
-依据:`test/` 目录、`pubspec.yaml` L83-92、`.github/workflows/`。
+依据:`test/` 目录、`pubspec.yaml`、`.github/workflows/analyze.yml`。
 
 ### 2.3 测试技术栈
 
@@ -118,13 +121,18 @@ flowchart TD
 |---|---|---|---|
 | `flutter_test` | SDK | 单元测试 / Widget 测试 | Flutter 官方 |
 | `mocktail` | `^1.0.4` | Mock 库 | 替代 mockito,无需 codegen |
-| `integration_test` | SDK | 集成测试 | 已声明但未使用 |
-| 内存数据库 | — | `BeeDatabase.forTesting(NativeDatabase.memory())` | 跳过文件系统副作用 |
-| Fake 类 | — | `FakePiggyCountCloudProvider` | extends 真类,覆盖 ~20 个方法 |
+| `integration_test` | SDK | 集成测试 | 已在使用（`integration_test/`） |
+| 内存数据库 | — | `PiggyDatabase.forTesting(NativeDatabase.memory())` | 跳过文件系统副作用 |
+| Fake 类 | — | 按 `test/` 现状 | 如 `test/support/fake_notification_util.dart`，不用 mockito codegen |
 
 ---
 
 ## 3. 详细设计
+
+> ⚠️ **2026-10-17 提示**：本节起的代码示例保留 2026-07-25 原样，其中
+> `BeeDatabase` 现名 `PiggyDatabase`；`SyncEngine` / `FakePiggyCountCloudProvider`
+> 已随 PiggyCount Cloud 下线。当前同步测试请参考 `test/cloud/` 与
+> `integration_test/` 的现状，不要照抄旧类名。
 
 ### 3.1 测试目录分布
 
@@ -492,12 +500,12 @@ flutter test --coverage
 
 | 约束 | 说明 |
 |---|---|
-| 测试用内存数据库 | `BeeDatabase.forTesting(NativeDatabase.memory())` |
+| 测试用内存数据库 | `PiggyDatabase.forTesting(NativeDatabase.memory())` |
 | Mock 用 mocktail | 不用 mockito |
-| 测试目录镜像 lib | `test/cloud/sync/` 对应 `lib/cloud/sync/` |
-| SyncEngine 测试用 Fake | `FakePiggyCountCloudProvider` |
-| 集成测试缺失 | `integration_test/` 不存在 |
-| CI 不跑测试 | 需手动 `flutter test` |
+| 测试目录镜像 lib | `test/` 结构参考 `lib/` |
+| 同步测试 | 以 `test/cloud/` + `integration_test/` 现状为准 |
+| 集成测试 | 已建立 `integration_test/`，持续补充 |
+| CI | `analyze.yml` 自动跑 analyze + test + coverage + ARB 门禁 |
 
 ### 6.2 测试编写规则
 
@@ -513,15 +521,15 @@ flutter test --coverage
 
 | 模块 | 覆盖情况 | 备注 |
 |---|---|---|
-| SyncEngine | 高 | 44 个 e2e 用例 |
-| BillCreationService | 高 | 37 个用例 |
-| AI 抽取引擎 | 中 | 7 个文件 |
+| 快照同步 | 高 | 以 `test/cloud/` 现状为准 |
+| BillCreationService | 高 | 37 个用例（2026-07-25 快照） |
+| AI 抽取引擎 | 中 | 以 `test/ai/` 现状为准 |
 | Repository 实现层 | 不均 | 部分有独立测试,部分通过 wrapper 间接覆盖 |
-| Widget | 低 | 仅 3 个文件 |
-| 迁移块 | 极低 | 仅 v30 有测试 |
-| Provider | 低 | 仅 4 个文件 |
-| 集成测试 | 无 | `integration_test/` 不存在 |
-| 端到端 | 无 | 无跨设备同步测试 |
+| Widget | 低 | 仍偏少 |
+| 迁移块 | 中 | v55~v58 有独立回归,更早的以间接覆盖为主 |
+| Provider | 低 | 仍偏少 |
+| 集成测试 | 中 | `integration_test/` 已建立,覆盖待扩 |
+| 端到端 | 低 | 跨设备同步流程仍待补 |
 
 ---
 
@@ -529,11 +537,11 @@ flutter test --coverage
 
 | 编号 | 缺口描述 | 影响章节 | 建议补充方式 |
 |---|---|---|---|
-| 1 | 无覆盖率工具配置 | §3.7 | 添加 `test_coverage` 或使用 `flutter test --coverage` |
-| 2 | CI 不跑测试 | §3.7.2 | 增加 `.github/workflows/test.yml` |
-| 3 | `integration_test/` 不存在 | §3.5 | 创建目录,添加端到端测试 |
-| 4 | Widget 测试仅 3 个 | §3.4 | 为核心页面添加 Widget 测试 |
-| 5 | 迁移块无回归测试(除 v30) | §3.5.2 | 为各迁移块添加幂等性回归测试 |
+| 1 | 覆盖率已接入 CI（E1，report-only） | §3.7 | 基线稳定后用 `--fail-under` 设阈值 |
+| 2 | CI 已跑测试 | §3.7.2 | `analyze.yml`（analyze + test + coverage + ARB 门禁） |
+| 3 | `integration_test/` 已建立 | §3.5 | 继续补设备端用例 |
+| 4 | Widget 测试仍偏少 | §3.4 | 为核心页面添加 Widget 测试 |
+| 5 | 迁移块回归测试仍不全 | §3.5.2 | v55~v58 已有，更早的逐块补 |
 | 6 | Repository 实现层测试不均 | §3.3 | 为 LocalLedgerRepository / LocalAccountRepository 等添加独立单测 |
 | 7 | Provider 测试薄弱 | §3.3 | 为 syncServiceProvider / repositoryProvider 等添加单测 |
 | 8 | 具体测试用例内容未抽样 | — | 阅读测试文件,评估测试质量 |

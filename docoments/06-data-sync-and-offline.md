@@ -1,10 +1,19 @@
 ---
 title: 数据同步与多设备离线机制
-version: v1.0
-last_updated: 2026-07-25
+version: v1.1
+last_updated: 2026-10-17
 author: wait
 audience: 一年经验的开发者
 ---
+
+> ⚠️ **2026-10-17 重要提示：本文所述同步体系已整体下线**。
+> PiggyCount Cloud / SyncEngine / 增量 push/pull / WebSocket Realtime / 共享账本均已移除；
+> 当前只有**整账本快照同步（Path A）**：`TransactionsSyncManager` 上传/下载整账本 JSON，
+> `SyncDiffService` 出 diff，`sync_fingerprint.dart` 出内容指纹；后端为
+> Supabase / WebDAV / S3 / iCloud 四种。正文中的 `sync_engine*.dart`、`SyncCoordinator`、
+> `SyncConflictResolver`、cursor、WS 事件等均为**历史记录**，不要按它找文件。
+> 现状请以 `lib/cloud/transactions_sync_manager.dart`、`lib/cloud/sync_diff_service.dart`、
+> `lib/cloud/sync_fingerprint.dart` 与 `AGENTS.md` 为准。
 
 ## 目录
 
@@ -25,15 +34,14 @@ audience: 一年经验的开发者
 
 数据同步是 PiggyCount 最复杂、最核心的模块,代码量占 `lib/cloud/` 整个目录,涉及:
 
-- 5 种同步后端(PiggyCount Cloud / iCloud / Supabase / WebDAV / S3)
-- 自研 `flutter_cloud_sync` 框架(4 层架构)
-- 增量同步(push / pull)+ 全量同步(fullPush / fullPull)
-- LWW 冲突解决 + 字段级合并
-- WebSocket Realtime 实时同步
-- 离线优先 + 变更追踪
-- 附件同步 + 自定义图标同步
+- 4 种快照同步后端（Supabase / WebDAV / S3 / iCloud）
+- 自研 `flutter_cloud_sync` 框架 + `TransactionsSyncManager`
+- 整账本快照上传/下载 + 内容指纹比对 + diff 预览
+- 合并时的实体删除语义 / 冲突确认（非 LWW 增量）
+- 离线优先 + ChangeTracker 标记脏
+- 附件同步
 
-新加入的贡献者面对 `sync_engine.dart` 1480 行主类 + 8 个 part 文件,常常无从下手。本文档系统梳理同步模块的架构、流程、设计决策,让一年经验开发者能快速理解和参与同步模块开发。
+新加入的贡献者面对 `transactions_sync_manager.dart` + diff / 指纹 / 恢复守卫多个文件，常常无从下手。本文档系统梳理同步模块的架构、流程、设计决策，让一年经验开发者能快速理解和参与同步模块开发（正文若与源码冲突，以源码为准）。
 
 ### 1.2 与其他文档的边界
 
@@ -110,7 +118,10 @@ flowchart TD
 
 依据:`lib/cloud/sync/sync_engine.dart` L72、`packages/flutter_cloud_sync/lib/src/core/cloud_provider.dart`。
 
-### 2.2 五种同步后端对比
+### 2.2 四种快照后端对比（历史表：原为五种）
+
+> 下表保留 2026-07-25 的五种对比作为历史记录；PiggyCount Cloud 已下线，当前只有
+> iCloud / Supabase / WebDAV / S3 四种，且都是文件级快照。
 
 | 维度 | PiggyCount Cloud | iCloud | Supabase | WebDAV | S3 |
 |---|---|---|---|---|---|
@@ -683,7 +694,7 @@ flowchart LR
 
 ### 决策 6:五种 provider 但能力分层
 
-- **决策内容**:支持 5 种同步后端,但只有 PiggyCount Cloud 提供完整能力(增量同步 + Realtime + 2FA),其他 4 种只提供文件级 snapshot 备份。
+- **决策内容（历史，已作废）**:原方案支持 5 种同步后端,但只有 PiggyCount Cloud 提供完整能力(增量同步 + Realtime + 2FA),其他 4 种只提供文件级 snapshot 备份。PiggyCount Cloud 下线后,四种后端同构为快照。
 - **原因**:
   - **实现成本**:5 种都实现完整能力成本过高
   - **后端限制**:iCloud / WebDAV / S3 不支持 WebSocket,无法 Realtime
