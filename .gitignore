@@ -51,6 +51,9 @@ PROJECT_IMPROVEMENTS.md
 build/
 **/build/
 
+# flutter test --coverage 产物：CI 只上传 artifact，不入库
+coverage/
+
 # Symbolication related
 app.*.symbols
 

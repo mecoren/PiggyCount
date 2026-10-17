@@ -808,32 +808,72 @@ const String createTransactionsRefundOfIndexSql =
 const String addCustomFieldIsRequiredSql =
     'ALTER TABLE custom_field_definitions ADD COLUMN is_required INTEGER NOT NULL DEFAULT 0;';
 
-/// v58 迁移（查询索引补齐，2026-10-17）的 DDL。
+/// v58 迁移（查询索引补齐，2026-10-17）的索引规格。
 ///
-/// 全部是 `CREATE INDEX IF NOT EXISTS`：幂等、可重入，不动任何业务数据。
+/// 每条都是 `CREATE INDEX IF NOT EXISTS`：幂等、可重入，不动任何业务数据。
 /// **onCreate 也必须建同一批**（新装库只走 onCreate，v48 教训）。
-const List<String> createV58QueryIndexesSql = [
+///
+/// **为什么带 table/columns**：迁移测试里的合成旧库是手搓的 minimal schema，
+/// 可能没有 `account_id` 等历史列 —— 直接跑 DDL 会 `no such column`，整次迁移
+/// 抛错、老库打不开。onUpgrade 先 `PRAGMA table_info` 校验，缺列跳过该条并记
+/// warning；真实老库这些列都存在，索引照建。
+const List<({String name, String ddl, String table, List<String> columns})>
+    v58IndexSpecs = [
   // 统计 / 预算 / 报表的共同谓词：
   // `ledger_id = ? AND type = ? AND happened_at >= ? AND < ?`
   // 现有 (ledger_id, happened_at) 只能按日期剪枝，type 退化为残余过滤。
-  'CREATE INDEX IF NOT EXISTS idx_transactions_ledger_type_happened '
-      'ON transactions(ledger_id, type, happened_at);',
+  (
+    name: 'idx_transactions_ledger_type_happened',
+    ddl: 'CREATE INDEX IF NOT EXISTS idx_transactions_ledger_type_happened '
+        'ON transactions(ledger_id, type, happened_at);',
+    table: 'transactions',
+    columns: ['ledger_id', 'type', 'happened_at'],
+  ),
   // 账户余额 / 收支：`WHERE (account_id = ?1 OR to_account_id = ?1)`
   // 此前无任何索引 → 每个账户一次全表扫描（多账户首页/资产页叠加）。
-  'CREATE INDEX IF NOT EXISTS idx_transactions_account '
-      'ON transactions(account_id);',
-  'CREATE INDEX IF NOT EXISTS idx_transactions_to_account '
-      'ON transactions(to_account_id);',
+  (
+    name: 'idx_transactions_account',
+    ddl: 'CREATE INDEX IF NOT EXISTS idx_transactions_account '
+        'ON transactions(account_id);',
+    table: 'transactions',
+    columns: ['account_id'],
+  ),
+  (
+    name: 'idx_transactions_to_account',
+    ddl: 'CREATE INDEX IF NOT EXISTS idx_transactions_to_account '
+        'ON transactions(to_account_id);',
+    table: 'transactions',
+    columns: ['to_account_id'],
+  ),
   // 分类聚合 / 分类预算 / 分类删除引用检查：`ledger_id = ? AND category_id = ?`。
-  'CREATE INDEX IF NOT EXISTS idx_transactions_ledger_category '
-      'ON transactions(ledger_id, category_id);',
+  (
+    name: 'idx_transactions_ledger_category',
+    ddl: 'CREATE INDEX IF NOT EXISTS idx_transactions_ledger_category '
+        'ON transactions(ledger_id, category_id);',
+    table: 'transactions',
+    columns: ['ledger_id', 'category_id'],
+  ),
   // 预算列表 / 按分类取预算：ledger + type + enabled(+ category_id)。
-  'CREATE INDEX IF NOT EXISTS idx_budgets_ledger_type_enabled_category '
-      'ON budgets(ledger_id, type, enabled, category_id);',
+  (
+    name: 'idx_budgets_ledger_type_enabled_category',
+    ddl: 'CREATE INDEX IF NOT EXISTS idx_budgets_ledger_type_enabled_category '
+        'ON budgets(ledger_id, type, enabled, category_id);',
+    table: 'budgets',
+    columns: ['ledger_id', 'type', 'enabled', 'category_id'],
+  ),
   // 回收站：`WHERE ledger_id = ? ORDER BY deleted_at DESC`。
-  'CREATE INDEX IF NOT EXISTS idx_deleted_transactions_ledger_deleted '
-      'ON deleted_transactions(ledger_id, deleted_at);',
+  (
+    name: 'idx_deleted_transactions_ledger_deleted',
+    ddl: 'CREATE INDEX IF NOT EXISTS idx_deleted_transactions_ledger_deleted '
+        'ON deleted_transactions(ledger_id, deleted_at);',
+    table: 'deleted_transactions',
+    columns: ['ledger_id', 'deleted_at'],
+  ),
 ];
+
+/// v58 的 DDL 清单（onCreate 直接跑；onUpgrade 走 [v58IndexSpecs] 的列校验）。
+List<String> get createV58QueryIndexesSql =>
+    [for (final spec in v58IndexSpecs) spec.ddl];
 
 @DriftDatabase(tables: [
   Ledgers,
@@ -2053,8 +2093,15 @@ class PiggyDatabase extends _$PiggyDatabase {
             // 业务数据，也不需要回填。清单见 [createV58QueryIndexesSql]，
             // onCreate 走同一份常量（v48 教训：两边索引集合必须逐一对齐）。
             logger.info('DBMigration', '开始迁移到 v58: 查询索引补齐');
-            for (final ddl in createV58QueryIndexesSql) {
-              await customStatement(ddl);
+            for (final spec in v58IndexSpecs) {
+              // 合成/直升形态库可能缺历史列（如 account_id）；缺列只跳过该条，
+              // 不让整次迁移失败。真实老库列都在，索引照建。
+              if (await _tableHasColumns(spec.table, spec.columns)) {
+                await customStatement(spec.ddl);
+              } else {
+                logger.warning('DBMigration',
+                    'v58 跳过 ${spec.name}：${spec.table} 缺少 ${spec.columns.join('/')}');
+              }
             }
             logger.info('DBMigration', 'v58 迁移完成');
           }
@@ -2253,6 +2300,26 @@ class PiggyDatabase extends _$PiggyDatabase {
       return;
     }
     await customStatement(ddl);
+  }
+
+  /// 目标表是否已具备 [columns] 的全部列（v58 防御式建索引）。
+  ///
+  /// 表不存在或列缺失都返回 false：合成旧库（迁移测试手搓的 minimal schema）
+  /// 里 `transactions` 可能只有 6 列，直接建 `account_id` 索引会抛
+  /// `no such column` 并让整次迁移失败。
+  Future<bool> _tableHasColumns(String table, List<String> columns) async {
+    final tableExists = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+      variables: [Variable<String>(table)],
+    ).get();
+    if (tableExists.isEmpty) return false;
+    final info = await customSelect('PRAGMA table_info($table)').get();
+    if (info.isEmpty) return false;
+    final existing = info
+        .map((row) => row.read<String>('name'))
+        .whereType<String>()
+        .toSet();
+    return columns.every(existing.contains);
   }
 
   /// 审计 T1：需要 updated_at 触碰触发器的表（v40）。

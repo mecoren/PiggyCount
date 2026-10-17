@@ -19,49 +19,10 @@ library;
 import 'dart:io';
 import 'dart:convert';
 
-/// 刻意留空的翻译键（**不是**漏翻译）。
-///
-/// 全是「单位后缀」：中文需要（「9月」「3 笔」「1,234 元」），英/韩语境的表达
-/// 里不需要 —— 拼接后空串正是想要的效果（`3.2 per day` 这类成对单位另有
-/// `userProfilePosterDailyUnit` 承担）。
-///
-/// 登记在此，检查工具就不会把它们当漏翻译反复告警；真有漏翻时才不会被这几条
-/// 固定噪音淹没。**新增刻意空值必须在此登记**，否则工具会（正确地）继续告警。
-const intentionalEmptyKeys = <String>{
-  'widgetMonthSuffix',
-  'sharePosterUnitCount',
-  'userProfilePosterCountUnit',
-  'userProfilePosterLedgerUnit',
-};
+import 'arb_rules.dart';
 
-/// 语言显示名。未登记的语言回落到语言码本身 —— 新增语言包时本工具仍能正常
-/// 报告（只是名字显示为码），不会因漏配名字而打印 `null`。
-const _languageDisplayNames = <String, String>{
-  'zh': '简体中文',
-  'en': 'English',
-  'zh_TW': '繁體中文',
-  'ko': '한국어',
-};
-
-String _displayName(String lang) => _languageDisplayNames[lang] ?? lang;
-
-/// 从 `lib/l10n` 动态发现语言包（`app_<lang>.arb`）。
-///
-/// 此前语言列表在几处写死为 `['zh','en','zh_TW']`，加语言必然漏配 —— `ko`
-/// 就长期没被本工具检查过。改为文件名驱动后，新增 `app_xx.arb` 即刻纳入；
-/// `zh` 固定排首位作为基准，其余按字母序（输出稳定，便于逐次比对）。
-List<String> discoverLanguages(Directory l10nDir) {
-  final langs = <String>[];
-  if (l10nDir.existsSync()) {
-    for (final entity in l10nDir.listSync()) {
-      final m = RegExp(r'^app_(.+)\.arb$').firstMatch(entity.uri.pathSegments.last);
-      if (m != null) langs.add(m.group(1)!);
-    }
-  }
-  langs.sort();
-  if (langs.remove('zh')) langs.insert(0, 'zh');
-  return langs;
-}
+// 刻意留空清单、语言显示名与语言包发现统一在 `arb_rules.dart`，
+// 与 `check_arb_consistency.dart` 共用同一份规则，避免两套清单漂移。
 
 void main() async {
   print('');
@@ -212,10 +173,10 @@ Future<void> checkTranslationCompleteness() async {
     final missing = zhKeys.difference(langKeys);
 
     if (missing.isEmpty) {
-      print('✅ $lang (${_displayName(lang)}): 完全匹配中文版本');
+      print('✅ $lang (${languageDisplayName(lang)}): 完全匹配中文版本');
     } else {
       hasIssues = true;
-      print('🔴 $lang (${_displayName(lang)}): 缺少 ${missing.length} 个键');
+      print('🔴 $lang (${languageDisplayName(lang)}): 缺少 ${missing.length} 个键');
       if (missing.length <= 10) {
         for (final key in missing.take(10)) {
           print('   - $key');
@@ -255,7 +216,7 @@ Future<void> checkTranslationCompleteness() async {
 
     if (unexpected.isNotEmpty) {
       hasEmptyValues = true;
-      print('⚠️  ${_displayName(lang)} 有 ${unexpected.length} 个空值翻译');
+      print('⚠️  ${languageDisplayName(lang)} 有 ${unexpected.length} 个空值翻译');
       for (final key in unexpected.take(5)) {
         print('   - $key');
       }
@@ -266,7 +227,7 @@ Future<void> checkTranslationCompleteness() async {
     }
 
     if (intentional.isNotEmpty) {
-      print('ℹ️  ${_displayName(lang)} 有 ${intentional.length} 个刻意留空的单位后缀'
+      print('ℹ️  ${languageDisplayName(lang)} 有 ${intentional.length} 个刻意留空的单位后缀'
           '（见 intentionalEmptyKeys，正常）：${intentional.join('、')}');
       print('');
     }
@@ -354,7 +315,7 @@ Future<Map<String, Set<String>>> checkExtraKeys() async {
     final lang = entry.key;
     final keys = entry.value;
 
-    print('🔴 $lang (${_displayName(lang)}): ${keys.length} 个多余的键');
+    print('🔴 $lang (${languageDisplayName(lang)}): ${keys.length} 个多余的键');
     print('─'.padRight(60, '─'));
 
     // 按字母排序显示

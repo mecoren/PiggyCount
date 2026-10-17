@@ -82,6 +82,14 @@ jobs:
       - name: flutter analyze (fail on any issue, including info)
         run: flutter analyze --fatal-infos
 
+      # ARB key 一致性门禁（E4，2026-10-17 新增）。
+      # 以 `l10n.yaml` 的模板 `app_en.arb` 为基准，检查 4 个语言包
+      # （zh / en / zh_TW / 社区维护的 ko）的键集合、非故意空值、占位符
+      # 与孤立元数据。有任一问题退出码 1；`--github` 额外写 `::error`
+      # 注解，免登录即可从 Annotations 看到具体键名。
+      - name: ARB 一致性门禁（4 语言键集合 / 空值 / 占位符）
+        run: dart run scripts/i18n/check_arb_consistency.dart --github
+
       # 无障碍对比度门禁（2026-10-05 新增）：纯 Python 算式，零依赖。
       # 守 WCAG 1.4.3（正文 ≥4.5:1）与 1.4.11（非文本 ≥3:1）；不合格组合
       # 退出码非 0。算式自检：`python3 scripts/contrast_check.py --self-check`。
@@ -91,7 +99,8 @@ jobs:
   test:
     name: flutter test (同步一致性守门测试)
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # 2026-10-17 起测试带 `--coverage`（插桩有额外开销），20 → 30 分钟。
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -127,8 +136,29 @@ jobs:
       # 有人贴日志。注解是匿名可读的（`GET /repos/{o}/{r}/check-runs/{id}/annotations`）。
       # ⚠️ **不要**改成 `flutter test | tee log`：管道背压会把计时敏感用例推过超时，
       # 2026-09-19 实测一次全量跑出 8 例 `did not complete` 假失败。用 file-reporter。
-      - name: flutter test
-        run: flutter test --file-reporter expanded:ci_test.log
+      - name: flutter test（含覆盖率）
+        run: flutter test --coverage --file-reporter expanded:ci_test.log
+
+      # 覆盖率基线（E1，2026-10-17 新增）。本期只**报告**不设硬阈值：
+      # 先让每次 PR 都看到行/函数/分支覆盖率与最低的 20 个文件，等基线
+      # 稳定后再用 `--fail-under` 设门（脚本已支持该参数）。
+      - name: 覆盖率摘要（写 Job Summary）
+        if: always()
+        run: |
+          if [ -f coverage/lcov.info ]; then
+            python3 scripts/coverage_summary.py coverage/lcov.info --top 20 \
+              >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          else
+            echo "::warning::未生成 coverage/lcov.info（测试可能在收集前就失败）"
+          fi
+
+      - name: 上传覆盖率报告（lcov.info）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          if-no-files-found: warn
 
       # 失败用例明细（2026-10-07 新增）。只在失败时跑，成功路径零开销。
       # 1) 把每条失败用例写成 `::error::` 注解 —— 免登录即可从 API / 网页 Annotations 读到；
