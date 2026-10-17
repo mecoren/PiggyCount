@@ -125,7 +125,10 @@ NORMS = {
     "json": lambda maps, v: _json_canon(v),
 }
 
-FK_MAP_TABLES = ("accounts", "categories", "tags", "recurring_transactions")
+FK_MAP_TABLES = ("accounts", "categories", "tags", "recurring_transactions",
+                 # v14 退款关联是 transactions 自引用（refund_of_id → sync_id），
+                 # 跨设备只有 syncId 可比，故也要建这张映射
+                 "transactions")
 
 
 # ====================== 契约清单：实现派生与双向校验 ======================
@@ -161,6 +164,10 @@ COL_KEYS = {
     "original_amount": ("originalAmount",),
     "custom_values_json": ("customValues",),
     "recurring_id": ("recurringSyncId",),
+    # v14 退款关联 / v56 报销状态：均在云快照与指纹白名单内（export ∩
+    # fingerprint ∩ parse 均命中），必须列契约内，否则契约校验报漂移。
+    "refund_of_id": ("refundSyncId",),
+    "reimburse_status": ("reimburseStatus",),
     # 以下为契约外列，保留映射以便校验「实现是否偷偷开始搬运」
     "created_by_user_id": ("createdByUserId",),
     "last_edited_by_user_id": ("lastEditedByUserId",),
@@ -370,7 +377,11 @@ SPEC = [
                  # 否则 validate_spec 会因「库中无此列」直接退出 3（实测：2026-10-10
                  # 本轮 R1_CMP 就因此报 [SPEC-ERROR]）。保留说明便于回溯。
                  # v8 G2：周期规则锚点在快照里以 recurringSyncId 传播，且已进指纹
-                 ("recurring", "t.recurring_id", _fk("recurring_transactions"))],
+                 ("recurring", "t.recurring_id", _fk("recurring_transactions")),
+                 # 契约 v14：退款关联以 refundSyncId 传播（自引用，按 syncId 归一）；
+                 # 契约 v56：报销状态三态字符串恒进快照
+                 ("refund", "t.refund_of_id", _fk("transactions")),
+                 ("reimburse_status", "t.reimburse_status", None)],
                  local_fields=[("created_by_user_id", "t.created_by_user_id", None),
                        ("last_edited_by_user_id", "t.last_edited_by_user_id", None),
                        ("updated_at", "t.updated_at", None)],
