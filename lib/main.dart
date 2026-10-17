@@ -759,7 +759,11 @@ class MainApp extends ConsumerWidget {
     ref.watch(fontScaleInitProvider);
     final customScale = ref.watch(effectiveFontScaleProvider);
 
-    // Clamp 系统字体缩放，避免部分设备设置 1.5+ 造成 UI 溢出。
+    // 系统字体缩放上限放开到 2.0（无障碍 U2）：旧实现 clamp 在 1.15，等于
+    // 把系统「特大字号」设置直接削平，视力不佳的用户无法放大正文。
+    // 仍保留 0.85 下限（极小字号同样不可读，且会把固定高度行压扁），
+    // 上限 2.0 覆盖 Android/iOS 的系统最大档位；超出部分由可滚动容器与
+    // `scaled()` 尺寸扩展兜底，重点页面已有窄屏回归测试。
     //
     // 性能关键点：这里只订阅 textScaler（MediaQuery.textScalerOf），
     // 绝不能订阅全量 MediaQuery —— 键盘弹出/收起动画期间 viewInsets 每帧变化，
@@ -768,8 +772,11 @@ class MainApp extends ConsumerWidget {
     // 缩放覆盖在下方 builder 中应用；builder 位于 MaterialApp 内部，
     // 即使随 insets 每帧执行也只有一个轻量 MediaQuery 包裹层的成本。
     final clamped =
-        MediaQuery.textScalerOf(context).clamp(minScaleFactor: 0.85, maxScaleFactor: 1.15);
-    final combinedScale = clamped.scale(customScale); // returns double
+        MediaQuery.textScalerOf(context).clamp(minScaleFactor: 0.85, maxScaleFactor: 2.0);
+    // 应用内字号（0.7~1.5）与系统缩放相乘后再封顶 2.0：
+    // 系统「特大」× 应用「特大」= 3.0 会直接撑爆所有固定高度行，
+    // 2.0 已覆盖无障碍可用范围，同时保住布局。
+    final combinedScale = clamped.scale(customScale).clamp(0.7, 2.0);
     final newScaler = TextScaler.linear(combinedScale);
     return MaterialApp(
       navigatorKey: globalNavigatorKey,
