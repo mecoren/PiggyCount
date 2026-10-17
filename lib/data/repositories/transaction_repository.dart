@@ -3,6 +3,7 @@ import 'package:drift/drift.dart' as d;
 import '../db.dart';
 import '../models/analytics_amount_metric.dart';
 import '../models/analytics_time_metric.dart';
+import '../models/transaction_search_query.dart';
 import '../../models/note_history.dart';
 
 /// 「5 分钟内再次记账继承上一笔默认值」的窗口长度（**唯一来源**：UI 与测试共用）。
@@ -224,6 +225,24 @@ abstract class TransactionRepository {
             Account? toAccount
           })>> transactionsWithCategoryAll({
     int? ledgerId,
+  });
+
+  /// 按搜索条件过滤的交易流（带分类 / 转入转出账户）。
+  ///
+  /// 条件在 SQL 侧下推（时间 / 金额 / 分类 / 账户 / 标签 / 附件 / 币种 /
+  /// 关键字备注与金额文本），只返回命中行；调用方只保留「分类显示名关键字」
+  /// 与「自定义字段值条件」两类 Dart 侧精判（见 [TransactionSearchQuery]）。
+  /// 排序与列表页一致：`happened_at DESC, id DESC`。
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> watchTransactionsByQuery({
+    required int ledgerId,
+    required TransactionSearchQuery query,
   });
 
   /// 获取最近的交易记录（带分类信息）- 用于预加载

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart';
+import '../../data/models/custom_field_values.dart';
+import '../../data/models/transaction_search_query.dart';
 import '../../providers.dart';
 import '../../providers/budget_providers.dart';
 import '../../providers/custom_field_providers.dart';
@@ -41,15 +43,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         Account? account,
         Account? toAccount
       })> _searchResults = [];
-  List<
-      ({
-        Transaction t,
-        Category? category,
-        Account? account,
-        Account? toAccount
-      })> _allTransactions = [];
-  // stream 缓存：复用同一 stream 引用，避免无关 rebuild（搜索、筛选）导致
-  // StreamBuilder 重新订阅 → snapshot 短暂 null → _allTransactions 被清空。
+  // 查询 stream 缓存：条件 / 账本不变时复用同一引用，避免无关 rebuild
+  // （输入框打字、批量模式切换）重新订阅导致结果闪空。
   Stream<
       List<
           ({
@@ -57,9 +52,28 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             Category? category,
             Account? account,
             Account? toAccount
-          })>>? _txStream;
-  int? _txStreamLedgerId;
-  bool _isSearching = false;
+          })>>? _resultsStream;
+  TransactionSearchQuery? _streamQuery;
+  int? _resultsStreamLedgerId;
+  // 空条件时的常量流：避免每次 rebuild 新建 Stream 导致 StreamBuilder
+  // 反复订阅 / 取消（输入框首次输入前会频繁重建）。
+  static final Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> _emptyResults = Stream.value(const []);
+  // 最近一次 StreamBuilder 的原始快照 / 对应条件：用于「同一批数据只精判一次」。
+  List<
+      ({
+        Transaction t,
+        Category? category,
+        Account? account,
+        Account? toAccount
+      })>? _rawRows;
+  TransactionSearchQuery? _appliedQuery;
   String _searchText = '';
 
   // 筛选条件
@@ -74,16 +88,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   final Set<int> _selectedTagIds = {};
   bool? _hasAttachmentFilter;
   String? _selectedCurrency;
-  Map<int, Set<int>> _txTagIds = const {};
-  Set<int> _txWithAttachment = const {};
-  bool _relationsLoaded = false;
   // 字段值筛选条件（F3）：下钻直达时随构造带入，chips 可单条移除。
   List<CustomFieldCondition> _customFieldConditions = const [];
-  // 交易数据代际：StreamBuilder 每次拿到新快照才重新过滤，避免「结果为空 →
-  // 每帧重新调度搜索」的循环。
-  int _allTxGeneration = 0;
-  int _searchedGeneration = -1;
-  Timer? _searchDebounce; // 搜索防抖：输入停顿后才执行全量过滤
+  // 当前生效的 SQL 查询条件（防抖后更新；条件不变则复用同一 stream）。
+  TransactionSearchQuery _query = const TransactionSearchQuery();
+  Timer? _searchDebounce; // 搜索防抖：输入停顿后才重建查询
 
   // 缓存汇总金额，避免每次 build() 重复计算
   double _totalExpense = 0.0;
@@ -97,8 +106,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
-    // 下钻直达：初始条件直接进筛选态（StreamBuilder 数据到位后自动按它过滤）。
+    // 下钻直达：初始条件直接进筛选态。SQL 只需「有自定义字段值」粗筛，
+    // 具体值条件由 `_recomputeResults` 精判，故这里直接给一个非空查询。
     _customFieldConditions = widget.initialCustomFieldConditions;
+    if (_customFieldConditions.isNotEmpty) {
+      _query = const TransactionSearchQuery(requiresCustomValues: true);
+    }
   }
 
   @override
@@ -110,16 +123,15 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   void _onSearchChanged() {
-    // 防抖：连续按键时只在停顿后执行一次全量过滤 + setState，
-    // 避免每个字符都 O(n) 遍历 + 整页重建导致输入卡顿。
+    // 防抖：连续按键时只在停顿后重建一次查询。
+    // 过滤已下推到 SQL（P1），这里不再全量读表 + Dart 遍历。
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 200), () {
-      if (mounted) _performSearch();
+      if (mounted) _applyQuery();
     });
   }
 
-  /// 当前筛选条件（各维度零散字段 → 单一条件对象，判定逻辑在
-  /// [TransactionSearchFilter.matches]）。
+  /// 当前筛选条件（各维度零散字段 → 单一条件对象，用于空态判定与 chip 展示）。
   TransactionSearchFilter get _currentFilter => TransactionSearchFilter(
         keyword: _searchText,
         categoryId: _selectedCategory?.id,
@@ -136,141 +148,110 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   bool get _hasAnyFilter => _currentFilter.isNotEmpty;
 
-  /// 执行搜索
-  void _performSearch() {
-    // 防抖期间 _searchText 可能滞后，这里从 controller 同步最新输入。
-    _searchText = _searchController.text.trim();
+  /// 关键字命中的分类 id。
+  ///
+  /// 分类显示名依赖当前语言（[CategoryUtils.getDisplayName]），SQL 侧只有原始
+  /// name，故先在这里解析出 id 集合再下推；分类表很小，一次 O(n) 可忽略。
+  List<int> _keywordCategoryIds() {
+    final kw = _searchText.toLowerCase();
+    if (kw.isEmpty) return const <int>[];
+    final categories =
+        ref.read(categoriesProvider).value ?? const <Category>[];
+    return [
+      for (final c in categories)
+        if (CategoryUtils.getDisplayName(c.name, context)
+            .toLowerCase()
+            .contains(kw))
+          c.id,
+    ];
+  }
 
-    // 如果没有任何搜索条件，清空结果
-    if (!_hasAnyFilter) {
-      setState(() {
-        _searchResults = [];
-        _totalExpense = 0.0;
-        _totalIncome = 0.0;
-        _isSearching = false;
-        // 搜索「完成」才盖代数章：加载态判定（_isSearching ∥ 代数不齐）依赖
-        // 它区分「已调度未算完」与「算完」——调度时盖章会让错误空态闪一帧。
-        _searchedGeneration = _allTxGeneration;
-      });
-      return;
-    }
-
-    // 500~3000 条数据的内存过滤为同步操作（<10ms），无需转圈（转圈在同一帧
-    // 内也不会渲染），直接过滤后一次 setState。
-    final filter = _currentFilter;
-    // 交易未显式记币种时按账本本位币参与币种匹配。
-    final ledgerCurrency =
-        ref.read(currentLedgerProvider).value?.currency ?? '';
-    final results = _allTransactions.where((item) {
-      return filter.matches(
-        t: item.t,
-        category: item.category,
-        categoryDisplayName:
-            CategoryUtils.getDisplayName(item.category?.name, context),
-        transactionTagIds: _txTagIds[item.t.id] ?? const <int>{},
-        hasTransactionAttachment: _txWithAttachment.contains(item.t.id),
-        ledgerCurrency: ledgerCurrency,
+  /// 把当前 UI 状态转成 SQL 查询描述（见 [TransactionSearchQuery]）。
+  TransactionSearchQuery _buildQuery() => TransactionSearchQuery(
+        keyword: _searchText,
+        keywordCategoryIds: _keywordCategoryIds(),
+        categoryId: _selectedCategory?.id,
+        minAmount: _minAmount,
+        maxAmount: _maxAmount,
+        startDate: _startDate,
+        endDate: _endDate,
+        accountId: _selectedAccount?.id,
+        tagIds: _selectedTagIds,
+        hasAttachment: _hasAttachmentFilter,
+        currencyCode: _selectedCurrency,
+        ledgerCurrency: ref.read(currentLedgerProvider).value?.currency ?? '',
+        requiresCustomValues: _customFieldConditions.isNotEmpty,
       );
-    }).toList();
 
+  /// 重建查询（防抖结束后调用）。
+  void _applyQuery() {
+    _searchText = _searchController.text.trim();
     setState(() {
-      _searchResults = results;
-      _totalExpense = results
-          .where((e) => e.t.type == 'expense')
-          .fold(0.0, (sum, e) => sum + (e.t.nativeAmount ?? e.t.amount).abs());
-      _totalIncome = results
-          .where((e) => e.t.type == 'income')
-          .fold(0.0, (sum, e) => sum + (e.t.nativeAmount ?? e.t.amount).abs());
-      _isSearching = false;
-      // 搜索「完成」才盖代数章（见上）。
-      _searchedGeneration = _allTxGeneration;
+      _query = _buildQuery();
+      // 条件变了：丢弃上一批快照 + 强制下一次 build 重新精判。
+      _rawRows = null;
+      _appliedQuery = null;
     });
   }
 
-  /// 交易数据换代（全量替换 / 从库重拉）时作废标签、附件筛选的关联缓存。
-  void _invalidateFilterRelations() {
-    _relationsLoaded = false;
-    _txTagIds = const {};
-    _txWithAttachment = const {};
+  /// 条件变化后的统一入口（筛选抽屉确认 / chip 移除 / 批量操作后刷新）。
+  void _refreshSearch() {
+    _searchDebounce?.cancel();
+    _applyQuery();
   }
 
-  /// 按需加载标签 / 附件筛选所需的关联数据（未启用这两个维度时不查库）。
-  Future<void> _ensureFilterRelations() async {
-    if (_relationsLoaded) return;
-    if (_selectedTagIds.isEmpty && _hasAttachmentFilter == null) {
-      _relationsLoaded = true;
-      return;
-    }
-    final ids = [for (final e in _allTransactions) e.t.id];
-    if (ids.isEmpty) {
-      _relationsLoaded = true;
-      return;
-    }
+  /// 自定义字段条件的 Dart 侧精判 + 汇总。
+  ///
+  /// SQL 只做了 `custom_values_json IS NOT NULL` 的粗筛（值标签规范化需要
+  /// [CustomFieldValueCodec]，无法纯 SQL 表达）；其余维度全部已由 SQL 过滤。
+  void _recomputeResults(List<
+      ({
+        Transaction t,
+        Category? category,
+        Account? account,
+        Account? toAccount
+      })> rows) {
+    final conditions = _customFieldConditions;
+    final results = conditions.isEmpty
+        ? rows
+        : rows.where((item) {
+            final values =
+                CustomFieldValueCodec.decode(item.t.customValuesJson);
+            return conditions.every((c) => c.matches(values[c.fieldSyncId]));
+          }).toList();
 
-    final repo = ref.read(repositoryProvider);
-    var tagIds = const <int, Set<int>>{};
-    var withAttachment = const <int>{};
-    try {
-      if (_selectedTagIds.isNotEmpty) {
-        final map = await repo.getTagsForTransactions(ids);
-        tagIds = {
-          for (final e in map.entries)
-            e.key: {for (final tag in e.value) tag.id},
-        };
-      }
-      if (_hasAttachmentFilter != null) {
-        final counts = await repo.getAttachmentCountsForTransactions(ids);
-        withAttachment = {
-          for (final e in counts.entries)
-            if (e.value > 0) e.key,
-        };
-      }
-    } catch (_) {
-      // 关联数据读失败按「无标签 / 无附件」处理，不阻断搜索主流程。
-    }
-
-    if (!mounted) return;
-    _txTagIds = tagIds;
-    _txWithAttachment = withAttachment;
-    _relationsLoaded = true;
+    _rawRows = rows;
+    _appliedQuery = _query;
+    _searchResults = results;
+    _totalExpense = results
+        .where((e) => e.t.type == 'expense')
+        .fold(0.0, (sum, e) => sum + (e.t.nativeAmount ?? e.t.amount).abs());
+    _totalIncome = results
+        .where((e) => e.t.type == 'income')
+        .fold(0.0, (sum, e) => sum + (e.t.nativeAmount ?? e.t.amount).abs());
   }
 
-  /// 筛选条件变化后的统一入口：作废关联缓存 → 按需重载 → 重新过滤。
-  Future<void> _refreshSearch() async {
-    _invalidateFilterRelations();
-    await _ensureFilterRelations();
-    if (!mounted) return;
-    _performSearch();
-  }
-
-  /// 从数据库重新加载并执行搜索
-  Future<void> _performSearchFromDb() async {
-    if (!mounted) return;
-
-    final repo = ref.read(repositoryProvider);
-    final ledgerId = ref.read(currentLedgerIdProvider);
-
-    setState(() {
-      _isSearching = true;
-    });
-
-    // 从数据库重新获取所有交易
-    final allTransactions =
-        await repo.transactionsWithCategoryAll(ledgerId: ledgerId).first;
-
-    if (!mounted) return;
-
-    // 更新_allTransactions
-    _allTransactions = allTransactions;
-    _allTxGeneration++;
-    // _searchedGeneration 的盖章交给 _performSearch（完成时才盖），
-    // 这里不提前盖，避免「数据已到、结果未算」的窗口被误判为已搜完。
-    _invalidateFilterRelations();
-
-    // 执行搜索筛选
-    await _ensureFilterRelations();
-    if (!mounted) return;
-    _performSearch();
+  /// 结果流：条件 / 账本不变时复用同一引用，避免无关 rebuild 重新订阅。
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> _resultsStreamFor(int ledgerId) {
+    final query = _query;
+    if (query.isEmpty) return _emptyResults;
+    if (_resultsStream == null ||
+        _streamQuery != query ||
+        _resultsStreamLedgerId != ledgerId) {
+      _streamQuery = query;
+      _resultsStreamLedgerId = ledgerId;
+      _resultsStream = ref
+          .read(repositoryProvider)
+          .watchTransactionsByQuery(ledgerId: ledgerId, query: query);
+    }
+    return _resultsStream!;
   }
 
   /// 切换批量操作模式
@@ -338,7 +319,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       _hasAttachmentFilter = result.hasAttachment;
       _selectedCurrency = result.currency;
     });
-    unawaited(_refreshSearch());
+    _refreshSearch();
   }
 
   /// 批量操作完成后刷新
@@ -349,8 +330,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         _selectedIds.clear();
         _isBatchMode = false;
       });
-      // 从数据库重新加载最新数据并执行搜索
-      await _performSearchFromDb();
+      // DB watch 会在批量写事务提交后自动 emit 新快照；这里重建查询即可
+      // （select 仍是同一个 SQL，条件未变时复用）。
+      _refreshSearch();
     }
   }
 
@@ -567,7 +549,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    final repo = ref.watch(repositoryProvider);
     final ledgerId = ref.watch(currentLedgerIdProvider);
     final hide = ref.watch(hideAmountsProvider);
     final l10n = AppLocalizations.of(context);
@@ -682,7 +663,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                 setState(() {
                                   _selectedCategory = null;
                                 });
-                                unawaited(_refreshSearch());
+                                _refreshSearch();
                               },
                             ),
                           if (_minAmount != null || _maxAmount != null)
@@ -695,7 +676,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                   _minAmount = null;
                                   _maxAmount = null;
                                 });
-                                unawaited(_refreshSearch());
+                                _refreshSearch();
                               },
                             ),
                           if (_startDate != null || _endDate != null)
@@ -708,7 +689,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                   _startDate = null;
                                   _endDate = null;
                                 });
-                                unawaited(_refreshSearch());
+                                _refreshSearch();
                               },
                             ),
                           if (_selectedAccount != null)
@@ -720,7 +701,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                 setState(() {
                                   _selectedAccount = null;
                                 });
-                                unawaited(_refreshSearch());
+                                _refreshSearch();
                               },
                             ),
                           if (_selectedTagIds.isNotEmpty)
@@ -730,7 +711,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                               primaryColor: primaryColor,
                               onDeleted: () {
                                 setState(_selectedTagIds.clear);
-                                unawaited(_refreshSearch());
+                                _refreshSearch();
                               },
                             ),
                           if (_hasAttachmentFilter != null)
@@ -742,7 +723,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                 setState(() {
                                   _hasAttachmentFilter = null;
                                 });
-                                unawaited(_refreshSearch());
+                                _refreshSearch();
                               },
                             ),
                           if (_selectedCurrency != null)
@@ -754,7 +735,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                 setState(() {
                                   _selectedCurrency = null;
                                 });
-                                unawaited(_refreshSearch());
+                                _refreshSearch();
                               },
                             ),
                           // 字段值条件（F3）：每条一个 chip，单条可移除
@@ -782,7 +763,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                       for (final c in _customFieldConditions)
                                         if (c != cond) c,
                                     ]);
-                                unawaited(_refreshSearch());
+                                _refreshSearch();
                               },
                             ),
                         ],
@@ -801,53 +782,35 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         Account? account,
                         Account? toAccount
                       })>>(
-                stream: () {
-                  // ledgerId 变化或首次才重建 stream；无关 rebuild 复用同一引用，
-                  // 避免 StreamBuilder 重新订阅导致 _allTransactions 闪空。
-                  if (_txStream == null || _txStreamLedgerId != ledgerId) {
-                    _txStream =
-                        repo.transactionsWithCategoryAll(ledgerId: ledgerId);
-                    _txStreamLedgerId = ledgerId;
-                  }
-                  return _txStream;
-                }(),
+                stream: _resultsStreamFor(ledgerId),
                 builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-                    // 仅在数据换代（首帧 / 库变更 emit 新 list）时重新过滤。
-                    // 用 identical 而非「结果为空就再搜」：后者在零命中时会被
-                    // 每帧重复调度。
-                    if (!identical(snapshot.data, _allTransactions)) {
-                      _allTransactions = snapshot.data!;
-                      _allTxGeneration++;
-                      _invalidateFilterRelations();
-                    }
-                    if (_hasAnyFilter &&
-                        _allTxGeneration != _searchedGeneration) {
-                      _searchedGeneration = _allTxGeneration;
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          unawaited(_refreshSearch());
-                        }
-                      });
-                    }
+                  // 空条件：不查库、直接提示输入（与既有空态一致）。
+                  if (_query.isEmpty) {
+                    return AppEmpty(
+                      text: AppLocalizations.of(context).searchNoInput,
+                      icon: Icons.search,
+                    );
                   }
 
-                  // 加载态覆盖两种窗口：显式搜索中、以及「条件已设（含下钻
-                  // 直达的初始条件）但首查未跑完」—— 后者若按空结果渲染会闪
-                  // 一帧错误的「未找到匹配的结果」空态。
-                  if (_isSearching ||
-                      (_hasAnyFilter &&
-                          _searchedGeneration != _allTxGeneration)) {
+                  // 首帧 / 条件切换后新 SQL 未返回：转圈。零命中不会落到这里
+                  // （空列表也是 hasData，下面的空态分支负责）。
+                  if (!snapshot.hasData) {
                     return Center(
                         child: PiggySpinner(
                             size: 36, color: PiggyTokens.primary(context)));
                   }
 
-                  if (!_hasAnyFilter) {
-                    return AppEmpty(
-                      text: AppLocalizations.of(context).searchNoInput,
-                      icon: Icons.search,
-                    );
+                  // 同一批快照只做一次「自定义字段精判 + 汇总」。
+                  // 用 identical 而非「结果为空就重算」：后者在零命中时会被
+                  // 每帧重复调度。
+                  final rows = snapshot.data!;
+                  if (!identical(rows, _rawRows) || _appliedQuery != _query) {
+                    _recomputeResults(rows);
+                    // 顶栏的批量计数 / 全选态在 StreamBuilder 之外，本帧读到的
+                    // 还是上一批结果；补一帧刷新（条件已变，下一帧不会再调度）。
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) setState(() {});
+                    });
                   }
 
                   if (_searchResults.isEmpty) {

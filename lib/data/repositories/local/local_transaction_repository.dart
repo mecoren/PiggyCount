@@ -13,6 +13,7 @@ import '../../../models/note_history.dart';
 import '../../models/analytics_amount_metric.dart';
 import '../../models/analytics_time_metric.dart';
 import '../../models/custom_field_values.dart';
+import '../../models/transaction_search_query.dart';
 import '../transaction_repository.dart';
 import '../../../services/system/logger_service.dart';
 
@@ -179,6 +180,127 @@ class LocalTransactionRepository implements TransactionRepository {
     final q = select.join(_txJoins());
     return _watchTxJoin(q);
   }
+
+  @override
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> watchTransactionsByQuery({
+    required int ledgerId,
+    required TransactionSearchQuery query,
+  }) {
+    final select = db.select(db.transactions)
+      ..where((t) => t.ledgerId.equals(ledgerId));
+
+    // 关键字：备注 / 金额文本 / 分类原始名 / 显示名命中的分类 id。
+    // LIKE 通配符按字面量转义（Dart 侧 matches 是 contains，% 与 _ 不是通配符）。
+    final keyword = query.normalizedKeyword;
+    if (keyword.isNotEmpty) {
+      final pattern = '%${_escapeLike(keyword)}%';
+      select.where((t) {
+        var match = t.note.like(pattern, escapeChar: r'\') |
+            t.amount.cast<String>().like(pattern, escapeChar: r'\') |
+            t.amount.abs().cast<String>().like(pattern, escapeChar: r'\') |
+            db.categories.name.like(pattern, escapeChar: r'\');
+        if (query.keywordCategoryIds.isNotEmpty) {
+          match = match | t.categoryId.isIn(query.keywordCategoryIds);
+        }
+        return match;
+      });
+    }
+
+    // 分类：自身或其直接子分类（与 Dart 侧判定同义）。
+    final categoryId = query.categoryId;
+    if (categoryId != null) {
+      select.where((t) =>
+          t.categoryId.equals(categoryId) |
+          db.categories.parentId.equals(categoryId));
+    }
+
+    // 金额：按绝对值闭区间。
+    final minAmount = query.minAmount;
+    final maxAmount = query.maxAmount;
+    if (minAmount != null) {
+      select.where((t) => t.amount.abs().isBiggerOrEqualValue(minAmount));
+    }
+    if (maxAmount != null) {
+      select.where((t) => t.amount.abs().isSmallerOrEqualValue(maxAmount));
+    }
+
+    // 日期：开始日 00:00（含）→ 结束日次日 00:00（不含），可用索引剪枝。
+    final startDate = query.startDate;
+    final endDate = query.endDate;
+    if (startDate != null) {
+      final start = DateTime(startDate.year, startDate.month, startDate.day);
+      select.where((t) => t.happenedAt.isBiggerOrEqualValue(start));
+    }
+    if (endDate != null) {
+      final end = DateTime(endDate.year, endDate.month, endDate.day)
+          .add(const Duration(days: 1));
+      select.where((t) => t.happenedAt.isSmallerThanValue(end));
+    }
+
+    // 账户：转出或转入任一命中。
+    final accountId = query.accountId;
+    if (accountId != null) {
+      select.where(
+          (t) => t.accountId.equals(accountId) | t.toAccountId.equals(accountId));
+    }
+
+    // 标签：带其中任意一个（EXISTS 语义走 IN 子查询，命中 transaction_tags 索引）。
+    if (query.tagIds.isNotEmpty) {
+      final tagged = db.selectOnly(db.transactionTags)
+        ..addColumns([db.transactionTags.transactionId])
+        ..where(db.transactionTags.tagId.isIn(query.tagIds));
+      select.where((t) => t.id.isInQuery(tagged));
+    }
+
+    // 附件：有 / 无。
+    final hasAttachment = query.hasAttachment;
+    if (hasAttachment != null) {
+      final attached = db.selectOnly(db.transactionAttachments)
+        ..addColumns([db.transactionAttachments.transactionId]);
+      select.where((t) => hasAttachment
+          ? t.id.isInQuery(attached)
+          : t.id.isNotInQuery(attached));
+    }
+
+    // 币种：交易未记币种（NULL / 空串）时按账本本位币兜底。
+    final wantedCurrency = query.currencyCode?.trim().toUpperCase() ?? '';
+    if (wantedCurrency.isNotEmpty) {
+      final ledgerCurrency = query.ledgerCurrency.trim().toUpperCase();
+      select.where((t) {
+        var match = t.currencyCode.trim().upper().equals(wantedCurrency);
+        if (ledgerCurrency == wantedCurrency) {
+          match = match |
+              t.currencyCode.isNull() |
+              t.currencyCode.trim().equals('');
+        }
+        return match;
+      });
+    }
+
+    // 自定义字段条件的存在性粗筛（值语义仍由调用方在 Dart 侧精判）。
+    if (query.requiresCustomValues) {
+      select.where((t) => t.customValuesJson.isNotNull());
+    }
+
+    select.orderBy([
+      (t) => d.OrderingTerm(expression: t.happenedAt, mode: d.OrderingMode.desc),
+      (t) => d.OrderingTerm(expression: t.id, mode: d.OrderingMode.desc),
+    ]);
+    return _watchTxJoin(select.join(_txJoins()));
+  }
+
+  /// SQL `LIKE` 通配符转义（配合 `ESCAPE '\'`）。
+  static String _escapeLike(String raw) => raw
+      .replaceAll(r'\', r'\\')
+      .replaceAll('%', r'\%')
+      .replaceAll('_', r'\_');
 
   @override
   Stream<
