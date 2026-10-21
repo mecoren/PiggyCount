@@ -66,6 +66,10 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
 
   @override
   Widget build(BuildContext context) {
+    return RepaintBoundary(child: _buildChart(context));
+  }
+
+  Widget _buildChart(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final positiveSum = widget.data
         .where((d) => d.totalBalance > 0)

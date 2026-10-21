@@ -40,6 +40,10 @@ class _AccountCategoryPieChartState
 
   @override
   Widget build(BuildContext context) {
+    return RepaintBoundary(child: _buildChart(context));
+  }
+
+  Widget _buildChart(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final Color primaryColor = widget.accentColor ?? ref.watch(primaryColorProvider);
 

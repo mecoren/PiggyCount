@@ -82,6 +82,10 @@ class _AnalyticsBarChartState extends State<AnalyticsBarChart> {
 
   @override
   Widget build(BuildContext context) {
+    return RepaintBoundary(child: _buildChart(context));
+  }
+
+  Widget _buildChart(BuildContext context) {
     if (widget.values.isEmpty) return const SizedBox.shrink();
 
     // Y 轴范围：支持结余视角的负值，顶部/底部各留 25% 空间

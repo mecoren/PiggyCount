@@ -109,6 +109,10 @@ class _LineChartState extends State<LineChart> {
 
   @override
   Widget build(BuildContext context) {
+    return RepaintBoundary(child: _buildChart(context));
+  }
+
+  Widget _buildChart(BuildContext context) {
     return GestureDetector(
       // interactive=false(资产卡内嵌图等)不自带手势:tap/swipe 让位给外层
       // (如外层 InkWell 点击进全屏页)。否则内部 opaque GestureDetector 会

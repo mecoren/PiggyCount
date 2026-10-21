@@ -683,7 +683,9 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
               return Column(
                 children: [
-                  _buildTransactionRow(context, it, allItemsInDay),
+                  RepaintBoundary(
+                    child: _buildTransactionRow(context, it, allItemsInDay),
+                  ),
                   if (!isLastInGroup)
                     PiggyDivider.short(indent: 56 + 16, endIndent: 16),
                 ],
@@ -998,7 +1000,8 @@ class TransactionListState extends ConsumerState<TransactionList> {
     // 导致行状态（滑动删除动画等）被反复重建。
     final children = <Widget>[
       header,
-      for (final it in list) _buildTransactionRow(context, it, list),
+      for (final it in list)
+        RepaintBoundary(child: _buildTransactionRow(context, it, list)),
       if (!isLast)
         Divider(
           height: PiggyTokens.listDayDividerHeight(context),

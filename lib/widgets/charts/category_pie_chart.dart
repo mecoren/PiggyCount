@@ -93,6 +93,10 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
 
   @override
   Widget build(BuildContext context) {
+    return RepaintBoundary(child: _buildChart(context));
+  }
+
+  Widget _buildChart(BuildContext context) {
     if (widget.data.isEmpty || widget.sum <= 0) {
       return const SizedBox.shrink();
     }
