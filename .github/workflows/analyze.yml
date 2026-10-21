@@ -139,15 +139,17 @@ jobs:
       - name: flutter test（含覆盖率）
         run: flutter test --coverage --file-reporter expanded:ci_test.log
 
-      # 覆盖率基线（E1，2026-10-17 新增）。本期只**报告**不设硬阈值：
-      # 先让每次 PR 都看到行/函数/分支覆盖率与最低的 20 个文件，等基线
-      # 稳定后再用 `--fail-under` 设门（脚本已支持该参数）。
-      - name: 覆盖率摘要（写 Job Summary）
+      # 覆盖率基线（E1，2026-10-17 新增；2026-10-17 全量实测行覆盖 44.1%）。
+      # 阈值 43（= 基线下方约 1 个百分点）是**地板不是目标**：拦的是覆盖率
+      # 断崖式下滑，允许正常小幅波动；基线继续上行后再逐步抬高阈值。
+      # 注意 Dart 的 lcov 不含函数 / 分支记录（FN/BR 计数为 0），Job Summary
+      # 里这两项显示 “—”，门禁只按行覆盖率判定。
+      - name: 覆盖率摘要（写 Job Summary + 阈值门禁）
         if: always()
         run: |
           if [ -f coverage/lcov.info ]; then
             python3 scripts/coverage_summary.py coverage/lcov.info --top 20 \
-              >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+              --fail-under 43 >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
           else
             echo "::warning::未生成 coverage/lcov.info（测试可能在收集前就失败）"
           fi
