@@ -305,25 +305,23 @@ flutter run -d ios
 
 ```
 lib/
-├── data/              # Data layer
-│   ├── db.dart       # Database definitions
-│   ├── models/       # Data models
-│   └── repository.dart # Data repository
-├── pages/            # UI pages
-│   ├── home/         # Home page
-│   ├── charts/       # Charts page
-│   ├── ledgers/      # Ledgers page
-│   └── mine/         # Profile page
-├── widgets/          # Reusable components
-│   ├── ui/           # UI base components
-│   └── biz/          # Business components
-├── cloud/            # Cloud services
-│   ├── supabase_auth.dart
-│   └── supabase_sync.dart
-├── l10n/             # Internationalization
-├── providers.dart    # Riverpod state management
-├── styles/           # Theme styles
-└── utils/            # Utility functions
+├── ai/                # AI integration (providers / core / privacy)
+├── cloud/             # Snapshot sync (SyncService / diff / fingerprint / backup)
+├── data/              # Drift database, repositories (abstract + local/), encryption
+├── domain/encryption/ # E2EE services and settings
+├── l10n/              # Localization resources (.arb)
+├── models/            # Business models
+├── pages/<module>/    # Feature pages (transaction / account / settings ...)
+├── providers/         # Riverpod state management (barrel: all_providers.dart)
+├── services/<module>/ # Business services (import/export / sync / security ...)
+├── styles/            # Design tokens and theme
+├── utils/             # Utilities (incl. PlatformFeature in platform_info.dart)
+├── widget/            # Home-screen widget logic
+├── widgets/           # Shared widgets (ui / biz / charts ...)
+├── app.dart           # Root widget
+├── main.dart          # Entry point
+└── theme.dart         # Theme
+packages/              # flutter_cloud_sync[_*] / flutter_ai_kit[_*] / flutter_market_data[_*] packages
 ```
 
 ### Common Commands

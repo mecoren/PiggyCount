@@ -10,7 +10,7 @@
 
 | 目录 | 主题 | 状态 |
 |---|---|---|
-| `attachment_upload_dedupe` | 附件对象上传按 sha256 做**进程内 in-flight 去重**，消除多账本并发写同一 `attachments/<sha256>.bin` 的竞态（2026-10-14 WebDAV 实测暴露的 1 次服务端 DELETE 之根因；无损但白跑流量 + 误计失败） | **已落地（2026-10-17）**：3 个验收单测（R1/R2）+ 既有附件测试合计 23 例全绿，`flutter analyze --fatal-infos` 0 issue；WebDAV 端到端 `DELETE = 0` 待有模拟器环境复跑（当前 `adb devices` 无设备），详见 [design.md](attachment_upload_dedupe/design.md) 实施记录 |
+| `attachment_upload_dedupe` | 附件对象上传按 sha256 做**进程内 in-flight 去重**，消除多账本并发写同一 `attachments/<sha256>.bin` 的竞态（2026-10-14 WebDAV 实测暴露的 1 次服务端 DELETE 之根因；无损但白跑流量 + 误计失败） | **已落地（2026-10-17）**：3 个验收单测（R1/R2）+ 既有附件测试合计 23 例全绿，`flutter analyze --fatal-infos` 0 issue；WebDAV 双端复跑服务端 `DELETE = 0`、`附件对象上传失败` = 0、B 端 8/8 下载且附件 7/7 哈希一致（2026-10-17/18），详见 [design.md](attachment_upload_dedupe/design.md) 实施记录 |
 
 ## 本轮（2026-10-12 缺口盘点后续）新增
 
@@ -32,21 +32,21 @@
 
 | 目录 / 入口 | 主题 | 状态 |
 |---|---|---|
-| `sqlcipher_db_encryption` | 整库加密：落盘即密文 / 密钥进系统安全区 / 明文→密文迁移（可往返）/ 健康探测适配 / 开关 | **代码已完整、默认休眠**：密钥层 + 连接层 `setup` 注入 + 明文→密文迁移（含中断恢复）+ 密文→明文关闭路径 + 健康探测适配 + 「引擎不支持就拒绝用密钥」护栏 + 六态开关 UI，49 例测试（不支持时报明原因跳过；配 sqlcipher hook 后 **48/48 实测全绿**）。**Android 打包已实测打通**（自备 `jniLibs` + `name_android: sqlcipher`，运行态日志确认 `SQLCipher 4.18.0 community`）。**端到端已在真机跑通**（非 UI 探针 `tool/db_encryption_device_probe.dart`：真 16.6MB 库加密后文件头非明文、40008 行完好、关闭后回到明文）。剩余：**制品/许可决定**（jniLibs 二进制入库 or 构建期拉取）与 iOS CI |
+| `sqlcipher_db_encryption` | 整库加密：落盘即密文 / 密钥进系统安全区 / 明文→密文迁移（可往返）/ 健康探测适配 / 开关 | **代码已完整、默认休眠**：密钥层 + 连接层 `setup` 注入 + 明文→密文迁移（含中断恢复）+ 密文→明文关闭路径 + 健康探测适配 + 「引擎不支持就拒绝用密钥」护栏 + 六态开关 UI，49 例测试（不支持时报明原因跳过；配 sqlcipher hook 后 **48/48 实测全绿**）。**Android 打包已实测打通**（自备 `jniLibs` + `name_android: sqlcipher`，运行态日志确认 `SQLCipher 4.18.0 community`）。**端到端已在真机跑通**（非 UI 探针 `tool/db_encryption_device_probe.dart`：真 16.6MB 库加密后文件头非明文、40008 行完好、关闭后回到明文）。剩余：**iOS CI 验证**（jniLibs 已于 2026-10-06 入库随包分发，Android 口径已定） |
 | `mem_baseline_and_leaks`（追加 2026-10-05 节） | M2-a 首页窗口化（keyset/limit + 日合计下沉 SQL + 首页切流 + `jumpToMonth` 降级）；M2-b 判为不做；M18 / M19 / M12b 三项定论 | 已落地；**收益未实测**（无真机） |
 | `ui_consistency_optimization`（追加） | U1 字号收敛**完成**（`PiggyTextTokens.fs*` 纯字号刻度，506 处迁移，ratchet 基线压到 0/0）；U2-b 亮色色阶重排达标 + 对比度门禁进 CI | 已落地；U2-c（读屏/热区/大字号）仍欠真机 |
 | 安全三项（未建 prd 目录，入口=代码注释 + 测试） | 备份强制加密（未开 E2EE 禁止云端明文备份）/ AI 发送二次确认（会话级 + 工厂二道关）/ 备注敏感标记（**设备本地**，AI 外发与列表掩码） | 已落地 |
 | 性能三基线 + debug 仪表盘（未建 prd 目录） | 冷启动/切页采集脚本 + 应用内帧率仪表盘（release 零常驻） | 已落地；**数字未实测**（`docs/evidence/perf-baseline-2026-10-05.md` 为空表） |
 | M13 归档流式（B11 存档设计的实现） | 附件导出与云备份 ZIP 改磁盘到磁盘流式（顺序/名称与旧格式一致） | 已落地 |
 
-**本轮遗留**：SQLCipher 的**连接层接线 / 迁移 bootstrap / 健康探测适配**（三者必须一起落，见其 design.md §7「仍待做」）；`final-gates` 因此未收口。另有 1 项判为不做（M2-b，理由与复访条件见 `mem_baseline_and_leaks/design.md`）。
+**本轮遗留（已大部分收口）**：SQLCipher 的连接层接线 / 迁移 bootstrap / 健康探测适配已随后续批次落地（见其 design.md §7）；Android 打包与真机端到端已打通，仅余 iOS CI 验证（需 macOS）。另有 1 项判为不做（M2-b，理由与复访条件见 `mem_baseline_and_leaks/design.md`）。
 
 
 ## 本轮（2026-09-28 日历节假日与月历样式）新增
 
 | 目录 | 主题 | 状态 |
 |---|---|---|
-| `calendar_holiday` | 月历 orbit 风格改造（农历/节气/节日副标签 + 休/班徽标 + 周末色 + 今天实心/选中描边，保留金额）+ 中国法定节假日联网更新（本地缓存 / 按年预置兜底 / 每日自动 + 手动更新 / 独立设置页 / **按年份补写历史数据（2000 ~ 明年）**，schemaVersion 49） | 设计中，待评审 |
+| `calendar_holiday` | 月历 orbit 风格改造（农历/节气/节日副标签 + 休/班徽标 + 周末色 + 今天实心/选中描边，保留金额）+ 中国法定节假日联网更新（本地缓存 / 按年预置兜底 / 每日自动 + 手动更新 / 独立设置页 / **按年份补写历史数据（2000 ~ 明年）**，schemaVersion 49） | 已落地（2026-10-17 同步；`holiday_entries` + `holiday_service.dart` / `holiday_scheduler.dart` / `holiday_settings_page.dart`） |
 
 ## 本轮（2026-09-25 自定义字段 v46+v47）新增
 

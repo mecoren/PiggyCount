@@ -110,7 +110,7 @@ flowchart TD
 | 集成测试目录 | **已建立** | `integration_test/`（recent_entry_inherit、search_sql_device、recycle_bin_device 等） |
 | Widget 测试文件 | 持续增加 | 原 3 个为 2026-07-25 快照 |
 | 测试 fake/辅助文件 | 以 `test/` 为准 | 如 `test/support/fake_notification_util.dart`；Cloud fake 已随 Cloud 下线删除 |
-| 覆盖率工具配置 | **已接入** | `flutter test --coverage` + `scripts/coverage_summary.py` + artifact |
+| 覆盖率工具配置 | **已接入并设门禁** | `flutter test --coverage` + `scripts/coverage_summary.py` + artifact；行覆盖基线 44.1%（2026-10-21 复测 44.3%，32170/72691），CI 阈值 43 |
 | CI 是否跑测试 | **是** | `analyze.yml`：analyze + test + coverage + ARB 门禁 |
 
 依据:`test/` 目录、`pubspec.yaml`、`.github/workflows/analyze.yml`。
@@ -336,20 +336,26 @@ BeeDatabase.forTesting(QueryExecutor executor) : super(executor);
 
 #### 3.7.1 analysis_options.yaml
 
-`analysis_options.yaml` 配置了 `flutter_lints: ^5.0.0` 与 `dart_code_metrics: ^5.7.6`,但**无测试覆盖率配置**。
+`analysis_options.yaml` 只 `include: package:flutter_lints/flutter.yaml`（版本由 `pubspec.yaml` 的
+`flutter_lints` 约束），并排除 `scripts/live_db/**`、`build/**`、`android/**`、`ios/**`。
+**没有**单独的覆盖率配置项——覆盖率由 CI 的 `flutter test --coverage` +
+`scripts/coverage_summary.py` 承担（见 §3.7.2）。
 
 #### 3.7.2 CI 配置
 
-`.github/workflows/` 只有:
+`.github/workflows/` 共四个工作流：
 
 | 文件 | 用途 | 是否跑测试 |
 |---|---|---|
+| `analyze.yml` | `flutter analyze --fatal-infos`（0 issue 门）+ `flutter test --coverage` + ARB 文案门禁 | **是** |
 | `issue-lint.yml` | Issue 模板校验 | 否 |
 | `pullfrog.yml` | PR 处理 | 否 |
-| `release.yml` | 发布构建 | 否(只构建不测试) |
+| `release.yml` | tag 触发的发布构建 | 否（只构建不测试，发版前由人工跑门禁） |
 
-[建议方案: 当前 CI 不跑测试,以下为推荐实践]
-建议增加 `.github/workflows/test.yml`,在 PR 时触发 `flutter test`,保证代码质量。
+`analyze.yml` 的 test job 同时承担同步契约结构性回归门禁（`sync_contract_*` 等，见
+[16-known-issues.md](./16-known-issues.md)）；覆盖率写 Job Summary 并上传 `coverage-lcov`
+artifact，行覆盖率低于 **43%**（2026-10-17 全量基线 44.1%，2026-10-21 复测 44.3%）
+时以 `--fail-under` 失败。
 
 ---
 
@@ -537,7 +543,7 @@ flutter test --coverage
 
 | 编号 | 缺口描述 | 影响章节 | 建议补充方式 |
 |---|---|---|---|
-| 1 | 覆盖率已接入 CI（E1，report-only） | §3.7 | 基线稳定后用 `--fail-under` 设阈值 |
+| 1 | 覆盖率已接入 CI 并设行覆盖门禁（基线 44.1% / 2026-10-21 复测 44.3%，阈值 43） | §3.7 | 基线上升后逐步抬高 `--fail-under` |
 | 2 | CI 已跑测试 | §3.7.2 | `analyze.yml`（analyze + test + coverage + ARB 门禁） |
 | 3 | `integration_test/` 已建立 | §3.5 | 继续补设备端用例 |
 | 4 | Widget 测试仍偏少 | §3.4 | 为核心页面添加 Widget 测试 |

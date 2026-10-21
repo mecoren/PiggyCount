@@ -1,7 +1,7 @@
 # 16. 已知问题
 
-> 文档版本：v1.1
-> 最后更新：2026-10-17
+> 文档版本：v1.3
+> 最后更新：2026-10-21
 > 作者：wait
 > 信息源：项目源码（本仓库）+ 前 15 篇工程文档中的 [未实现]/[待补充]/[待确认] 标记汇总
 >
@@ -47,21 +47,20 @@
 
 - **声明位置**：[PRIVACY.md:93](../PRIVACY.md)
   > "Authentication credentials are stored securely using Android Keystore"
-- **实际实现**：
-  - ⚠️ **2026-09-19 复核，本条已部分失效**：`lib/` 内已有 `FlutterSecureStorage`（仅用于
-    E2EE 密钥，`lib/data/encryption/secure_key_storage.dart:27-31`），"零匹配"不再成立；
-    PIN 也已改为 Argon2id + 每次新 salt（`app_lock_service.dart:40-54`，原文称"SHA-256
-    未加盐"同样过期）。**仍然成立的部分**：PIN 哈希与应用锁开关仍在 SharedPreferences
-    （`app_lock_service.dart:49,62`），未进 Keychain/Keystore。
-  - 全部凭证（PIN 哈希、API Token、密码）存储在 `SharedPreferences`（明文 XML 文件）
-  - 文件位置：[lib/services/security/app_lock_service.dart:26-37](../lib/services/security/app_lock_service.dart)、[lib/pages/auth/login_page.dart:69-113](../lib/pages/auth/login_page.dart)、`packages/flutter_cloud_sync/lib/src/providers/piggycount_cloud_provider.dart:1748-1754`
+- **现状（2026-10-17 复核：已修复）**：
+  - PIN 哈希为 Argon2id + 随机 salt，存 `flutter_secure_storage`
+    （`lib/services/security/app_lock_service.dart:119,139`；SharedPreferences 仅保留旧值迁移路径）。
+  - 云服务凭据统一经 `CloudServiceStore` 写安全存储
+    （`packages/flutter_cloud_sync/lib/src/config/cloud_service_store.dart`）。
+  - AI 服务商 apiKey 存安全存储；配置导入也已改为直接进安全存储（2026-10-17）。
+  - 应用锁开关等非敏感状态仍在 SharedPreferences，属可接受范围。以下为历史结论，保留备查。
 - **风险**：
   - root 设备/备份提取场景下，所有云服务凭证可被直接窃取
   - **严重违反隐私政策声明，存在合规风险**
-- **建议修复**：
-  1. 引入 [flutter_secure_storage](https://pub.dev/packages/flutter_secure_storage) 替代 SharedPreferences 存储所有敏感字段
-  2. 短期：修订 PRIVACY.md 删除 "Android Keystore" 声明
-  3. 长期：实际实现 Keystore/Keychain 集成
+- **建议修复（已完成）**：
+  1. ✅ 引入 [flutter_secure_storage](https://pub.dev/packages/flutter_secure_storage) 存储敏感字段
+  2. ✅ PRIVACY.md 的 "Android Keystore" 表述已与实现对齐
+  3. ✅ Keystore / Keychain 集成已落地
 
 #### 3.1.2 License 声明与实际不符
 
@@ -77,11 +76,10 @@
 
 #### 3.1.3 Supabase / WebDAV / S3 同步方案未在隐私政策中列出
 
-- **现状（2026-10-17）**：README 公开口径为 WebDAV / S3 两种自建方案；代码内另有
-  Supabase / iCloud 后端。PiggyCount Cloud 已整体下线，不再需要为其补声明。
-- **声明位置**：[PRIVACY.md](../PRIVACY.md)
-- **实际实现**：[README.md](../README.md) 的「云同步方案」一节（WebDAV / S3）
-- **建议修复**：补全 iCloud / Supabase 的隐私声明（如仍在产品中暴露）
+- **现状（2026-10-17 复核：已修复）**：`PRIVACY.md` 的 Cloud sync 一节已列出
+  WebDAV / S3-compatible / Supabase。Supabase 与 iCloud 后端在 UI 上仍被
+  `_kShowSupabaseAndICloud = false` 隐藏（`lib/pages/cloud/cloud_service_page.dart:33-38`），
+  当前无用户可达入口；若日后重新暴露，需同步补声明。
 
 ### 3.2 PIN 码安全机制薄弱
 
@@ -168,9 +166,17 @@ LazyDatabase _openConnection() {
 
 #### 4.1.2 用户自配置 URL 未强制 HTTPS
 
-- **现状**：用户配置 WebDAV/S3/Supabase/PiggyCount Cloud URL 时无协议校验
-- **风险**：用户可填入 `http://`，凭证与数据明文传输
-- **建议修复**：URL 输入框强制 `https://` 前缀，提示用户不安全连接风险
+- **现状（2026-10-17 复核：已修复）**：新增 `lib/utils/secure_url.dart`，配置表单保存时校验
+  （`lib/pages/cloud/cloud_service_page.dart` 的 Supabase / WebDAV 表单 `isExplicitHttpUrl`
+  拦显式 `http://`、`normalizeCloudUrl` 补协议；S3 表单不拦，靠
+  `packages/flutter_cloud_sync_s3/lib/src/s3_provider.dart:120-128` 的 `useSSL` 判定兜底）。
+  **provider 层另有硬拦**（真正落盘后的二道关）：WebDAV
+  `packages/flutter_cloud_sync_webdav/lib/src/webdav_provider.dart:155-159`、Supabase
+  `packages/flutter_cloud_sync_supabase/lib/src/supabase_provider.dart:103-110`、S3 同上，
+  均抛 `CloudConfigurationException`。AI provider Base URL 同样强制 HTTPS（仅回环地址放行，
+  `lib/ai/providers/ai_provider_factory.dart:27-31`）。`CloudServiceStore` 本身**不做** URL 校验。
+- **风险（历史）**：用户可填入 `http://`，凭证与数据明文传输
+- **建议修复（已完成）**：URL 输入框强制 `https://` 前缀，提示用户不安全连接风险
 
 ### 4.2 AI 隐私保护不足
 
@@ -178,23 +184,28 @@ LazyDatabase _openConnection() {
 
 #### 4.2.1 发送前无二次确认
 
-- **现状**：仅在首次启用 AI 时弹同意对话框，后续每次调用直接发送数据
-- **风险**：用户可能误触发送包含敏感信息（账户名、金额）的请求
-- **建议修复**：在 AI 聊天发送按钮旁显示"将发送给 <服务商>"提示，长按可取消
+- **现状（2026-10-17 复核：已修复）**：发送前二次确认已落地（会话级确认 +
+  `AiProviderFactory` 二道关），实现见 `lib/ai/privacy/ai_send_confirm.dart`、
+  `lib/widgets/ai/ai_send_confirm_dialog.dart`，守门测试 `test/ai/ai_send_confirm_test.dart`。
+- **风险（历史）**：用户可能误触发送包含敏感信息（账户名、金额）的请求
+- **建议修复（已完成）**：发送前显示"将发送给 <服务商>"提示并需用户确认
 
 #### 4.2.2 无敏感数据脱敏
 
-- **现状**：发送给 AI 的上下文（[lib/ai/core/ai_extraction_context.dart](../lib/ai/core/ai_extraction_context.dart)）包含完整账户名、原始金额、备注
-- **风险**：账户名可能包含真实姓名（如 "张三的工资卡"），备注可能包含敏感信息
-- **建议修复**：
-  1. 账户名发送前替换为 `account_1`、`account_2` 等匿名标识
-  2. 备注字段提供"包含敏感信息"标记，默认不发送
+- **现状（2026-10-17 复核：已修复）**：账户名默认脱敏为 `account_1…` 别名，
+  落库前再映射回真实名（`lib/ai/core/ai_extraction_context.dart:38-39,98,121-136`）；
+  备注支持"敏感"标记，标记后 AI 外发与列表展示均按掩码处理。
+- **风险（历史）**：账户名可能包含真实姓名，备注可能包含敏感信息
+- **建议修复（已完成）**：
+  1. ✅ 账户名发送前替换为 `account_1`、`account_2` 等匿名标识
+  2. ✅ 备注字段提供"包含敏感信息"标记，默认不发送
 
 #### 4.2.3 同意状态可被篡改
 
-- **现状**：同意状态存 SharedPreferences（`ai_privacy_consent_version` int）
-- **风险**：root 用户可手动写入 version 跳过对话框
-- **建议修复**：使用 flutter_secure_storage 存储同意状态
+- **现状（2026-10-17 复核：已修复）**：同意版本号存 `flutter_secure_storage`
+  （`lib/ai/privacy/ai_privacy_consent.dart:19-20,42-61`），旧明文 int 读到即迁移并清理。
+- **风险（历史）**：root 用户可手动写入 version 跳过对话框
+- **建议修复（已完成）**：使用 flutter_secure_storage 存储同意状态
 
 ### 4.3 截屏保护（原「未实现」，2026-10-10 已实现）
 
@@ -260,9 +271,11 @@ LazyDatabase _openConnection() {
 
 #### 5.1.2 长列表缺 RepaintBoundary
 
-- **现状**：交易列表、图表组件（`CategoryPieChart` 等）未使用 `RepaintBoundary` 包裹
-- **影响**：长列表滚动时可能引发不必要的重绘
-- **建议修复**：在 [transaction_list.dart](../lib/widgets/biz/transaction_list.dart) 的 item 构建器外层加 `RepaintBoundary`
+- **现状（2026-10-17：已修复）**：交易行在 `transaction_list.dart` 的两个调用点
+  （日卡片 / 平铺旧风格）均包 `RepaintBoundary`；`CategoryPieChart`、
+  `AccountCategoryPieChart`、`AssetCompositionChart`、`AnalyticsBarChart`、`LineChart`
+  的 `build` 统一先包一层 `RepaintBoundary`。
+- **注意**：收益需真机滚动 / 帧率基线复核，当前只落地隔离层，未声称提速数字。
 
 #### 5.1.3 WAL 模式未显式声明
 
@@ -276,9 +289,8 @@ LazyDatabase _openConnection() {
 
 **问题位置**：[lib/widgets/biz/transaction_list.dart](../lib/widgets/biz/transaction_list.dart)
 
-- **现状**：`Key('tx-${it.t.id}-$index')` 拼接了 index
-- **影响**：列表排序变化时失去复用意义
-- **建议修复**：改为纯 `ValueKey(it.t.id)`
+- **现状（2026-10-17 复核：已修复）**：`lib/widgets/biz/transaction_list.dart:774`
+  已改为纯 `Key('tx-${it.t.id}')`，不再拼接 index。
 
 ### 5.2 同步引擎潜在风险
 
@@ -321,41 +333,36 @@ LazyDatabase _openConnection() {
 
 #### 5.3.2 无测试覆盖率工具
 
-- **现状（2026-10-17）**：✅ 已接入 CI —— `analyze.yml` 用 `flutter test --coverage`，
-  `scripts/coverage_summary.py` 写 Job Summary（行/函数/分支 + 最低 20 文件），并上传
-  `coverage-lcov` artifact；本期只报告不设阈值，脚本已支持 `--fail-under`。
-- **建议修复（已完成 / 待收紧）**：
+- **现状（2026-10-17）**：✅ 已接入 CI 并设行覆盖门禁 —— `analyze.yml` 用
+  `flutter test --coverage`，`scripts/coverage_summary.py` 写 Job Summary（行覆盖率 +
+  最低 20 文件），并上传 `coverage-lcov` artifact。全量实测行覆盖 **44.1%**
+  （32024/72687，`lib/` 下 374 个文件；2026-10-21 本批复测 44.3%，32170/72691，
+  与基线同档）；CI 阈值 `--fail-under 43`（基线下方约 1 个百分点，只拦断崖式下滑，
+  后续随基线上行逐步抬高）。Dart 的 lcov 不产出函数 / 分支记录，摘要中这两项显示
+  “—”，门禁只按行覆盖率判定。
+- **建议修复（已完成）**：
   1. 在 CI 中添加 `flutter test --coverage`
   2. 上传覆盖率报告（当前用 GitHub Actions artifact，未接 codecov）
-  3. 基线稳定后再设阈值并用 `--fail-under` 阻止低覆盖 PR
+  3. 设阈值并用 `--fail-under` 阻止低覆盖 PR（2026-10-17 已设 43）
 
 ### 5.4 凭证存储改进
 
 #### 5.4.1 全部凭证明文存储
 
-**问题位置**：[lib/services/export/config_export_service.dart:1262-1305](../lib/services/export/config_export_service.dart)
-
-| SharedPreferences 键 | 内容 | 风险 |
-|---|---|---|
-| `cloud_supabase_cfg` | URL+anonKey+email+明文 password | 极高 |
-| `cloud_webdav_cfg` | URL+username+明文 password | 极高 |
-| `cloud_s3_cfg` | endpoint+accessKey+明文 secretKey | 极高 |
-| `ai_glm_api_key` / 自定义 provider apiKey | 明文 API Key | 高 |
-
-> 2026-10-17：PiggyCount Cloud 已下线，`cloud_piggycount_cloud_cfg` 与
-> `_sessionStorageKey` 已不在存活代码中；E2EE 密钥已进 `flutter_secure_storage`。
-> 其余云服务凭据是否仍明文存 SharedPreferences，需按当前
-> `config_export_service.dart` 复核后另行处理。
-
-- **建议修复**：全部迁移到 flutter_secure_storage
+- **现状（2026-10-17 复核：已修复）**：
+  - 云服务凭据统一经 `CloudServiceStore` 写 `flutter_secure_storage`，读取时迁移旧明文并清理
+    （`packages/flutter_cloud_sync/lib/src/config/cloud_service_store.dart`）。
+  - AI 服务商 `apiKey` 存安全存储（`lib/ai/providers/ai_provider_manager.dart:14-30`）；
+    配置导入也不再写明文 prefs（`lib/services/export/config_export_service.dart:2397-2410`）。
+  - E2EE 密钥、PIN 哈希、AI 同意版本号均已在安全存储。
+- **历史问题（保留备查）**：云配置、AI Key、PIN 曾以明文存 SharedPreferences。
 
 #### 5.4.2 配置导出可能泄露凭证
 
-- **现状**：[config_export_service.dart](../lib/services/export/config_export_service.dart) 导出配置时可能包含明文凭证
-- **建议修复**：
-  1. 默认导出时移除所有敏感字段
-  2. 提供"包含凭证（不推荐）"选项，需用户二次确认
-  3. 导出文件可选 AES 加密
+- **现状（2026-10-17 复核：已修复）**：默认导出把凭据替换为 `****`
+  （`_sensitiveFieldNames` 递归兜底），仅当用户显式勾选 `includeCredentials` 才写真实值
+  （`config_export_service.dart:89-139,1321-1325`）。
+- **剩余可选项**：导出文件本身未做 AES 加密，可按需后续补充。
 
 ---
 
@@ -370,11 +377,11 @@ LazyDatabase _openConnection() {
 
 #### 6.1.2 TODO/FIXME 标记
 
-- **现状**：项目内 `TODO` / `FIXME` 标记较少（仅 2 处），但可能存在未标记的技术债
-- **位置**：
-  - [lib/providers/sync_providers.dart](../lib/providers/sync_providers.dart)
-  - [lib/widgets/biz/product_promo_card.dart](../lib/widgets/biz/product_promo_card.dart)
-- **建议修复**：清理所有 TODO，或转换为 GitHub Issue 跟踪
+- **现状（2026-10-17 复核）**：`lib/` 内仅剩 1 处 TODO —— `lib/data/db.dart:945`
+  的 **TODO-M18**（`cache_size` / `mmap_size` 需真机内存基线后再定，见
+  `prd/mem_baseline_and_leaks/`）。此前 `sync_providers.dart` 与
+  `product_promo_card.dart` 的两处已清理。
+- **建议修复**：真机基线出来后给 M18 定论，顺手移除标记。
 
 #### 6.1.3 dependency_overrides 钉死版本
 
@@ -394,35 +401,15 @@ dependency_overrides:
 
 #### 6.2.1 docs/contributing/CONTRIBUTING_ZH.md 项目结构过时
 
-**问题位置**：[docs/contributing/CONTRIBUTING_ZH.md:307-328](../docs/contributing/CONTRIBUTING_ZH.md)
-
-```markdown
-lib/
-├── data/              # 数据层
-│   ├── db.dart       # 数据库定义
-│   ├── models/       # 数据模型
-│   └── repository.dart # 数据仓库   ← 实际是 repositories/
-├── pages/            # UI 页面
-│   ├── home/         # 首页           ← 实际是 main/
-│   ├── charts/       # 图表页          ← 实际在 widgets/charts/
-│   ├── ledgers/      # 账本页          ← 实际是 main/ledgers_page_new.dart
-│   └── mine/         # 个人中心        ← 实际是 main/mine_page.dart
-├── cloud/            # 云服务
-│   ├── supabase_auth.dart     ← 文件不存在
-│   └── supabase_sync.dart     ← 文件不存在
-```
-
-- **建议修复**：更新为实际目录结构，参考 [15-development-guidelines.md](15-development-guidelines.md) 第 5 节
+- **现状（2026-10-17 复核：已修复）**：`CONTRIBUTING_ZH.md` 与 `CONTRIBUTING_EN.md`
+  的项目结构树已按当前 `lib/`（ai / cloud / data / domain / l10n / models / pages /
+  providers / services / styles / utils / widget / widgets + `packages/`）重写，
+  不再出现 `repository.dart` / `supabase_sync.dart` 等已删除路径。
 
 #### 6.2.2 PRIVACY.md 联系方式未填写
 
-**问题位置**：[PRIVACY.md:146](../PRIVACY.md)
-
-```markdown
-- **Email**: (Add your email if you want, or remove this section)
-```
-
-- **建议修复**：填写项目联系邮箱（文档里统一用占位 `user@example.com`，不要写真实个人邮箱）或删除该字段
+- **现状（2026-10-17 复核：已修复）**：占位提示已替换为 `user@example.com`，
+  并保留 GitHub Issues / Discussions 两个有效入口。
 
 ### 6.3 平台兼容性
 
@@ -502,17 +489,17 @@ lib/
 ### 8.1 短期（1-2 个版本）
 
 1. ✅ 修订 PRIVACY.md 的 License 声明（MIT → BSL，已完成）
-2. 🟠 引入 flutter_secure_storage：E2EE 密钥与 PIN 哈希已进安全存储，其余云服务凭据仍待迁移
+2. ✅ 引入 flutter_secure_storage：E2EE 密钥、PIN 哈希、云服务凭据、AI Key 均已进安全存储
 3. ~~🟠 启用 Android FLAG_SECURE 截屏保护~~ ✅ 已完成（2026-10-10，并在设置页提供开关）
 4. ✅ PIN 码失败退避 + wipe 开关（Argon2id，已实现）
-5. 🟠 用户自配置 URL 强制 HTTPS 校验
+5. ✅ 用户自配置 URL 强制 HTTPS 校验（表单层 `lib/utils/secure_url.dart` + 三后端 provider 层硬拦）
 
 ### 8.2 中期（季度规划）
 
 1. ✅ 启用 SQLCipher 加密本地数据库（Android 2026-10-06 启用，opt-in 默认关闭）
-2. 🟠 AI 调用前敏感数据脱敏
+2. ✅ AI 调用前敏感数据脱敏（账户名别名 + 备注敏感标记）
 3. ✅ transactions 表复合索引（v32 + v58 已补齐）
-4. 🟡 长列表添加 RepaintBoundary
+4. ✅ 长列表 / 图表添加 RepaintBoundary（2026-10-17，收益待真机基线复核）
 5. 🟡 补充集成测试用例（目录已建立，持续补充）
 6. ✅ CI 集成测试覆盖率工具（report-only + artifact）
 

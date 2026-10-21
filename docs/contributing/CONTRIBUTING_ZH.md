@@ -306,25 +306,23 @@ flutter run -d ios
 
 ```
 lib/
-├── data/              # 数据层
-│   ├── db.dart       # 数据库定义
-│   ├── models/       # 数据模型
-│   └── repository.dart # 数据仓库
-├── pages/            # UI 页面
-│   ├── home/         # 首页
-│   ├── charts/       # 图表页
-│   ├── ledgers/      # 账本页
-│   └── mine/         # 个人中心
-├── widgets/          # 通用组件
-│   ├── ui/           # UI 基础组件
-│   └── biz/          # 业务组件
-├── cloud/            # 云服务
-│   ├── supabase_auth.dart
-│   └── supabase_sync.dart
-├── l10n/             # 国际化资源
-├── providers.dart    # Riverpod 状态管理
-├── styles/           # 主题样式
-└── utils/            # 工具函数
+├── ai/                # AI 集成层（providers / core / privacy）
+├── cloud/             # 整账本快照同步（SyncService / diff / fingerprint / 备份）
+├── data/              # Drift 数据库、repositories（抽象 + local/ 实现）、加密
+├── domain/encryption/ # E2EE 领域服务与设置
+├── l10n/              # 国际化资源（.arb）
+├── models/            # 业务模型
+├── pages/<module>/    # 业务页面（transaction / account / settings …）
+├── providers/         # Riverpod 状态管理（all_providers.dart 汇总导出）
+├── services/<module>/ # 业务服务（导入导出 / 同步 / 安全 …）
+├── styles/            # Design Token 与主题
+├── utils/             # 工具函数（含 platform_info.dart 的 PlatformFeature）
+├── widget/            # 桌面小组件逻辑
+├── widgets/           # 通用组件（ui / biz / charts …）
+├── app.dart           # 应用根 Widget
+├── main.dart          # 入口
+└── theme.dart         # 主题
+packages/              # flutter_cloud_sync[_*] / flutter_ai_kit[_*] / flutter_market_data[_*] 子包
 ```
 
 ### 常用命令
