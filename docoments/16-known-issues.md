@@ -501,7 +501,7 @@ dependency_overrides:
 3. ✅ transactions 表复合索引（v32 + v58 已补齐）
 4. ✅ 长列表 / 图表添加 RepaintBoundary（2026-10-17，收益待真机基线复核）
 5. 🟡 补充集成测试用例（目录已建立，持续补充）
-6. ✅ CI 集成测试覆盖率工具（report-only + artifact）
+6. ✅ CI 集成测试覆盖率工具（`--coverage` + Job Summary + artifact，并设行覆盖 43% 硬门禁）
 
 ### 8.3 长期（年度规划）
 
