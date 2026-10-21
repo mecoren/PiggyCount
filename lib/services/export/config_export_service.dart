@@ -2400,11 +2400,16 @@ class ConfigExportService {
       // apiKey 是凭据，导入时直接写安全存储；prefs 仅在旧版本迁移路径出现。
       if (config.ai!.glmApiKey != null && config.ai!.glmApiKey!.isNotEmpty) {
         final zhipu = await AIProviderManager.getProvider('zhipu_glm');
-        if (zhipu != null) {
+        if (zhipu == null) {
+          // 理论不可达（getProviders 保证智谱默认服务商始终存在，且
+          // updateProvider 在找不到 id 时静默 no-op）。此处**保留**旧明文键：
+          // 先 remove 会造成「明文删了、安全存储没写」→ Key 直接丢失。
+          logger.warning('ConfigImport', '智谱服务商缺失，跳过 API Key 导入（保留旧配置）');
+        } else {
           await AIProviderManager.updateProvider(
               zhipu.copyWith(apiKey: config.ai!.glmApiKey!));
+          await prefs.remove(AIConstants.keyGlmApiKey);
         }
-        await prefs.remove(AIConstants.keyGlmApiKey);
       }
       if (config.ai!.glmModel != null) {
         await prefs.setString(AIConstants.keyGlmModel, config.ai!.glmModel!);

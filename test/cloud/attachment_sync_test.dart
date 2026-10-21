@@ -392,7 +392,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       }
       expect(await saved.exists(), isTrue,
-          reason: 'downloadRemoteLedger 返回后应立即入队并补齐附件，'
+          reason: 'downloadRemoteLedger 应在返回前后台入队并补齐附件，'
               '不能等下次冷启动 enqueueAllMissingAttachmentJobs');
       expect(await saved.readAsBytes(), bytes);
     });

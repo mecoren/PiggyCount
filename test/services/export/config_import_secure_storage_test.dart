@@ -49,4 +49,19 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getString('ai_glm_api_key'), isNull);
   });
+
+  test('导入空 apiKey 时不覆盖已有 Key（空串守卫）', () async {
+    await AIProviderManager.updateProvider(
+      AIServiceProviderConfig.zhipuDefault.copyWith(apiKey: 'sk-test-keep'),
+    );
+
+    await ConfigExportService.importFromYaml('''
+ai:
+  ai_glm_api_key: ""
+''');
+
+    final providers = await AIProviderManager.getProviders();
+    final zhipu = providers.firstWhere((p) => p.id == 'zhipu_glm');
+    expect(zhipu.apiKey, 'sk-test-keep', reason: '空串导入不得把已有 Key 覆盖成空');
+  });
 }

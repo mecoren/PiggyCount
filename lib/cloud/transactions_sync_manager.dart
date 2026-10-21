@@ -2250,8 +2250,12 @@ class TransactionsSyncManager implements SyncService {
 
       // 附件二进制后台补齐(不阻塞恢复返回):元数据已入库,缺的文件
       // 从 attachments/<sha256>.bin 异步下载,失败回队下次 drain 重试。
-      unawaited(enqueueMissingAttachmentJobs(ledgerId)
-          .then((_) => drainAttachmentJobs()));
+      // 走 unawaitedLog 而非裸 unawaited：入队 / drain 的意外异常（非
+      // per-job 失败，那类已在 drain 内按 outcome 处理）必须落日志。
+      unawaitedLog(
+          enqueueMissingAttachmentJobs(ledgerId)
+              .then((_) => drainAttachmentJobs()),
+          '恢复完成后附件补齐');
 
       // 清除缓存
       _statusCache.remove(ledgerId);
@@ -2452,8 +2456,10 @@ class TransactionsSyncManager implements SyncService {
           // 文件从 attachments/<sha256>.bin 后台补齐（与下载恢复路径同口径，
           // 不阻塞 apply 返回）。
           if (result.totalCount > 0) {
-            unawaited(enqueueMissingAttachmentJobs(ledgerId)
-                .then((_) => drainAttachmentJobs()));
+            unawaitedLog(
+                enqueueMissingAttachmentJobs(ledgerId)
+                    .then((_) => drainAttachmentJobs()),
+                '合并应用后附件补齐');
           }
 
           return result;
@@ -3796,8 +3802,12 @@ class TransactionsSyncManager implements SyncService {
               ledgerId: ledgerId, duration: metricsWatch.elapsed);
           // 附件补齐：云端独有账本导入后立即入队并后台下载。此前该路径
           // 不入队，缺文件只能等下次冷启动补扫，用户当轮会看到附件缺失。
-          await enqueueMissingAttachmentJobs(ledgerId);
-          unawaited(drainAttachmentJobs());
+          // 与恢复 / 导入 / 合并三处同款 fire-and-forget（走 unawaitedLog，
+          // 后台链路异常仍落日志，不阻塞 downloadRemoteLedger 返回）。
+          unawaitedLog(
+              enqueueMissingAttachmentJobs(ledgerId)
+                  .then((_) => drainAttachmentJobs()),
+              '云端独有账本下载后附件补齐');
           return ledgerId;
         }
         final targetPath = await pathForLedger(ledgerId);
@@ -3837,8 +3847,10 @@ class TransactionsSyncManager implements SyncService {
         _recordMetrics(SyncOpScenario.snapshotRestore, SyncOpOutcome.success,
             ledgerId: ledgerId, duration: metricsWatch.elapsed);
         // 附件补齐：同上，避免下载完成的账本在第一轮会话内附件缺失。
-        await enqueueMissingAttachmentJobs(ledgerId);
-        unawaited(drainAttachmentJobs());
+        unawaitedLog(
+            enqueueMissingAttachmentJobs(ledgerId)
+                .then((_) => drainAttachmentJobs()),
+            '下载恢复后附件补齐');
         return ledgerId;
       });
     } catch (e, stack) {
@@ -4446,8 +4458,10 @@ class TransactionsSyncManager implements SyncService {
     }
 
     // 附件二进制后台补齐(与下载恢复路径同款:不阻塞导入返回)
-    unawaited(enqueueMissingAttachmentJobs(newLedgerId)
-        .then((_) => drainAttachmentJobs()));
+    unawaitedLog(
+        enqueueMissingAttachmentJobs(newLedgerId)
+            .then((_) => drainAttachmentJobs()),
+        '本地导入后附件补齐');
     return inserted;
   }
 }
