@@ -138,8 +138,9 @@ When you enable AI features and configure a provider, PiggyCount sends — for t
 AI is OFF by default and requires your own API key. The app shows an in-app notice naming the provider and the data involved, and asks for your consent, before any data is sent. PiggyCount itself neither stores nor receives this data.
 
 ### Cloud sync (optional)
-- **Supabase**: subject to [Supabase Privacy Policy](https://supabase.com/privacy)
 - **WebDAV**: subject to your own server's privacy policy
+- **S3-compatible storage**: subject to your storage provider's privacy policy (e.g. AWS, Cloudflare R2, MinIO)
+- **Supabase**: subject to [Supabase Privacy Policy](https://supabase.com/privacy) (hidden backend, not exposed in the current UI)
 
 ### Calendar holidays (on by default, can be turned off)
 To label statutory holidays in the calendar, the app requests `https://timor.tech/api/holiday/year/{year}` — sending only the year, with no ledger, account, or device identifiers. You can turn the daily auto-update off in Settings → Calendar & Holidays; the app then only fetches when you tap "Update now", and built-in data keeps the calendar working fully offline.
@@ -148,7 +149,7 @@ To label statutory holidays in the calendar, the app requests `https://timor.tec
 
 If you have any questions about this Privacy Policy, please contact us:
 
-- **Email**: (Add your email if you want, or remove this section)
+- **Email**: user@example.com
 - **GitHub Issues**: https://github.com/mecoren/PiggyCount/issues
 - **GitHub Discussions**: https://github.com/mecoren/PiggyCount/discussions
 

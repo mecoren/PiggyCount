@@ -2397,8 +2397,14 @@ class ConfigExportService {
     // 导入AI配置
     if (options.ai && config.ai != null) {
       // 基础设置（向后兼容）
-      if (config.ai!.glmApiKey != null) {
-        await prefs.setString(AIConstants.keyGlmApiKey, config.ai!.glmApiKey!);
+      // apiKey 是凭据，导入时直接写安全存储；prefs 仅在旧版本迁移路径出现。
+      if (config.ai!.glmApiKey != null && config.ai!.glmApiKey!.isNotEmpty) {
+        final zhipu = await AIProviderManager.getProvider('zhipu_glm');
+        if (zhipu != null) {
+          await AIProviderManager.updateProvider(
+              zhipu.copyWith(apiKey: config.ai!.glmApiKey!));
+        }
+        await prefs.remove(AIConstants.keyGlmApiKey);
       }
       if (config.ai!.glmModel != null) {
         await prefs.setString(AIConstants.keyGlmModel, config.ai!.glmModel!);
