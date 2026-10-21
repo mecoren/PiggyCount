@@ -358,6 +358,46 @@ void main() {
     });
   });
 
+  group('downloadRemoteLedger 附件补齐（2026-10-18 回归）', () {
+    test('云端独有账本下载后立即入队并补齐附件（不依赖冷启动补扫）', () async {
+      final repo = LocalRepository(db);
+      final bytes = Uint8List.fromList([21, 22, 23]);
+      final sha = crypto.sha256.convert(bytes).toString();
+      const slot = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+
+      final cloudJson = '{"version":8,"exportedAt":"2026-08-15T10:00:00Z",'
+          '"ledgerId":1,"ledgerName":"CloudOnly","currency":"CNY","count":1,'
+          '"accounts":[],"categories":[],"tags":[],'
+          '"items":[{"type":"expense","amount":10.0,'
+          '"categoryName":null,"categoryKind":null,'
+          '"happenedAt":"2026-08-01T00:00:00.000","note":"n","tags":"",'
+          '"syncId":"tx-1",'
+          '"attachments":[{"fileName":"cloud.jpg","originalName":"cloud.jpg",'
+          '"fileSize":3,"sortOrder":0,"sha256":"$sha"}]}]}';
+
+      final storage = _MapStorage()
+        ..files['ledger_$slot.json'] = cloudJson
+        ..files['attachments/$sha.bin'] = base64Encode(bytes);
+      final manager = buildManager(storage, repo: repo);
+
+      final ledgerId = await manager.downloadRemoteLedger(
+        name: 'CloudOnly',
+        currency: 'CNY',
+        remotePath: 'ledger_$slot.json',
+      );
+
+      expect(ledgerId, isNotNull);
+      final saved = File('${attDir.path}/cloud.jpg');
+      for (var i = 0; i < 40 && !await saved.exists(); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+      expect(await saved.exists(), isTrue,
+          reason: 'downloadRemoteLedger 返回后应立即入队并补齐附件，'
+              '不能等下次冷启动 enqueueAllMissingAttachmentJobs');
+      expect(await saved.readAsBytes(), bytes);
+    });
+  });
+
   group('快照清单 → localSha256 落列', () {
     test('恢复含 attachments[].sha256 的快照后列值正确', () async {
       final repo = LocalRepository(db);

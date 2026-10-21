@@ -58,4 +58,9 @@
 - **可观测（R3）**：合并路径输出 `附件对象上传合并(同 sha 并发): <sha8>`；测试缝 `attachmentUploadMergedCountForTest`（[:170](../../lib/cloud/transactions_sync_manager.dart#L170)）供并发时序断言。
 - **测试**：新增 [attachment_upload_dedupe_test.dart](../../test/cloud/attachment_upload_dedupe_test.dart#L117) 3 例（R1 并发合并、R2 首路失败传播 + 下一轮重试、R2 不同 sha 并发度保持）；与既有 `attachment_sync_test.dart` 合计 23 例全绿。
 - **门禁**：`flutter analyze --fatal-infos` → `No issues found!`。全量 `flutter test`：2591 过 / 1 跳过 / 1 失败；唯一失败为 `custom_field_stats_perf_test.dart`（4 万行聚合）在并行负载下 6688ms 超过 5s 阈值，单独复跑 162ms 通过 —— 判定为并行负载抖动，非本批回归。
-- **未执行（不宣称达标）**：验收 4 的 WebDAV 双端复跑未执行 —— 当前环境 `adb devices` 无设备、无运行中的双端 App / 本地服务会话，无法产出 `wd_audit.py` 的 `DELETE = 0` 证据。留待有模拟器环境时按 `requirements.md` 验收 4 复跑。
+- **验收 4（WebDAV 双端复跑，2026-10-17 23:49 ~ 2026-10-18 01:23）**：
+  - **A 端全量上传**：`round.py upload` 成功（225s）。应用日志 7 个含附件账本逐本 `上传=1 失败=0`（账本 4 另计 `跳过=1`，即同 sha 对象命中在途/缓存后合并），`附件对象上传失败` 在应用日志与 logcat 中均为 **0**。
+  - **服务端审计**：`scripts/live_db/run_20261017_wd/wd_audit.py` 覆盖上传 + 下载全窗口，共 474 请求（OPTIONS 143 / GET 128 / PROPFIND 98 / MKCOL 16 / PUT 15 / MOVE 15），**DELETE = 0**、磁盘 `.tmp` 残留 = 0 → `VERDICT OK`（证据 `scripts/live_db/run_20261017_wd/WD_audit_summary.txt`）。
+  - **B 端全量下载**：清空历史测试库后执行全量覆盖下载，成功 8 / 失败 0（489s）。逐账本 `syncId`、交易数（合计 40010）、附件元数据（9 行）与 A 全等；附件物理文件 7/7 哈希与 A 一致（证据 `scripts/live_db/run_20261017_wd/B_vs_A_wd17c.txt` 与两端 `sha256sum` 输出）。
+  - **伴生修复（同日）**：复验发现云端独有账本走 `downloadRemoteLedger` 时不会入队附件补齐，文件只能等下次冷启动补扫。已在两条成功返回路径补 `enqueueMissingAttachmentJobs` + 后台 `drainAttachmentJobs`（`lib/cloud/transactions_sync_manager.dart:3799` / `:3840`），新增单测「云端独有账本下载后立即入队并补齐附件」。复验（WDD17D，371s，8/8）日志逐本 `附件补齐完成: 1/1`，下载完成当轮附件目录即为 7 个文件、哈希与 A 一致，无需重启（证据 `scripts/live_db/run_20261017_wd/WDD17D_attachment_immediate.txt`）。
+  - **测试环境说明**：B 端临时账本 `WDD17C_B` 仅为清库后让同步页出现全量入口而建（交易 0、未上传），比对时已排除；A 端云端快照为明文（旧 E2EE 账本已移至 `scripts/webdav_test/data_backup_20261017/`），属测试服务数据准备，不影响去重结论。

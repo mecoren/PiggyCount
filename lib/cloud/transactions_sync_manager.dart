@@ -3794,6 +3794,10 @@ class TransactionsSyncManager implements SyncService {
                   '远程文件均保持原样，请自行核对其他设备的同步状态 ($remotePath)');
           _recordMetrics(SyncOpScenario.snapshotRestore, SyncOpOutcome.success,
               ledgerId: ledgerId, duration: metricsWatch.elapsed);
+          // 附件补齐：云端独有账本导入后立即入队并后台下载。此前该路径
+          // 不入队，缺文件只能等下次冷启动补扫，用户当轮会看到附件缺失。
+          await enqueueMissingAttachmentJobs(ledgerId);
+          unawaited(drainAttachmentJobs());
           return ledgerId;
         }
         final targetPath = await pathForLedger(ledgerId);
@@ -3832,6 +3836,9 @@ class TransactionsSyncManager implements SyncService {
         // P2-6：主路径成功（含换名收尾完成/槽位一致两种形态）
         _recordMetrics(SyncOpScenario.snapshotRestore, SyncOpOutcome.success,
             ledgerId: ledgerId, duration: metricsWatch.elapsed);
+        // 附件补齐：同上，避免下载完成的账本在第一轮会话内附件缺失。
+        await enqueueMissingAttachmentJobs(ledgerId);
+        unawaited(drainAttachmentJobs());
         return ledgerId;
       });
     } catch (e, stack) {
