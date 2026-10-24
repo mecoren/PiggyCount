@@ -40,6 +40,63 @@ class ChangelogVersion {
 /// 全部版本，最新在前
 const kChangelogVersions = <ChangelogVersion>[
   ChangelogVersion(
+    version: '0.1.10',
+    date: '2026-10-24',
+    summary: 'AI 可以直接查账；账单导入默认自动识别并支持钱迹 / 随手记；应用锁可设 4 / 6 位 PIN；大账本的统计、预算与搜索更快，多语言与无障碍细节同步补齐。',
+    sections: [
+      ChangelogSection(
+        icon: Icons.smart_toy_outlined,
+        title: 'AI 查账',
+        items: [
+          '快捷指令接入自由对话：直接问「这个月花了多少」「餐饮花了多少」，AI 会按意图带上本月汇总、分类、趋势与最近交易作答，不再被误判成记账',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.file_upload_outlined,
+        title: '账单导入',
+        items: [
+          '导入页默认「自动识别」账单类型，不用每次手动挑选',
+          '新增钱迹 / 随手记解析器，补齐账户转入 / 转出、付款方 / 收款方等列名别名',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.lock_outline,
+        title: '安全',
+        items: [
+          '应用锁 PIN 支持 4 位 / 6 位，改密时按已保存长度校验旧 PIN',
+          '输错次数与锁定截止时间改存系统安全存储，不再依赖可被改写的普通偏好设置',
+          '云服务自配端点强制 HTTPS；配置备份里的 AI Key 导入时直接写入安全存储',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.speed,
+        title: '性能',
+        items: [
+          '统计聚合与预算用量改由数据库直接汇总，大账本打开洞察 / 预算明显更快',
+          '搜索条件下沉数据库，交易量大时不再先拉全量再过滤',
+          '数据库补齐统计 / 账户 / 预算 / 回收站索引，交易行与图表增加隔离重绘',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.translate,
+        title: '多语言与无障碍',
+        items: [
+          '系统字号最大支持 2.0 倍（原上限 1.15 倍），系统「特大字号」不再被削平',
+          '云同步、备份、年报、图标分组等页面补齐多语言，日期格式跟随语言',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.build_outlined,
+        title: '修复与改进',
+        items: [
+          '记账金额允许为 0，0 元订单也能保存并正常统计',
+          '从云端下载新账本后立即补齐附件，不再等下次启动',
+          '附件上传按内容哈希去重，同一附件不重复传输',
+        ],
+      ),
+    ],
+  ),
+  ChangelogVersion(
     version: '0.1.9',
     date: '2026-10-16',
     summary: '洞察与报表新增「统计口径」：金额可按原始金额或金额型自定义字段统计，时间可按日期型自定义字段统计；日期 / 时间滚轮抽屉支持物理键盘直接输入。',
