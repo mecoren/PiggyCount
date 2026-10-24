@@ -168,6 +168,32 @@ void main() {
       await drainAndUnmount(tester);
     });
 
+    testWidgets('新建支出金额 0：可保存并落库', (tester) async {
+      await repo.createCategory(name: '餐饮', kind: 'expense');
+      await openEditor(tester);
+
+      await tester.tap(find.text('选择分类'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('餐饮').last);
+      await tester.pumpAndSettle();
+
+      // 初始金额为 0，不输入数字，直接完成。
+      await tester.tap(find.text(AppLocalizations.of(
+              tester.element(find.byType(TransactionEditorPage)))
+          .commonFinish));
+      await settleAfterSave(tester);
+
+      final txs = await repo.getTransactionsByLedger(1);
+      expect(txs, hasLength(1), reason: '0 元也必须允许落库');
+      expect(txs.single.amount, closeTo(0, 0.001));
+
+      final stats = await repo.getLedgerStats(ledgerId: 1);
+      expect(stats.transactionCount, 1);
+      expect(stats.balance, closeTo(0, 0.001));
+
+      await drainAndUnmount(tester);
+    });
+
     testWidgets('编辑已存在交易：改金额后保存，读路径反映新值', (tester) async {
       final categoryId = await repo.createCategory(name: '餐饮', kind: 'expense');
       await repo.addTransaction(

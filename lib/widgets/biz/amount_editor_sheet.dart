@@ -1127,12 +1127,9 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     setState(() {});
   }
 
-  /// 「完成」键可用性（屏幕键与硬件 Enter 共用）：提交求值钉在**记账金额**，
-  /// 与当前焦点无关（否则焦点在原始金额时会漏算记账侧的算式）。
-  bool get _isDoneEnabled {
-    final total = _isDoneTotal();
-    return (_op != null ? true : total.abs() > 0) && !_isSubmitting;
-  }
+  /// 「完成」键可用性（屏幕键与硬件 Enter 共用）：0 元是合法金额，
+  /// 仅防重复提交。运算模式下本键先当等号。
+  bool get _isDoneEnabled => !_isSubmitting;
 
   /// 「完成」键（与硬件键盘 Enter）：运算模式下先当等号，否则提交。
   Future<void> _doneKeyTap() async {
