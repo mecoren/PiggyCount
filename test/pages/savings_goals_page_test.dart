@@ -5,7 +5,8 @@
 /// 2. 有目标 → 汇总卡 + 目标名 + 进度条渲染；
 /// 3. 账户模式的目标必须透出「关联账户 · 账户名」，让用户知道进度来自哪里；
 /// 4. 新增目标表单保存后**真的落库**（走 Repository，不是直接写 Drift）；
-/// 5. 明细区滚动时**汇总卡固定在标题栏下方**（总进度常驻，不被滚走 / 不被标题栏切掉）。
+/// 5. 头部是覆盖层（渐变磨砂），列表铺满 body：往上滑时汇总卡滚到磨砂层下面，
+///    「总目标 / 总已存」收进标题栏右上角的紧凑版（总览常驻，不会因为卡滚走而消失）。
 ///
 /// ⚠️ 每个用例结束都要 [settlePage] 推时间：drift 的 QueryStream 在 dispose 时用
 /// `Timer(Duration.zero)` 异步关闭、LoggerService 有 2s 落盘节流定时器 —— 不推进
@@ -139,8 +140,7 @@ void main() {
     await settlePage(tester, container);
   });
 
-  testWidgets('表单抽屉：分段来源 + 行式字段（不再用 ChoiceChip / ListTile）',
-      (tester) async {
+  testWidgets('表单抽屉：分段来源 + 行式字段（不再用 ChoiceChip / ListTile）', (tester) async {
     final container = await pumpPage(tester);
 
     await tester.tap(find.byType(FloatingActionButton));
@@ -164,13 +164,12 @@ void main() {
     await tester.tap(find.text(l10n.savingsGoalSourceAccount));
     await tester.pumpAndSettle();
     expect(find.text(l10n.savingsGoalCurrencyFollowsAccount), findsOneWidget);
-    expect(find.byType(AmountText), findsNothing,
-        reason: '手动草稿行在账户模式下应整行消失');
+    expect(find.byType(AmountText), findsNothing, reason: '手动草稿行在账户模式下应整行消失');
 
     await settlePage(tester, container);
   });
 
-  testWidgets('明细区滚动 → 汇总卡固定在标题栏下方', (tester) async {
+  testWidgets('往上滑 → 汇总卡滚到磨砂层下面，总目标/总已存收进右上角', (tester) async {
     for (var i = 0; i < 12; i++) {
       await repo.createSavingsGoal(
         ledgerId: 1,
@@ -182,22 +181,51 @@ void main() {
     final container = await pumpPage(tester);
     final l10n = l10nOf(tester);
 
-    final summaryLabel = find.text(l10n.savingsGoalTotalTarget);
-    final before = tester.getTopLeft(summaryLabel);
+    // 头部是覆盖层（不占布局位）：列表视口贴屏幕顶，卡片才穿得到磨砂层下面
+    expect(tester.getTopLeft(find.byType(ListView)).dy, 0,
+        reason: '列表要从屏幕顶开始滚，磨砂层才有内容可模糊');
+
+    // 汇总卡里的那个（限定在列表内找：滚动后标题栏里还会出现同名标签）
+    final cardLabel = find.descendant(
+      of: find.byType(ListView),
+      matching: find.text(l10n.savingsGoalTotalTarget),
+    );
+    final before = tester.getTopLeft(cardLabel);
     expect(before.dy, greaterThan(kToolbarHeight),
         reason: '汇总卡应落在标题栏下方，而不是被标题栏盖住');
 
-    final firstCardBefore = tester.getTopLeft(find.byType(SavingsGoalCard).first);
+    final firstCardBefore =
+        tester.getTopLeft(find.byType(SavingsGoalCard).first);
 
-    // 只拖明细区：汇总卡跟着走就是 bug（原先整页一个 ListView 会把它滚上去）
+    // 拖 120dp：够把汇总卡的两个数字顶到磨砂层下沿，又不至于把首卡滑出
+    // sliver 的缓存区（滑出去元素会被回收，位置断言就取不到了）
     await tester.drag(
-        find.byType(SavingsGoalCard).first, const Offset(0, -400));
+        find.byType(SavingsGoalCard).first, const Offset(0, -120));
     await tester.pumpAndSettle();
 
-    expect(tester.getTopLeft(summaryLabel), before, reason: '汇总卡必须固定不动');
-    // 明细确实滚了（否则上面那条断言等于没测）
+    // 列表真的滚了：汇总卡跟着往上走（钻进磨砂层），不再是「钉死在标题栏下方」
+    expect(
+        tester
+            .state<ScrollableState>(find.byType(Scrollable).first)
+            .position
+            .pixels,
+        greaterThan(0));
+    expect(tester.getTopLeft(cardLabel).dy, lessThan(before.dy),
+        reason: '汇总卡要跟着列表滚走，否则磨砂层下面永远没内容');
     expect(tester.getTopLeft(find.byType(SavingsGoalCard).first).dy,
         lessThan(firstCardBefore.dy));
+
+    // 滚走后「总目标 / 总已存」收进标题栏右上角（限定在头部里找，避免和卡片里的撞）
+    final compact = find.descendant(
+      of: find.byType(PiggyHeader),
+      matching: find.text(l10n.savingsGoalTotalTarget),
+    );
+    expect(compact, findsOneWidget, reason: '总览数字不能因为卡滚走就看不到');
+    final compactPos = tester.getTopLeft(compact);
+    expect(compactPos.dy, lessThan(kToolbarHeight), reason: '紧凑汇总要落在标题栏这一行内');
+    expect(compactPos.dx,
+        greaterThan(tester.getSize(find.byType(SavingsGoalsPage)).width / 2),
+        reason: '「收进右上角」——紧凑汇总必须靠右，不能留在左侧标题区');
 
     await settlePage(tester, container);
   });

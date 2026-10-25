@@ -16,61 +16,90 @@ import 'savings_goal_edit_page.dart';
 ///
 /// 数据源单一：`savingsGoalProgressProvider`（目标 × 进度的解算结果）——
 /// 页面不做金额计算，也不自己查账户余额（见 `lib/providers/savings_goal_providers.dart`）。
-class SavingsGoalsPage extends ConsumerWidget {
+///
+/// 版式与洞察页同款分层：**头部是覆盖层**（`PiggyHeader` 自带渐变磨砂），列表
+/// 铺满整个 body 从屏幕顶开始滚 —— 汇总卡往上滑时会钻到磨砂层下面，磨砂才有
+/// 内容可模糊；同一时刻「总目标 / 总已存」收进标题栏右上角的紧凑样式，
+/// 总览数字不会因为滚走而看不到。
+class SavingsGoalsPage extends ConsumerStatefulWidget {
   const SavingsGoalsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SavingsGoalsPage> createState() => _SavingsGoalsPageState();
+}
+
+class _SavingsGoalsPageState extends ConsumerState<SavingsGoalsPage> {
+  final ScrollController _scroll = ScrollController();
+
+  /// 汇总金额「收进右上角」的进度：0 = 汇总卡里的数字完整可见，1 = 只剩标题栏
+  /// 右侧的紧凑版。用 ValueNotifier 而不是 setState —— 滚动每帧都变，只让标题栏
+  /// 那一小块重建，列表不跟着逐帧重建。
+  final ValueNotifier<double> _collapse = ValueNotifier<double>(0);
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_syncCollapse);
+  }
+
+  @override
+  void dispose() {
+    _scroll
+      ..removeListener(_syncCollapse)
+      ..dispose();
+    _collapse.dispose();
+    super.dispose();
+  }
+
+  void _syncCollapse() {
+    final offset = _scroll.hasClients ? _scroll.offset : 0.0;
+    // 汇总卡的数字在卡片顶部：滚 24~64dp 之间正好滑到标题栏磨砂层下沿。在这个
+    // 区间淡入，再早会出现「同一个数字在上下两处并存」的重影。
+    _collapse.value = ((offset - 24) / 40).clamp(0.0, 1.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final itemsAsync = ref.watch(savingsGoalProgressProvider);
     final summary = ref.watch(savingsGoalSummaryProvider).value;
     final currencyCode =
         ref.watch(currentLedgerProvider).value?.currency ?? 'CNY';
     final items = itemsAsync.value ?? const <SavingsGoalWithProgress>[];
+    final hasSummary = summary != null && summary.totalCount > 0;
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      extendBodyBehindAppBar: true,
-      appBar: PiggyTitleBar(
-        title: l10n.savingsGoalPageTitle,
-        showBack: true,
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showSavingsGoalFormBottomSheet(context),
         // 只要一个「+」按钮，不带文字；按钮名走 tooltip（长按提示 + 无障碍朗读）
         tooltip: l10n.savingsGoalAddTitle,
         child: const Icon(Icons.add_rounded),
       ),
-      // 汇总卡**固定**在标题栏下方，只有明细区滚动：原先整页共用一个 ListView，
-      // 往下滚时汇总卡会被标题栏切掉（总进度看不到），与「总览常驻」的预期不符。
-      body: Column(
+      body: Stack(
         children: [
-          Padding(
-            padding: EdgeInsets.only(
-              // 标题栏下方留出呼吸位（与预算页口径一致），否则首卡顶边贴住标题栏下缘
-              top: PiggyTokens.topScrollablePadding(
-                context,
-                extra: PiggyDimens.p8,
+          // 内容层：列表铺满整个 body，顶部留白由列表自己让出标题栏高度 ——
+          // 视口从屏幕顶开始，卡片才穿得到磨砂层下面（包在 body 外就没这效果）。
+          Positioned.fill(
+            child: ListView(
+              controller: _scroll,
+              padding: EdgeInsets.only(
+                // 标题栏下方留出呼吸位（与预算页口径一致），否则首卡顶边贴住标题栏下缘
+                top: PiggyTokens.topScrollablePadding(
+                  context,
+                  extra: PiggyDimens.p8,
+                ),
+                // 给 FAB 留位 + 底部安全区
+                bottom: 96 + MediaQuery.of(context).padding.bottom,
               ),
-            ),
-            child: Column(
               children: [
-                if (summary != null && summary.totalCount > 0) ...[
+                // 汇总卡随列表滚动（不再常驻）：滚走后由标题栏右上角的紧凑版接管
+                if (hasSummary) ...[
                   _SummaryCard(summary: summary, currencyCode: currencyCode),
                   // SectionCard 只带水平 margin，卡与卡的纵向间距要在这里补，
                   // 否则汇总卡与列表卡上下贴死（间距口径取预算页的 12）
                   SizedBox(height: PiggyDimens.p12.scaled(context, ref)),
                 ],
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.only(
-                // 给 FAB 留位 + 底部安全区
-                bottom: 96 + MediaQuery.of(context).padding.bottom,
-              ),
-              children: [
                 if (items.isEmpty && itemsAsync.hasValue)
                   Padding(
                     padding: EdgeInsets.only(
@@ -91,8 +120,7 @@ class SavingsGoalsPage extends ConsumerWidget {
                         for (var i = 0; i < items.length; i++) ...[
                           if (i > 0)
                             Divider(
-                                height: 1,
-                                color: PiggyTokens.divider(context)),
+                                height: 1, color: PiggyTokens.divider(context)),
                           SavingsGoalCard(
                             item: items[i],
                             onTap: () => showSavingsGoalFormBottomSheet(
@@ -107,7 +135,77 @@ class SavingsGoalsPage extends ConsumerWidget {
               ],
             ),
           ),
+          // 头部层：标题栏盖在列表之上，磨砂据此生效
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: _buildHeader(context, l10n, summary, currencyCode),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, AppLocalizations l10n,
+      SavingsGoalSummary? summary, String currencyCode) {
+    final hasSummary = summary != null && summary.totalCount > 0;
+    return PiggyHeader(
+      child: SizedBox(
+        // 与 PiggyTokens.topScrollablePadding 里的 kToolbarHeight 同源，
+        // 列表的顶部留白才对得上头部高度
+        height: kToolbarHeight,
+        child: Padding(
+          padding: PiggyDimens.headerHorizontal,
+          child: Row(
+            children: [
+              IconButton(
+                padding: const EdgeInsets.only(right: 8),
+                icon: const Icon(Icons.arrow_back_rounded, size: 22),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+              Expanded(
+                child: Text(
+                  l10n.savingsGoalPageTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: PiggyTextTokens.title(context),
+                ),
+              ),
+              if (hasSummary)
+                ConstrainedBox(
+                  // 天花板：金额再长也只压缩自己，不许把标题挤没
+                  constraints: BoxConstraints(
+                    maxWidth: 168.0.scaled(context, ref),
+                  ),
+                  child: ValueListenableBuilder<double>(
+                    valueListenable: _collapse,
+                    builder: (context, progress, _) {
+                      // 收敛到 0 时整块不建：「总目标 / 总已存」这两个词否则会
+                      // 在页面上各出现两次（汇总卡里 + 标题栏里），读屏会重复播报
+                      if (progress <= 0) return const SizedBox.shrink();
+                      return Opacity(
+                        opacity: progress,
+                        child: Transform.translate(
+                          // 从右侧滑入一点点：读起来是「收进右上角」，
+                          // 而不是凭空多出一行字
+                          offset: Offset(12 * (1 - progress), 0),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: _CompactSummary(
+                              summary: summary,
+                              currencyCode: currencyCode,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -165,7 +263,8 @@ class _SummaryCard extends ConsumerWidget {
             Row(
               children: [
                 Expanded(
-                  child: metric(l10n.savingsGoalTotalTarget, summary.totalTarget),
+                  child:
+                      metric(l10n.savingsGoalTotalTarget, summary.totalTarget),
                 ),
                 Expanded(
                   child: metric(l10n.savingsGoalTotalSaved, summary.totalSaved),
@@ -206,6 +305,53 @@ class _SummaryCard extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 标题栏右上角的紧凑汇总：汇总卡往上滑走之后，「总目标 / 总已存」收到这里。
+///
+/// 两行「标签 + 紧凑金额（万 / 千）」，字号取 caption 档 —— 它是常驻提示，
+/// 不能跟标题抢字重；金额仍走 [AmountText]，跟随全局「隐藏金额」开关。
+class _CompactSummary extends ConsumerWidget {
+  const _CompactSummary({required this.summary, required this.currencyCode});
+
+  final SavingsGoalSummary summary;
+  final String currencyCode;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final hide = ref.watch(hideAmountsProvider);
+    final labelStyle = PiggyTextTokens.caption(context)
+        .copyWith(color: PiggyTokens.textTertiary(context));
+    final valueStyle =
+        PiggyTextTokens.caption(context).copyWith(fontWeight: FontWeight.w600);
+
+    Widget line(String label, double value) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label, style: labelStyle),
+            SizedBox(width: PiggyDimens.p4.scaled(context, ref)),
+            AmountText(
+              value: value,
+              signed: false,
+              showCurrency: true,
+              currencyCode: currencyCode,
+              useCompactFormat: true,
+              hide: hide,
+              style: valueStyle,
+            ),
+          ],
+        );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        line(l10n.savingsGoalTotalTarget, summary.totalTarget),
+        line(l10n.savingsGoalTotalSaved, summary.totalSaved),
+      ],
     );
   }
 }
