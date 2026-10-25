@@ -16,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/models/analytics_amount_metric.dart';
 import 'package:piggycount/data/models/analytics_time_metric.dart';
+import 'package:piggycount/data/models/analytics_transaction_filter.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/pages/analytics/custom_field_analysis_page.dart';
 import 'package:piggycount/providers.dart';
@@ -58,7 +59,8 @@ void main() {
               DateTime end,
               int refreshTick,
               AnalyticsAmountMetric amountMetric,
-              AnalyticsTimeMetric timeMetric
+              AnalyticsTimeMetric timeMetric,
+              AnalyticsTransactionFilter filter
             })>?
         calls,
   }) {
@@ -66,7 +68,8 @@ void main() {
       overrides: [
         // AmountText(showCurrency) 会 watch 当前账本；注入假流避免真实 drift
         // QueryStream 排零位定时器（既有测试同款做法）。
-        currentLedgerProvider.overrideWith((ref) => Stream<Ledger?>.value(null)),
+        currentLedgerProvider
+            .overrideWith((ref) => Stream<Ledger?>.value(null)),
         currentLedgerIdProvider.overrideWith((ref) => 7),
         customFieldStatsForRangeProvider.overrideWith((ref, q) async {
           calls?.add(q);
@@ -94,8 +97,8 @@ void main() {
   }
 
   testWidgets('结余视角隐藏本卡', (tester) async {
-    await tester.pumpWidget(host(
-        type: 'balance', data: [field('渠道', 100, 0)], calls: []));
+    await tester.pumpWidget(
+        host(type: 'balance', data: [field('渠道', 100, 0)], calls: []));
     await tester.pump(const Duration(seconds: 3));
 
     expect(find.byType(AmountText), findsNothing);
@@ -111,8 +114,8 @@ void main() {
   });
 
   testWidgets('支出视角出卡：标题 + 值桶行，金额取支出', (tester) async {
-    await tester.pumpWidget(host(
-        type: 'expense', data: [field('渠道', 300, 50)], calls: []));
+    await tester.pumpWidget(
+        host(type: 'expense', data: [field('渠道', 300, 50)], calls: []));
     await tester.pump(const Duration(seconds: 3));
 
     expect(find.text(l10n.rangeReportCustomFieldTitle), findsOneWidget);
@@ -126,8 +129,8 @@ void main() {
   });
 
   testWidgets('收入视角：维度跟随，金额取收入', (tester) async {
-    await tester.pumpWidget(host(
-        type: 'income', data: [field('渠道', 300, 50)], calls: []));
+    await tester.pumpWidget(
+        host(type: 'income', data: [field('渠道', 300, 50)], calls: []));
     await tester.pump(const Duration(seconds: 3));
 
     expect(
@@ -145,7 +148,8 @@ void main() {
       DateTime end,
       int refreshTick,
       AnalyticsAmountMetric amountMetric,
-      AnalyticsTimeMetric timeMetric
+      AnalyticsTimeMetric timeMetric,
+      AnalyticsTransactionFilter filter
     })>[];
     await tester.pumpWidget(host(
         type: 'expense',
@@ -167,8 +171,8 @@ void main() {
   });
 
   testWidgets('整卡可点：点卡片主体（标题/值桶行）也能进字段分析页', (tester) async {
-    await tester.pumpWidget(host(
-        type: 'expense', data: [field('渠道', 300, 50)], calls: []));
+    await tester.pumpWidget(
+        host(type: 'expense', data: [field('渠道', 300, 50)], calls: []));
     await tester.pump(const Duration(seconds: 3));
 
     final card = find.byKey(const Key('custom-field-stats-card'));
@@ -176,7 +180,8 @@ void main() {
 
     // 热区 = 整卡（此前只有右上角那行小字的 InkWell，点主体无反应 ——
     // 无障碍树却把整卡合并成一个 clickable 节点）。
-    final titleRect = tester.getRect(find.text(l10n.rangeReportCustomFieldTitle));
+    final titleRect =
+        tester.getRect(find.text(l10n.rangeReportCustomFieldTitle));
     final rowRect = tester.getRect(find.text('渠道'));
     expect(rect.contains(titleRect.center), isTrue);
     expect(rect.contains(rowRect.center), isTrue);
@@ -194,12 +199,11 @@ void main() {
       DateTime end,
       int refreshTick,
       AnalyticsAmountMetric amountMetric,
-      AnalyticsTimeMetric timeMetric
+      AnalyticsTimeMetric timeMetric,
+      AnalyticsTransactionFilter filter
     })>[];
-    await tester.pumpWidget(host(
-        type: 'expense',
-        data: [field('渠道', 1, 0)],
-        calls: calls));
+    await tester.pumpWidget(
+        host(type: 'expense', data: [field('渠道', 1, 0)], calls: calls));
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpWidget(host(
         type: 'expense',
@@ -221,12 +225,11 @@ void main() {
       DateTime end,
       int refreshTick,
       AnalyticsAmountMetric amountMetric,
-      AnalyticsTimeMetric timeMetric
+      AnalyticsTimeMetric timeMetric,
+      AnalyticsTransactionFilter filter
     })>[];
-    await tester.pumpWidget(host(
-        type: 'expense',
-        data: [field('渠道', 1, 0)],
-        calls: calls));
+    await tester.pumpWidget(
+        host(type: 'expense', data: [field('渠道', 1, 0)], calls: calls));
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpWidget(host(
         type: 'expense',

@@ -15,6 +15,7 @@ import '../../widgets/analytics/metric_segment.dart';
 import '../../widgets/analytics/time_metric_chip.dart';
 import '../../widgets/analytics/category_rank_row.dart';
 import '../../widgets/analytics/custom_field_stats_card.dart';
+import '../../widgets/analytics/analytics_filter_sheet.dart';
 import '../../widgets/analytics/insight_card.dart';
 import '../../widgets/ui/wait_sliding_segmented_control.dart';
 import '../../l10n/app_localizations.dart';
@@ -23,8 +24,10 @@ import '../../services/system/logger_service.dart';
 import '../../data/db.dart' as db;
 import '../../data/models/analytics_amount_metric.dart';
 import '../../data/models/analytics_time_metric.dart';
+import '../../data/models/analytics_transaction_filter.dart';
 import '../report/range_report_page.dart';
 import '../../utils/analytics_scope.dart';
+import '../../utils/transaction_search_filter.dart';
 import '../../utils/month_range.dart';
 import '../../utils/week_range.dart';
 import '../../utils/format_utils.dart';
@@ -44,6 +47,7 @@ class AnalyticsPage extends ConsumerStatefulWidget {
 class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   AnalyticsScope _scope = AnalyticsScope.month;
   String _type = 'expense'; // expense | income | balance
+  AnalyticsTransactionFilter _filter = const AnalyticsTransactionFilter();
   bool _chartSwiped = false; // 吸收图表区域横滑，避免父级切换收入/支出
   bool _localChartDismissed = false;
   // 周报选中的周（该周周一），独立于首页月份状态，避免污染首页
@@ -187,12 +191,102 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     }
   }
 
+  Future<void> _openFilterSheet() async {
+    final result = await showAnalyticsFilterSheet(context, initial: _filter);
+    if (result == null || !mounted) return;
+    setState(() => _filter = result);
+  }
+
+  String _typeFilterLabel(String type, AppLocalizations l10n) => switch (type) {
+        'income' => l10n.homeIncome,
+        'transfer' => l10n.transferTitle,
+        _ => l10n.homeExpense,
+      };
+
+  String _conditionFilterLabel(
+      CustomFieldCondition condition, AppLocalizations l10n) {
+    final value = switch (condition) {
+      CustomFieldConditionEq(:final value) => value,
+      CustomFieldConditionContains(:final value) => value,
+      CustomFieldConditionAnyOf(:final values) =>
+        (values.toList()..sort()).join(' / '),
+      CustomFieldConditionBetween(:final lower, :final upper) =>
+        upper == null ? '≥$lower' : '$lower~$upper',
+    };
+    return l10n.customFieldFilterChip(condition.fieldName, value);
+  }
+
+  Widget _buildFilterBar(AppLocalizations l10n, Color primary) {
+    final chips = <Widget>[
+      for (final type in (_filter.types.toList()..sort()))
+        InputChip(
+          label: Text(_typeFilterLabel(type, l10n)),
+          onDeleted: () => setState(() {
+            final next = {..._filter.types}..remove(type);
+            _filter = _filter.copyWith(types: next);
+          }),
+          deleteIconColor: PiggyTokens.error(context),
+        ),
+      for (final condition in _filter.customFieldConditions)
+        InputChip(
+          label: Text(_conditionFilterLabel(condition, l10n)),
+          onDeleted: () => setState(() {
+            _filter = _filter.copyWith(customFieldConditions: [
+              for (final c in _filter.customFieldConditions)
+                if (c != condition) c,
+            ]);
+          }),
+          deleteIconColor: PiggyTokens.error(context),
+        ),
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Row(
+        children: [
+          OutlinedButton.icon(
+            onPressed: _openFilterSheet,
+            icon: Icon(
+              _filter.isEmpty ? Icons.filter_alt_outlined : Icons.filter_alt,
+              size: 16,
+            ),
+            label: Text(
+              _filter.isEmpty
+                  ? l10n.analyticsFilterEntry
+                  : l10n.analyticsFilterApplied,
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: primary,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          if (chips.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final chip in chips)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: chip,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   // 显示类型选择菜单
   /// v30 补折算横幅(01 §六):currencyCode≠本位币 且 nativeAmount==amount 的
   /// 存量外币交易 >0 时出现;确认后按当前有效汇率重算(逐笔记 change,L13)。
   Widget _buildRecalcForeignBanner(BuildContext context) {
-    final count =
-        ref.watch(ledgerUnconvertedForeignTxCountProvider).value ?? 0;
+    final count = ref.watch(ledgerUnconvertedForeignTxCountProvider).value ?? 0;
     if (count <= 0) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final primary = ref.watch(primaryColorProvider);
@@ -314,8 +408,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   // 自定义→_customRange 本地（等长平移，shiftCustomRange）。
   void _onChartSwipeLeft() {
     if (_scope == AnalyticsScope.custom) {
-      setState(
-          () => _customRange = shiftCustomRange(_customRange, 1));
+      setState(() => _customRange = shiftCustomRange(_customRange, 1));
       return;
     }
     final selMonth = ref.read(selectedMonthProvider);
@@ -334,8 +427,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
   void _onChartSwipeRight() {
     if (_scope == AnalyticsScope.custom) {
-      setState(
-          () => _customRange = shiftCustomRange(_customRange, -1));
+      setState(() => _customRange = shiftCustomRange(_customRange, -1));
       return;
     }
     final selMonth = ref.read(selectedMonthProvider);
@@ -361,8 +453,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
         color: Colors.transparent,
         // UI-10：边框走 token，暗色模式下不再用固定浅灰导致不可见
         shape: CircleBorder(
-          side: BorderSide(
-              color: PiggyTokens.borderThemed(context), width: 1.4),
+          side:
+              BorderSide(color: PiggyTokens.borderThemed(context), width: 1.4),
         ),
         child: InkWell(
           onTap: onTap,
@@ -387,8 +479,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
           '${selMonth.year}Q${((selMonth.month - 1) ~/ 3) + 1}',
         AnalyticsScope.year => '${selMonth.year}',
         AnalyticsScope.custom => _customRangeText(),
-        AnalyticsScope.all =>
-          AppLocalizations.of(context).analyticsAllYears,
+        AnalyticsScope.all => AppLocalizations.of(context).analyticsAllYears,
       };
 
   /// 自定义区间文案：yyyy-MM-dd ~ yyyy-MM-dd（含端展示，与
@@ -455,9 +546,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     // 时间范围 + 同比上期窗口：周期计算收拢在 analytics_scope.dart 纯函数
     // （含「当前周期只到今天」截断与各档上期口径，行为冻结见该文件文档）
     final anchor = _scope == AnalyticsScope.week ? _selWeek : selMonth;
-    final period =
-        resolveAnalyticsPeriod(_scope,
-            anchor: anchor, range: _customRange, startDay: sd, now: now);
+    final period = resolveAnalyticsPeriod(_scope,
+        anchor: anchor, range: _customRange, startDay: sd, now: now);
     final start = period.start;
     final end = period.end;
     final prevStart = period.prevStart;
@@ -474,7 +564,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     // 被 _rememberAnalyticsFuture 丢弃；命中时闭包不执行，占位 future 安全。
     final scopeKey = '${start.millisecondsSinceEpoch}|'
         '${end.millisecondsSinceEpoch}|$refreshTick|$ledgerId|'
-        '${amountMetric.storageValue}|${timeMetric.storageValue}';
+        '${amountMetric.storageValue}|${timeMetric.storageValue}|'
+        '${_filter.cacheKey}';
     final memoKey = '$_type|$scopeKey';
 
     // 命中 = 已发查询复用 或 口径缓存已有结果，两种都不必再建查询。
@@ -487,6 +578,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
       // 「总额按字段日期、趋势按记账时间」的对不上账。
       final metric = amountMetric;
       final time = timeMetric;
+      final extraFilter = _filter;
       // 主序列路由由 seriesKind 决定：week/month=日、year=月、all=年序列
       if (_type == 'balance') {
         // 结余模式：同时获取收入和支出数据
@@ -498,38 +590,44 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 start: start,
                 end: end,
                 amountMetric: metric,
-                timeMetric: time);
+                timeMetric: time,
+                filter: extraFilter);
             expenseSeriesFuture = repo.totalsByDay(
                 ledgerId: ledgerId,
                 type: 'expense',
                 start: start,
                 end: end,
                 amountMetric: metric,
-                timeMetric: time);
+                timeMetric: time,
+                filter: extraFilter);
           case AnalyticsSeriesKind.month:
             incomeSeriesFuture = repo.totalsByMonth(
                 ledgerId: ledgerId,
                 type: 'income',
                 year: selMonth.year,
                 amountMetric: metric,
-                timeMetric: time);
+                timeMetric: time,
+                filter: extraFilter);
             expenseSeriesFuture = repo.totalsByMonth(
                 ledgerId: ledgerId,
                 type: 'expense',
                 year: selMonth.year,
                 amountMetric: metric,
-                timeMetric: time);
+                timeMetric: time,
+                filter: extraFilter);
           case AnalyticsSeriesKind.yearSeries:
             incomeSeriesFuture = repo.totalsByYearSeries(
                 ledgerId: ledgerId,
                 type: 'income',
                 amountMetric: metric,
-                timeMetric: time);
+                timeMetric: time,
+                filter: extraFilter);
             expenseSeriesFuture = repo.totalsByYearSeries(
                 ledgerId: ledgerId,
                 type: 'expense',
                 amountMetric: metric,
-                timeMetric: time);
+                timeMetric: time,
+                filter: extraFilter);
         }
         seriesFuture = Future.value([]); // 占位
       } else {
@@ -541,18 +639,21 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               start: start,
               end: end,
               amountMetric: metric,
-              timeMetric: time),
+              timeMetric: time,
+              filter: extraFilter),
           AnalyticsSeriesKind.month => repo.totalsByMonth(
               ledgerId: ledgerId,
               type: _type,
               year: selMonth.year,
               amountMetric: metric,
-              timeMetric: time),
+              timeMetric: time,
+              filter: extraFilter),
           AnalyticsSeriesKind.yearSeries => repo.totalsByYearSeries(
               ledgerId: ledgerId,
               type: _type,
               amountMetric: metric,
-              timeMetric: time),
+              timeMetric: time,
+              filter: extraFilter),
         };
       }
 
@@ -568,7 +669,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
               ledgerId: ledgerId,
               type: type,
               amountMetric: metric,
-              timeMetric: time);
+              timeMetric: time,
+              filter: extraFilter);
         }
         return repo.totalsByDay(
             ledgerId: ledgerId,
@@ -576,7 +678,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
             start: w.start,
             end: w.end,
             amountMetric: metric,
-            timeMetric: time);
+            timeMetric: time,
+            filter: extraFilter);
       }
 
       if (_type == 'balance') {
@@ -651,8 +754,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                       const SizedBox(width: 4),
                       // F2 自定义区间报表入口（任意起止 + 环比/同比 + 标签维度）
                       Tooltip(
-                        message:
-                            AppLocalizations.of(context).rangeReportTitle,
+                        message: AppLocalizations.of(context).rangeReportTitle,
                         child: IconButton(
                           icon: Icon(Icons.date_range_outlined,
                               color: PiggyTokens.textPrimary(context)),
@@ -667,83 +769,85 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                       // 分享按钮（自定义区间无海报模板，隐藏入口，Q5）
                       if (_scope != AnalyticsScope.custom)
                         IconButton(
-                        icon: Icon(Icons.share,
-                            color: PiggyTokens.textPrimary(context)),
-                        tooltip: AppLocalizations.of(context).sharePosterShare,
-                        onPressed: () async {
-                          final ledgerId = ref.read(currentLedgerIdProvider);
-                          if (ledgerId == 0) {
-                            showToast(
-                                context,
-                                AppLocalizations.of(context)
-                                    .sharePosterNoLedger);
-                            return;
-                          }
-
-                          // 显示加载弹窗：项目统一阻塞进度弹窗
-                          final block = showBlockingProgressDialog(
-                            context,
-                            title: AppLocalizations.of(context)
-                                .mineShareGenerating,
-                          );
-
-                          try {
-                            if (context.mounted) {
-                              await block.close(); // 关闭加载对话框
-                              if (!context.mounted) return;
-
-                              // 使用动态预览对话框（支持隐藏收入）
-                              // 注意：周报回退到该周所在月的月报海报（现状语义）
-                              // 季度→年报回退（Q5）；自定义区间无海报模板，
-                              // 分享入口已隐藏（Q5），null 仅作防御性兜底。
-                              final poster = switch (_scope) {
-                                AnalyticsScope.week => (
-                                    type: 'month',
-                                    year: _selWeek.year,
-                                    month: _selWeek.month,
-                                  ),
-                                AnalyticsScope.month => (
-                                    type: 'month',
-                                    year: selMonth.year,
-                                    month: selMonth.month,
-                                  ),
-                                AnalyticsScope.quarter => (
-                                    type: 'year',
-                                    year: selMonth.year,
-                                    month: null,
-                                  ),
-                                AnalyticsScope.year => (
-                                    type: 'year',
-                                    year: selMonth.year,
-                                    month: null,
-                                  ),
-                                AnalyticsScope.custom => null,
-                                AnalyticsScope.all => (
-                                    type: 'ledger',
-                                    year: null,
-                                    month: null,
-                                  ),
-                              };
-                              if (poster == null) return;
-                              await SharePosterService.showDynamicPosterPreview(
-                                context,
-                                ref,
-                                type: poster.type,
-                                ledgerId: ledgerId,
-                                year: poster.year,
-                                month: poster.month,
-                              );
+                          icon: Icon(Icons.share,
+                              color: PiggyTokens.textPrimary(context)),
+                          tooltip:
+                              AppLocalizations.of(context).sharePosterShare,
+                          onPressed: () async {
+                            final ledgerId = ref.read(currentLedgerIdProvider);
+                            if (ledgerId == 0) {
+                              showToast(
+                                  context,
+                                  AppLocalizations.of(context)
+                                      .sharePosterNoLedger);
+                              return;
                             }
-                          } catch (e) {
-                            if (context.mounted) {
-                              await block.close(); // 关闭加载对话框
-                              if (!context.mounted) return;
-                              showToast(context,
-                                  '${AppLocalizations.of(context).commonError}: $e');
+
+                            // 显示加载弹窗：项目统一阻塞进度弹窗
+                            final block = showBlockingProgressDialog(
+                              context,
+                              title: AppLocalizations.of(context)
+                                  .mineShareGenerating,
+                            );
+
+                            try {
+                              if (context.mounted) {
+                                await block.close(); // 关闭加载对话框
+                                if (!context.mounted) return;
+
+                                // 使用动态预览对话框（支持隐藏收入）
+                                // 注意：周报回退到该周所在月的月报海报（现状语义）
+                                // 季度→年报回退（Q5）；自定义区间无海报模板，
+                                // 分享入口已隐藏（Q5），null 仅作防御性兜底。
+                                final poster = switch (_scope) {
+                                  AnalyticsScope.week => (
+                                      type: 'month',
+                                      year: _selWeek.year,
+                                      month: _selWeek.month,
+                                    ),
+                                  AnalyticsScope.month => (
+                                      type: 'month',
+                                      year: selMonth.year,
+                                      month: selMonth.month,
+                                    ),
+                                  AnalyticsScope.quarter => (
+                                      type: 'year',
+                                      year: selMonth.year,
+                                      month: null,
+                                    ),
+                                  AnalyticsScope.year => (
+                                      type: 'year',
+                                      year: selMonth.year,
+                                      month: null,
+                                    ),
+                                  AnalyticsScope.custom => null,
+                                  AnalyticsScope.all => (
+                                      type: 'ledger',
+                                      year: null,
+                                      month: null,
+                                    ),
+                                };
+                                if (poster == null) return;
+                                await SharePosterService
+                                    .showDynamicPosterPreview(
+                                  context,
+                                  ref,
+                                  type: poster.type,
+                                  ledgerId: ledgerId,
+                                  year: poster.year,
+                                  month: poster.month,
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                await block.close(); // 关闭加载对话框
+                                if (!context.mounted) return;
+                                showToast(context,
+                                    '${AppLocalizations.of(context).commonError}: $e');
+                              }
                             }
-                          }
-                        },
-                      ),
+                          },
+                        ),
                     ],
                   ),
                 ),
@@ -786,7 +890,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         // （月/季/年共享 selectedMonthProvider，D5）
                         final sel = ref.read(selectedMonthProvider);
                         ref.read(selectedMonthProvider.notifier).state =
-                            DateTime(sel.year, ((sel.month - 1) ~/ 3) * 3 + 1, 1);
+                            DateTime(
+                                sel.year, ((sel.month - 1) ~/ 3) * 3 + 1, 1);
                       }
                     }),
                   ),
@@ -801,7 +906,9 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                             context, Icons.chevron_left, _onChartSwipeRight),
                       Expanded(
                         child: InkWell(
-                          onTap: _scope != AnalyticsScope.all ? _showPeriodPicker : null,
+                          onTap: _scope != AnalyticsScope.all
+                              ? _showPeriodPicker
+                              : null,
                           child: Center(
                             child: Text(
                               _navPeriodLabel(context, selMonth),
@@ -848,6 +955,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                     ],
                   ),
                 ),
+                _buildFilterBar(
+                  AppLocalizations.of(context),
+                  ref.watch(primaryColorProvider),
+                ),
               ],
             ),
           ),
@@ -892,7 +1003,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                               prevEnd,
                               chartSeriesFuture,
                               amountMetric,
-                              timeMetric)
+                              timeMetric,
+                              _filter)
                           : _loadCategoryData(
                               repo,
                               ledgerId,
@@ -904,7 +1016,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                               prevEnd,
                               chartSeriesFuture,
                               amountMetric,
-                              timeMetric))
+                              timeMetric,
+                              _filter))
                       .then((loaded) => (shape, loaded));
                 },
               ),
@@ -918,8 +1031,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.error_outline,
-                            size: 40,
-                            color: PiggyTokens.textTertiary(context)),
+                            size: 40, color: PiggyTokens.textTertiary(context)),
                         const SizedBox(height: 12),
                         Text(
                           AppLocalizations.of(context)
@@ -930,9 +1042,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         ),
                         const SizedBox(height: 16),
                         OutlinedButton(
-                          onPressed: () => ref
-                              .read(statsRefreshProvider.notifier)
-                              .state++,
+                          onPressed: () =>
+                              ref.read(statsRefreshProvider.notifier).state++,
                           child: Text(
                               AppLocalizations.of(context).helpCenterRetry),
                         ),
@@ -1024,6 +1135,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 final vals = valuesOnly();
                 final allZero = vals.isEmpty || vals.every((v) => v == 0);
                 if (txCount == 0 || (sum == 0 && allZero)) {
+                  final l10n = AppLocalizations.of(context);
                   return GestureDetector(
                     onHorizontalDragEnd: (details) {
                       // 左右滑动切换周期（月份/年份）
@@ -1036,27 +1148,41 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                     child: ListView(
                       padding: const EdgeInsets.all(16),
                       children: [
-                        AppEmpty(
-                          text: AppLocalizations.of(context).commonEmpty,
-                          subtext: AppLocalizations.of(context)
-                              .analyticsNoDataSubtext,
-                        ),
-                        const SizedBox(height: 12),
-                        Align(
-                          alignment: Alignment.center,
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.swap_horiz),
-                            label: Text(AppLocalizations.of(context)
-                                .analyticsSwitchTo(_type == "expense"
-                                    ? AppLocalizations.of(context).homeIncome
-                                    : _type == "income"
-                                        ? AppLocalizations.of(context)
-                                            .homeBalance
-                                        : AppLocalizations.of(context)
-                                            .homeExpense)),
-                            onPressed: _cycleTypeForward,
+                        if (_filter.isNotEmpty) ...[
+                          AppEmpty(
+                            text: l10n.analyticsFilterNoResults,
+                            subtext: l10n.analyticsFilterNoResultsSubtext,
                           ),
-                        ),
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.center,
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.filter_alt_off_outlined),
+                              label: Text(l10n.searchClearFilter),
+                              onPressed: () => setState(() =>
+                                  _filter = const AnalyticsTransactionFilter()),
+                            ),
+                          ),
+                        ] else ...[
+                          AppEmpty(
+                            text: l10n.commonEmpty,
+                            subtext: l10n.analyticsNoDataSubtext,
+                          ),
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.center,
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.swap_horiz),
+                              label:
+                                  Text(l10n.analyticsSwitchTo(_type == "expense"
+                                      ? l10n.homeIncome
+                                      : _type == "income"
+                                          ? l10n.homeBalance
+                                          : l10n.homeExpense)),
+                              onPressed: _cycleTypeForward,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 8),
                       ],
                     ),
@@ -1347,7 +1473,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                   margin: const EdgeInsets.only(right: 8),
                                   decoration: BoxDecoration(
                                     color: PiggyTokens.primary(context),
-                                    borderRadius: BorderRadius.circular(PiggyDimens.radiusXs),
+                                    borderRadius: BorderRadius.circular(
+                                        PiggyDimens.radiusXs),
                                   ),
                                 ),
                                 Text(
@@ -1394,8 +1521,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                         ref.read(analyticsHintsSetterProvider);
                                     await setter.dismissChart();
                                     if (mounted) {
-                                      setState(() =>
-                                          _localChartDismissed = true);
+                                      setState(
+                                          () => _localChartDismissed = true);
                                     }
                                   },
                                   // minimal：背景/轴线/平均线交给外层卡片
@@ -1473,8 +1600,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                       Container(
                                         width: 3,
                                         height: 14,
-                                        margin:
-                                            const EdgeInsets.only(right: 8),
+                                        margin: const EdgeInsets.only(right: 8),
                                         decoration: BoxDecoration(
                                           color: PiggyTokens.primary(context),
                                           borderRadius: BorderRadius.circular(
@@ -1522,8 +1648,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                               horizontal: 16, vertical: 6),
                           decoration: BoxDecoration(
                             color: PiggyTokens.surface(context),
-                            borderRadius: BorderRadius.circular(
-                                PiggyDimens.radius2xl),
+                            borderRadius:
+                                BorderRadius.circular(PiggyDimens.radius2xl),
                             border: Border.all(
                               color: ref.watch(primaryColorProvider),
                               width: 1.5,
@@ -1546,9 +1672,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                   category: catData[i].category,
                                   name: catData[i].name,
                                   value: catData[i].total,
-                                  percent: sum == 0
-                                      ? 0
-                                      : catData[i].total / sum,
+                                  percent:
+                                      sum == 0 ? 0 : catData[i].total / sum,
                                   color: _pieColorAt(context, i),
                                   start: start,
                                   end: end,
@@ -1559,14 +1684,14 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                                   // 周/自定义由页面传入范围文案（自定义区间
                                   // 在 row 侧无法还原，其余档位 row 自算）
                                   periodLabel: switch (_scope) {
-                                    AnalyticsScope.week => weekRangeText(
-                                        weekRangeFor(_selWeek)),
-                                    AnalyticsScope.custom =>
-                                      _customRangeText(),
+                                    AnalyticsScope.week =>
+                                      weekRangeText(weekRangeFor(_selWeek)),
+                                    AnalyticsScope.custom => _customRangeText(),
                                     AnalyticsScope.month ||
                                     AnalyticsScope.quarter ||
                                     AnalyticsScope.year ||
-                                    AnalyticsScope.all => null,
+                                    AnalyticsScope.all =>
+                                      null,
                                   },
                                 ),
                             ],
@@ -1588,6 +1713,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                         type: _type,
                         amountMetric: amountMetric,
                         timeMetric: timeMetric,
+                        filter: _filter,
                       ),
                     ],
                   ),
@@ -1672,7 +1798,13 @@ typedef CatAgg = ({
   db.Category? category,
   double total,
   int count,
-  List<({int id, db.Category category, String name, double total})> subCategories,
+  List<
+      ({
+        int id,
+        db.Category category,
+        String name,
+        double total
+      })> subCategories,
 });
 
 /// 洞察页查询结果数据包（批次②：替代 `List<dynamic>` 位次表）。
@@ -1763,6 +1895,7 @@ Future<InOutInsightsData> _loadCategoryData(
   Future<dynamic> chartSeriesFuture,
   AnalyticsAmountMetric amountMetric,
   AnalyticsTimeMetric timeMetric,
+  AnalyticsTransactionFilter filter,
 ) async {
   final prevTotalsFuture = (prevStart != null && prevEnd != null)
       ? repo.totalsInRange(
@@ -1770,7 +1903,8 @@ Future<InOutInsightsData> _loadCategoryData(
           start: prevStart,
           end: prevEnd,
           amountMetric: amountMetric,
-          timeMetric: timeMetric)
+          timeMetric: timeMetric,
+          filter: filter)
       : Future.value((0.0, 0.0));
   final results = await Future.wait<dynamic>([
     repo.totalsByCategoryWithHierarchy(
@@ -1779,7 +1913,8 @@ Future<InOutInsightsData> _loadCategoryData(
         start: start,
         end: end,
         amountMetric: amountMetric,
-        timeMetric: timeMetric),
+        timeMetric: timeMetric,
+        filter: filter),
     seriesFuture,
     repo.countByTypeInRange(
         ledgerId: ledgerId,
@@ -1787,14 +1922,16 @@ Future<InOutInsightsData> _loadCategoryData(
         start: start,
         end: end,
         amountMetric: amountMetric,
-        timeMetric: timeMetric),
+        timeMetric: timeMetric,
+        filter: filter),
     // 本期收支（结余用）
     repo.totalsInRange(
         ledgerId: ledgerId,
         start: start,
         end: end,
         amountMetric: amountMetric,
-        timeMetric: timeMetric),
+        timeMetric: timeMetric,
+        filter: filter),
     prevTotalsFuture,
     chartSeriesFuture,
   ]);
@@ -1839,6 +1976,7 @@ Future<BalanceInsightsData> _loadBalanceData(
   Future<dynamic> chartSeriesFuture,
   AnalyticsAmountMetric amountMetric,
   AnalyticsTimeMetric timeMetric,
+  AnalyticsTransactionFilter filter,
 ) async {
   final prevTotalsFuture = (prevStart != null && prevEnd != null)
       ? repo.totalsInRange(
@@ -1846,7 +1984,8 @@ Future<BalanceInsightsData> _loadBalanceData(
           start: prevStart,
           end: prevEnd,
           amountMetric: amountMetric,
-          timeMetric: timeMetric)
+          timeMetric: timeMetric,
+          filter: filter)
       : Future.value((0.0, 0.0));
   final results = await Future.wait<dynamic>([
     repo.totalsByCategoryWithHierarchy(
@@ -1855,7 +1994,8 @@ Future<BalanceInsightsData> _loadBalanceData(
         start: start,
         end: end,
         amountMetric: amountMetric,
-        timeMetric: timeMetric),
+        timeMetric: timeMetric,
+        filter: filter),
     seriesFuture,
     repo.countByTypeInRange(
         ledgerId: ledgerId,
@@ -1863,7 +2003,8 @@ Future<BalanceInsightsData> _loadBalanceData(
         start: start,
         end: end,
         amountMetric: amountMetric,
-        timeMetric: timeMetric),
+        timeMetric: timeMetric,
+        filter: filter),
     incomeSeriesFuture,
     expenseSeriesFuture,
     repo.countByTypeInRange(
@@ -1872,7 +2013,8 @@ Future<BalanceInsightsData> _loadBalanceData(
         start: start,
         end: end,
         amountMetric: amountMetric,
-        timeMetric: timeMetric),
+        timeMetric: timeMetric,
+        filter: filter),
     prevTotalsFuture,
     chartSeriesFuture,
   ]);
@@ -1936,8 +2078,7 @@ dynamic _calculateBalanceSeries(dynamic incomeData, dynamic expenseData) {
     final Map<DateTime, double> expenseMap = {
       for (var e in expenseData) e.month: e.total
     };
-    final allMonths = {...incomeMap.keys, ...expenseMap.keys}.toList()
-      ..sort();
+    final allMonths = {...incomeMap.keys, ...expenseMap.keys}.toList()..sort();
     return allMonths.map((month) {
       final income = incomeMap[month] ?? 0.0;
       final expense = expenseMap[month] ?? 0.0;

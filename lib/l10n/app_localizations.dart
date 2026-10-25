@@ -1524,6 +1524,156 @@ abstract class AppLocalizations {
   /// **'Week'**
   String get analyticsWeek;
 
+  /// No description provided for @analyticsFilterEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter'**
+  String get analyticsFilterEntry;
+
+  /// No description provided for @analyticsFilterApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter active'**
+  String get analyticsFilterApplied;
+
+  /// No description provided for @analyticsFilterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Insights filter'**
+  String get analyticsFilterTitle;
+
+  /// No description provided for @analyticsFilterTypes.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction type'**
+  String get analyticsFilterTypes;
+
+  /// No description provided for @analyticsFilterCustomFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom fields'**
+  String get analyticsFilterCustomFields;
+
+  /// No description provided for @analyticsFilterTextHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Text contains'**
+  String get analyticsFilterTextHint;
+
+  /// No description provided for @importCustomFieldMappingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom field mapping'**
+  String get importCustomFieldMappingTitle;
+
+  /// No description provided for @importCustomFieldMappingDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the ledger field for each column. You can create a field when auto-match fails, or ignore the column.'**
+  String get importCustomFieldMappingDesc;
+
+  /// No description provided for @importCustomFieldMappingTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Target field'**
+  String get importCustomFieldMappingTarget;
+
+  /// No description provided for @importCustomFieldMappingAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-match by column name'**
+  String get importCustomFieldMappingAuto;
+
+  /// No description provided for @importCustomFieldMappingSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Ignore this column'**
+  String get importCustomFieldMappingSkip;
+
+  /// No description provided for @importCustomFieldColumns.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} custom field column(s) detected'**
+  String importCustomFieldColumns(int count);
+
+  /// No description provided for @importCustomFieldColumnsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm custom fields'**
+  String get importCustomFieldColumnsTitle;
+
+  /// No description provided for @importCustomFieldColumnsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'The file contains custom fields that do not exist in this ledger. Confirm each name and type before importing; options for single/multi select come from values in the file.'**
+  String get importCustomFieldColumnsDesc;
+
+  /// No description provided for @importCustomFieldName.
+  ///
+  /// In en, this message translates to:
+  /// **'Field name'**
+  String get importCustomFieldName;
+
+  /// No description provided for @importCustomFieldType.
+  ///
+  /// In en, this message translates to:
+  /// **'Field type'**
+  String get importCustomFieldType;
+
+  /// No description provided for @importCustomFieldOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Candidate options: {count}'**
+  String importCustomFieldOptions(int count);
+
+  /// No description provided for @importCustomFieldNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Field name cannot be empty'**
+  String get importCustomFieldNameRequired;
+
+  /// No description provided for @importCustomFieldNameDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Field name \"{name}\" already exists or is duplicated'**
+  String importCustomFieldNameDuplicate(String name);
+
+  /// No description provided for @importCustomFieldOptionsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Field \"{name}\" has no options; choose Text instead'**
+  String importCustomFieldOptionsRequired(String name);
+
+  /// No description provided for @analyticsFilterNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions match the current filters'**
+  String get analyticsFilterNoResults;
+
+  /// No description provided for @analyticsFilterNoResultsSubtext.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust the filters, or clear them to view all data'**
+  String get analyticsFilterNoResultsSubtext;
+
+  /// No description provided for @importCustomFieldAddOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Add option'**
+  String get importCustomFieldAddOption;
+
+  /// No description provided for @importCustomFieldAddOptionAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get importCustomFieldAddOptionAction;
+
+  /// No description provided for @importCustomFieldCreateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create custom field \"{name}\". Import cancelled; please try again'**
+  String importCustomFieldCreateFailed(String name);
+
   /// No description provided for @analyticsMonth.
   ///
   /// In en, this message translates to:

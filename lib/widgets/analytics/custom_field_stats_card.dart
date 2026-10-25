@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/analytics_amount_metric.dart';
 import '../../data/models/analytics_time_metric.dart';
+import '../../data/models/analytics_transaction_filter.dart';
 import '../../l10n/app_localizations.dart';
 import '../../pages/analytics/custom_field_analysis_page.dart';
 import '../../providers.dart';
@@ -32,6 +33,7 @@ class CustomFieldStatsCard extends ConsumerWidget {
     required this.type,
     required this.amountMetric,
     this.timeMetric = AnalyticsTimeMetric.happenedAt,
+    this.filter = const AnalyticsTransactionFilter(),
   });
 
   final DateTime start;
@@ -48,27 +50,31 @@ class CustomFieldStatsCard extends ConsumerWidget {
   /// 同一字段的日期划区间 —— 否则同一页的卡片之间会对不上账）。
   final AnalyticsTimeMetric timeMetric;
 
+  /// 洞察页附加筛选：与页面其它卡片同口径，并继续带入下钻页。
+  final AnalyticsTransactionFilter filter;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (type == 'balance') return const SizedBox.shrink();
-    final fields =
-        ref.watch(customFieldStatsForRangeProvider((
+    final fields = ref
+        .watch(customFieldStatsForRangeProvider((
           ledgerId: ref.watch(currentLedgerIdProvider),
           start: start,
           end: end,
           refreshTick: ref.watch(statsRefreshProvider),
           amountMetric: amountMetric,
           timeMetric: timeMetric,
+          filter: filter,
         )))
-            .when(
-      data: (d) => d,
-      loading: () => const <CustomFieldFieldStats>[],
-      // 附属卡失败不拖垮主链路：落日志、不渲染（不吞错 —— 禁空 catch 约束）。
-      error: (e, st) {
-        logger.warning('洞察', '自定义字段汇总卡聚合失败: $e\n$st');
-        return const <CustomFieldFieldStats>[];
-      },
-    );
+        .when(
+          data: (d) => d,
+          loading: () => const <CustomFieldFieldStats>[],
+          // 附属卡失败不拖垮主链路：落日志、不渲染（不吞错 —— 禁空 catch 约束）。
+          error: (e, st) {
+            logger.warning('洞察', '自定义字段汇总卡聚合失败: $e\n$st');
+            return const <CustomFieldFieldStats>[];
+          },
+        );
     if (fields.isEmpty) return const SizedBox.shrink();
 
     final l10n = AppLocalizations.of(context);
@@ -98,6 +104,7 @@ class CustomFieldStatsCard extends ConsumerWidget {
                   type: type,
                   amountMetric: amountMetric,
                   timeMetric: timeMetric,
+                  filter: filter,
                 ),
               ),
             );
@@ -139,8 +146,8 @@ class CustomFieldStatsCard extends ConsumerWidget {
                       children: [
                         Text(
                           l10n.customFieldAnalysisEntry,
-                          style: PiggyTextTokens.caption(context).copyWith(
-                              color: PiggyTokens.textLink(context)),
+                          style: PiggyTextTokens.caption(context)
+                              .copyWith(color: PiggyTokens.textLink(context)),
                         ),
                         const SizedBox(width: 2),
                         Icon(Icons.chevron_right,

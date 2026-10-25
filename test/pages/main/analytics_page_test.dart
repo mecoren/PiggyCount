@@ -13,6 +13,8 @@ import 'dart:async';
 
 import 'package:drift/drift.dart' as d;
 import 'package:drift/native.dart';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,6 +24,7 @@ import 'package:piggycount/cloud/sync_service.dart';
 import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/models/analytics_amount_metric.dart';
 import 'package:piggycount/data/models/analytics_time_metric.dart';
+import 'package:piggycount/data/models/analytics_transaction_filter.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/pages/main/analytics_page.dart';
@@ -48,6 +51,7 @@ class _GatedRepository extends LocalRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) async {
     if (blocked) await gate.future;
     return super.totalsByDay(
@@ -57,6 +61,7 @@ class _GatedRepository extends LocalRepository {
       end: end,
       amountMetric: amountMetric,
       timeMetric: timeMetric,
+      filter: filter,
     );
   }
 }
@@ -151,18 +156,124 @@ void main() {
     expect(find.text('350.00'), findsWidgets);
   });
 
-  testWidgets('窄屏（360dp）+ 两枚口径 chip：标题行不溢出、口径条不被缩放',
-      (tester) async {
+  testWidgets('洞察筛选抽屉：选择交易类型后显示已启用与条件摘要', (tester) async {
+    await pump(tester);
+
+    await tester.tap(find.text('筛选'));
+    await tester.pumpAndSettle();
+    expect(find.text('洞察筛选'), findsOneWidget);
+    expect(find.text('交易类型'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilterChip, '收入'));
+    await tester.pump();
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('筛选已启用'), findsOneWidget);
+    expect(find.widgetWithText(InputChip, '收入'), findsOneWidget);
+    expect(find.text('当前筛选没有匹配账单'), findsOneWidget);
+
+    await tester.tap(find.text('清空筛选'));
+    await tester.pumpAndSettle();
+    expect(find.text('筛选'), findsOneWidget);
+    expect(find.text('350.00'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('洞察筛选抽屉：文本 / 单选 / 多选自定义字段', (tester) async {
+    await db.into(db.customFieldDefinitions).insert(
+          CustomFieldDefinitionsCompanion.insert(
+            ledgerId: 1,
+            name: '商户',
+            fieldType: 'text',
+            syncId: const d.Value('sid_text'),
+          ),
+        );
+    await db.into(db.customFieldDefinitions).insert(
+          CustomFieldDefinitionsCompanion.insert(
+            ledgerId: 1,
+            name: '场景',
+            fieldType: 'singleSelect',
+            syncId: const d.Value('sid_single'),
+            optionsJson: const d.Value('["日常","工资"]'),
+          ),
+        );
+    await db.into(db.customFieldDefinitions).insert(
+          CustomFieldDefinitionsCompanion.insert(
+            ledgerId: 1,
+            name: '标签',
+            fieldType: 'multiSelect',
+            syncId: const d.Value('sid_multi'),
+            optionsJson: const d.Value('["外出","居家"]'),
+          ),
+        );
+    await (db.update(db.transactions)).write(
+      TransactionsCompanion(
+        customValuesJson: d.Value(jsonEncode({
+          'sid_text': '今天咖啡',
+          'sid_single': '日常',
+          'sid_multi': ['外出'],
+        })),
+      ),
+    );
+
+    await pump(tester);
+    await tester.tap(find.text('筛选'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('商户'), findsWidgets);
+    expect(find.text('场景'), findsWidgets);
+    expect(find.text('标签'), findsWidgets);
+
+    await tester.enterText(find.byType(TextFormField), '咖啡');
+    await tester.tap(find.widgetWithText(FilterChip, '日常'));
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilterChip, '外出'));
+    await tester.pump();
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(InputChip, '商户：咖啡'), findsOneWidget);
+    expect(find.widgetWithText(InputChip, '场景：日常'), findsOneWidget);
+    expect(find.widgetWithText(InputChip, '标签：外出'), findsOneWidget);
+  });
+
+  testWidgets('筛选清空：文本框内容同步清空', (tester) async {
+    await db.into(db.customFieldDefinitions).insert(
+          CustomFieldDefinitionsCompanion.insert(
+            ledgerId: 1,
+            name: '商户',
+            fieldType: 'text',
+            syncId: const d.Value('sid_text'),
+          ),
+        );
+    await pump(tester);
+    await tester.tap(find.text('筛选'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField), '咖啡');
+    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        '咖啡');
+
+    await tester.tap(find.text('清空筛选'));
+    await tester.pump();
+
+    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        isEmpty);
+  });
+
+  testWidgets('窄屏（360dp）+ 两枚口径 chip：标题行不溢出、口径条不被缩放', (tester) async {
     // 有日期型字段时统计时间 chip 才会出现（它在标题行与金额 chip 并排）。
     // 360dp 窄屏 + 4 字字段名是最挤的组合：两枚 chip + 标题 + 右侧两个
     // IconButton 放不下，必须压缩到槽位内，而不是整行溢出红条。
-    await db.into(db.customFieldDefinitions).insert(
-        CustomFieldDefinitionsCompanion.insert(
-      ledgerId: 1,
-      name: '消费日期',
-      fieldType: 'date',
-      syncId: const d.Value('f-date'),
-    ));
+    await db
+        .into(db.customFieldDefinitions)
+        .insert(CustomFieldDefinitionsCompanion.insert(
+          ledgerId: 1,
+          name: '消费日期',
+          fieldType: 'date',
+          syncId: const d.Value('f-date'),
+        ));
 
     await pump(tester, size: const Size(1080, 6000)); // 360dp × dpr 3
 
@@ -187,7 +298,8 @@ void main() {
     // 392dp 真机实测到过）
     expect(
       tester.getRect(find.byKey(const Key('time-metric-chip'))).right,
-      lessThanOrEqualTo(tester.getRect(find.byIcon(Icons.date_range_outlined)).left),
+      lessThanOrEqualTo(
+          tester.getRect(find.byIcon(Icons.date_range_outlined)).left),
     );
     expect(
       tester.getRect(find.byKey(const Key('amount-metric-chip'))).left,
@@ -212,18 +324,18 @@ void main() {
     );
   });
 
-  testWidgets('切口径：口径条尺寸与字号都不变（不整条缩放、不按内容自适应）',
-      (tester) async {
+  testWidgets('切口径：口径条尺寸与字号都不变（不整条缩放、不按内容自适应）', (tester) async {
     // 用户在 360dp 真机上的反馈「选完对应的文字后大小会变，而且好丑」：
     // 旧实现靠 FittedBox(scaleDown) 兜底，文案一换缩放比例就换
     // （「记账金额」0.48 ↔ 「水费」0.67），字号在 6dp / 8.7dp 之间跳。
-    await db.into(db.customFieldDefinitions).insert(
-        CustomFieldDefinitionsCompanion.insert(
-      ledgerId: 1,
-      name: '水费',
-      fieldType: 'amount',
-      syncId: const d.Value('f-water'),
-    ));
+    await db
+        .into(db.customFieldDefinitions)
+        .insert(CustomFieldDefinitionsCompanion.insert(
+          ledgerId: 1,
+          name: '水费',
+          fieldType: 'amount',
+          syncId: const d.Value('f-water'),
+        ));
     final container = await pump(tester, size: const Size(1080, 6000));
 
     final track = tester.getSize(find.byType(PiggySegmentTrack));

@@ -24,6 +24,14 @@ import '../../l10n/app_localizations.dart';
 import '../../services/attachment_service.dart';
 import '../../utils/month_range.dart';
 
+/// 吸附日期的纯选择逻辑：按日期倒序的组里取第一个仍可见的日期。
+String? firstVisibleDayKey(Iterable<String> orderedKeys, Set<String> visible) {
+  for (final key in orderedKeys) {
+    if (visible.contains(key)) return key;
+  }
+  return null;
+}
+
 /// 可复用的交易列表组件
 /// 支持显示分组的交易列表，包含日期头部和交易项
 class TransactionList extends ConsumerStatefulWidget {
@@ -81,6 +89,9 @@ class TransactionList extends ConsumerStatefulWidget {
   /// 滚到接近列表底部时回调（首页据此把窗口 limit 调大一页）。
   final VoidCallback? onLoadMore;
 
+  /// 日期头吸附（仅分组卡片风格生效）。首页显式开启。
+  final bool stickyDateHeader;
+
   const TransactionList({
     super.key,
     this.transactionsWithDetails,
@@ -95,6 +106,7 @@ class TransactionList extends ConsumerStatefulWidget {
     this.dayTotals,
     this.hasMore = false,
     this.onLoadMore,
+    this.stickyDateHeader = false,
   }) : assert(transactionsWithDetails != null || transactions != null,
             'Either transactionsWithDetails or transactions must be provided');
 
@@ -138,6 +150,61 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
   /// M2-a：一帧最多请求一次下一页（底部阈值内会有多行命中）。
   bool _loadMoreScheduled = false;
+
+  final GlobalKey _stickyViewportKey = GlobalKey();
+  final Map<String, GlobalKey> _dayGroupKeys = {};
+  String? _stickyDateKey;
+  bool _stickyPinned = false;
+  bool _stickyUpdateScheduled = false;
+
+  bool get _stickyEnabled => widget.stickyDateHeader && widget.wrapInOuterCard;
+
+  @visibleForTesting
+  String? get stickyDateKey => _stickyDateKey;
+
+  @visibleForTesting
+  bool get stickyPinned => _stickyPinned;
+
+  GlobalKey _dayGroupKey(String dateKey) =>
+      _dayGroupKeys.putIfAbsent(dateKey, GlobalKey.new);
+
+  /// 用已构建日期卡片的真实位置判断吸附日：视口顶部之上最近的一组。
+  /// 只遍历构建过的分组 key（约一屏数量），不随总交易数增长。
+  void _scheduleStickyUpdate() {
+    if (!_stickyEnabled || _stickyUpdateScheduled) return;
+    _stickyUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _stickyUpdateScheduled = false;
+      if (!mounted) return;
+      final viewportBox =
+          _stickyViewportKey.currentContext?.findRenderObject() as RenderBox?;
+      if (viewportBox == null || !viewportBox.attached) return;
+      final top = viewportBox.localToGlobal(Offset.zero).dy;
+      final visible = <String>{};
+      double? firstTop;
+      for (final dayKey in _grouper.sortedDayKeys) {
+        final box = _dayGroupKeys[dayKey]?.currentContext?.findRenderObject()
+            as RenderBox?;
+        if (box == null || !box.attached || !box.hasSize) continue;
+        final dy = box.localToGlobal(Offset.zero).dy;
+        if (dy + box.size.height <= top + 0.5) continue;
+        visible.add(dayKey);
+        firstTop ??= dy;
+      }
+      final next = firstVisibleDayKey(_grouper.sortedDayKeys, visible);
+      final pinned = next != null && firstTop != null && firstTop <= top + 0.5;
+      if (next != _stickyDateKey || pinned != _stickyPinned) {
+        setState(() {
+          _stickyDateKey = next;
+          _stickyPinned = pinned;
+        });
+      }
+    });
+  }
+
+  void _onScrollForSticky() {
+    if (_stickyEnabled) _scheduleStickyUpdate();
+  }
 
   // 缓存标签数据（仅用于非预加载模式）
   Map<int, List<Tag>> _cachedTagsMap = {};
@@ -186,6 +253,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
   void initState() {
     super.initState();
     _controller = widget.controller ?? FlutterListViewController();
+    _controller.addListener(_onScrollForSticky);
     // 始终加载标签和附件（用于非预加载范围的交易）
     _loadTags();
     _loadAttachmentCounts();
@@ -309,6 +377,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
   @override
   void dispose() {
+    _controller.removeListener(_onScrollForSticky);
     if (widget.controller == null) {
       _controller.dispose(); // 只在我们创建的controller时才dispose
     }
@@ -572,155 +641,217 @@ class TransactionListState extends ConsumerState<TransactionList> {
     // 使用FlutterListView渲染列表。外层 Container(margin: cardMargin) 给出
     // 「整张大卡片」整体边距,内部每个 day item 共享连续边线 boxShadow,而非
     // 每个 day 独立 margin —— 形成一个连续大卡片观感。
+    final listView = FlutterListView(
+      controller: _controller,
+      physics: const BouncingScrollPhysics(),
+      delegate: FlutterListViewDelegate(
+        (BuildContext context, int index) {
+          final item = _flatItems[index];
+          final type = item.$1 as String;
+
+          // M2-a：接近列表底部 → 请求下一页（limit 只增，已显示的行不会被挤掉）。
+          // 用 post-frame 回调：构建期不能触发 provider 更新；_loadMoreScheduled
+          // 保证一帧最多一次（阈值内会有多行命中）。
+          if (widget.hasMore &&
+              widget.onLoadMore != null &&
+              !_loadMoreScheduled &&
+              index >= _flatItems.length - 3) {
+            _loadMoreScheduled = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _loadMoreScheduled = false;
+              if (mounted) widget.onLoadMore!();
+            });
+          }
+
+          if (type == 'listHeader') {
+            // 列表头部内容（随列表滚动）
+            return widget.listHeader ?? const SizedBox.shrink();
+          }
+
+          if (type == 'bottomSpacer') {
+            // 悬浮 Tab 栏高度(56) + 浮动间距(12) + 安全区 + 额外间距
+            final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+            return SizedBox(height: 56 + 12 + bottomPadding + 16);
+          }
+
+          if (type == 'header') {
+            // 渲染日期头部(平铺旧风格用)
+            final dateKey = item.$2 as String;
+            // 日合计在 _buildFlatItems 构建期预计算($4),渲染期零循环
+            final totals = item.$4 as (double, double);
+            final isFirst = index == 0;
+
+            Widget header = Column(
+              children: [
+                if (!isFirst)
+                  Divider(
+                    height: PiggyTokens.listDayDividerHeight(context),
+                    color: PiggyTokens.listDayDividerColor(context),
+                  ),
+                DaySectionHeader(
+                  dateText: dateKey,
+                  income: totals.$1,
+                  expense: totals.$2,
+                  hide: widget.hideAmounts,
+                ),
+              ],
+            );
+
+            // 如果启用可见性跟踪，则包装VisibilityDetector
+            if (widget.enableVisibilityTracking &&
+                widget.onDateVisibilityChanged != null) {
+              header = VisibilityDetector(
+                key: Key('header-$dateKey'),
+                onVisibilityChanged: (VisibilityInfo info) {
+                  // 当可见比例大于50%时认为可见
+                  widget.onDateVisibilityChanged!(
+                      dateKey, info.visibleFraction > 0.5);
+                },
+                child: header,
+              );
+            }
+
+            return header;
+          } else if (type == 'day') {
+            // 「分组卡片」风格:每个 day 独立懒加载,首日画顶部圆角+阴影,末日
+            // 画底部圆角,中日只画左右边线——视觉上各 day 共享连续边线,像"一张
+            // 大卡片"。FlutterListView 按 index 按需构建/回收解决 3000 条卡顿。
+            // jumpToMonth 仍用 _dateIndexMap 映射到各 day item。
+            final dateKey = item.$2 as String;
+            final list = item.$3 as List<
+                ({
+                  Transaction t,
+                  Category? category,
+                  Account? account,
+                  Account? toAccount
+                })>;
+            final isFirst = item.$4 as bool;
+            final isLast = item.$5 as bool;
+            final dayTotals = item.$6 as (double, double);
+            return _buildDayCard(context, dateKey, list, isFirst, isLast,
+                dayTotals: dayTotals);
+          } else {
+            // 'transaction' 平铺旧风格(wrapInOuterCard = false):平铺单条交易,
+            // 项之间用 PiggyDivider.short 分隔,项的具体渲染复用 _buildTransactionRow。
+            final it = item.$2 as ({
+              Transaction t,
+              Category? category,
+              Account? account,
+              Account? toAccount
+            });
+            final allItemsInDay = item.$3 as List<
+                ({
+                  Transaction t,
+                  Category? category,
+                  Account? account,
+                  Account? toAccount
+                })>;
+            final isLastInGroup = allItemsInDay.last.t.id == it.t.id;
+
+            return Column(
+              children: [
+                RepaintBoundary(
+                  child: _buildTransactionRow(context, it, allItemsInDay),
+                ),
+                if (!isLastInGroup)
+                  PiggyDivider.short(indent: 56 + 16, endIndent: 16),
+              ],
+            );
+          }
+        },
+        // onItemHeight:为 flutter_list_view 提供 item 高度估算,避免默认 50px
+        // 严重低估 day 卡片(实际 = header + 当天交易行数×行高)导致 constructNext
+        // 按 50px 逐项构建直到填满视口 → 单帧过量构建大量日卡片(含当天全部
+        // 交易行),这是 3000 笔数据下真实设备卡顿的根因之一。此值仅用于估算
+        // 构建范围/总高度,不参与实际布局,偏高是安全的。
+        onItemHeight: (index) {
+          if (index < 0 || index >= _flatItems.length) return 50.0;
+          final item = _flatItems[index];
+          final type = item.$1 as String;
+          switch (type) {
+            case 'listHeader':
+              return 160.0; // 月份总结卡片(随内容变化,估算偏大)
+            case 'bottomSpacer':
+              return 110.0; // 悬浮 Tab 栏留白
+            case 'day':
+              // DaySectionHeader(~40px) + 当天交易行数×行高。行高取单行
+              // 48px(icon32+8*2) + 二级信息行(~28px)的保守上限 72px。
+              final list = item.$3 as List;
+              return 40.0 + list.length * 72.0;
+            case 'header':
+              return 40.0; // 平铺旧风格:DaySectionHeader
+            case 'transaction':
+              return 80.0; // 平铺旧风格:单行 + 分割线
+            default:
+              return 50.0;
+          }
+        },
+        childCount: _flatItems.length,
+      ),
+    );
+
+    if (_stickyEnabled) _scheduleStickyUpdate();
+    final stickyKey = _stickyDateKey;
+    final showSticky = _stickyEnabled && _stickyPinned && stickyKey != null;
+    final stickyList = stickyKey == null
+        ? const <({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>[]
+        : _grouper.dayGroups[stickyKey] ??
+            const <({
+              Transaction t,
+              Category? category,
+              Account? account,
+              Account? toAccount
+            })>[];
+    final stickyTotals =
+        stickyKey == null ? (0.0, 0.0) : _dayTotalsFor(stickyKey, stickyList);
+
     return Container(
       margin: PiggyDimens.cardMargin,
-      child: FlutterListView(
-        controller: _controller,
-        physics: const BouncingScrollPhysics(),
-        delegate: FlutterListViewDelegate(
-          (BuildContext context, int index) {
-            final item = _flatItems[index];
-            final type = item.$1 as String;
-
-            // M2-a：接近列表底部 → 请求下一页（limit 只增，已显示的行不会被挤掉）。
-            // 用 post-frame 回调：构建期不能触发 provider 更新；_loadMoreScheduled
-            // 保证一帧最多一次（阈值内会有多行命中）。
-            if (widget.hasMore &&
-                widget.onLoadMore != null &&
-                !_loadMoreScheduled &&
-                index >= _flatItems.length - 3) {
-              _loadMoreScheduled = true;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _loadMoreScheduled = false;
-                if (mounted) widget.onLoadMore!();
-              });
-            }
-
-            if (type == 'listHeader') {
-              // 列表头部内容（随列表滚动）
-              return widget.listHeader ?? const SizedBox.shrink();
-            }
-
-            if (type == 'bottomSpacer') {
-              // 悬浮 Tab 栏高度(56) + 浮动间距(12) + 安全区 + 额外间距
-              final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
-              return SizedBox(height: 56 + 12 + bottomPadding + 16);
-            }
-
-            if (type == 'header') {
-              // 渲染日期头部(平铺旧风格用)
-              final dateKey = item.$2 as String;
-              // 日合计在 _buildFlatItems 构建期预计算($4),渲染期零循环
-              final totals = item.$4 as (double, double);
-              final isFirst = index == 0;
-
-              Widget header = Column(
-                children: [
-                  if (!isFirst)
-                    Divider(
-                      height: PiggyTokens.listDayDividerHeight(context),
-                      color: PiggyTokens.listDayDividerColor(context),
+      child: Stack(
+        key: _stickyViewportKey,
+        children: [
+          listView,
+          if (showSticky)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: PiggyTokens.surface(context),
+                  border: Border(
+                    top: BorderSide(
+                      color: ref.watch(primaryColorProvider),
+                      width: 1.5,
                     ),
-                  DaySectionHeader(
-                    dateText: dateKey,
-                    income: totals.$1,
-                    expense: totals.$2,
-                    hide: widget.hideAmounts,
+                    left: BorderSide(
+                      color: ref.watch(primaryColorProvider),
+                      width: 1.5,
+                    ),
+                    right: BorderSide(
+                      color: ref.watch(primaryColorProvider),
+                      width: 1.5,
+                    ),
                   ),
-                ],
-              );
-
-              // 如果启用可见性跟踪，则包装VisibilityDetector
-              if (widget.enableVisibilityTracking &&
-                  widget.onDateVisibilityChanged != null) {
-                header = VisibilityDetector(
-                  key: Key('header-$dateKey'),
-                  onVisibilityChanged: (VisibilityInfo info) {
-                    // 当可见比例大于50%时认为可见
-                    widget.onDateVisibilityChanged!(
-                        dateKey, info.visibleFraction > 0.5);
-                  },
-                  child: header,
-                );
-              }
-
-              return header;
-            } else if (type == 'day') {
-              // 「分组卡片」风格:每个 day 独立懒加载,首日画顶部圆角+阴影,末日
-              // 画底部圆角,中日只画左右边线——视觉上各 day 共享连续边线,像"一张
-              // 大卡片"。FlutterListView 按 index 按需构建/回收解决 3000 条卡顿。
-              // jumpToMonth 仍用 _dateIndexMap 映射到各 day item。
-              final dateKey = item.$2 as String;
-              final list = item.$3 as List<
-                  ({
-                    Transaction t,
-                    Category? category,
-                    Account? account,
-                    Account? toAccount
-                  })>;
-              final isFirst = item.$4 as bool;
-              final isLast = item.$5 as bool;
-              final dayTotals = item.$6 as (double, double);
-              return _buildDayCard(context, dateKey, list, isFirst, isLast,
-                  dayTotals: dayTotals);
-            } else {
-              // 'transaction' 平铺旧风格(wrapInOuterCard = false):平铺单条交易,
-              // 项之间用 PiggyDivider.short 分隔,项的具体渲染复用 _buildTransactionRow。
-              final it = item.$2 as ({
-                Transaction t,
-                Category? category,
-                Account? account,
-                Account? toAccount
-              });
-              final allItemsInDay = item.$3 as List<
-                  ({
-                    Transaction t,
-                    Category? category,
-                    Account? account,
-                    Account? toAccount
-                  })>;
-              final isLastInGroup = allItemsInDay.last.t.id == it.t.id;
-
-              return Column(
-                children: [
-                  RepaintBoundary(
-                    child: _buildTransactionRow(context, it, allItemsInDay),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(PiggyDimens.radiusLg),
                   ),
-                  if (!isLastInGroup)
-                    PiggyDivider.short(indent: 56 + 16, endIndent: 16),
-                ],
-              );
-            }
-          },
-          // onItemHeight:为 flutter_list_view 提供 item 高度估算,避免默认 50px
-          // 严重低估 day 卡片(实际 = header + 当天交易行数×行高)导致 constructNext
-          // 按 50px 逐项构建直到填满视口 → 单帧过量构建大量日卡片(含当天全部
-          // 交易行),这是 3000 笔数据下真实设备卡顿的根因之一。此值仅用于估算
-          // 构建范围/总高度,不参与实际布局,偏高是安全的。
-          onItemHeight: (index) {
-            if (index < 0 || index >= _flatItems.length) return 50.0;
-            final item = _flatItems[index];
-            final type = item.$1 as String;
-            switch (type) {
-              case 'listHeader':
-                return 160.0; // 月份总结卡片(随内容变化,估算偏大)
-              case 'bottomSpacer':
-                return 110.0; // 悬浮 Tab 栏留白
-              case 'day':
-                // DaySectionHeader(~40px) + 当天交易行数×行高。行高取单行
-                // 48px(icon32+8*2) + 二级信息行(~28px)的保守上限 72px。
-                final list = item.$3 as List;
-                return 40.0 + list.length * 72.0;
-              case 'header':
-                return 40.0; // 平铺旧风格:DaySectionHeader
-              case 'transaction':
-                return 80.0; // 平铺旧风格:单行 + 分割线
-              default:
-                return 50.0;
-            }
-          },
-          childCount: _flatItems.length,
-        ),
+                ),
+                child: DaySectionHeader(
+                  key: const Key('sticky-date-header'),
+                  dateText: stickyKey,
+                  income: stickyTotals.$1,
+                  expense: stickyTotals.$2,
+                  hide: widget.hideAmounts,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -1015,6 +1146,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
     // 「分组卡片」装饰:首日画顶部圆角+顶边+亮色 boxShadow,末日画底部圆角+底边,
     // 中日只画左右边线——所有 day 共享连续 surface 背景,视觉上像一张大卡片。
     return DayGroupCard(
+      key: _stickyEnabled ? _dayGroupKey(dateKey) : null,
       isFirst: isFirst,
       isLast: isLast,
       child: Column(

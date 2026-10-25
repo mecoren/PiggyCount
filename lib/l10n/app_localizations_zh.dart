@@ -803,6 +803,92 @@ class AppLocalizationsZh extends AppLocalizations {
   String get analyticsWeek => '周';
 
   @override
+  String get analyticsFilterEntry => '筛选';
+
+  @override
+  String get analyticsFilterApplied => '筛选已启用';
+
+  @override
+  String get analyticsFilterTitle => '洞察筛选';
+
+  @override
+  String get analyticsFilterTypes => '交易类型';
+
+  @override
+  String get analyticsFilterCustomFields => '自定义字段';
+
+  @override
+  String get analyticsFilterTextHint => '输入包含的文本';
+
+  @override
+  String get importCustomFieldMappingTitle => '自定义字段映射';
+
+  @override
+  String get importCustomFieldMappingDesc => '选择每列对应的账本字段；自动匹配不到时可新建字段，或忽略该列。';
+
+  @override
+  String get importCustomFieldMappingTarget => '目标字段';
+
+  @override
+  String get importCustomFieldMappingAuto => '按列名自动匹配';
+
+  @override
+  String get importCustomFieldMappingSkip => '忽略此列';
+
+  @override
+  String importCustomFieldColumns(int count) {
+    return '已识别 $count 个自定义字段独立列';
+  }
+
+  @override
+  String get importCustomFieldColumnsTitle => '确认自定义字段';
+
+  @override
+  String get importCustomFieldColumnsDesc =>
+      '文件中有本账本尚未定义的自定义字段。请逐项确认名称与类型后继续导入；单选 / 多选的候选选项来自文件中的值。';
+
+  @override
+  String get importCustomFieldName => '字段名称';
+
+  @override
+  String get importCustomFieldType => '字段类型';
+
+  @override
+  String importCustomFieldOptions(int count) {
+    return '候选选项：$count 个';
+  }
+
+  @override
+  String get importCustomFieldNameRequired => '字段名称不能为空';
+
+  @override
+  String importCustomFieldNameDuplicate(String name) {
+    return '字段名称「$name」已存在或重复';
+  }
+
+  @override
+  String importCustomFieldOptionsRequired(String name) {
+    return '字段「$name」没有可用选项，请改选文本类型';
+  }
+
+  @override
+  String get analyticsFilterNoResults => '当前筛选没有匹配账单';
+
+  @override
+  String get analyticsFilterNoResultsSubtext => '调整筛选条件后再试，或清空筛选查看全部数据';
+
+  @override
+  String get importCustomFieldAddOption => '添加选项';
+
+  @override
+  String get importCustomFieldAddOptionAction => '添加';
+
+  @override
+  String importCustomFieldCreateFailed(String name) {
+    return '创建自定义字段「$name」失败，导入已取消，请重试';
+  }
+
+  @override
   String get analyticsMonth => '月';
 
   @override
@@ -10179,6 +10265,92 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get analyticsWeek => '週';
+
+  @override
+  String get analyticsFilterEntry => '篩選';
+
+  @override
+  String get analyticsFilterApplied => '篩選已啟用';
+
+  @override
+  String get analyticsFilterTitle => '洞察篩選';
+
+  @override
+  String get analyticsFilterTypes => '交易類型';
+
+  @override
+  String get analyticsFilterCustomFields => '自訂欄位';
+
+  @override
+  String get analyticsFilterTextHint => '輸入包含的文字';
+
+  @override
+  String get importCustomFieldMappingTitle => '自訂欄位對應';
+
+  @override
+  String get importCustomFieldMappingDesc => '選擇每欄對應的帳本欄位；自動比對不到時可建立欄位，或忽略此欄。';
+
+  @override
+  String get importCustomFieldMappingTarget => '目標欄位';
+
+  @override
+  String get importCustomFieldMappingAuto => '依欄名自動比對';
+
+  @override
+  String get importCustomFieldMappingSkip => '忽略此欄';
+
+  @override
+  String importCustomFieldColumns(int count) {
+    return '已識別 $count 個自訂欄位獨立欄';
+  }
+
+  @override
+  String get importCustomFieldColumnsTitle => '確認自訂欄位';
+
+  @override
+  String get importCustomFieldColumnsDesc =>
+      '檔案中有本帳本尚未定義的自訂欄位。請逐項確認名稱與類型後繼續匯入；單選 / 多選的候選選項來自檔案中的值。';
+
+  @override
+  String get importCustomFieldName => '欄位名稱';
+
+  @override
+  String get importCustomFieldType => '欄位類型';
+
+  @override
+  String importCustomFieldOptions(int count) {
+    return '候選選項：$count 個';
+  }
+
+  @override
+  String get importCustomFieldNameRequired => '欄位名稱不能為空';
+
+  @override
+  String importCustomFieldNameDuplicate(String name) {
+    return '欄位名稱「$name」已存在或重複';
+  }
+
+  @override
+  String importCustomFieldOptionsRequired(String name) {
+    return '欄位「$name」沒有可用選項，請改選文字類型';
+  }
+
+  @override
+  String get analyticsFilterNoResults => '目前篩選沒有符合的帳單';
+
+  @override
+  String get analyticsFilterNoResultsSubtext => '調整篩選條件後再試，或清空篩選查看全部資料';
+
+  @override
+  String get importCustomFieldAddOption => '新增選項';
+
+  @override
+  String get importCustomFieldAddOptionAction => '新增';
+
+  @override
+  String importCustomFieldCreateFailed(String name) {
+    return '建立自訂欄位「$name」失敗，匯入已取消，請重試';
+  }
 
   @override
   String get analyticsMonth => '月';

@@ -1041,11 +1041,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                   transactionsWithDetails: cachedFullData,
                   hideAmounts: ref.watch(hideAmountsProvider),
                   enableVisibilityTracking: true,
+                  stickyDateHeader: true,
                   onDateVisibilityChanged: _onHeaderVisibilityChanged,
                   // M2-a：窗口日合计（SQL 口径）+ 触底加载下一页
                   dayTotals: dayTotals,
-                  hasMore: hasStreamData &&
-                      (streamData?.length ?? 0) >= windowLimit,
+                  hasMore:
+                      hasStreamData && (streamData?.length ?? 0) >= windowLimit,
                   onLoadMore: () => growHomeTxWindow(ref, ledgerId),
                   controller: _listController,
                   emptyWidget: AppEmpty(

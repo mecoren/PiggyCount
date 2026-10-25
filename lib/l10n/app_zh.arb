@@ -450,6 +450,66 @@
   "searchDateStart": "开始",
   "searchDateEnd": "结束",
   "analyticsWeek": "周",
+  "analyticsFilterEntry": "筛选",
+  "analyticsFilterApplied": "筛选已启用",
+  "analyticsFilterTitle": "洞察筛选",
+  "analyticsFilterTypes": "交易类型",
+  "analyticsFilterCustomFields": "自定义字段",
+  "analyticsFilterTextHint": "输入包含的文本",
+  "importCustomFieldMappingTitle": "自定义字段映射",
+  "importCustomFieldMappingDesc": "选择每列对应的账本字段；自动匹配不到时可新建字段，或忽略该列。",
+  "importCustomFieldMappingTarget": "目标字段",
+  "importCustomFieldMappingAuto": "按列名自动匹配",
+  "importCustomFieldMappingSkip": "忽略此列",
+  "importCustomFieldColumns": "已识别 {count} 个自定义字段独立列",
+  "@importCustomFieldColumns": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importCustomFieldColumnsTitle": "确认自定义字段",
+  "importCustomFieldColumnsDesc": "文件中有本账本尚未定义的自定义字段。请逐项确认名称与类型后继续导入；单选 / 多选的候选选项来自文件中的值。",
+  "importCustomFieldName": "字段名称",
+  "importCustomFieldType": "字段类型",
+  "importCustomFieldOptions": "候选选项：{count} 个",
+  "@importCustomFieldOptions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importCustomFieldNameRequired": "字段名称不能为空",
+  "importCustomFieldNameDuplicate": "字段名称「{name}」已存在或重复",
+  "@importCustomFieldNameDuplicate": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "importCustomFieldOptionsRequired": "字段「{name}」没有可用选项，请改选文本类型",
+  "@importCustomFieldOptionsRequired": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "analyticsFilterNoResults": "当前筛选没有匹配账单",
+  "analyticsFilterNoResultsSubtext": "调整筛选条件后再试，或清空筛选查看全部数据",
+  "importCustomFieldAddOption": "添加选项",
+  "importCustomFieldAddOptionAction": "添加",
+  "importCustomFieldCreateFailed": "创建自定义字段「{name}」失败，导入已取消，请重试",
+  "@importCustomFieldCreateFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "analyticsMonth": "月",
   "analyticsWeekTotal": "本周{type}： ",
   "analyticsComparedToLastWeek": "比上周",

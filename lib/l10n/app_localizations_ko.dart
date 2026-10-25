@@ -814,6 +814,93 @@ class AppLocalizationsKo extends AppLocalizations {
   String get analyticsWeek => '주';
 
   @override
+  String get analyticsFilterEntry => '필터';
+
+  @override
+  String get analyticsFilterApplied => '필터 적용됨';
+
+  @override
+  String get analyticsFilterTitle => '인사이트 필터';
+
+  @override
+  String get analyticsFilterTypes => '거래 유형';
+
+  @override
+  String get analyticsFilterCustomFields => '사용자 정의 필드';
+
+  @override
+  String get analyticsFilterTextHint => '포함할 텍스트';
+
+  @override
+  String get importCustomFieldMappingTitle => '사용자 정의 필드 매핑';
+
+  @override
+  String get importCustomFieldMappingDesc =>
+      '각 열에 대응할 장부 필드를 선택하세요. 자동 매칭에 실패하면 필드를 새로 만들거나 이 열을 무시할 수 있습니다.';
+
+  @override
+  String get importCustomFieldMappingTarget => '대상 필드';
+
+  @override
+  String get importCustomFieldMappingAuto => '열 이름으로 자동 매칭';
+
+  @override
+  String get importCustomFieldMappingSkip => '이 열 무시';
+
+  @override
+  String importCustomFieldColumns(int count) {
+    return '사용자 정의 필드 열 $count개를 찾았습니다';
+  }
+
+  @override
+  String get importCustomFieldColumnsTitle => '사용자 정의 필드 확인';
+
+  @override
+  String get importCustomFieldColumnsDesc =>
+      '이 장부에 없는 사용자 정의 필드가 파일에 있습니다. 가져오기 전에 이름과 유형을 확인하세요. 단일/다중 선택의 후보 옵션은 파일 값에서 가져옵니다.';
+
+  @override
+  String get importCustomFieldName => '필드 이름';
+
+  @override
+  String get importCustomFieldType => '필드 유형';
+
+  @override
+  String importCustomFieldOptions(int count) {
+    return '후보 옵션: $count개';
+  }
+
+  @override
+  String get importCustomFieldNameRequired => '필드 이름은 비워 둘 수 없습니다';
+
+  @override
+  String importCustomFieldNameDuplicate(String name) {
+    return '필드 이름 \"$name\"이(가) 이미 있거나 중복됩니다';
+  }
+
+  @override
+  String importCustomFieldOptionsRequired(String name) {
+    return '필드 \"$name\"에 사용할 옵션이 없습니다. 텍스트 유형을 선택하세요';
+  }
+
+  @override
+  String get analyticsFilterNoResults => '현재 필터와 일치하는 거래가 없습니다';
+
+  @override
+  String get analyticsFilterNoResultsSubtext => '필터를 조정하거나 초기화하여 전체 데이터를 확인하세요';
+
+  @override
+  String get importCustomFieldAddOption => '옵션 추가';
+
+  @override
+  String get importCustomFieldAddOptionAction => '추가';
+
+  @override
+  String importCustomFieldCreateFailed(String name) {
+    return '사용자 정의 필드 \"$name\" 생성에 실패하여 가져오기를 취소했습니다. 다시 시도해 주세요';
+  }
+
+  @override
   String get analyticsMonth => '월';
 
   @override

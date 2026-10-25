@@ -329,6 +329,66 @@
   "analyticsExpense": "支出",
   "analyticsIncome": "收入",
   "analyticsWeek": "週",
+  "analyticsFilterEntry": "篩選",
+  "analyticsFilterApplied": "篩選已啟用",
+  "analyticsFilterTitle": "洞察篩選",
+  "analyticsFilterTypes": "交易類型",
+  "analyticsFilterCustomFields": "自訂欄位",
+  "analyticsFilterTextHint": "輸入包含的文字",
+  "importCustomFieldMappingTitle": "自訂欄位對應",
+  "importCustomFieldMappingDesc": "選擇每欄對應的帳本欄位；自動比對不到時可建立欄位，或忽略此欄。",
+  "importCustomFieldMappingTarget": "目標欄位",
+  "importCustomFieldMappingAuto": "依欄名自動比對",
+  "importCustomFieldMappingSkip": "忽略此欄",
+  "importCustomFieldColumns": "已識別 {count} 個自訂欄位獨立欄",
+  "@importCustomFieldColumns": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importCustomFieldColumnsTitle": "確認自訂欄位",
+  "importCustomFieldColumnsDesc": "檔案中有本帳本尚未定義的自訂欄位。請逐項確認名稱與類型後繼續匯入；單選 / 多選的候選選項來自檔案中的值。",
+  "importCustomFieldName": "欄位名稱",
+  "importCustomFieldType": "欄位類型",
+  "importCustomFieldOptions": "候選選項：{count} 個",
+  "@importCustomFieldOptions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importCustomFieldNameRequired": "欄位名稱不能為空",
+  "importCustomFieldNameDuplicate": "欄位名稱「{name}」已存在或重複",
+  "@importCustomFieldNameDuplicate": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "importCustomFieldOptionsRequired": "欄位「{name}」沒有可用選項，請改選文字類型",
+  "@importCustomFieldOptionsRequired": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "analyticsFilterNoResults": "目前篩選沒有符合的帳單",
+  "analyticsFilterNoResultsSubtext": "調整篩選條件後再試，或清空篩選查看全部資料",
+  "importCustomFieldAddOption": "新增選項",
+  "importCustomFieldAddOptionAction": "新增",
+  "importCustomFieldCreateFailed": "建立自訂欄位「{name}」失敗，匯入已取消，請重試",
+  "@importCustomFieldCreateFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "analyticsMonth": "月",
   "analyticsWeekTotal": "本週{type}： ",
   "analyticsComparedToLastWeek": "比上週",

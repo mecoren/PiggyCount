@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../data/db.dart';
 import '../data/models/analytics_amount_metric.dart';
 import '../data/models/analytics_time_metric.dart';
+import '../data/models/analytics_transaction_filter.dart';
 import '../data/models/custom_field_values.dart';
 import '../services/custom_field_stats_service.dart';
 import 'database_providers.dart';
@@ -52,7 +53,8 @@ final customFieldsForCurrentLedgerProvider =
 
 /// 某笔交易已存的自定义字段值（编辑回显用）。无值 → 空 map。
 final transactionCustomValuesProvider =
-    FutureProvider.family<Map<String, dynamic>, int>((ref, transactionId) async {
+    FutureProvider.family<Map<String, dynamic>, int>(
+        (ref, transactionId) async {
   ref.watch(customFieldListRefreshProvider);
   final repo = ref.watch(repositoryProvider);
   return repo.getValuesForTransaction(transactionId);
@@ -102,7 +104,8 @@ final customFieldStatsForRangeProvider = FutureProvider.autoDispose.family<
       DateTime end,
       int refreshTick,
       AnalyticsAmountMetric amountMetric,
-      AnalyticsTimeMetric timeMetric
+      AnalyticsTimeMetric timeMetric,
+      AnalyticsTransactionFilter filter
     })>((ref, q) async {
   ref.watch(customFieldListRefreshProvider);
   final repo = ref.watch(repositoryProvider);
@@ -113,7 +116,8 @@ final customFieldStatsForRangeProvider = FutureProvider.autoDispose.family<
       start: q.start,
       end: q.end,
       amountMetric: q.amountMetric,
-      timeMetric: q.timeMetric);
+      timeMetric: q.timeMetric,
+      filter: q.filter);
   return CustomFieldStatsService.aggregate(defs: defs, rows: rows);
 });
 
@@ -130,7 +134,8 @@ final customFieldStatsDetailProvider = FutureProvider.autoDispose.family<
       DateTime end,
       int refreshTick,
       AnalyticsAmountMetric amountMetric,
-      AnalyticsTimeMetric timeMetric
+      AnalyticsTimeMetric timeMetric,
+      AnalyticsTransactionFilter filter
     })>((ref, q) async {
   ref.watch(customFieldListRefreshProvider);
   final repo = ref.watch(repositoryProvider);
@@ -142,15 +147,17 @@ final customFieldStatsDetailProvider = FutureProvider.autoDispose.family<
         start: q.start,
         end: q.end,
         amountMetric: q.amountMetric,
-        timeMetric: q.timeMetric),
+        timeMetric: q.timeMetric,
+        filter: q.filter),
     repo.customFieldStatsTotalCount(
         ledgerId: q.ledgerId,
         start: q.start,
         end: q.end,
-        timeMetric: q.timeMetric),
+        timeMetric: q.timeMetric,
+        filter: q.filter),
   ]);
-  final rows =
-      results[0] as List<({String type, double nativeAmount, String? customValuesJson})>;
+  final rows = results[0]
+      as List<({String type, double nativeAmount, String? customValuesJson})>;
   final totalCount = results[1] as int;
   return CustomFieldStatsService.aggregateDetail(
       defs: defs, totalCount: totalCount, rows: rows);
@@ -164,8 +171,8 @@ final customFieldStatsDetailProvider = FutureProvider.autoDispose.family<
 /// 这里只防云端在途的幽灵键)。「全部账本」模式下其它账本的值天然解析不出
 /// 名称 → 不显示,属预期。日期值按 fieldType 转本地化 yMd 文本;填了时分秒
 /// 且「显示交易时间」开启时连时间一并显示(与明细行时间口径一致)。
-final customFieldValueBadgesProvider = StreamProvider<Map<int,
-        List<({String name, String display})>>>((ref) {
+final customFieldValueBadgesProvider =
+    StreamProvider<Map<int, List<({String name, String display})>>>((ref) {
   final db = ref.watch(databaseProvider);
   final ledgerId = ref.watch(currentLedgerIdProvider);
   final repo = ref.watch(repositoryProvider);
@@ -183,8 +190,7 @@ final customFieldValueBadgesProvider = StreamProvider<Map<int,
   final showTime = ref.watch(showTransactionTimeProvider);
   return valuesStream.asyncMap((rows) async {
     final defs = await repo.getDefinitionsForLedger(ledgerId);
-    final out =
-        <int, List<({String name, String display})>>{};
+    final out = <int, List<({String name, String display})>>{};
     for (final tx in rows) {
       final json = tx.customValuesJson;
       if (json == null) continue;

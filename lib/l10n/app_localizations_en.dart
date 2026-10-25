@@ -826,6 +826,95 @@ class AppLocalizationsEn extends AppLocalizations {
   String get analyticsWeek => 'Week';
 
   @override
+  String get analyticsFilterEntry => 'Filter';
+
+  @override
+  String get analyticsFilterApplied => 'Filter active';
+
+  @override
+  String get analyticsFilterTitle => 'Insights filter';
+
+  @override
+  String get analyticsFilterTypes => 'Transaction type';
+
+  @override
+  String get analyticsFilterCustomFields => 'Custom fields';
+
+  @override
+  String get analyticsFilterTextHint => 'Text contains';
+
+  @override
+  String get importCustomFieldMappingTitle => 'Custom field mapping';
+
+  @override
+  String get importCustomFieldMappingDesc =>
+      'Choose the ledger field for each column. You can create a field when auto-match fails, or ignore the column.';
+
+  @override
+  String get importCustomFieldMappingTarget => 'Target field';
+
+  @override
+  String get importCustomFieldMappingAuto => 'Auto-match by column name';
+
+  @override
+  String get importCustomFieldMappingSkip => 'Ignore this column';
+
+  @override
+  String importCustomFieldColumns(int count) {
+    return '$count custom field column(s) detected';
+  }
+
+  @override
+  String get importCustomFieldColumnsTitle => 'Confirm custom fields';
+
+  @override
+  String get importCustomFieldColumnsDesc =>
+      'The file contains custom fields that do not exist in this ledger. Confirm each name and type before importing; options for single/multi select come from values in the file.';
+
+  @override
+  String get importCustomFieldName => 'Field name';
+
+  @override
+  String get importCustomFieldType => 'Field type';
+
+  @override
+  String importCustomFieldOptions(int count) {
+    return 'Candidate options: $count';
+  }
+
+  @override
+  String get importCustomFieldNameRequired => 'Field name cannot be empty';
+
+  @override
+  String importCustomFieldNameDuplicate(String name) {
+    return 'Field name \"$name\" already exists or is duplicated';
+  }
+
+  @override
+  String importCustomFieldOptionsRequired(String name) {
+    return 'Field \"$name\" has no options; choose Text instead';
+  }
+
+  @override
+  String get analyticsFilterNoResults =>
+      'No transactions match the current filters';
+
+  @override
+  String get analyticsFilterNoResultsSubtext =>
+      'Adjust the filters, or clear them to view all data';
+
+  @override
+  String get importCustomFieldAddOption => 'Add option';
+
+  @override
+  String get importCustomFieldAddOptionAction => 'Add';
+
+  @override
+  String importCustomFieldCreateFailed(String name) {
+    return 'Failed to create custom field \"$name\". Import cancelled; please try again';
+  }
+
+  @override
   String get analyticsMonth => 'Month';
 
   @override

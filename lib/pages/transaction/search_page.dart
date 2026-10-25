@@ -155,8 +155,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   List<int> _keywordCategoryIds() {
     final kw = _searchText.toLowerCase();
     if (kw.isEmpty) return const <int>[];
-    final categories =
-        ref.read(categoriesProvider).value ?? const <Category>[];
+    final categories = ref.read(categoriesProvider).value ?? const <Category>[];
     return [
       for (final c in categories)
         if (CategoryUtils.getDisplayName(c.name, context)
@@ -204,13 +203,15 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   ///
   /// SQL 只做了 `custom_values_json IS NOT NULL` 的粗筛（值标签规范化需要
   /// [CustomFieldValueCodec]，无法纯 SQL 表达）；其余维度全部已由 SQL 过滤。
-  void _recomputeResults(List<
-      ({
-        Transaction t,
-        Category? category,
-        Account? account,
-        Account? toAccount
-      })> rows) {
+  void _recomputeResults(
+      List<
+              ({
+                Transaction t,
+                Category? category,
+                Account? account,
+                Account? toAccount
+              })>
+          rows) {
     final conditions = _customFieldConditions;
     final results = conditions.isEmpty
         ? rows
@@ -745,16 +746,17 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                               label: l10n.customFieldFilterChip(
                                 cond.fieldName,
                                 switch (cond) {
-                                  CustomFieldConditionEq(:final value) =>
+                                  CustomFieldConditionEq(:final value) => value,
+                                  CustomFieldConditionContains(:final value) =>
                                     value,
+                                  CustomFieldConditionAnyOf(:final values) =>
+                                    (values.toList()..sort()).join(' / '),
                                   // 区间：[lower, upper) 文案，开上界出「≥lower」。
                                   CustomFieldConditionBetween(
                                     :final lower,
                                     :final upper
                                   ) =>
-                                    upper == null
-                                        ? '≥$lower'
-                                        : '$lower~$upper',
+                                    upper == null ? '≥$lower' : '$lower~$upper',
                                 },
                               ),
                               primaryColor: primaryColor,

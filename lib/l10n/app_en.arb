@@ -450,6 +450,66 @@
   "searchDateStart": "Start",
   "searchDateEnd": "End",
   "analyticsWeek": "Week",
+  "analyticsFilterEntry": "Filter",
+  "analyticsFilterApplied": "Filter active",
+  "analyticsFilterTitle": "Insights filter",
+  "analyticsFilterTypes": "Transaction type",
+  "analyticsFilterCustomFields": "Custom fields",
+  "analyticsFilterTextHint": "Text contains",
+  "importCustomFieldMappingTitle": "Custom field mapping",
+  "importCustomFieldMappingDesc": "Choose the ledger field for each column. You can create a field when auto-match fails, or ignore the column.",
+  "importCustomFieldMappingTarget": "Target field",
+  "importCustomFieldMappingAuto": "Auto-match by column name",
+  "importCustomFieldMappingSkip": "Ignore this column",
+  "importCustomFieldColumns": "{count} custom field column(s) detected",
+  "@importCustomFieldColumns": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importCustomFieldColumnsTitle": "Confirm custom fields",
+  "importCustomFieldColumnsDesc": "The file contains custom fields that do not exist in this ledger. Confirm each name and type before importing; options for single/multi select come from values in the file.",
+  "importCustomFieldName": "Field name",
+  "importCustomFieldType": "Field type",
+  "importCustomFieldOptions": "Candidate options: {count}",
+  "@importCustomFieldOptions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importCustomFieldNameRequired": "Field name cannot be empty",
+  "importCustomFieldNameDuplicate": "Field name \"{name}\" already exists or is duplicated",
+  "@importCustomFieldNameDuplicate": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "importCustomFieldOptionsRequired": "Field \"{name}\" has no options; choose Text instead",
+  "@importCustomFieldOptionsRequired": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "analyticsFilterNoResults": "No transactions match the current filters",
+  "analyticsFilterNoResultsSubtext": "Adjust the filters, or clear them to view all data",
+  "importCustomFieldAddOption": "Add option",
+  "importCustomFieldAddOptionAction": "Add",
+  "importCustomFieldCreateFailed": "Failed to create custom field \"{name}\". Import cancelled; please try again",
+  "@importCustomFieldCreateFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "analyticsMonth": "Month",
   "analyticsWeekTotal": "{type} This Week: ",
   "analyticsComparedToLastWeek": "vs Last Week",

@@ -12,6 +12,8 @@ import '../../providers.dart';
 import '../../providers/custom_field_providers.dart';
 import '../../data/models/analytics_amount_metric.dart';
 import '../../data/models/analytics_time_metric.dart';
+import '../../data/models/analytics_transaction_filter.dart';
+import '../../data/models/custom_field_values.dart';
 import '../../services/custom_field_stats_service.dart';
 import '../../services/export/csv_builder.dart';
 import '../../services/export/custom_field_stats_csv.dart';
@@ -40,6 +42,7 @@ class CustomFieldAnalysisPage extends ConsumerStatefulWidget {
     required this.type,
     this.amountMetric = AnalyticsAmountMetric.recorded,
     this.timeMetric = AnalyticsTimeMetric.happenedAt,
+    this.filter = const AnalyticsTransactionFilter(),
     this.fieldSyncId,
     this.onDrillDown,
     this.onExportCsv,
@@ -59,6 +62,9 @@ class CustomFieldAnalysisPage extends ConsumerStatefulWidget {
   /// 统计时间口径（与洞察卡同源）：区间按记账时间还是某个日期型自定义字段
   /// 判定。不透传的话，从洞察卡下钻进来的数字会与卡片对不上账。
   final AnalyticsTimeMetric timeMetric;
+
+  /// 洞察页附加筛选：下钻后的字段统计与明细导出沿用同一条件。
+  final AnalyticsTransactionFilter filter;
 
   /// 初始选中字段；null/不存在时默认第一个字段。
   final String? fieldSyncId;
@@ -92,6 +98,7 @@ class _CustomFieldAnalysisPageState
       refreshTick: ref.watch(statsRefreshProvider),
       amountMetric: widget.amountMetric,
       timeMetric: widget.timeMetric,
+      filter: widget.filter,
     )));
 
     return Scaffold(
@@ -188,10 +195,20 @@ class _CustomFieldAnalysisPageState
       for (final r in txs)
         if (!r.t.excludeFromStats &&
             widget.timeMetric
-                .inRange(r.t, start: widget.start, end: widget.end))
+                .inRange(r.t, start: widget.start, end: widget.end) &&
+            _matchesFilter(r.t))
           r.t,
     ];
     return buildCustomFieldDetailCsvRows(l10n: l10n, defs: defs, txs: rows);
+  }
+
+  bool _matchesFilter(Transaction t) {
+    final f = widget.filter;
+    if (f.types.isNotEmpty && !f.types.contains(t.type)) return false;
+    if (f.customFieldConditions.isEmpty) return true;
+    final values = CustomFieldValueCodec.decode(t.customValuesJson);
+    return f.customFieldConditions
+        .every((c) => c.matches(values[c.fieldSyncId]));
   }
 
   /// 落盘 + 系统分享：临时文件分享后即删（「临时文件不残留」约束）。

@@ -15,7 +15,12 @@ import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/widgets/biz/transaction_list.dart';
 
-typedef TxItem = ({Transaction t, Category? category, Account? account, Account? toAccount});
+typedef TxItem = ({
+  Transaction t,
+  Category? category,
+  Account? account,
+  Account? toAccount
+});
 
 TxItem item(int id, DateTime at, {double amount = 10}) => (
       t: Transaction(
@@ -47,7 +52,21 @@ void main() {
 
   tearDown(() async => db.close());
 
-  Widget host(List<TxItem> transactions, GlobalKey<TransactionListState> key) {
+  test('吸附日期：取日期倒序里第一个仍可见的组', () {
+    const ordered = ['2026-10-03', '2026-10-02', '2026-10-01'];
+    expect(
+      firstVisibleDayKey(ordered, {'2026-10-02', '2026-10-01'}),
+      '2026-10-02',
+    );
+    expect(firstVisibleDayKey(ordered, {'2026-10-01'}), '2026-10-01');
+    expect(firstVisibleDayKey(ordered, {}), isNull);
+  });
+
+  Widget host(
+    List<TxItem> transactions,
+    GlobalKey<TransactionListState> key, {
+    bool sticky = false,
+  }) {
     return ProviderScope(
       // riverpod 3：provider 失败后会自动重试（指数退避 Timer），残留的 timer 会
       // 触发 flutter_test 的 pending-timer 断言。本测试只验证列表增量 diff 行为，
@@ -66,11 +85,30 @@ void main() {
             key: key,
             transactions: transactions,
             hideAmounts: false,
+            stickyDateHeader: sticky,
           ),
         ),
       ),
     );
   }
+
+  testWidgets('stickyDateHeader：滚过日期头后出现吸附头，金额沿用日合计', (tester) async {
+    final key = GlobalKey<TransactionListState>();
+    await tester.pumpWidget(host([
+      for (var d = 1; d <= 10; d++)
+        item(d, DateTime(2024, 1, d), amount: d.toDouble()),
+    ], key, sticky: true));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(TransactionList), const Offset(0, -420));
+    await tester.pumpAndSettle();
+
+    expect(key.currentState!.stickyPinned, isTrue);
+    expect(find.byKey(const Key('sticky-date-header')), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
 
   testWidgets('指纹门 → 增量 diff → _dateIndexMap 增删正确（jumpToMonth 探测）',
       (tester) async {
@@ -125,5 +163,5 @@ void main() {
     await tester.pump();
     // pump() 不推进时间，drift 的 Timer(Duration.zero) 需要显式推进才会执行
     await tester.pump(const Duration(milliseconds: 1));
-    });
+  });
 }
