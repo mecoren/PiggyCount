@@ -3,6 +3,7 @@ import 'package:drift/drift.dart' as d;
 import '../db.dart';
 import '../models/analytics_amount_metric.dart';
 import '../models/analytics_time_metric.dart';
+import '../models/analytics_transaction_filter.dart';
 import '../models/transaction_search_query.dart';
 import '../../models/note_history.dart';
 
@@ -36,18 +37,23 @@ class TransactionUpdateBySyncIdData {
   final int? toAccountId;
   final DateTime happenedAt;
   final String? note;
+
   /// v30 多币种：交易币种。null 表示保持本地原值。
   final String? currencyCode;
+
   /// v30 多币种：折算到账本本位币的金额。null 表示保持本地原值。
   /// 注意：sync_diff_service 的 modified 路径若只更新 amount 而不带
   /// nativeAmount，单币种账本下本地旧行的 native_amount 会与新的 amount
   /// 分裂，导致合计（SUM(COALESCE(native_amount, amount))）读旧值——即
   /// 此前"同步后明细变了但合计不变"的根因。调用方必须重算并传入。
   final double? nativeAmount;
+
   /// 账单标记：不计入统计。diff 合并必须带上，否则跨设备丢失。
   final bool excludeFromStats;
+
   /// 账单标记：不计入预算。同上。
   final bool excludeFromBudget;
+
   /// 附件清单（云→本 modified 合并，附件差异贯通修复）。
   ///
   /// - null：不改动本地 transaction_attachments 行；
@@ -349,19 +355,40 @@ abstract class TransactionRepository {
   ///
   /// [month] 为周期标签,约定传 DateTime(year, month, 1);实际范围由账本
   /// monthStartDay 决定:[y-m-起始日, y-(m+1)-起始日)。
-  Stream<List<({Transaction t, Category? category, Account? account, Account? toAccount})>> watchTransactionsWithCategoryInMonth({
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> watchTransactionsWithCategoryInMonth({
     required int ledgerId,
     required DateTime month,
   });
 
   /// 获取指定年份的交易记录（带分类信息）
-  Stream<List<({Transaction t, Category? category, Account? account, Account? toAccount})>> watchTransactionsWithCategoryInYear({
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> watchTransactionsWithCategoryInYear({
     required int ledgerId,
     required int year,
   });
 
   /// 获取指定分类和时间范围的交易记录（带分类信息）
-  Stream<List<({Transaction t, Category? category, Account? account, Account? toAccount})>> watchTransactionsForCategoryInRange({
+  Stream<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            Account? account,
+            Account? toAccount
+          })>> watchTransactionsForCategoryInRange({
     required int ledgerId,
     required DateTime start,
     required DateTime end,
@@ -380,6 +407,7 @@ abstract class TransactionRepository {
     required DateTime happenedAt,
     String? note,
     String? syncId,
+
     /// 关联的周期模板 id（recurring_transactions.id）。recurring 生成器生成的
     /// 实例必须写入，否则 (recurringId, happenedAt) 去重键缺失，无法与
     /// S3 恢复来的同周期实例识别为重复（见 existsRecurringInstance）。
@@ -521,6 +549,7 @@ abstract class TransactionRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric,
     AnalyticsTimeMetric timeMetric,
+    AnalyticsTransactionFilter filter,
   });
 
   /// 获取账本的所有交易记录
@@ -596,13 +625,15 @@ abstract class TransactionRepository {
   });
 
   /// 获取指定日期的所有交易（含分类、标签、附件、账户）
-  Future<List<({
-    Transaction t,
-    Category? category,
-    List<Tag> tags,
-    List<TransactionAttachment> attachments,
-    Account? account,
-  })>> getTransactionsByDate({
+  Future<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            List<Tag> tags,
+            List<TransactionAttachment> attachments,
+            Account? account,
+          })>> getTransactionsByDate({
     required int ledgerId,
     required DateTime date,
   });
@@ -614,13 +645,15 @@ abstract class TransactionRepository {
   /// 可言，改用与统计口径一致的**日粒度半开区间** `[startDate, endDate)`
   /// （见 [AnalyticsTimeMetric.rangeSqlInlined]）—— 调用方收口时应用
   /// [AnalyticsTimeMetric.inRange]，它对两种口径都与这里的 SQL 同义。
-  Future<List<({
-    Transaction t,
-    Category? category,
-    List<Tag> tags,
-    List<TransactionAttachment> attachments,
-    Account? account,
-  })>> getTransactionsByDateRange({
+  Future<
+      List<
+          ({
+            Transaction t,
+            Category? category,
+            List<Tag> tags,
+            List<TransactionAttachment> attachments,
+            Account? account,
+          })>> getTransactionsByDateRange({
     required int ledgerId,
     required DateTime startDate,
     required DateTime endDate,

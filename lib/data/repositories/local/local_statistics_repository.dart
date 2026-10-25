@@ -2,7 +2,9 @@ import 'package:drift/drift.dart' as d;
 
 import '../../db.dart';
 import '../../models/analytics_amount_metric.dart';
+import '../../models/analytics_filter_sql.dart';
 import '../../models/analytics_time_metric.dart';
+import '../../models/analytics_transaction_filter.dart';
 import '../../models/transaction_original_amount.dart';
 import '../../../utils/month_range.dart';
 import '../statistics_repository.dart';
@@ -27,12 +29,10 @@ class LocalStatisticsRepository implements StatisticsRepository {
     // 的库被编译成 `SQLITE_OMIT_JSON`，整条口径链会以「读数为 0」的形式
     // 静默失效，故显式探测一次，UI 据结果决定是否提供该口径。
     try {
-      final row = await db
-          .customSelect(
-            r"""SELECT json_type('{"a":1}', '$.a') AS t""",
-            readsFrom: const {},
-          )
-          .getSingle();
+      final row = await db.customSelect(
+        r"""SELECT json_type('{"a":1}', '$.a') AS t""",
+        readsFrom: const {},
+      ).getSingle();
       return _jsonSupported = row.read<String?>('t') != null;
     } catch (_) {
       return _jsonSupported = false;
@@ -74,7 +74,8 @@ class LocalStatisticsRepository implements StatisticsRepository {
       ];
 
   @override
-  Future<List<({int? id, String name, String? icon, double total})>> totalsByCategory({
+  Future<List<({int? id, String name, String? icon, double total})>>
+      totalsByCategory({
     required int ledgerId,
     required String type,
     required DateTime start,
@@ -119,18 +120,29 @@ class LocalStatisticsRepository implements StatisticsRepository {
   }
 
   @override
-  Future<List<({int? id, String name, String? icon, int? parentId, int level, double total, int count})>>
-      totalsByCategoryWithHierarchy({
+  Future<
+      List<
+          ({
+            int? id,
+            String name,
+            String? icon,
+            int? parentId,
+            int level,
+            double total,
+            int count
+          })>> totalsByCategoryWithHierarchy({
     required int ledgerId,
     required String type,
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) async {
     // SQL 分组聚合（此前把区间内全部明细读进 Dart 再累加金额与笔数）。
     // COUNT(*) 与旧实现的「每行 +1」同义：金额口径行过滤已进 WHERE，
     // 因此自定义字段口径下笔数 = 填了该字段的笔数。
+    final fs = buildAnalyticsFilterSql(filter, firstIndex: 5, alias: 't');
     final rows = await db.customSelect(
       'SELECT t.category_id AS cid, c.name AS name, c.icon AS icon, '
       'c.parent_id AS parent_id, c.level AS level, '
@@ -140,13 +152,15 @@ class LocalStatisticsRepository implements StatisticsRepository {
       'LEFT JOIN categories c ON t.category_id = c.id '
       'WHERE t.ledger_id = ?1 AND t.type = ?2 AND t.exclude_from_stats = 0'
       '${_metricFilter(amountMetric, alias: 't')}'
-      '${_timeFilter(timeMetric, alias: 't')} '
+      '${_timeFilter(timeMetric, alias: 't')}'
+      '${fs.suffix} '
       'AND ${timeMetric.rangeSql(start: start, end: end, alias: 't', startVar: '?3', endVar: '?4')} '
       'GROUP BY t.category_id',
       variables: [
         d.Variable<int>(ledgerId),
         d.Variable<String>(type),
         ..._timeBinds(timeMetric, start, end),
+        for (final v in fs.values) d.Variable<Object>(v),
       ],
       readsFrom: {db.transactions, db.categories},
     ).get();
@@ -185,6 +199,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) async {
     // SQL 分组聚合（此前全量加载日期范围内交易行再 Dart 循环累加）。
     // 分组键与旧实现严格一致（记账时间口径）：本地时区的日界
@@ -192,19 +207,22 @@ class LocalStatisticsRepository implements StatisticsRepository {
     // DateTime(local) 转 unixepoch 传入；自定义字段时间口径改按该字段日期的
     // 本地日历日（date(json_extract(...))，日粒度）。
     // 结果补零保证 [start, end) 区间逐日连续。
+    final fs = buildAnalyticsFilterSql(filter, firstIndex: 5);
     final rows = await db.customSelect(
       'SELECT ${timeMetric.sqlDayExpr()} AS day, '
       'SUM(${amountMetric.sqlExpr()}) AS total '
       'FROM transactions '
       'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0'
       '${_metricFilter(amountMetric)}'
-      '${_timeFilter(timeMetric)} '
+      '${_timeFilter(timeMetric)}'
+      '${fs.suffix} '
       'AND ${timeMetric.rangeSql(start: start, end: end, startVar: '?3', endVar: '?4')} '
       'GROUP BY day',
       variables: [
         d.Variable<int>(ledgerId),
         d.Variable<String>(type),
         ..._timeBinds(timeMetric, start, end),
+        for (final v in fs.values) d.Variable<Object>(v),
       ],
       readsFrom: {db.transactions},
     ).get();
@@ -229,6 +247,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required int year,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) async {
     final sd = await _monthStartDayOf(ledgerId);
     final yr = yearRangeFor(year, sd);
@@ -240,6 +259,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     final src = '${timeMetric.sqlSource()}${timeMetric.sqlModifier}';
     // 区间端点变量在列表里的位置是 3 与 5（?4 是 monthStartDay），故先取出一对。
     final binds = _timeBinds(timeMetric, yr.start, yr.end);
+    final fs = buildAnalyticsFilterSql(filter, firstIndex: 7);
     final rows = await db.customSelect(
       "SELECT strftime('%Y-%m', $src, "
       "CASE WHEN CAST(strftime('%d', $src) AS INTEGER) >= ?4 "
@@ -248,7 +268,8 @@ class LocalStatisticsRepository implements StatisticsRepository {
       'FROM transactions '
       'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0'
       '${_metricFilter(amountMetric)}'
-      '${_timeFilter(timeMetric)} '
+      '${_timeFilter(timeMetric)}'
+      '${fs.suffix} '
       'AND ${timeMetric.rangeSql(start: yr.start, end: yr.end, startVar: '?3', endVar: '?5')} '
       "GROUP BY label HAVING substr(label, 1, 4) = ?6",
       variables: [
@@ -258,6 +279,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
         d.Variable<int>(sd),
         binds[1],
         d.Variable<String>(year.toString()),
+        for (final v in fs.values) d.Variable<Object>(v),
       ],
       readsFrom: {db.transactions},
     ).get();
@@ -279,6 +301,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required String type,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) async {
     final sd = await _monthStartDayOf(ledgerId);
     // SQL 聚合（此前**无任何时间过滤**全量载入该账本全部交易行）。
@@ -289,6 +312,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     // 明细 —— 否则它们的 `date(NULL)` 会成为一个独立（且 int.parse 会炸）
     // 的空标签。
     final src = '${timeMetric.sqlSource()}${timeMetric.sqlModifier}';
+    final fs = buildAnalyticsFilterSql(filter, firstIndex: 4);
     final rows = await db.customSelect(
       "WITH labeled AS (SELECT "
       "strftime('%Y', $src, "
@@ -298,12 +322,14 @@ class LocalStatisticsRepository implements StatisticsRepository {
       'FROM transactions '
       'WHERE ledger_id = ?1 AND type = ?2 AND exclude_from_stats = 0'
       '${_metricFilter(amountMetric)}'
-      '${_timeFilter(timeMetric)}) '
+      '${_timeFilter(timeMetric)}'
+      '${fs.suffix}) '
       'SELECT label, SUM(v) AS total FROM labeled GROUP BY label ORDER BY label',
       variables: [
         d.Variable<int>(ledgerId),
         d.Variable<String>(type),
         d.Variable<int>(sd),
+        for (final v in fs.values) d.Variable<Object>(v),
       ],
       readsFrom: {db.transactions},
     ).get();
@@ -313,7 +339,8 @@ class LocalStatisticsRepository implements StatisticsRepository {
     var maxYear = int.parse(rows.last.read<String>('label'));
     final map = <int, double>{
       for (final r in rows)
-        int.parse(r.read<String>('label')): (r.read<double>('total') as num).toDouble(),
+        int.parse(r.read<String>('label')):
+            (r.read<double>('total') as num).toDouble(),
     };
     for (int y = minYear; y <= maxYear; y++) {
       out.add((year: y, total: map[y] ?? 0));
@@ -335,10 +362,13 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) async {
     int ival(dynamic v) => v is num ? v.toInt() : (v is BigInt ? v.toInt() : 0);
-    double dval(dynamic v) => v is num ? v.toDouble() : (v is BigInt ? v.toDouble() : 0.0);
+    double dval(dynamic v) =>
+        v is num ? v.toDouble() : (v is BigInt ? v.toDouble() : 0.0);
 
+    final fs = buildAnalyticsFilterSql(filter, firstIndex: 5, alias: 't');
     final rows = await db.customSelect(
       'SELECT tg.id AS id, tg.name AS name, tg.color AS color, '
       'COUNT(*) AS cnt, SUM(${amountMetric.sqlExpr(alias: 't')}) AS total '
@@ -347,17 +377,20 @@ class LocalStatisticsRepository implements StatisticsRepository {
       'INNER JOIN tags tg ON tg.id = tt.tag_id '
       'WHERE t.ledger_id = ?1 AND t.type = ?2 AND t.exclude_from_stats = 0'
       '${_metricFilter(amountMetric, alias: 't')}'
-      '${_timeFilter(timeMetric, alias: 't')} '
+      '${_timeFilter(timeMetric, alias: 't')}'
+      '${fs.suffix} '
       'AND ${timeMetric.rangeSql(start: start, end: end, alias: 't', startVar: '?3', endVar: '?4')} '
       'GROUP BY tg.id',
       variables: [
         d.Variable<int>(ledgerId),
         d.Variable<String>(type),
         ..._timeBinds(timeMetric, start, end),
+        for (final v in fs.values) d.Variable<Object>(v),
       ],
       readsFrom: {db.transactionTags, db.transactions, db.tags},
     ).get();
-    final map = <int, ({int id, String name, String? color, double total, int count})>{
+    final map =
+        <int, ({int id, String name, String? color, double total, int count})>{
       for (final r in rows)
         r.read<int>('id'): (
           id: r.read<int>('id'),
@@ -378,8 +411,10 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) async {
     final expr = amountMetric.sqlExpr();
+    final fs = buildAnalyticsFilterSql(filter, firstIndex: 4);
     // 使用 SQL 聚合查询，比查出全部数据再累加快得多
     final result = await db.customSelect(
       '''
@@ -389,11 +424,12 @@ class LocalStatisticsRepository implements StatisticsRepository {
     FROM transactions
     WHERE ledger_id = ?1
       AND ${timeMetric.rangeSql(start: start, end: end, startVar: '?2', endVar: '?3')}
-      AND exclude_from_stats = 0${_metricFilter(amountMetric)}${_timeFilter(timeMetric)}
+      AND exclude_from_stats = 0${_metricFilter(amountMetric)}${_timeFilter(timeMetric)}${fs.suffix}
     ''',
       variables: [
         d.Variable<int>(ledgerId),
         ..._timeBinds(timeMetric, start, end),
+        for (final v in fs.values) d.Variable<Object>(v),
       ],
       readsFrom: {db.transactions},
     ).getSingle();
@@ -531,13 +567,14 @@ class LocalStatisticsRepository implements StatisticsRepository {
       v is num ? v.toDouble() : (v is BigInt ? v.toDouble() : 0.0);
 
   @override
-  Future<({
-    int total,
-    int deviated,
-    double diffSum,
-    double absDiffSum,
-    double maxAbsDiff,
-  })> originalAmountDiffSummary({
+  Future<
+      ({
+        int total,
+        int deviated,
+        double diffSum,
+        double absDiffSum,
+        double maxAbsDiff,
+      })> originalAmountDiffSummary({
     required int ledgerId,
     required String type,
     required DateTime start,
@@ -598,8 +635,7 @@ class LocalStatisticsRepository implements StatisticsRepository {
     // 看的是"何时开始偏"，起点平移不改变形状。要与报表月严格对账时，
     // 再复用 _monthStartDayOf 的 CASE 分支即可。
     final bucketExpr = switch (granularity) {
-      'month' =>
-        "strftime('%Y-%m', t.happened_at, 'unixepoch', 'localtime')",
+      'month' => "strftime('%Y-%m', t.happened_at, 'unixepoch', 'localtime')",
       'year' => "strftime('%Y', t.happened_at, 'unixepoch', 'localtime')",
       _ => "date(t.happened_at, 'unixepoch', 'localtime')",
     };
@@ -779,19 +815,22 @@ class LocalStatisticsRepository implements StatisticsRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) async {
+    final fs = buildAnalyticsFilterSql(filter, firstIndex: 4);
     final rows = await db.customSelect(
       'SELECT type AS type, '
       '${amountMetric.sqlExpr()} AS total, '
       'custom_values_json AS custom_values_json '
       'FROM transactions '
       'WHERE ledger_id = ?1 AND exclude_from_stats = 0'
-      '${_metricFilter(amountMetric)}${_timeFilter(timeMetric)} '
+      '${_metricFilter(amountMetric)}${_timeFilter(timeMetric)}${fs.suffix} '
       'AND custom_values_json IS NOT NULL '
       'AND ${timeMetric.rangeSql(start: start, end: end, startVar: '?2', endVar: '?3')}',
       variables: [
         d.Variable<int>(ledgerId),
         ..._timeBinds(timeMetric, start, end),
+        for (final v in fs.values) d.Variable<Object>(v),
       ],
       readsFrom: {db.transactions},
     ).get();
@@ -805,20 +844,23 @@ class LocalStatisticsRepository implements StatisticsRepository {
   }
 
   @override
-  Future<int>       customFieldStatsTotalCount({
+  Future<int> customFieldStatsTotalCount({
     required int ledgerId,
     required DateTime start,
     required DateTime end,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) async {
+    final fs = buildAnalyticsFilterSql(filter, firstIndex: 4);
     final row = await db.customSelect(
       'SELECT COUNT(*) AS c FROM transactions '
       'WHERE ledger_id = ?1 AND exclude_from_stats = 0'
-      '${_timeFilter(timeMetric)} '
+      '${_timeFilter(timeMetric)}${fs.suffix} '
       'AND ${timeMetric.rangeSql(start: start, end: end, startVar: '?2', endVar: '?3')}',
       variables: [
         d.Variable<int>(ledgerId),
         ..._timeBinds(timeMetric, start, end),
+        for (final v in fs.values) d.Variable<Object>(v),
       ],
       readsFrom: {db.transactions},
     ).getSingle();

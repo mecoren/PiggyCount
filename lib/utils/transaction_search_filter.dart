@@ -37,6 +37,22 @@ sealed class CustomFieldCondition {
     required String value,
   }) = CustomFieldConditionEq;
 
+  /// 文本包含：忽略大小写与首尾空白（洞察筛选的文本字段）。
+  const factory CustomFieldCondition.contains({
+    required String fieldSyncId,
+    required String fieldName,
+    required String fieldType,
+    required String value,
+  }) = CustomFieldConditionContains;
+
+  /// 多选任一命中：值标签与 [values] 有交集即命中（洞察多选筛选）。
+  const factory CustomFieldCondition.anyOf({
+    required String fieldSyncId,
+    required String fieldName,
+    required String fieldType,
+    required Set<String> values,
+  }) = CustomFieldConditionAnyOf;
+
   /// 数值区间：按 abs 值比较，半开 `[lower, upper)`（与分布分档同源）。
   /// [upper] 为 null = 开区间上界（最高档「≥lower」）。
   const factory CustomFieldCondition.between({
@@ -69,6 +85,43 @@ final class CustomFieldConditionEq extends CustomFieldCondition {
     // 空标签列表 = 未填/脏值 → 不命中。
     final labels = CustomFieldValueCodec.toLabels(v, fieldType);
     return labels.contains(value);
+  }
+}
+
+final class CustomFieldConditionContains extends CustomFieldCondition {
+  const CustomFieldConditionContains({
+    required super.fieldSyncId,
+    required super.fieldName,
+    required super.fieldType,
+    required this.value,
+  });
+
+  /// 已裁剪的查询文本；匹配时再统一小写。
+  final String value;
+
+  @override
+  bool matches(dynamic v) {
+    final wanted = value.trim().toLowerCase();
+    if (wanted.isEmpty || v == null) return false;
+    return CustomFieldValueCodec.toLabels(v, fieldType)
+        .any((label) => label.toLowerCase().contains(wanted));
+  }
+}
+
+final class CustomFieldConditionAnyOf extends CustomFieldCondition {
+  const CustomFieldConditionAnyOf({
+    required super.fieldSyncId,
+    required super.fieldName,
+    required super.fieldType,
+    required this.values,
+  });
+
+  final Set<String> values;
+
+  @override
+  bool matches(dynamic v) {
+    if (values.isEmpty || v == null) return false;
+    return CustomFieldValueCodec.toLabels(v, fieldType).any(values.contains);
   }
 }
 

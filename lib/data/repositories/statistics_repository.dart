@@ -1,5 +1,6 @@
 import '../models/analytics_amount_metric.dart';
 import '../models/analytics_time_metric.dart';
+import '../models/analytics_transaction_filter.dart';
 import '../models/transaction_original_amount.dart';
 
 /// 统计Repository接口
@@ -30,7 +31,8 @@ abstract class StatisticsRepository {
   Future<bool> supportsCustomFieldAmountMetric();
 
   /// 按分类统计（指定时间范围和类型）
-  Future<List<({int? id, String name, String? icon, double total})>> totalsByCategory({
+  Future<List<({int? id, String name, String? icon, double total})>>
+      totalsByCategory({
     required int ledgerId,
     required String type,
     required DateTime start,
@@ -43,14 +45,24 @@ abstract class StatisticsRepository {
   ///
   /// [count] 是**笔数**：记账金额 / 原始金额口径下与口径无关（只换金额），
   /// 自定义字段口径下随行过滤收窄（= 填了该字段的笔数）。
-  Future<List<({int? id, String name, String? icon, int? parentId, int level, double total, int count})>>
-      totalsByCategoryWithHierarchy({
+  Future<
+      List<
+          ({
+            int? id,
+            String name,
+            String? icon,
+            int? parentId,
+            int level,
+            double total,
+            int count
+          })>> totalsByCategoryWithHierarchy({
     required int ledgerId,
     required String type,
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric,
     AnalyticsTimeMetric timeMetric,
+    AnalyticsTransactionFilter filter,
   });
 
   /// 按天统计（指定时间范围和类型）
@@ -61,6 +73,7 @@ abstract class StatisticsRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric,
     AnalyticsTimeMetric timeMetric,
+    AnalyticsTransactionFilter filter,
   });
 
   /// 按月统计（指定年份和类型）
@@ -75,6 +88,7 @@ abstract class StatisticsRepository {
     required int year,
     AnalyticsAmountMetric amountMetric,
     AnalyticsTimeMetric timeMetric,
+    AnalyticsTransactionFilter filter,
   });
 
   /// 按年统计（所有年份，指定类型）
@@ -87,6 +101,7 @@ abstract class StatisticsRepository {
     required String type,
     AnalyticsAmountMetric amountMetric,
     AnalyticsTimeMetric timeMetric,
+    AnalyticsTransactionFilter filter,
   });
 
   /// 按标签统计（指定时间范围和类型），total 按金额降序由调用方排。
@@ -101,6 +116,7 @@ abstract class StatisticsRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric,
     AnalyticsTimeMetric timeMetric,
+    AnalyticsTransactionFilter filter,
   });
 
   /// 获取指定时间范围的收支总额
@@ -110,6 +126,7 @@ abstract class StatisticsRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric,
     AnalyticsTimeMetric timeMetric,
+    AnalyticsTransactionFilter filter,
   });
 
   /// 获取指定月份的收支总额
@@ -145,13 +162,14 @@ abstract class StatisticsRepository {
   /// [deviated] = 「原始金额 ≠ 记账金额」的明细数。未填写的明细在保存/
   /// 迁移时已兜底为记账金额（差异恒 0），所以它是"有偏差的明细数"，
   /// 而不是"用户手填过的明细数"。
-  Future<({
-    int total,
-    int deviated,
-    double diffSum,
-    double absDiffSum,
-    double maxAbsDiff,
-  })> originalAmountDiffSummary({
+  Future<
+      ({
+        int total,
+        int deviated,
+        double diffSum,
+        double absDiffSum,
+        double maxAbsDiff,
+      })> originalAmountDiffSummary({
     required int ledgerId,
     required String type,
     required DateTime start,
@@ -229,6 +247,7 @@ abstract class StatisticsRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric,
     AnalyticsTimeMetric timeMetric,
+    AnalyticsTransactionFilter filter,
   });
 
   /// 区间内计入统计的交易总笔数（同 [customFieldStatsRows] 口径：排除
@@ -239,5 +258,6 @@ abstract class StatisticsRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsTimeMetric timeMetric,
+    AnalyticsTransactionFilter filter,
   });
 }

@@ -148,6 +148,35 @@ void main() {
     });
   });
 
+  group('contains / anyOf（洞察筛选）', () {
+    test('文本包含忽略大小写，多选任一命中', () {
+      const text = CustomFieldCondition.contains(
+        fieldSyncId: 'f1',
+        fieldName: '商户',
+        fieldType: 'text',
+        value: 'STAR',
+      );
+      const any = CustomFieldCondition.anyOf(
+        fieldSyncId: 'f2',
+        fieldName: '标签',
+        fieldType: 'multiSelect',
+        values: {'A', 'B'},
+      );
+      const filter =
+          TransactionSearchFilter(customFieldConditions: [text, any]);
+      expect(
+        filter.matches(
+            t: tx(customValuesJson: '{"f1":"Starbucks","f2":["C","B"]}')),
+        isTrue,
+      );
+      expect(
+        filter.matches(
+            t: tx(customValuesJson: '{"f1":"Starbucks","f2":["C"]}')),
+        isFalse,
+      );
+    });
+  });
+
   group('与既有条件正交', () {
     test('字段值 + 金额条件同时生效（都命中才过）', () {
       const filter = TransactionSearchFilter(

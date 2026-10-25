@@ -11,7 +11,9 @@ import '../../db.dart';
 import '../../../utils/month_range.dart';
 import '../../../models/note_history.dart';
 import '../../models/analytics_amount_metric.dart';
+import '../../models/analytics_filter_sql.dart';
 import '../../models/analytics_time_metric.dart';
+import '../../models/analytics_transaction_filter.dart';
 import '../../models/custom_field_values.dart';
 import '../../models/transaction_search_query.dart';
 import '../transaction_repository.dart';
@@ -247,8 +249,8 @@ class LocalTransactionRepository implements TransactionRepository {
     // 账户：转出或转入任一命中。
     final accountId = query.accountId;
     if (accountId != null) {
-      select.where(
-          (t) => t.accountId.equals(accountId) | t.toAccountId.equals(accountId));
+      select.where((t) =>
+          t.accountId.equals(accountId) | t.toAccountId.equals(accountId));
     }
 
     // 标签：带其中任意一个（EXISTS 语义走 IN 子查询，命中 transaction_tags 索引）。
@@ -290,17 +292,16 @@ class LocalTransactionRepository implements TransactionRepository {
     }
 
     select.orderBy([
-      (t) => d.OrderingTerm(expression: t.happenedAt, mode: d.OrderingMode.desc),
+      (t) =>
+          d.OrderingTerm(expression: t.happenedAt, mode: d.OrderingMode.desc),
       (t) => d.OrderingTerm(expression: t.id, mode: d.OrderingMode.desc),
     ]);
     return _watchTxJoin(select.join(_txJoins()));
   }
 
   /// SQL `LIKE` 通配符转义（配合 `ESCAPE '\'`）。
-  static String _escapeLike(String raw) => raw
-      .replaceAll(r'\', r'\\')
-      .replaceAll('%', r'\%')
-      .replaceAll('_', r'\_');
+  static String _escapeLike(String raw) =>
+      raw.replaceAll(r'\', r'\\').replaceAll('%', r'\%').replaceAll('_', r'\_');
 
   @override
   Stream<
@@ -649,9 +650,8 @@ class LocalTransactionRepository implements TransactionRepository {
     if (originalAmount == null) {
       originalAmountValue = const d.Value.absent();
     } else if (originalAmount is d.Value<double?>) {
-      originalAmountValue = originalAmount.value == null
-          ? d.Value(amount)
-          : originalAmount;
+      originalAmountValue =
+          originalAmount.value == null ? d.Value(amount) : originalAmount;
     } else {
       originalAmountValue = d.Value(originalAmount as double?);
     }
@@ -1159,16 +1159,14 @@ class LocalTransactionRepository implements TransactionRepository {
     required int ledgerId,
     required String kind,
   }) async {
-    final row = await db
-        .customSelect(
-          lastRecordedTransactionSql,
-          variables: [
-            d.Variable<int>(ledgerId),
-            d.Variable<String>(kind),
-          ],
-          readsFrom: {db.transactions},
-        )
-        .getSingleOrNull();
+    final row = await db.customSelect(
+      lastRecordedTransactionSql,
+      variables: [
+        d.Variable<int>(ledgerId),
+        d.Variable<String>(kind),
+      ],
+      readsFrom: {db.transactions},
+    ).getSingleOrNull();
     if (row == null) return null;
     // customSelect 拿到的是驱动原始值（DateTime 列为纪元秒整型），交给生成表的
     // `map` 按类型映射还原，避免在这里手抄一份列转换。语句是 `SELECT *`，所有列
@@ -1184,6 +1182,7 @@ class LocalTransactionRepository implements TransactionRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) async {
     // 口径行过滤：自定义字段口径下「没填该字段」的明细不计入笔数
     // （默认口径为空串，SQL 逐字不变）。
@@ -1191,11 +1190,13 @@ class LocalTransactionRepository implements TransactionRepository {
     // 时间口径自带的行过滤（自定义字段时间口径下「没填该字段」的明细同样
     // 不计入笔数）。绑定值与占位符恒为两个，见 `AnalyticsTimeMetric.rangeBinds`。
     final timeFilter = timeMetric.sqlRowFilter();
+    final fs = buildAnalyticsFilterSql(filter, firstIndex: 5);
     final row = await db.customSelect(
       'SELECT COUNT(*) AS c FROM transactions WHERE ledger_id = ?1 AND type = ?2 '
       'AND ${timeMetric.rangeSql(start: start, end: end, startVar: '?3', endVar: '?4')}'
       '${amountFilter.isEmpty ? '' : ' AND $amountFilter'}'
-      '${timeFilter.isEmpty ? '' : ' AND $timeFilter'}',
+      '${timeFilter.isEmpty ? '' : ' AND $timeFilter'}'
+      '${fs.suffix}',
       variables: [
         d.Variable<int>(ledgerId),
         d.Variable<String>(type),
@@ -1203,6 +1204,7 @@ class LocalTransactionRepository implements TransactionRepository {
           v is DateTime
               ? d.Variable<DateTime>(v)
               : d.Variable<String>(v as String),
+        for (final v in fs.values) d.Variable<Object>(v),
       ],
       readsFrom: {db.transactions},
     ).getSingle();

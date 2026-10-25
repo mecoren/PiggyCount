@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../db.dart';
 import '../../models/analytics_amount_metric.dart';
 import '../../models/analytics_time_metric.dart';
+import '../../models/analytics_transaction_filter.dart';
 import '../../models/transaction_original_amount.dart';
 import '../../models/transaction_search_query.dart';
 import '../../../cloud/sync/change_tracker.dart';
@@ -1234,6 +1235,7 @@ class LocalRepository extends BaseRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) =>
       _transactionRepo.countByTypeInRange(
         ledgerId: ledgerId,
@@ -1242,6 +1244,7 @@ class LocalRepository extends BaseRepository {
         end: end,
         amountMetric: amountMetric,
         timeMetric: timeMetric,
+        filter: filter,
       );
 
   @override
@@ -2855,7 +2858,8 @@ class LocalRepository extends BaseRepository {
   Future<Holding?> getHolding(int id) => _holdingRepo.getHolding(id);
 
   @override
-  Future<bool> hasHoldings(int accountId) => _holdingRepo.hasHoldings(accountId);
+  Future<bool> hasHoldings(int accountId) =>
+      _holdingRepo.hasHoldings(accountId);
 
   @override
   Future<Set<int>> getAccountIdsWithHoldings() =>
@@ -3035,6 +3039,7 @@ class LocalRepository extends BaseRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) =>
       _statisticsRepo.totalsByCategoryWithHierarchy(
         ledgerId: ledgerId,
@@ -3043,6 +3048,7 @@ class LocalRepository extends BaseRepository {
         end: end,
         amountMetric: amountMetric,
         timeMetric: timeMetric,
+        filter: filter,
       );
 
   @override
@@ -3053,6 +3059,7 @@ class LocalRepository extends BaseRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) =>
       _statisticsRepo.totalsByDay(
         ledgerId: ledgerId,
@@ -3061,6 +3068,7 @@ class LocalRepository extends BaseRepository {
         end: end,
         amountMetric: amountMetric,
         timeMetric: timeMetric,
+        filter: filter,
       );
 
   @override
@@ -3070,6 +3078,7 @@ class LocalRepository extends BaseRepository {
     required int year,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) =>
       _statisticsRepo.totalsByMonth(
         ledgerId: ledgerId,
@@ -3077,6 +3086,7 @@ class LocalRepository extends BaseRepository {
         year: year,
         amountMetric: amountMetric,
         timeMetric: timeMetric,
+        filter: filter,
       );
 
   @override
@@ -3085,39 +3095,36 @@ class LocalRepository extends BaseRepository {
     required String type,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) =>
       _statisticsRepo.totalsByYearSeries(
         ledgerId: ledgerId,
         type: type,
         amountMetric: amountMetric,
         timeMetric: timeMetric,
+        filter: filter,
       );
 
   @override
-  Future<
-      List<
-          ({
-            int id,
-            String name,
-            String? color,
-            double total,
-            int count
-          })>> totalsByTag({
+  Future<List<({int id, String name, String? color, double total, int count})>>
+      totalsByTag({
     required int ledgerId,
     required String type,
     required DateTime start,
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) =>
-      _statisticsRepo.totalsByTag(
-        ledgerId: ledgerId,
-        type: type,
-        start: start,
-        end: end,
-        amountMetric: amountMetric,
-        timeMetric: timeMetric,
-      );
+          _statisticsRepo.totalsByTag(
+            ledgerId: ledgerId,
+            type: type,
+            start: start,
+            end: end,
+            amountMetric: amountMetric,
+            timeMetric: timeMetric,
+            filter: filter,
+          );
 
   @override
   Future<(double income, double expense)> totalsInRange({
@@ -3126,6 +3133,7 @@ class LocalRepository extends BaseRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) =>
       _statisticsRepo.totalsInRange(
         ledgerId: ledgerId,
@@ -3133,6 +3141,7 @@ class LocalRepository extends BaseRepository {
         end: end,
         amountMetric: amountMetric,
         timeMetric: timeMetric,
+        filter: filter,
       );
 
   @override
@@ -3166,13 +3175,14 @@ class LocalRepository extends BaseRepository {
   // v45 原始金额偏差（口径见 StatisticsRepository 声明）。
 
   @override
-  Future<({
-    int total,
-    int deviated,
-    double diffSum,
-    double absDiffSum,
-    double maxAbsDiff,
-  })> originalAmountDiffSummary({
+  Future<
+      ({
+        int total,
+        int deviated,
+        double diffSum,
+        double absDiffSum,
+        double maxAbsDiff,
+      })> originalAmountDiffSummary({
     required int ledgerId,
     required String type,
     required DateTime start,
@@ -3274,14 +3284,16 @@ class LocalRepository extends BaseRepository {
     required DateTime end,
     AnalyticsAmountMetric amountMetric = AnalyticsAmountMetric.recorded,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) =>
-      _statisticsRepo.customFieldStatsRows(
-        ledgerId: ledgerId,
-        start: start,
-        end: end,
-        amountMetric: amountMetric,
-        timeMetric: timeMetric,
-      );
+          _statisticsRepo.customFieldStatsRows(
+            ledgerId: ledgerId,
+            start: start,
+            end: end,
+            amountMetric: amountMetric,
+            timeMetric: timeMetric,
+            filter: filter,
+          );
 
   @override
   Future<int> customFieldStatsTotalCount({
@@ -3289,12 +3301,14 @@ class LocalRepository extends BaseRepository {
     required DateTime start,
     required DateTime end,
     AnalyticsTimeMetric timeMetric = AnalyticsTimeMetric.happenedAt,
+    AnalyticsTransactionFilter filter = const AnalyticsTransactionFilter(),
   }) =>
       _statisticsRepo.customFieldStatsTotalCount(
         ledgerId: ledgerId,
         start: start,
         end: end,
         timeMetric: timeMetric,
+        filter: filter,
       );
 
   // ============================================
@@ -4174,7 +4188,8 @@ class LocalRepository extends BaseRepository {
   /// 记一条 savings_goal 的 update 变更（预读行取 syncId / ledgerId）。
   Future<void> _recordSavingsGoalUpdateChange(int id) async {
     if (changeTracker == null) return;
-    final row = await (db.select(db.savingsGoals)..where((g) => g.id.equals(id)))
+    final row = await (db.select(db.savingsGoals)
+          ..where((g) => g.id.equals(id)))
         .getSingleOrNull();
     final syncId = row?.syncId;
     if (row == null || syncId == null || syncId.isEmpty) return;
@@ -4316,8 +4331,8 @@ class LocalRepository extends BaseRepository {
   /// `ChangeTracker.normalizeAction`）；新建路径显式传 'create' 只为调用点可读性，
   /// 落库值与之相同。
   /// syncId 缺失（同步纪元前的遗留行）时静默跳过，与既有 delete 路径口径一致。
-  Future<void> _recordUserGlobalUpdateChange(
-      String entityType, int entityId, {String action = 'update'}) async {
+  Future<void> _recordUserGlobalUpdateChange(String entityType, int entityId,
+      {String action = 'update'}) async {
     if (changeTracker == null) return;
     dynamic row;
     if (entityType == 'category') {
@@ -4499,7 +4514,8 @@ class LocalRepository extends BaseRepository {
   Future<List<HolidayEntry>> getAll() => _holidayRepo.getAll();
 
   @override
-  Future<List<HolidayEntry>> getByYear(int year) => _holidayRepo.getByYear(year);
+  Future<List<HolidayEntry>> getByYear(int year) =>
+      _holidayRepo.getByYear(year);
 
   @override
   Future<HolidayEntry?> getByDate(String date) => _holidayRepo.getByDate(date);
@@ -4580,7 +4596,8 @@ class LocalRepository extends BaseRepository {
       );
 
   @override
-  Future<void> deleteDefinition(int id) => _customFieldRepo.deleteDefinition(id);
+  Future<void> deleteDefinition(int id) =>
+      _customFieldRepo.deleteDefinition(id);
 
   @override
   Future<void> updateDefinitionSyncId(int id, String syncId) =>

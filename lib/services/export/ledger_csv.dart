@@ -13,14 +13,23 @@ library;
 import 'dart:convert';
 
 import '../../data/db.dart';
+import '../../data/models/custom_field_values.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/category_utils.dart';
 
-/// 表头行的 13 列，顺序即列序。
+/// 自定义字段独立列的表头前缀（稳定、非本地化，供回导识别）。
+const String customFieldCsvHeaderPrefix = 'custom_field:';
+
+/// 表头行：12 个固定业务列 + 按 [definitions] 顺序追加的自定义字段列。
 ///
 /// 与 [buildLedgerCsvRow] 产出的行**必须同序同数**：两处分别增删列会让
-/// 回导按位置/表头匹配时整列错位。
-List<String> ledgerCsvHeaders(AppLocalizations l10n) => [
+/// 回导按位置/表头匹配时整列错位。老版本导出的 `custom_fields` JSON 列
+/// 不再写出，但导入端继续识别以兼容历史文件。
+List<String> ledgerCsvHeaders(
+  AppLocalizations l10n, {
+  List<CustomFieldDefinition> definitions = const [],
+}) =>
+    [
       l10n.exportCsvHeaderType,
       l10n.exportCsvHeaderCategory,
       l10n.exportCsvHeaderSubCategory, // 二级分类名称
@@ -33,7 +42,9 @@ List<String> ledgerCsvHeaders(AppLocalizations l10n) => [
       l10n.exportCsvHeaderTime,
       l10n.exportCsvHeaderTags,
       l10n.exportCsvHeaderAttachments, // 附件文件名（逗号分隔）
-      l10n.exportCsvHeaderCustomFields, // v46 {字段名: 值} JSON（可回导）
+      for (final d in definitions)
+        if (d.syncId != null && d.syncId!.isNotEmpty)
+          '$customFieldCsvHeaderPrefix${d.name}',
     ];
 
 /// 交易类型列的展示名；未知类型原样返回（兜底不吞掉脏数据）。
@@ -103,7 +114,8 @@ List<dynamic> buildLedgerCsvRow({
       if (category.level == 2 && category.parentId != null) {
         // 二级分类：分类列填一级分类名称，二级分类列填当前分类名称
         final parentCategory = allCategories[category.parentId];
-        categoryName = CategoryUtils.getDisplayNameWith(l10n, parentCategory?.name);
+        categoryName =
+            CategoryUtils.getDisplayNameWith(l10n, parentCategory?.name);
         subCategoryName = CategoryUtils.getDisplayNameWith(l10n, category.name);
       } else {
         // 一级分类：分类列填当前分类，二级分类列留空
@@ -119,7 +131,9 @@ List<dynamic> buildLedgerCsvRow({
   // v30 多币种：交易币种为 NULL 的历史行按账户/本位币兜底，与统计读取端
   // 同语义 —— 导出自包含，回导不丢币种。
   final currencyStr = (tx.currencyCode ??
-          ((account?.currency.isNotEmpty ?? false) ? account!.currency : null) ??
+          ((account?.currency.isNotEmpty ?? false)
+              ? account!.currency
+              : null) ??
           ledgerBaseCurrency)
       .toUpperCase();
 
@@ -136,30 +150,33 @@ List<dynamic> buildLedgerCsvRow({
     timeStr,
     tagNames.join(','),
     attachmentFileNames.join(','),
-    _customFieldsJson(customFieldDefinitions, customValues),
+    for (final f in customFieldDefinitions)
+      if (f.syncId != null && f.syncId!.isNotEmpty)
+        encodeCustomFieldCsvCell(f, customValues?[f.syncId]),
   ];
 }
 
-/// v46 自定义字段列：以「字段名」为键、按定义顺序输出 JSON 对象。
+/// 自定义字段单元格编码（导出 / 导入共用语义）。
 ///
-/// 用 JSON 而不是 `名称=值;…` 拼接：字段名与值里都可能出现分隔符，JSON 无
-/// 歧义；同时保留数值类型（金额回导后仍是数字）。定义已被删除的"野值"
-/// （键找不到定义）不导出 —— 它们在 UI 上本来就不可见，导出来只会让 CSV
-/// 出现无从解释的列。
-String _customFieldsJson(
-  List<CustomFieldDefinition> definitions,
-  Map<String, dynamic>? values,
+/// 多选用 JSON 数组，避免选项文本里的逗号 / 分号被当分隔符；金额输出
+/// 规范数字文本，日期收敛到 `yyyy-MM-dd`，其余按原文本输出。
+String encodeCustomFieldCsvCell(
+  CustomFieldDefinition definition,
+  dynamic value,
 ) {
-  if (values == null || values.isEmpty) return '';
-  final mapped = <String, dynamic>{
-    for (final f in definitions)
-      if (f.syncId != null &&
-          f.syncId!.isNotEmpty &&
-          values.containsKey(f.syncId))
-        f.name: values[f.syncId],
-  };
-  // 一个键都没映射上（值全是"野值"）→ 空串，与「该笔没有值」同一表示。
-  // 否则会写出 `{}`：列里出现一个无从解释的对象，且与「无值 = 空串」的口径
-  // 分裂（回导侧两者等价，但人看 CSV 时会以为是有效数据）。
-  return mapped.isEmpty ? '' : jsonEncode(mapped);
+  if (value == null) return '';
+  switch (definition.fieldType) {
+    case CustomFieldType.multiSelect:
+      final labels = CustomFieldValueCodec.toLabels(value, definition.fieldType)
+        ..sort();
+      return labels.isEmpty ? '' : jsonEncode(labels);
+    case CustomFieldType.date:
+      return CustomFieldValueCodec.toLabel(value, definition.fieldType) ?? '';
+    case CustomFieldType.amount:
+      return CustomFieldValueCodec.canonicalValue(value);
+    case CustomFieldType.text:
+    case CustomFieldType.singleSelect:
+    default:
+      return CustomFieldValueCodec.toDisplayString(value) ?? '';
+  }
 }

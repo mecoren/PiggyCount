@@ -119,37 +119,29 @@ List<dynamic> row({
 
 void main() {
   group('表头与数据行对齐', () {
-    test('13 列，自定义字段列在末位', () {
+    test('12 个固定列；自定义字段按定义顺序追加独立列', () {
       final headers = ledgerCsvHeaders(zh);
-      expect(headers.length, 13);
-      expect(headers.last, zh.exportCsvHeaderCustomFields);
-      // 顺序即列序，回导按表头匹配：挪列等于改协议，必须显式改这里
-      expect(headers, [
-        zh.exportCsvHeaderType,
-        zh.exportCsvHeaderCategory,
-        zh.exportCsvHeaderSubCategory,
-        zh.exportCsvHeaderAmount,
-        zh.exportCsvHeaderCurrency,
-        zh.exportCsvHeaderAccount,
-        zh.exportCsvHeaderFromAccount,
-        zh.exportCsvHeaderToAccount,
-        zh.exportCsvHeaderNote,
-        zh.exportCsvHeaderTime,
-        zh.exportCsvHeaderTags,
-        zh.exportCsvHeaderAttachments,
-        zh.exportCsvHeaderCustomFields,
+      expect(headers.length, 12);
+      expect(headers.last, zh.exportCsvHeaderAttachments);
+      final withFields = ledgerCsvHeaders(zh, definitions: [
+        field(id: 1, name: '发票号', syncId: 'cf_a'),
+        field(id: 2, name: '渠道', syncId: 'cf_b'),
       ]);
+      expect(withFields.length, 14);
+      expect(withFields[12], '$customFieldCsvHeaderPrefix发票号');
+      expect(withFields[13], '$customFieldCsvHeaderPrefix渠道');
     });
 
     test('行的列数必须等于表头列数（表头/行同源，防止只改一边）', () {
-      final headers = ledgerCsvHeaders(zh);
-      expect(row().length, headers.length);
+      final defs = [field(id: 1, name: '发票号', syncId: 'cf_a')];
+      final headers = ledgerCsvHeaders(zh, definitions: defs);
+      expect(row().length, ledgerCsvHeaders(zh).length);
       expect(
         row(
           t: tx(type: 'transfer', amount: 100, accountId: 5, toAccountId: 6),
           toAccount: acc(id: 6, name: '支付宝'),
           category: cat(id: 2, name: '早餐', level: 2, parentId: 1),
-          customFieldDefinitions: [field(id: 1, name: '发票号', syncId: 'cf_a')],
+          customFieldDefinitions: defs,
           customValues: {'cf_a': 'X-1'},
         ).length,
         headers.length,
@@ -177,7 +169,6 @@ void main() {
       expect(r[7], ''); // 转入账户
       expect(r[8], ''); // 备注 null → 空串
       expect(r[9], '  2026-06-18 09:05:03  ');
-      expect(r[12], '');
     });
 
     test('一级分类只填分类列；未分类两列皆空', () {
@@ -268,22 +259,33 @@ void main() {
     });
   });
 
-  group('v46 自定义字段列', () {
-    test('按定义顺序输出 {字段名: 值}，键不是 syncId', () {
+  group('自定义字段独立列', () {
+    test('按定义顺序逐列输出标量；多选为 JSON 数组', () {
       final r = row(
         customFieldDefinitions: [
           field(id: 1, name: '发票号', syncId: 'cf_a'),
           field(id: 2, name: '含税金额', syncId: 'cf_b', fieldType: 'amount'),
+          field(id: 3, name: '渠道', syncId: 'cf_c', fieldType: 'singleSelect'),
+          field(id: 4, name: '标签', syncId: 'cf_d', fieldType: 'multiSelect'),
+          field(id: 5, name: '日期', syncId: 'cf_e', fieldType: 'date'),
         ],
-        customValues: const {'cf_b': 120.0, 'cf_a': 'X-1'},
+        customValues: const {
+          'cf_a': 'X-1',
+          'cf_b': 120.0,
+          'cf_c': '微信',
+          'cf_d': ['B', 'A'],
+          'cf_e': '2026-06-18T00:00:00.000',
+        },
       );
 
-      expect(jsonDecode(r[12] as String), {'发票号': 'X-1', '含税金额': 120.0});
-      // 定义顺序决定键顺序（定义按 sortOrder 查询，导出结果稳定可比）
-      expect(r[12] as String, '{"发票号":"X-1","含税金额":120.0}');
+      expect(r[12], 'X-1');
+      expect(r[13], '120');
+      expect(r[14], '微信');
+      expect(jsonDecode(r[15] as String), ['A', 'B']);
+      expect(r[16], '2026-06-18');
     });
 
-    test('无值 / 空值 → 空串（不留 {} 噪音列）', () {
+    test('无值 / 空值 → 空单元格', () {
       final defs = [field(id: 1, name: '发票号', syncId: 'cf_a')];
       expect(row(customFieldDefinitions: defs)[12], '');
       expect(row(customFieldDefinitions: defs, customValues: const {})[12], '');
@@ -297,12 +299,18 @@ void main() {
       expect(r[12], '');
     });
 
-    test('定义缺 syncId（异常数据）不产生键，也不崩', () {
-      final r = row(
-        customFieldDefinitions: [field(id: 1, name: '发票号')],
-        customValues: const {'cf_a': 'X-1'},
+    test('定义缺 syncId（异常数据）不产生列/单元格，也不崩', () {
+      expect(
+        ledgerCsvHeaders(zh, definitions: [field(id: 1, name: '发票号')]).length,
+        12,
       );
-      expect(r[12], '');
+      expect(
+        row(
+          customFieldDefinitions: [field(id: 1, name: '发票号')],
+          customValues: const {'cf_a': 'X-1'},
+        ).length,
+        12,
+      );
     });
   });
 
