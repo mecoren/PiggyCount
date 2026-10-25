@@ -92,7 +92,7 @@
       "codepoints": 8653,
       "bytes": 2470124,
       "sha256": "1706d6365d33647c3f03508e397827d13f1793d7a248dc50f9d9f9298d420e3e",
-      "source_gap_count": 1951,
+      "source_gap_count": 1952,
       "source_gap_sample": [
         "Ą",
         "ą",
@@ -168,7 +168,7 @@
       "codepoints": 8653,
       "bytes": 2467220,
       "sha256": "701a19047fe5889d8118b8932c8b4515165b2edb81b916563d5251990a502003",
-      "source_gap_count": 1951,
+      "source_gap_count": 1952,
       "source_gap_sample": [
         "Ą",
         "ą",
