@@ -192,7 +192,11 @@ class TransactionListState extends ConsumerState<TransactionList> {
         firstTop ??= dy;
       }
       final next = firstVisibleDayKey(_grouper.sortedDayKeys, visible);
-      final pinned = next != null && firstTop != null && firstTop <= top + 0.5;
+      // 严格「已滚出视口顶」才算吸附：`<= top` 会让列表停在顶部（首组卡片
+      // 顶边正好贴着视口顶）时也叠一层吸附头，与卡片自己的圆角顶边重合成
+      // 两条线（观感就是两侧挑出两个"尖"）。此时真实组头本来就完整可见，
+      // 不需要吸附层。
+      final pinned = next != null && firstTop != null && firstTop < top - 0.5;
       if (next != _stickyDateKey || pinned != _stickyPinned) {
         setState(() {
           _stickyDateKey = next;
@@ -821,33 +825,40 @@ class TransactionListState extends ConsumerState<TransactionList> {
               top: 0,
               left: 0,
               right: 0,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: PiggyTokens.surface(context),
-                  border: Border(
-                    top: BorderSide(
-                      color: ref.watch(primaryColorProvider),
-                      width: 1.5,
+              // 方角满宽白底垫在圆角框下面：框的顶部两个圆角是**缺口**，不垫底
+              // 时下层日卡片连续的左右主色边线会从缺口里各露出一截，看着就是
+              // 「往上滑时两侧挑出两个尖」。垫底与卡片同为 surface，圆角外那块
+              // 白与卡片背景连成一片，看不出接缝，圆角轮廓照旧。
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: PiggyTokens.surface(context)),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: PiggyTokens.surface(context),
+                    border: Border(
+                      top: BorderSide(
+                        color: ref.watch(primaryColorProvider),
+                        width: 1.5,
+                      ),
+                      left: BorderSide(
+                        color: ref.watch(primaryColorProvider),
+                        width: 1.5,
+                      ),
+                      right: BorderSide(
+                        color: ref.watch(primaryColorProvider),
+                        width: 1.5,
+                      ),
                     ),
-                    left: BorderSide(
-                      color: ref.watch(primaryColorProvider),
-                      width: 1.5,
-                    ),
-                    right: BorderSide(
-                      color: ref.watch(primaryColorProvider),
-                      width: 1.5,
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(PiggyDimens.radiusLg),
                     ),
                   ),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(PiggyDimens.radiusLg),
+                  child: DaySectionHeader(
+                    key: const Key('sticky-date-header'),
+                    dateText: stickyKey,
+                    income: stickyTotals.$1,
+                    expense: stickyTotals.$2,
+                    hide: widget.hideAmounts,
                   ),
-                ),
-                child: DaySectionHeader(
-                  key: const Key('sticky-date-header'),
-                  dateText: stickyKey,
-                  income: stickyTotals.$1,
-                  expense: stickyTotals.$2,
-                  hide: widget.hideAmounts,
                 ),
               ),
             ),

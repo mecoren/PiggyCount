@@ -92,6 +92,24 @@ void main() {
     );
   }
 
+  // 列表停在顶部时，首组卡片顶边正贴着视口顶，真实组头本来就完整可见；
+  // 此时若也叠一层吸附头，它的圆角顶边会和卡片自己的圆角顶边重合成两条线
+  // （用户看到的就是「两侧挑出两个尖」）。
+  testWidgets('stickyDateHeader：停在顶部不叠吸附头（不与真实组头重影）', (tester) async {
+    final key = GlobalKey<TransactionListState>();
+    await tester.pumpWidget(host([
+      for (var d = 1; d <= 10; d++)
+        item(d, DateTime(2024, 1, d), amount: d.toDouble()),
+    ], key, sticky: true));
+    await tester.pumpAndSettle();
+
+    expect(key.currentState!.stickyPinned, isFalse);
+    expect(find.byKey(const Key('sticky-date-header')), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
   testWidgets('stickyDateHeader：滚过日期头后出现吸附头，金额沿用日合计', (tester) async {
     final key = GlobalKey<TransactionListState>();
     await tester.pumpWidget(host([
