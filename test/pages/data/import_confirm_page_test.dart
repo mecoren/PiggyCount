@@ -116,10 +116,11 @@ void main() {
     required String csvText,
     BillSourceType billType = BillSourceType.generic,
     bool hasHeader = true,
+    LocalRepository? repository,
   }) async {
     final container = ProviderContainer(overrides: [
       databaseProvider.overrideWithValue(db),
-      repositoryProvider.overrideWithValue(repo),
+      repositoryProvider.overrideWithValue(repository ?? repo),
       // 显式给 LocalOnly：否则 syncServiceProvider 会去读安全存储/偏好配置
       syncServiceProvider.overrideWithValue(LocalOnlySyncService()),
       remoteLedgersProvider
@@ -201,6 +202,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text(zh(tester).importStartImport));
     await tester.pump();
+    // 未知自定义字段会先弹逐项确认；有则由测试按「确认」继续。
+    await tester.pump(const Duration(milliseconds: 350));
+    final fieldConfirm = find.byKey(const Key('import-custom-field-confirm'));
+    if (fieldConfirm.evaluate().isNotEmpty) {
+      await tester.tap(fieldConfirm);
+      await tester.pump();
+    }
   }
 
   group('AC-R12 解析与第一步（字段映射）门禁', () {
@@ -313,7 +321,8 @@ void main() {
       await tester.pump(); // _startImport 已 setState(importing=true)，正卡在假延迟上
 
       final l10n = zh(tester);
-      final startFinder = find.widgetWithText(FilledButton, l10n.importStartImport);
+      final startFinder =
+          find.widgetWithText(FilledButton, l10n.importStartImport);
       expect(tester.widget<FilledButton>(startFinder).onPressed, isNull,
           reason: '导入进行中还能再点 = 同一批账单被导入两次');
       final backFinder =
@@ -327,8 +336,7 @@ void main() {
       expect(await txCount(), 3);
     });
 
-    testWidgets('可转后台：进度弹窗给「后台导入」，点了直接回数据页、事后不再弹提示',
-        (tester) async {
+    testWidgets('可转后台：进度弹窗给「后台导入」，点了直接回数据页、事后不再弹提示', (tester) async {
       // 「后台导入」的意义就是不打断用户 —— 若弹窗没关掉或完成时又弹一次提示，
       // 用户会在数据页上莫名收到一个弹窗。
       // 用带转账列的 CSV：它有账户 → importAccounts 会 await getAllAccounts，
@@ -408,8 +416,8 @@ void main() {
       await settleParsing(tester);
       await tapStartImport(tester);
       await pumpFrames(tester, frames: 8);
-      await tester.tap(
-          find.widgetWithText(TextButton, zh(tester).commonConfirm));
+      await tester
+          .tap(find.widgetWithText(TextButton, zh(tester).commonConfirm));
       await pumpFrames(tester, frames: 6);
 
       expect(await txCount(), 1, reason: '2 行里只有 1 行是有效收支');
@@ -441,7 +449,8 @@ void main() {
           reason: '5s 后要清空进度，否则「我的」页永久停留在「刚导入完成」态');
       expect(container.read(statsRefreshProvider), greaterThan(statsBefore),
           reason: '不刷新统计 → 「我的」页笔数/天数还是导入前的旧值');
-      expect(container.read(syncStatusRefreshProvider), greaterThan(syncBefore));
+      expect(
+          container.read(syncStatusRefreshProvider), greaterThan(syncBefore));
       await drainImportTimers(tester);
     });
 
@@ -463,7 +472,8 @@ void main() {
 
       // 模拟导入进行中 → 完成
       container.read(importProgressProvider.notifier).state =
-          const ImportProgress(running: true, total: 3, done: 0, ok: 0, fail: 0);
+          const ImportProgress(
+              running: true, total: 3, done: 0, ok: 0, fail: 0);
       await tester.pump();
       final listBefore = container.read(ledgerListRefreshProvider);
       final syncBefore = container.read(syncStatusRefreshProvider);
@@ -475,25 +485,29 @@ void main() {
 
       expect(container.read(ledgerListRefreshProvider), greaterThan(listBefore),
           reason: '账本列表不刷新 → 用户看不到刚导进去的账单笔数');
-      expect(container.read(syncStatusRefreshProvider), greaterThan(syncBefore));
+      expect(
+          container.read(syncStatusRefreshProvider), greaterThan(syncBefore));
       await pumpFrames(tester, frames: 8);
     });
   });
 
   group('v46 自定义字段列（CSV 往返）', () {
-    Future<void> seedField({required String name, required String syncId}) =>
+    Future<void> seedField({
+      required String name,
+      required String syncId,
+      String fieldType = 'amount',
+    }) =>
         db.into(db.customFieldDefinitions).insert(
               CustomFieldDefinitionsCompanion.insert(
                 ledgerId: 1,
                 name: name,
-                fieldType: 'amount',
+                fieldType: fieldType,
                 syncId: d.Value(syncId),
               ),
             );
 
     /// 与本 App 导出格式一致：该列是 `{字段名: 值}` 的 JSON（CSV 引号转义）。
-    String csvWithCustomFields(String jsonCell) =>
-        '日期,类型,金额,分类,自定义字段\n'
+    String csvWithCustomFields(String jsonCell) => '日期,类型,金额,分类,自定义字段\n'
         '2026-09-01,支出,12.50,餐饮,"$jsonCell"\n';
 
     testWidgets('值按本地定义的 syncId 落到交易上', (tester) async {
@@ -523,27 +537,218 @@ void main() {
       await drainImportTimers(tester);
 
       final tx = (await db.select(db.transactions).get()).single;
-      expect(CustomFieldValueCodec.decode(tx.customValuesJson),
-          {'cf-tax': 3.0});
+      expect(
+          CustomFieldValueCodec.decode(tx.customValuesJson), {'cf-tax': 3.0});
     });
 
-    testWidgets('本地没有该定义 → B4 自动建字段并接住值，交易照常导入', (tester) async {
-      await pumpHost(
-          tester, csvText: csvWithCustomFields('{""不存在的字段"":1}'));
+    testWidgets('本地没有该定义 → 确认后建字段并接住值，交易照常导入', (tester) async {
+      await pumpHost(tester, csvText: csvWithCustomFields('{""不存在的字段"":1}'));
       await openConfirmPage(tester);
       await settleParsing(tester);
       await tapStartImport(tester);
       await drainImportTimers(tester);
 
       expect(await txCount(), 1, reason: '建字段失败也不该牵连整笔交易');
-      // B4(v47)：未知字段名按 CSV 值推断类型自动建定义（全数值 → amount），
-      // 值以新定义的 syncId 落到交易上，不再是直接丢弃。
+      // 未知字段名先逐项确认（默认按值推断类型），用户确认后再创建定义，
+      // 值以新定义的 syncId 落到交易上。
       final defs = await db.select(db.customFieldDefinitions).get();
       expect(defs.map((f) => f.name), contains('不存在的字段'));
       expect(defs.single.fieldType, 'amount');
       final tx = (await db.select(db.transactions).get()).single;
       expect(CustomFieldValueCodec.decode(tx.customValuesJson),
           {defs.single.syncId: 1.0});
+    });
+
+    testWidgets('新格式独立列：按表头匹配定义并解码数量', (tester) async {
+      await seedField(name: '税费', syncId: 'cf-tax');
+
+      await pumpHost(
+        tester,
+        csvText: '日期,类型,金额,分类,custom_field:税费\n'
+            '2026-09-01,支出,12.50,餐饮,8.5\n',
+      );
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+      await tapStartImport(tester);
+      await drainImportTimers(tester);
+
+      final tx = (await db.select(db.transactions).get()).single;
+      expect(
+          CustomFieldValueCodec.decode(tx.customValuesJson), {'cf-tax': 8.5});
+    });
+
+    testWidgets('列名不同时可在第一步映射到已有字段', (tester) async {
+      await seedField(name: '税费', syncId: 'cf-tax');
+
+      await pumpHost(
+        tester,
+        csvText: '日期,类型,金额,分类,custom_field:旧列名\n'
+            '2026-09-01,支出,12.50,餐饮,8.5\n',
+      );
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+
+      expect(find.text(zh(tester).importCustomFieldMappingTitle), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey('custom-field-map-旧列名-__auto__')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('税费').last);
+      await tester.pumpAndSettle();
+      expect(find.text('税费'), findsOneWidget);
+
+      await tapStartImport(tester);
+      await drainImportTimers(tester);
+
+      final defs = await db.select(db.customFieldDefinitions).get();
+      debugPrint('defs=${defs.map((d) => '${d.name}/${d.syncId}').toList()}');
+      expect(defs.length, 1, reason: '映射到已有字段，不应重复建字段');
+      final tx = (await db.select(db.transactions).get()).single;
+      expect(CustomFieldValueCodec.decode(tx.customValuesJson),
+          {'cf-tax': 8.5});
+    });
+
+    testWidgets('自定义字段列可显式忽略', (tester) async {
+      await pumpHost(
+        tester,
+        csvText: '日期,类型,金额,分类,custom_field:野列\n'
+            '2026-09-01,支出,12.50,餐饮,值\n',
+      );
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+
+      await tester.tap(
+        find.byKey(const ValueKey('custom-field-map-野列-__auto__')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(zh(tester).importCustomFieldMappingSkip));
+      await tester.pumpAndSettle();
+
+      await tapStartImport(tester);
+      await drainImportTimers(tester);
+
+      expect(await db.select(db.customFieldDefinitions).get(), isEmpty);
+      final tx = (await db.select(db.transactions).get()).single;
+      expect(tx.customValuesJson, isNull);
+    });
+
+    testWidgets('新格式多选列：单元格 JSON 数组按定义保存', (tester) async {
+      await seedField(name: '标签', syncId: 'cf-tags', fieldType: 'multiSelect');
+
+      await pumpHost(
+        tester,
+        csvText: '日期,类型,金额,分类,custom_field:标签\n'
+            '2026-09-01,支出,12.50,餐饮,"[""A"",""B""]"\n',
+      );
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+      await tapStartImport(tester);
+      await drainImportTimers(tester);
+
+      final tx = (await db.select(db.transactions).get()).single;
+      expect(CustomFieldValueCodec.decode(tx.customValuesJson), {
+        'cf-tags': ['A', 'B'],
+      });
+    });
+
+    testWidgets('未知独立列：确认后按文本建字段并保留单元格值', (tester) async {
+      await pumpHost(
+        tester,
+        csvText: '日期,类型,金额,分类,custom_field:新字段\n'
+            '2026-09-01,支出,12.50,餐饮,你好\n',
+      );
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+      await tapStartImport(tester);
+      await drainImportTimers(tester);
+
+      final def = (await db.select(db.customFieldDefinitions).get()).single;
+      expect(def.name, '新字段');
+      expect(def.fieldType, 'text');
+      final tx = (await db.select(db.transactions).get()).single;
+      expect(CustomFieldValueCodec.decode(tx.customValuesJson),
+          {def.syncId: '你好'});
+    });
+
+    testWidgets('未知独立列：可改类型并补充候选项', (tester) async {
+      await pumpHost(
+        tester,
+        csvText: '日期,类型,金额,分类,custom_field:场景\n'
+            '2026-09-01,支出,12.50,餐饮,A\n'
+            '2026-09-02,支出,8,餐饮,B\n',
+      );
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+      await tester.tap(find.text(zh(tester).importNextStep));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(zh(tester).importStartImport));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(zh(tester).customFieldTypeMultiSelect).last);
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(InputChip, 'A'), findsOneWidget);
+      expect(find.widgetWithText(InputChip, 'B'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).last, 'C');
+      await tester.tap(find.text(zh(tester).importCustomFieldAddOptionAction));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('import-custom-field-confirm')));
+      await tester.pump();
+      await drainImportTimers(tester);
+
+      final def = (await db.select(db.customFieldDefinitions).get()).single;
+      expect(def.fieldType, CustomFieldType.multiSelect);
+      expect(CustomFieldOptionsCodec.decode(def.optionsJson), ['A', 'B', 'C']);
+      expect(await txCount(), 2);
+    });
+
+    testWidgets('建字段失败：中止导入并提示，不静默丢值', (tester) async {
+      await pumpHost(
+        tester,
+        csvText: '日期,类型,金额,分类,custom_field:新字段\n'
+            '2026-09-01,支出,12.50,餐饮,值\n',
+        repository: _FailingCustomFieldRepo(db),
+      );
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+      await tapStartImport(tester);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(
+        find.text(zh(tester).importCustomFieldCreateFailed('新字段')),
+        findsOneWidget,
+      );
+      expect(await txCount(), 0);
+      expect(await db.select(db.customFieldDefinitions).get(), isEmpty);
+      await drainImportTimers(tester);
+    });
+
+    testWidgets('未知独立列：取消确认则整次导入不开始、不建字段', (tester) async {
+      await pumpHost(
+        tester,
+        csvText: '日期,类型,金额,分类,custom_field:新字段\n'
+            '2026-09-01,支出,12.50,餐饮,值\n',
+      );
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+      await tester.tap(find.text(zh(tester).importNextStep));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(zh(tester).importStartImport));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(
+          find.text(zh(tester).importCustomFieldColumnsTitle), findsOneWidget);
+      await tester.tap(find.text(zh(tester).commonCancel));
+      await tester.pump();
+      await drainImportTimers(tester);
+
+      expect(await txCount(), 0);
+      expect(await db.select(db.customFieldDefinitions).get(), isEmpty);
     });
 
     testWidgets('该列不是 JSON（用户手填）→ 当没有值处理，不阻断导入', (tester) async {
@@ -644,6 +849,23 @@ class _ImportPageStub extends StatelessWidget {
 /// 延迟点选的是 `_startImport` 里第一个 await（`getLedgerById`）与
 /// `importData → importAccounts` 里的第一个 await（`getAllAccounts`），
 /// 于是「点开始导入」后依次能观察到：底部导入中 → 进度弹窗。
+class _FailingCustomFieldRepo extends LocalRepository {
+  _FailingCustomFieldRepo(super.db);
+
+  @override
+  Future<int> upsertDefinition({
+    required int ledgerId,
+    required String name,
+    required String fieldType,
+    int? sortOrder,
+    String? syncId,
+    List<String>? options,
+    bool isRequired = false,
+  }) async {
+    throw StateError('模拟建字段失败');
+  }
+}
+
 class _SlowRepo extends LocalRepository {
   _SlowRepo(super.db);
 

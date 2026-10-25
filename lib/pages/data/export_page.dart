@@ -405,7 +405,12 @@ class _ExportPageState extends ConsumerState<ExportPage> {
           await repo.transactionsWithCategoryAll(ledgerId: ledgerId).first;
       final total = transactionsWithCategory.length;
       // 表头与数据行都由 services/export/ledger_csv 唯一构造（列序对齐可单测）
-      final rows = <List<dynamic>>[ledgerCsvHeaders(l10n)];
+      // 自定义字段定义在下方一次批量读取；这里先占位，稍后重建表头以免
+      // 多一次查询（定义也用于逐行编码）。
+      final customFieldDefs = await repo.getDefinitionsForLedger(ledgerId);
+      final rows = <List<dynamic>>[
+        ledgerCsvHeaders(l10n, definitions: customFieldDefs),
+      ];
 
       // 批量获取所有交易的标签
       final transactionIds =
@@ -416,9 +421,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       final attachmentsMap =
           await repo.getAttachmentsForTransactions(transactionIds);
 
-      // v46 自定义字段：定义（按 sortOrder）用于把交易上的值翻译成用户看得懂
-      // 的字段名；值批量取一次，避免逐条查询（N+1）。
-      final customFieldDefs = await repo.getDefinitionsForLedger(ledgerId);
+      // v46 自定义字段：定义（按 sortOrder）已在上方取表头时批量读取；值再
+      // 批量取一次，避免逐条查询（N+1）。
       final customValuesMap = customFieldDefs.isEmpty
           ? const <int, Map<String, dynamic>>{}
           : await repo.getValuesForTransactions(transactionIds);

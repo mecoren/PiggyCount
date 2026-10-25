@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers.dart';
+import '../../providers/custom_field_providers.dart';
 import '../../widgets/ui/ui.dart';
 import '../../data/db.dart' as schema;
 import '../../data/models/custom_field_values.dart';
@@ -15,8 +16,10 @@ import '../../services/import/parsers/generic_parser.dart';
 import '../../services/import/parsers/alipay_parser.dart';
 import '../../services/import/parsers/wechat_parser.dart';
 import '../../services/import/parsers/auto_parser.dart';
+import '../../services/system/logger_service.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/data_import_service.dart';
+import '../../services/export/ledger_csv.dart' show customFieldCsvHeaderPrefix;
 import '../../utils/date_parser.dart';
 import '../../styles/tokens.dart';
 import 'import_page.dart';
@@ -56,6 +59,22 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     'attachments': null, // 附件文件名（逗号分隔）
     'custom_fields': null, // v46 自定义字段（{字段名: 值} JSON）
   };
+
+  /// 新格式自定义字段独立列：归一化字段名 → (展示名, 列号)。
+  Map<String, ({String name, int index})> _customFieldColumns = {};
+
+  /// 导入期间用于按字段类型解码独立列（定义 + 本次确认新建）。
+  Map<String, String> _customFieldNameToType = {};
+
+  /// 用户在第一步为自定义字段列选择的目标：`__auto__` / `__skip__` / 定义 syncId。
+  final Map<String, String> _customFieldTargets = {};
+
+  /// 导入开始后解析出的「列 key → 目标字段 syncId」。
+  final Map<String, String> _customFieldColumnSyncIds = {};
+
+  static const _customFieldAuto = '__auto__';
+  static const _customFieldSkip = '__skip__';
+
   bool importing = false;
   int ok = 0, fail = 0, skipped = 0; // skipped: 跳过的非收支类型记录
   int step = 0; // 0: 字段映射, 1: 分类映射
@@ -126,7 +145,27 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
         mapping[key] = index;
       }
     });
+
+    // 新格式：`custom_field:<字段名>` 独立列。这里只记录列位置，字段名 /
+    // 类型在导入前由用户逐项确认，不做静默自动创建。
+    _customFieldColumns = {};
+    for (var i = 0; i < headers.length; i++) {
+      final header = headers[i];
+      if (!header.startsWith(customFieldCsvHeaderPrefix)) continue;
+      final rawName =
+          header.substring(customFieldCsvHeaderPrefix.length).trim();
+      if (rawName.isNotEmpty) {
+        final key = rawName.toLowerCase();
+        _customFieldColumns[key] = (name: rawName, index: i);
+        _customFieldTargets.putIfAbsent(key, () => _customFieldAuto);
+      }
+    }
   }
+
+  bool _customFieldTargetUsedElsewhere(String syncId, String currentKey) =>
+      _customFieldTargets.entries.any(
+        (e) => e.key != currentKey && e.value == syncId,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -214,10 +253,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                                 .exportCsvHeaderSubCategory,
                             'sub_category',
                             items()),
-                        _mapRow(
-                            AppLocalizations.of(context).importFieldAccount,
-                            'account',
-                            items()),
+                        _mapRow(AppLocalizations.of(context).importFieldAccount,
+                            'account', items()),
                         _mapRow(
                             AppLocalizations.of(context)
                                 .exportCsvHeaderFromAccount,
@@ -241,6 +278,81 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                             items()),
                       ],
                     ),
+                    if (_customFieldColumns.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        AppLocalizations.of(context)
+                            .importCustomFieldMappingTitle,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        AppLocalizations.of(context)
+                            .importCustomFieldMappingDesc,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: PiggyTokens.textSecondary(context)),
+                      ),
+                      const SizedBox(height: 8),
+                      for (final entry in _customFieldColumns.entries)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(entry.value.name),
+                              const SizedBox(height: 6),
+                              DropdownButtonFormField<String>(
+                                key: ValueKey(
+                                  'custom-field-map-${entry.key}-'
+                                  '${_customFieldTargets[entry.key]}',
+                                ),
+                                initialValue: _customFieldTargets[entry.key] ??
+                                    _customFieldAuto,
+                                isExpanded: true,
+                                decoration: piggyOutlinedDecoration(
+                                  context,
+                                  label: AppLocalizations.of(context)
+                                      .importCustomFieldMappingTarget,
+                                ),
+                                items: [
+                                  DropdownMenuItem(
+                                    value: _customFieldAuto,
+                                    child: Text(AppLocalizations.of(context)
+                                        .importCustomFieldMappingAuto),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: _customFieldSkip,
+                                    child: Text(AppLocalizations.of(context)
+                                        .importCustomFieldMappingSkip),
+                                  ),
+                                  for (final field in (ref
+                                          .watch(
+                                              customFieldsForCurrentLedgerProvider)
+                                          .value ??
+                                      const <schema.CustomFieldDefinition>[]))
+                                    if (field.syncId != null &&
+                                        field.syncId!.isNotEmpty)
+                                      DropdownMenuItem(
+                                        value: field.syncId,
+                                        enabled:
+                                            !_customFieldTargetUsedElsewhere(
+                                          field.syncId!,
+                                          entry.key,
+                                        ),
+                                        child: Text(field.name),
+                                      ),
+                                ],
+                                onChanged: (value) {
+                                  if (value == null) return;
+                                  setState(() {
+                                    _customFieldTargets[entry.key] = value;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                     const SizedBox(height: 12),
                     // 预览仅展示前 N 行，避免大文件一次性渲染导致卡顿
                     Text(AppLocalizations.of(context).importPreview,
@@ -486,18 +598,96 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
         if (f.syncId != null && f.syncId!.isNotEmpty)
           f.name.trim().toLowerCase(): f.syncId!,
     };
+    final customFieldBySyncId = {
+      for (final f in customFieldDefs)
+        if (f.syncId != null && f.syncId!.isNotEmpty) f.syncId!: f,
+    };
 
     final dataStart = widget.hasHeader ? (headerRow + 1) : 0;
 
-    // B4(v47)：自动建字段。必须在 _buildImportDataFromCsv 之前跑 —— 映射表
-    // 是它收着的参数，补进去的 syncId 要赶在值映射之前就位。
-    await _autoCreateFieldsFromCsv(
-      rows: rows,
+    _customFieldNameToType = {
+      for (final f in customFieldDefs) f.name.trim().toLowerCase(): f.fieldType,
+    };
+    // 第一步显式映射到已有字段的列：以用户选择为准，不再按表头名称猜。
+    debugPrint('DEBUG targets=$_customFieldTargets defs=${customFieldBySyncId.keys}');
+    _customFieldColumnSyncIds.clear();
+    for (final entry in _customFieldColumns.entries) {
+      final target = _customFieldTargets[entry.key] ?? _customFieldAuto;
+      if (target == _customFieldAuto || target == _customFieldSkip) continue;
+      final def = customFieldBySyncId[target];
+      if (def == null) continue; // 字段已被删除 → 退回自动匹配
+      _customFieldColumnSyncIds[entry.key] = target;
+      _customFieldNameToType[entry.key] = def.fieldType;
+    }
+
+    // 未知字段（旧 JSON 列与新独立列合并去重）逐项确认后创建；取消则整次
+    // 导入都不开始，避免"确认到一半已经建了字段"。
+    final unknown = _collectUnknownCustomFields(
       dataStart: dataStart,
-      customFieldsCol: mapping['custom_fields'],
       nameToSyncId: customFieldNameToSyncId,
-      nextSortOrder: customFieldDefs.length,
     );
+    if (unknown.isNotEmpty) {
+      if (!mounted) return;
+      setState(() => importing = false);
+      final drafts = await showDialog<List<_CustomFieldDraft>>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => _CustomFieldConfirmDialog(
+          drafts: unknown,
+          existingNames: customFieldNameToSyncId.keys.toSet(),
+        ),
+      );
+      if (drafts == null) {
+        if (mounted) setState(() => importing = false);
+        return;
+      }
+      if (mounted) setState(() => importing = true);
+      var sortOrder = customFieldDefs.length;
+      for (final draft in drafts) {
+        try {
+          final id = await repo.upsertDefinition(
+            ledgerId: ledgerId,
+            name: draft.name,
+            fieldType: draft.type,
+            sortOrder: sortOrder++,
+            options:
+                CustomFieldType.hasOptions(draft.type) ? draft.options : null,
+          );
+          final def = await repo.getDefinitionById(id);
+          final syncId = def?.syncId;
+          if (syncId == null || syncId.isEmpty) {
+            throw StateError('自定义字段落库后缺少 syncId');
+          }
+          final key = draft.name.trim().toLowerCase();
+          customFieldNameToSyncId[key] = syncId;
+          _customFieldNameToType[key] = draft.type;
+        } catch (e) {
+          // 字段建不成时继续导入会让该列值静默丢失 —— 整次导入先停下，
+          // 已成功创建的字段保留（重试时会被识别为已有字段）。
+          logger.warning('导入', '创建自定义字段「${draft.name}」失败: $e');
+          if (mounted) {
+            setState(() => importing = false);
+            showToast(
+              context,
+              AppLocalizations.of(context)
+                  .importCustomFieldCreateFailed(draft.name),
+            );
+          }
+          return;
+        }
+      }
+    }
+    // 自动匹配的列：定义已就绪后补上列 → syncId；显式忽略的列不参与解析。
+    for (final entry in _customFieldColumns.entries) {
+      if (_customFieldColumnSyncIds.containsKey(entry.key)) continue;
+      final target = _customFieldTargets[entry.key] ?? _customFieldAuto;
+      if (target == _customFieldSkip) continue;
+      final syncId = customFieldNameToSyncId[entry.key];
+      if (syncId == null) continue;
+      _customFieldColumnSyncIds[entry.key] = syncId;
+      _customFieldNameToType[entry.key] =
+          customFieldBySyncId[syncId]?.fieldType ?? CustomFieldType.text;
+    }
     final total = rows.length - dataStart;
     // 初始化全局进度
     container.read(importProgressProvider.notifier).state = ImportProgress(
@@ -961,10 +1151,16 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       final tagsStr = getBy('tags');
       final attachmentsStr = getBy('attachments');
       final customFieldsStr = getBy('custom_fields');
-      final customValues = _parseCsvCustomValues(
+      final legacyValues = _parseCsvCustomValues(
         customFieldsStr,
         customFieldNameToSyncId,
       );
+      final columnValues = _parseCustomFieldColumns(r);
+      // 独立列是显式列，覆盖旧 JSON 里的同名字段（极少见的混合文件）。
+      final customValues = <String, dynamic>{
+        ...?legacyValues,
+        ...columnValues,
+      };
 
       // 类型识别
       final typeStr = typeRaw.trim().toLowerCase();
@@ -1079,7 +1275,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
         toAccountName: type == 'transfer' ? toAccountName : null,
         tagNames: tagNames,
         attachments: attachments,
-        customValues: customValues,
+        customValues: customValues.isEmpty ? null : customValues,
       ));
     }
 
@@ -1091,82 +1287,100 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     );
   }
 
-  /// B4(v47)：扫描 CSV「自定义字段」列，把本地没有定义的字段名自动建成字段
-  /// 定义，并把新定义的 syncId **原地**补进 [nameToSyncId]。
-  ///
-  /// 类型推断（导出侧 ledger_csv 保留原生 JSON 类型）：
-  /// - 全部非空值都是数值 → amount；
-  /// - 全部非空值都能解析成日期 → date；
-  /// - 其余（含整列无值）→ text —— 宁降级不猜测，不会出现"文本被强转数字"。
-  /// 建字段走 upsertDefinition（按名 get-or-create，不抛重名）；名称归一口径
-  /// （trim + lower）与 [nameToSyncId] 一致。单字段创建失败只丢该字段的值，
-  /// 不阻断导入（与周期规则导入 REC-03 同哲学）。
-  Future<void> _autoCreateFieldsFromCsv({
-    required List<List<String>> rows,
+  /// 扫描旧 JSON 列与新独立列，收集本地没有定义的字段名与示例值。
+  List<_CustomFieldDraft> _collectUnknownCustomFields({
     required int dataStart,
-    required int? customFieldsCol,
     required Map<String, String> nameToSyncId,
-    required int nextSortOrder,
-  }) async {
-    if (customFieldsCol == null) return;
-    // 收集：字段名(小写归一) → 原始名 + 全部非空值。
+  }) {
     final names = <String, ({String raw, List<String> values})>{};
-    for (int i = dataStart; i < rows.length; i++) {
-      final r = rows[i];
-      if (customFieldsCol >= r.length) continue;
-      final cell = r[customFieldsCol].trim();
-      if (cell.isEmpty) continue;
-      Object? decoded;
-      try {
-        decoded = jsonDecode(cell);
-      } catch (_) {
-        continue; // 非 JSON（用户手填列）当无值，与 _parseCsvCustomValues 同口径
-      }
-      if (decoded is! Map) continue;
-      for (final e in decoded.entries) {
-        final rawName = e.key.toString().trim();
-        if (rawName.isEmpty) continue;
-        final key = rawName.toLowerCase();
-        if (nameToSyncId.containsKey(key)) continue; // 已有定义，不重建
-        final v = (e.value?.toString() ?? '').trim();
-        final entry =
-            names.putIfAbsent(key, () => (raw: rawName, values: <String>[]));
-        if (v.isNotEmpty) entry.values.add(v);
-      }
-    }
-    if (names.isEmpty) return;
 
-    final repo = ref.read(repositoryProvider);
-    final ledgerId = ref.read(currentLedgerIdProvider);
-    var sortOrder = nextSortOrder;
-    for (final entry in names.entries) {
-      final values = entry.value.values;
-      final allNumeric =
-          values.isNotEmpty && values.every((v) => double.tryParse(v) != null);
-      final allDates = values.isNotEmpty &&
-          values.every((v) => DateTime.tryParse(v) != null);
-      final fieldType = allNumeric
-          ? CustomFieldType.amount
-          : allDates
-              ? CustomFieldType.date
-              : CustomFieldType.text;
-      try {
-        final id = await repo.upsertDefinition(
-          ledgerId: ledgerId,
-          name: entry.value.raw,
-          fieldType: fieldType,
-          sortOrder: sortOrder,
-        );
-        final def = await repo.getDefinitionById(id);
-        final syncId = def?.syncId;
-        if (syncId != null && syncId.isNotEmpty) {
-          nameToSyncId[entry.key] = syncId;
+    void addValue(String rawName, String value, {bool splitList = false}) {
+      final trimmed = rawName.trim();
+      if (trimmed.isEmpty) return;
+      final key = trimmed.toLowerCase();
+      if (nameToSyncId.containsKey(key)) return;
+      final entry =
+          names.putIfAbsent(key, () => (raw: trimmed, values: <String>[]));
+      final v = value.trim();
+      if (v.isEmpty) return;
+      if (splitList && v.startsWith('[')) {
+        try {
+          final decoded = jsonDecode(v);
+          if (decoded is List) {
+            for (final item in decoded) {
+              final s = item?.toString().trim() ?? '';
+              if (s.isNotEmpty) entry.values.add(s);
+            }
+            return;
+          }
+        } catch (_) {
+          // 落回原文（用户手填的逗号列表也允许后续按选项猜）。
         }
-        sortOrder++;
-      } catch (_) {
-        // 建失败 → 该字段名保持未知，值在 _parseCsvCustomValues 里照旧丢弃。
+      }
+      entry.values.add(v);
+    }
+
+    final legacyCol = mapping['custom_fields'];
+    if (legacyCol != null) {
+      for (var i = dataStart; i < rows.length; i++) {
+        final r = rows[i];
+        if (legacyCol >= r.length) continue;
+        final cell = r[legacyCol].trim();
+        if (cell.isEmpty) continue;
+        Object? decoded;
+        try {
+          decoded = jsonDecode(cell);
+        } catch (_) {
+          continue;
+        }
+        if (decoded is! Map) continue;
+        for (final e in decoded.entries) {
+          addValue(e.key.toString(), e.value?.toString() ?? '');
+        }
       }
     }
+
+    for (final entry in _customFieldColumns.entries) {
+      for (var i = dataStart; i < rows.length; i++) {
+        final r = rows[i];
+        if (entry.value.index >= r.length) continue;
+        addValue(
+          entry.value.name,
+          r[entry.value.index],
+          splitList: true,
+        );
+      }
+    }
+
+    return [
+      for (final entry in names.values)
+        _CustomFieldDraft(
+          name: entry.raw,
+          type: _inferCustomFieldType(entry.values),
+          options: _inferCustomFieldOptions(entry.values),
+        ),
+    ];
+  }
+
+  String _inferCustomFieldType(List<String> values) {
+    final nonEmpty = values.where((v) => v.trim().isNotEmpty).toList();
+    if (nonEmpty.isEmpty) return CustomFieldType.text;
+    if (nonEmpty.every((v) => double.tryParse(v) != null)) {
+      return CustomFieldType.amount;
+    }
+    if (nonEmpty.every((v) => DateTime.tryParse(v) != null)) {
+      return CustomFieldType.date;
+    }
+    return CustomFieldType.text;
+  }
+
+  List<String> _inferCustomFieldOptions(List<String> values) {
+    final out = <String>[];
+    for (final v in values) {
+      final s = v.trim();
+      if (s.isNotEmpty && !out.contains(s)) out.add(s);
+    }
+    return out;
   }
 
   /// 解析 CSV 的「自定义字段」列（本 App 导出为 `{字段名: 值}` JSON）。
@@ -1200,6 +1414,40 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     return out.isEmpty ? null : out;
   }
 
+  /// 解析新格式独立列：表头已定位到列号，单元格按目标字段类型解码。
+  Map<String, dynamic> _parseCustomFieldColumns(List<String> row) {
+    final out = <String, dynamic>{};
+    for (final entry in _customFieldColumns.entries) {
+      final syncId = _customFieldColumnSyncIds[entry.key];
+      if (syncId == null || entry.value.index >= row.length) continue;
+      final raw = row[entry.value.index].trim();
+      if (raw.isEmpty) continue;
+      final type = _customFieldNameToType[entry.key] ?? CustomFieldType.text;
+      final value = _decodeCustomFieldCell(raw, type);
+      if (value != null) out[syncId] = value;
+    }
+    return out;
+  }
+
+  dynamic _decodeCustomFieldCell(String raw, String fieldType) {
+    if (fieldType == CustomFieldType.multiSelect) {
+      Object? decoded;
+      try {
+        decoded = jsonDecode(raw);
+      } catch (_) {
+        decoded = raw.split(',');
+      }
+      return CustomFieldValueCodec.normalizeValue(
+        decoded is List ? decoded : [decoded],
+      );
+    }
+    if (fieldType == CustomFieldType.amount) {
+      final n = double.tryParse(raw);
+      return n == null ? null : CustomFieldValueCodec.normalizeValue(n);
+    }
+    return CustomFieldValueCodec.normalizeValue(raw);
+  }
+
   void _buildDistinctCategories() {
     final catIdx = mapping['category'];
     if (catIdx == null) {
@@ -1219,6 +1467,261 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
 
     // 初始化分类映射为null，后续在FutureBuilder中进行自动匹配
     categoryMapping = {for (final n in distinctCategories) n: null};
+  }
+}
+
+class _CustomFieldDraft {
+  _CustomFieldDraft({
+    required this.name,
+    required this.type,
+    required this.options,
+  });
+
+  String name;
+  String type;
+  final List<String> options;
+}
+
+/// 未知自定义字段逐项确认：名称可改、类型可选；单选 / 多选沿用数据中
+/// 出现的值作为选项（不再静默按列值猜类型建字段）。
+class _CustomFieldConfirmDialog extends StatefulWidget {
+  const _CustomFieldConfirmDialog({
+    required this.drafts,
+    required this.existingNames,
+  });
+
+  final List<_CustomFieldDraft> drafts;
+  final Set<String> existingNames;
+
+  @override
+  State<_CustomFieldConfirmDialog> createState() =>
+      _CustomFieldConfirmDialogState();
+}
+
+class _CustomFieldConfirmDialogState extends State<_CustomFieldConfirmDialog> {
+  late final List<TextEditingController> _controllers;
+  late final List<TextEditingController> _optionControllers;
+  late final List<String> _types;
+  late final List<List<String>> _options;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = [
+      for (final d in widget.drafts) TextEditingController(text: d.name),
+    ];
+    _optionControllers = [
+      for (final _ in widget.drafts) TextEditingController()
+    ];
+    _types = [for (final d in widget.drafts) d.type];
+    _options = [
+      for (final d in widget.drafts) [...d.options],
+    ];
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    for (final c in _optionControllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _addOption(int index) {
+    final value = _optionControllers[index].text.trim();
+    if (value.isEmpty) return;
+    setState(() {
+      if (!_options[index].contains(value)) _options[index].add(value);
+      _optionControllers[index].clear();
+      _error = null;
+    });
+  }
+
+  String _typeLabel(AppLocalizations l10n, String type) => switch (type) {
+        CustomFieldType.amount => l10n.customFieldTypeAmount,
+        CustomFieldType.date => l10n.customFieldTypeDate,
+        CustomFieldType.singleSelect => l10n.customFieldTypeSingleSelect,
+        CustomFieldType.multiSelect => l10n.customFieldTypeMultiSelect,
+        _ => l10n.customFieldTypeText,
+      };
+
+  void _confirm() {
+    final l10n = AppLocalizations.of(context);
+    final names = <String>{};
+    for (var i = 0; i < _controllers.length; i++) {
+      final name = _controllers[i].text.trim();
+      final key = name.toLowerCase();
+      if (name.isEmpty) {
+        setState(() => _error = l10n.importCustomFieldNameRequired);
+        return;
+      }
+      if (names.contains(key) || widget.existingNames.contains(key)) {
+        setState(() => _error = l10n.importCustomFieldNameDuplicate(name));
+        return;
+      }
+      names.add(key);
+      if (CustomFieldType.hasOptions(_types[i]) && _options[i].isEmpty) {
+        setState(() => _error = l10n.importCustomFieldOptionsRequired(name));
+        return;
+      }
+    }
+    Navigator.of(context).pop([
+      for (var i = 0; i < _controllers.length; i++)
+        _CustomFieldDraft(
+          name: _controllers[i].text.trim(),
+          type: _types[i],
+          options: _options[i],
+        ),
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AppDialogShell(
+      wide: true,
+      title: Text(l10n.importCustomFieldColumnsTitle),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              l10n.importCustomFieldColumnsDesc,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: PiggyTokens.textSecondary(context),
+                  ),
+            ),
+            const SizedBox(height: PiggyDimens.p12),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * 0.52,
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: widget.drafts.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: PiggyDimens.p12),
+                itemBuilder: (context, i) {
+                  return Container(
+                    padding: const EdgeInsets.all(PiggyDimens.p12),
+                    decoration: BoxDecoration(
+                      color: PiggyTokens.surfaceElevated(context),
+                      borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
+                    ),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: _controllers[i],
+                          decoration: piggyOutlinedDecoration(
+                            context,
+                            label: l10n.importCustomFieldName,
+                          ),
+                        ),
+                        const SizedBox(height: PiggyDimens.p8),
+                        DropdownButtonFormField<String>(
+                          initialValue: _types[i],
+                          decoration: piggyOutlinedDecoration(
+                            context,
+                            label: l10n.importCustomFieldType,
+                          ),
+                          items: [
+                            for (final type in CustomFieldType.all)
+                              DropdownMenuItem(
+                                value: type,
+                                child: Text(_typeLabel(l10n, type)),
+                              ),
+                          ],
+                          onChanged: (v) {
+                            if (v == null) return;
+                            setState(() => _types[i] = v);
+                          },
+                        ),
+                        if (CustomFieldType.hasOptions(_types[i])) ...[
+                          const SizedBox(height: PiggyDimens.p8),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              l10n.importCustomFieldOptions(_options[i].length),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: PiggyTokens.textSecondary(context),
+                                  ),
+                            ),
+                          ),
+                          if (_options[i].isNotEmpty) ...[
+                            const SizedBox(height: PiggyDimens.p8),
+                            Wrap(
+                              spacing: PiggyDimens.p8,
+                              runSpacing: PiggyDimens.p8,
+                              children: [
+                                for (final option in _options[i])
+                                  InputChip(
+                                    label: Text(option),
+                                    onDeleted: () => setState(() {
+                                      _options[i].remove(option);
+                                      _error = null;
+                                    }),
+                                  ),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: PiggyDimens.p8),
+                          TextField(
+                            controller: _optionControllers[i],
+                            decoration: piggyOutlinedDecoration(
+                              context,
+                              label: l10n.importCustomFieldAddOption,
+                            ),
+                            onSubmitted: (_) => _addOption(i),
+                            onChanged: (_) {
+                              if (_error != null) setState(() => _error = null);
+                            },
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () => _addOption(i),
+                              child:
+                                  Text(l10n.importCustomFieldAddOptionAction),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: PiggyDimens.p8),
+              Text(
+                _error!,
+                style: TextStyle(color: PiggyTokens.error(context)),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.commonCancel),
+        ),
+        FilledButton(
+          key: const Key('import-custom-field-confirm'),
+          onPressed: _confirm,
+          child: Text(l10n.commonConfirm),
+        ),
+      ],
+    );
   }
 }
 
