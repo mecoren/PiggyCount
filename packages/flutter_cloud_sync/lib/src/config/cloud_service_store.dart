@@ -70,7 +70,8 @@ class CloudServiceStore {
   final FlutterSecureStorage _secure;
 
   CloudServiceStore({FlutterSecureStorage? secureStorage})
-      : _secure = secureStorage ?? const FlutterSecureStorage(
+      : _secure = secureStorage ??
+            const FlutterSecureStorage(
               iOptions: IOSOptions(
                 accessibility: KeychainAccessibility.first_unlock_this_device,
                 synchronizable: false,
@@ -97,14 +98,26 @@ class CloudServiceStore {
       debugPrint('Secure storage read failed for $key: $e');
       secureReadError = e;
     }
-    final sp = await SharedPreferences.getInstance();
-    final legacy = sp.getString(key);
-    if (legacy != null) {
+    // 明文兜底同样可能不可读：Android 上 shared_preferences 走 JNI 解码，
+    // 平台侧异常会以裸 ArgumentError 抛出（如 "Instance of 'JObject'"）。
+    // 这里既不能让兜底把安全存储的主因盖掉，也不能让异常裸奔到 UI。
+    SharedPreferences? sp;
+    String? legacy;
+    try {
+      sp = await SharedPreferences.getInstance();
+      legacy = sp.getString(key);
+    } catch (e) {
+      debugPrint('SharedPreferences read failed for $key: $e');
+      secureReadError ??= e;
+    }
+    if (legacy != null && sp != null) {
+      final prefs = sp;
       // 旧明文数据迁移（尽力而为，失败不阻塞读取）
       try {
         await _secure.write(key: key, value: legacy);
-        await sp.remove(key);
-        debugPrint('Migrated config $key from plaintext prefs to secure storage');
+        await prefs.remove(key);
+        debugPrint(
+            'Migrated config $key from plaintext prefs to secure storage');
         // SEC-03：本次迁移成功即清除失败痕迹（上次失败本次成功的自愈）
         clearMigrationError();
       } catch (e) {
@@ -152,7 +165,22 @@ class CloudServiceStore {
   /// - `activeCloudConfigProvider`（App 层）catch 后转损坏 banner 并继续上抛；
   /// - `main.dart` 等直连调用点已有 try/catch 留痕。
   Future<CloudServiceConfig> loadActive() async {
-    final sp = await SharedPreferences.getInstance();
+    // M16 延伸：偏好存储读取本身也可能失败（Android 的 shared_preferences
+    // 走 JNI，解码异常会以裸 ArgumentError 抛出，toString 只有
+    // "Invalid argument: Instance of 'JObject'" 这种对用户毫无意义的内容）。
+    // 这里包一层带上下文的异常并保留原始错误，保证 UI / 同步链路拿到的是
+    // 「云配置不可访问」，而不是一条平台内部错误。
+    final SharedPreferences sp;
+    try {
+      sp = await SharedPreferences.getInstance();
+    } catch (e) {
+      _recordLoadError('preferences', e);
+      throw CloudStorageException(
+        '本机偏好存储读取失败，云配置不可访问（自动同步已停止，'
+        '请重启应用后重试或重新配置云服务）',
+        e,
+      );
+    }
     final activeType = sp.getString(_kActiveType) ?? 'local';
 
     // 成功路径（含 local）先清除历史错误，避免陈旧 banner 常驻

@@ -182,6 +182,42 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudConfigCorruptWarning => '云端配置读取失败，自动同步已暂停。请重新配置云服务。';
 
   @override
+  String get cloudConfigCorruptAction => '去重新配置';
+
+  @override
+  String get cloudConfigLoadFailedTitle => '无法读取云服务配置';
+
+  @override
+  String get cloudConfigLoadFailedMessage =>
+      '本机保存的云服务凭据读取失败（安全存储或系统存储暂时不可用），云同步已暂停。账本数据仍完整保存在本机；如重试无效，请重启应用后再试。';
+
+  @override
+  String get cloudConfigLoadFailedRetry => '重试';
+
+  @override
+  String get cloudConfigLoadFailedUseOffline => '先使用离线模式';
+
+  @override
+  String get cloudConfigLoadFailedDetails => '查看错误详情';
+
+  @override
+  String get cloudConfigLoadFailedResetPrefs => '清除本机设置并修复';
+
+  @override
+  String get cloudConfigLoadFailedResetTitle => '清除本机设置';
+
+  @override
+  String get cloudConfigLoadFailedResetMessage =>
+      '将清空本机保存的应用设置（主题、同步开关、当前账本选择、云服务选择等）。账本数据与已保存的云凭据不受影响，但需要重新选择云服务。确定继续吗？';
+
+  @override
+  String get cloudConfigLoadFailedResetMessage2 =>
+      '不可恢复：本机设置将全部回到默认值。这是存储损坏且无法定位坏数据时的最后手段，再次确认。';
+
+  @override
+  String get cloudConfigLoadFailedResetDone => '已清除本机设置，正在重新读取';
+
+  @override
   String get cloudMigrationWarning =>
       '云凭据安全迁移失败，凭据暂以明文形式留在本机。建议重新保存云配置以完成安全迁移。';
 
@@ -9647,6 +9683,42 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get cloudConfigCorruptWarning => '雲端設定讀取失敗，自動同步已暫停。請重新設定雲端服務。';
+
+  @override
+  String get cloudConfigCorruptAction => '去重新設定';
+
+  @override
+  String get cloudConfigLoadFailedTitle => '無法讀取雲端服務設定';
+
+  @override
+  String get cloudConfigLoadFailedMessage =>
+      '本機儲存的雲端憑證讀取失敗（安全儲存或系統儲存暫時無法使用），雲端同步已暫停。帳本資料仍完整保存在本機；若重試無效，請重新啟動應用程式後再試。';
+
+  @override
+  String get cloudConfigLoadFailedRetry => '重試';
+
+  @override
+  String get cloudConfigLoadFailedUseOffline => '先使用離線模式';
+
+  @override
+  String get cloudConfigLoadFailedDetails => '查看錯誤詳情';
+
+  @override
+  String get cloudConfigLoadFailedResetPrefs => '清除本機設定並修復';
+
+  @override
+  String get cloudConfigLoadFailedResetTitle => '清除本機設定';
+
+  @override
+  String get cloudConfigLoadFailedResetMessage =>
+      '將清空本機儲存的應用程式設定（主題、同步開關、目前帳本選擇、雲端服務選擇等）。帳本資料與已儲存的雲端憑證不受影響，但需要重新選擇雲端服務。確定要繼續嗎？';
+
+  @override
+  String get cloudConfigLoadFailedResetMessage2 =>
+      '無法復原：本機設定將全部回到預設值。這是儲存損毀且無法定位壞資料時的最後手段，請再次確認。';
+
+  @override
+  String get cloudConfigLoadFailedResetDone => '已清除本機設定，正在重新讀取';
 
   @override
   String get cloudMigrationWarning =>

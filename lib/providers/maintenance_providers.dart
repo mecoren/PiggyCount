@@ -13,7 +13,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/maintenance/orphan_cleaner.dart';
 import '../services/maintenance/orphan_record.dart';
 import '../services/maintenance/orphan_scanner.dart';
+import '../services/system/prefs_repair_service.dart';
 import 'database_providers.dart';
+
+/// 本机偏好存储自救（清空损坏的 `flutter.*` 偏好项）。
+///
+/// 只在「`SharedPreferences.getInstance()` 整体失败」时使用：云服务页错误态
+/// 提供入口，走双重危险确认后清空再重试。
+final prefsRepairServiceProvider =
+    Provider<PrefsRepairService>((_) => const PrefsRepairService());
 
 final orphanScannerProvider = Provider<OrphanScanner>((ref) {
   final db = ref.watch(databaseProvider);

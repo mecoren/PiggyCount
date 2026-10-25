@@ -105,13 +105,12 @@ final activeCloudConfigProvider =
     rethrow;
   }
   final errBackend = CloudServiceStore.lastLoadErrorBackend;
-  ref.read(cloudConfigCorruptionProvider.notifier).state =
-      errBackend == null
-          ? null
-          : (
-              backend: errBackend,
-              message: CloudServiceStore.lastLoadErrorMessage ?? ''
-            );
+  ref.read(cloudConfigCorruptionProvider.notifier).state = errBackend == null
+      ? null
+      : (
+          backend: errBackend,
+          message: CloudServiceStore.lastLoadErrorMessage ?? ''
+        );
   // SEC-03：迁移失败痕迹同步转 UI 状态（成功/清除时置回 null）
   final migKey = CloudServiceStore.lastMigrationErrorKey;
   ref.read(cloudMigrationWarningProvider.notifier).state = migKey == null
@@ -121,7 +120,12 @@ final activeCloudConfigProvider =
           message: CloudServiceStore.lastMigrationErrorMessage ?? ''
         );
   return cfg;
-});
+},
+        // 读失败的处置是「显式告知 + 用户手动重试」：Riverpod 3 的默认重试会
+        // 按 200/400/…/6400ms 退避重跑 10 次（`CloudStorageException` 是
+        // Exception，不在 defaultRetry 的 Error 白名单内），云服务页会在
+        // 骨架屏 ↔ 错误态之间闪烁近 40 秒，且每次都重复写日志。
+        retry: (retryCount, error) => null);
 
 // Supabase配置(不管是否激活)
 final supabaseConfigProvider = FutureProvider<CloudServiceConfig?>((ref) async {
@@ -292,8 +296,7 @@ final localLedgersProvider =
 
     final result = <LedgerDisplayItem>[];
     for (final ledger in localLedgers) {
-      final stats = statsMap[ledger.id] ??
-          (balance: 0.0, transactionCount: 0);
+      final stats = statsMap[ledger.id] ?? (balance: 0.0, transactionCount: 0);
 
       result.add(LedgerDisplayItem.fromLocal(
         id: ledger.id,
@@ -367,8 +370,7 @@ final allLedgersProvider = FutureProvider<List<LedgerDisplayItem>>((ref) async {
 
     final result = <LedgerDisplayItem>[];
     for (final ledger in localLedgers) {
-      final stats = statsMap[ledger.id] ??
-          (balance: 0.0, transactionCount: 0);
+      final stats = statsMap[ledger.id] ?? (balance: 0.0, transactionCount: 0);
 
       result.add(LedgerDisplayItem.fromLocal(
         id: ledger.id,

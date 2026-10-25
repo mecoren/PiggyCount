@@ -22,6 +22,7 @@ import '../../cloud/backup/cloud_backup_service.dart';
 import '../../cloud/backend_identity.dart';
 import '../../domain/encryption/encryption_service.dart';
 import '../auth/login_page.dart';
+import 'cloud_service_page.dart';
 import 'encryption_dialogs.dart';
 import 'encryption_settings_page.dart';
 import 'sync_health_card.dart';
@@ -608,26 +609,52 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
   /// M11：云配置损坏 banner。loadActive 解析失败会静默回退 LocalOnly
   /// （自动同步无声停摆），此处把包侧记录的错误以显式提示呈现，
   /// 引导用户重新配置云服务。
+  ///
+  /// 整条 banner 可点：文案写着「请重新配置云服务」，而本页并没有第二个
+  /// 进入云服务配置的入口——不点就只能退出本页再去「我的 → 云服务」。
   Widget _buildConfigCorruptionBanner(BuildContext context) {
     final corruption = ref.watch(cloudConfigCorruptionProvider);
     if (corruption == null) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    final onColor = Theme.of(context).colorScheme.onErrorContainer;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Card(
         color: Theme.of(context).colorScheme.errorContainer,
         elevation: 0,
         child: ListTile(
-          leading: Icon(Icons.cloud_off,
-              color: Theme.of(context).colorScheme.onErrorContainer),
+          leading: Icon(Icons.cloud_off, color: onColor),
           title: Text(
-            AppLocalizations.of(context).cloudConfigCorruptWarning,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onErrorContainer,
-                ),
+            l10n.cloudConfigCorruptWarning,
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: onColor),
           ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.cloudConfigCorruptAction,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: onColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              Icon(Icons.chevron_right, size: 20, color: onColor),
+            ],
+          ),
+          onTap: _openCloudServiceConfig,
           dense: true,
         ),
       ),
+    );
+  }
+
+  /// 打开云服务配置页（配置损坏 / 需要重新保存凭据时的一致出口）。
+  void _openCloudServiceConfig() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CloudServicePage()),
     );
   }
 
@@ -759,13 +786,22 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
 
                     final user = snap.data;
                     final cloudConfig = ref.watch(activeCloudConfigProvider);
-                    final isLocalMode = cloudConfig.hasValue &&
-                        cloudConfig.value!.type == CloudBackendType.local;
-                    final needsLogin = cloudConfig.hasValue &&
-                        (cloudConfig.value!.type == CloudBackendType.supabase);
+                    // 用可空取值而非 `cloudConfig.value!`：配置读失败时 provider
+                    // 处于 AsyncError 且没有历史值，`value` 为 null —— 页面
+                    // build 期直接空断言会让整个内容区塌成红屏（Null check
+                    // operator used on a null value），连「重新配置」提示都
+                    // 被 ErrorWidget 顶掉。
+                    final cloudType = cloudConfig.value?.type;
+                    // 硬失败（读取异常且无历史值）：同步链路已降级 LocalOnly，
+                    // 云相关入口按「不可用」呈现，避免点了才报错。
+                    final configUnavailable =
+                        cloudConfig.hasError && cloudType == null;
+                    final isLocalMode = cloudType == CloudBackendType.local;
+                    final needsLogin = cloudType == CloudBackendType.supabase;
                     // Supabase 需要登录，其他云服务（iCloud/S3/WebDAV）使用配置文件认证
-                    final canUseCloud =
-                        !isLocalMode && (!needsLogin || user != null);
+                    final canUseCloud = !configUnavailable &&
+                        !isLocalMode &&
+                        (!needsLogin || user != null);
 
                     final asyncSt = ref.watch(syncStatusProvider(ledgerId));
                     final cached = ref.watch(lastSyncStatusProvider(ledgerId));
@@ -1637,13 +1673,13 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                     },
                                   ),
                                   // 登录/登出 (仅 Supabase 需要，其他云服务使用配置文件认证)
-                                  if (!isLocalMode &&
-                                      cloudConfig.value!.type ==
-                                          CloudBackendType.supabase)
+                                  if (needsLogin)
                                     Consumer(builder: (ctx, r, _) {
                                       final userNow = user;
-                                      final cloudConfig =
-                                          r.watch(activeCloudConfigProvider);
+                                      final currentType = r
+                                          .watch(activeCloudConfigProvider)
+                                          .value
+                                          ?.type;
 
                                       // 根据云服务类型显示不同的用户信息
                                       String getUserDisplayName() {
@@ -1652,9 +1688,8 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                               .mineLoginTitle;
                                         }
 
-                                        if (cloudConfig.hasValue &&
-                                            cloudConfig.value!.type ==
-                                                CloudBackendType.webdav) {
+                                        if (currentType ==
+                                            CloudBackendType.webdav) {
                                           // WebDAV: 显示用户名（去掉 @webdav 后缀）
                                           return userNow.id;
                                         } else {
@@ -1783,8 +1818,14 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                                                 ? Text(
                                                     AppLocalizations.of(context)
                                                         .mineAutoSyncSubtitle)
-                                                : Text(
-                                                    AppLocalizations.of(context)
+                                                // 配置读取失败时不能说「需登录」——
+                                                // 用户真正要做的是去重新配置云服务
+                                                : Text(configUnavailable
+                                                    ? AppLocalizations.of(
+                                                            context)
+                                                        .mineSyncNotConfigured
+                                                    : AppLocalizations.of(
+                                                            context)
                                                         .mineAutoSyncNeedLogin),
                                             value: can ? value : false,
                                             onChanged: can

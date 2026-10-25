@@ -193,6 +193,44 @@ class AppLocalizationsEn extends AppLocalizations {
       'Cloud configuration could not be read — automatic sync has been paused. Please set up your cloud service again.';
 
   @override
+  String get cloudConfigCorruptAction => 'Reconfigure';
+
+  @override
+  String get cloudConfigLoadFailedTitle => 'Can\'t read cloud configuration';
+
+  @override
+  String get cloudConfigLoadFailedMessage =>
+      'The cloud credentials saved on this device could not be read (secure storage or system storage is temporarily unavailable), so cloud sync is paused. Your ledger data is still stored safely on this device; if retrying does not help, restart the app and try again.';
+
+  @override
+  String get cloudConfigLoadFailedRetry => 'Retry';
+
+  @override
+  String get cloudConfigLoadFailedUseOffline => 'Use offline mode first';
+
+  @override
+  String get cloudConfigLoadFailedDetails => 'Show error details';
+
+  @override
+  String get cloudConfigLoadFailedResetPrefs =>
+      'Reset local settings and repair';
+
+  @override
+  String get cloudConfigLoadFailedResetTitle => 'Reset local settings';
+
+  @override
+  String get cloudConfigLoadFailedResetMessage =>
+      'This clears the app settings saved on this device (theme, sync switches, current ledger, cloud service choice, etc.). Your ledger data and saved cloud credentials are not affected, but you will need to select your cloud service again. Continue?';
+
+  @override
+  String get cloudConfigLoadFailedResetMessage2 =>
+      'This cannot be undone: all local settings return to defaults. Use it only when storage is corrupted and the bad entry cannot be located. Please confirm again.';
+
+  @override
+  String get cloudConfigLoadFailedResetDone =>
+      'Local settings cleared, reloading';
+
+  @override
   String get cloudMigrationWarning =>
       'Cloud credentials could not be migrated to secure storage and are still stored in plain text on this device. Please re-save your cloud configuration to complete the secure migration.';
 

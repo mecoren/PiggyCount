@@ -51,6 +51,10 @@ dependencies:
   # 纯 BackdropFilter + ShaderMask 做不到渐变模糊（mask 只会作用于 tint 层）。
   progressive_background_blur: ^1.0.1
   shared_preferences: ^2.3.2
+  # 直接依赖而非走传递：`PrefsRepairService` 要调平台层的 clear() 清空损坏的
+  # `flutter.*` 偏好项（该调用只遍历键名、不解码值，是坏数据下唯一能自救的
+  # 入口）。仅此一处使用，勿扩散。
+  shared_preferences_platform_interface: ^2.4.2
   # 停 7.3.1（2026-10-06 实测）：7.3.2 起依赖 nm ^0.6.0 → dbus ^0.8.0，而
   # flutter_local_notifications 22.x 的 Linux 实现（flutter_local_notifications_linux
   # 8.0.1）仍依赖 dbus ^0.7.8，两版 dbus 无法共存。7.3.2 相对 7.3.1 只是 Linux 侧

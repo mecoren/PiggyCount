@@ -425,6 +425,72 @@ abstract class AppLocalizations {
   /// **'Cloud configuration could not be read — automatic sync has been paused. Please set up your cloud service again.'**
   String get cloudConfigCorruptWarning;
 
+  /// No description provided for @cloudConfigCorruptAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconfigure'**
+  String get cloudConfigCorruptAction;
+
+  /// No description provided for @cloudConfigLoadFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t read cloud configuration'**
+  String get cloudConfigLoadFailedTitle;
+
+  /// No description provided for @cloudConfigLoadFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The cloud credentials saved on this device could not be read (secure storage or system storage is temporarily unavailable), so cloud sync is paused. Your ledger data is still stored safely on this device; if retrying does not help, restart the app and try again.'**
+  String get cloudConfigLoadFailedMessage;
+
+  /// No description provided for @cloudConfigLoadFailedRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get cloudConfigLoadFailedRetry;
+
+  /// No description provided for @cloudConfigLoadFailedUseOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Use offline mode first'**
+  String get cloudConfigLoadFailedUseOffline;
+
+  /// No description provided for @cloudConfigLoadFailedDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Show error details'**
+  String get cloudConfigLoadFailedDetails;
+
+  /// No description provided for @cloudConfigLoadFailedResetPrefs.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset local settings and repair'**
+  String get cloudConfigLoadFailedResetPrefs;
+
+  /// No description provided for @cloudConfigLoadFailedResetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset local settings'**
+  String get cloudConfigLoadFailedResetTitle;
+
+  /// No description provided for @cloudConfigLoadFailedResetMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This clears the app settings saved on this device (theme, sync switches, current ledger, cloud service choice, etc.). Your ledger data and saved cloud credentials are not affected, but you will need to select your cloud service again. Continue?'**
+  String get cloudConfigLoadFailedResetMessage;
+
+  /// No description provided for @cloudConfigLoadFailedResetMessage2.
+  ///
+  /// In en, this message translates to:
+  /// **'This cannot be undone: all local settings return to defaults. Use it only when storage is corrupted and the bad entry cannot be located. Please confirm again.'**
+  String get cloudConfigLoadFailedResetMessage2;
+
+  /// No description provided for @cloudConfigLoadFailedResetDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Local settings cleared, reloading'**
+  String get cloudConfigLoadFailedResetDone;
+
   /// No description provided for @cloudMigrationWarning.
   ///
   /// In en, this message translates to:

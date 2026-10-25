@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart' hide SyncStatus;
 import 'package:flutter_cloud_sync_icloud/flutter_cloud_sync_icloud.dart';
+import '../../providers/maintenance_providers.dart';
 import '../../providers/sync_providers.dart';
 import '../../providers/theme_providers.dart';
 import '../../services/system/logger_service.dart';
@@ -49,6 +50,14 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
   bool _hasAutoTested = false;
   String _selectedTab = 'offline'; // 'offline' | 'backup'
 
+  /// 配置读取失败时是否展开原始错误（默认收起：平台异常串对用户无意义，
+  /// 但排查/反馈时必须有处可看）。
+  bool _showErrorDetail = false;
+
+  /// 配置读取失败是否已写过日志（错误态每次重绘都会走 error builder，
+  /// 不加闸门会把同一条异常刷满日志文件）。
+  bool _configErrorLogged = false;
+
   @override
   void initState() {
     super.initState();
@@ -71,8 +80,14 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
     _hasAutoTested = true;
 
     // 多设备同步关闭时，跳过自动测试
-    final prefs = await SharedPreferences.getInstance();
-    final multiDevice = prefs.getBool('multi_device_sync') ?? false;
+    // 偏好存储不可读时直接跳过：自动测连是锦上添花，不能因它抛未捕获异常
+    bool multiDevice = false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      multiDevice = prefs.getBool('multi_device_sync') ?? false;
+    } catch (e) {
+      logger.warning('CloudService', '读取 multi_device_sync 失败，跳过自动测连: $e');
+    }
     if (!multiDevice) return;
 
     final activeAsync = ref.read(activeCloudConfigProvider);
@@ -166,9 +181,11 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                   ),
                 ),
               ),
-              error: (e, _) => Center(
-                  child:
-                      Text('${AppLocalizations.of(context).commonError}: $e')),
+              error: (e, st) {
+                // 原始异常写日志（平台错误串只在「错误详情」里给用户看）
+                _logConfigErrorOnce(e, st);
+                return _buildConfigErrorState(context, e);
+              },
               data: (active) {
                 if (_selectedTab == 'offline') {
                   // ===== 离线模式 =====
@@ -490,8 +507,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
             Expanded(
               child: Text(
                 l10n.cloudSyncGuideTitle,
-                style:
-                    PiggyTextTokens.strongTitle(context).copyWith(fontSize: PiggyTextTokens.fs18),
+                style: PiggyTextTokens.strongTitle(context)
+                    .copyWith(fontSize: PiggyTextTokens.fs18),
               ),
             ),
           ],
@@ -608,8 +625,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                   Expanded(
                     child: Text(
                       item,
-                      style: PiggyTextTokens.label(context)
-                          .copyWith(fontSize: PiggyTextTokens.fs13, height: 1.4),
+                      style: PiggyTextTokens.label(context).copyWith(
+                          fontSize: PiggyTextTokens.fs13, height: 1.4),
                     ),
                   ),
                 ],
@@ -695,7 +712,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                                           PiggyDimens.radiusSm),
                                     ),
                                     child: Text(
-                                      AppLocalizations.of(context).cloudStatusUnavailable,
+                                      AppLocalizations.of(context)
+                                          .cloudStatusUnavailable,
                                       style: PiggyTextTokens.caption(context),
                                     ),
                                   ),
@@ -745,7 +763,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                               icon: const Icon(Icons.help_outline, size: 16),
                               label: Text(
                                   AppLocalizations.of(context).commonTutorial,
-                                  style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
+                                  style: const TextStyle(
+                                      fontSize: PiggyTextTokens.fs12)),
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 4),
@@ -760,7 +779,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                               icon: const Icon(Icons.settings, size: 16),
                               label: Text(
                                   AppLocalizations.of(context).commonConfigure,
-                                  style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
+                                  style: const TextStyle(
+                                      fontSize: PiggyTextTokens.fs12)),
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 8),
@@ -850,7 +870,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                                           PiggyDimens.radiusSm),
                                     ),
                                     child: Text(
-                                      AppLocalizations.of(context).cloudStatusUnavailable,
+                                      AppLocalizations.of(context)
+                                          .cloudStatusUnavailable,
                                       style: PiggyTextTokens.caption(context),
                                     ),
                                   ),
@@ -900,7 +921,8 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
                             icon: const Icon(Icons.help_outline, size: 16),
                             label: Text(
                                 AppLocalizations.of(context).commonTutorial,
-                                style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
+                                style: const TextStyle(
+                                    fontSize: PiggyTextTokens.fs12)),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 8, vertical: 4),
@@ -1281,14 +1303,16 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
       children: [
         Text(
           title,
-          style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: PiggyTextTokens.fs14),
+          style: PiggyTextTokens.strongTitle(context)
+              .copyWith(fontSize: PiggyTextTokens.fs14),
         ),
         const SizedBox(height: 8),
         ...items.map((item) => Padding(
               padding: const EdgeInsets.only(left: 8, bottom: 4),
               child: Text(
                 item,
-                style: PiggyTextTokens.label(context).copyWith(fontSize: PiggyTextTokens.fs13),
+                style: PiggyTextTokens.label(context)
+                    .copyWith(fontSize: PiggyTextTokens.fs13),
               ),
             )),
       ],
@@ -1304,6 +1328,186 @@ class _CloudServicePageState extends ConsumerState<CloudServicePage> {
         showToast(context, AppLocalizations.of(context).cloudCannotOpenLink);
       }
     }
+  }
+
+  void _logConfigErrorOnce(Object error, StackTrace stack) {
+    if (_configErrorLogged) return;
+    _configErrorLogged = true;
+    logger.error('CloudService', '读取云服务配置失败', error, stack);
+  }
+
+  /// 配置读取失败的兜底态（M16 硬失败的 UI 侧）。
+  ///
+  /// 旧实现只把异常原样打成一行「错误: Invalid argument: Instance of
+  /// 'JObject'」——用户既看不懂，也没有任何出口：重试不了、退不回离线模式，
+  /// 整页只有一段平台内部错误。这里给出三件事：
+  /// 1. 说明「为什么同步停了、数据还在不在」；
+  /// 2. 「重试」重新读一次配置（安全存储/系统存储偶发故障可直接恢复）；
+  /// 3. 「先使用离线模式」把激活项落回 local，用户至少能继续记账；
+  /// 另有默认收起的「错误详情」，保留原始异常便于反馈。
+  Widget _buildConfigErrorState(BuildContext context, Object error) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.cloud_off_outlined,
+              size: 40,
+              color: PiggyTokens.error(context),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.cloudConfigLoadFailedTitle,
+              textAlign: TextAlign.center,
+              style: PiggyTextTokens.title(context),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.cloudConfigLoadFailedMessage,
+              textAlign: TextAlign.center,
+              style: PiggyTextTokens.label(context).copyWith(
+                color: PiggyTokens.textSecondary(context),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _retryCloudConfigLoad,
+                child: Text(l10n.cloudConfigLoadFailedRetry),
+              ),
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: _useOfflineModeFromError,
+                child: Text(l10n.cloudConfigLoadFailedUseOffline),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () =>
+                  setState(() => _showErrorDetail = !_showErrorDetail),
+              child: Text(
+                l10n.cloudConfigLoadFailedDetails,
+                style: PiggyTextTokens.caption(context).copyWith(
+                  color: PiggyTokens.textTertiary(context),
+                ),
+              ),
+            ),
+            // 自救：整个偏好存储读不动时（不是某一条配置坏了），只能从平台层
+            // 清空 flutter.* 键再重读。危险操作 → 双重确认。
+            TextButton(
+              onPressed: _resetPrefsAndRetry,
+              child: Text(
+                l10n.cloudConfigLoadFailedResetPrefs,
+                style: PiggyTextTokens.caption(context).copyWith(
+                  color: PiggyTokens.error(context),
+                ),
+              ),
+            ),
+            if (_showErrorDetail)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
+                ),
+                child: SelectableText(
+                  '$error',
+                  style: PiggyTextTokens.caption(context).copyWith(
+                    color: PiggyTokens.textTertiary(context),
+                    height: 1.4,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 重新读取云配置：invalidate 整条配置链（激活配置 / 各后端配置 / 认证与
+  /// 同步服务都挂在它下面，不一起失效会继续沿用「读失败」的旧派生状态）。
+  void _retryCloudConfigLoad() {
+    logger.info('CloudService', '用户重试读取云服务配置');
+    _configErrorLogged = false;
+    ref.invalidate(activeCloudConfigProvider);
+    ref.invalidate(supabaseConfigProvider);
+    ref.invalidate(webdavConfigProvider);
+    ref.invalidate(s3ConfigProvider);
+    ref.invalidate(authServiceProvider);
+    ref.invalidate(syncServiceProvider);
+  }
+
+  /// 配置读不出来时的「重手段」：清空本机偏好存储后重读。
+  ///
+  /// 只在整库不可读（`SharedPreferences.getInstance()` 本身失败）时才有意义：
+  /// 坏数据清不掉，任何「只改某一条配置」的写法都走不到（读就要经过那层解码）。
+  /// 清空后本机设置回默认，账本数据与云凭据不受影响 —— 因此必须双重危险确认。
+  Future<void> _resetPrefsAndRetry() async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDoubleDangerConfirmDialog(
+      context,
+      title: l10n.cloudConfigLoadFailedResetTitle,
+      firstMessage: l10n.cloudConfigLoadFailedResetMessage,
+      secondMessage: l10n.cloudConfigLoadFailedResetMessage2,
+      okLabel: l10n.cloudConfigLoadFailedResetPrefs,
+      cancelLabel: l10n.commonCancel,
+      countdownSeconds: 3,
+    );
+    if (!confirmed || !mounted) return;
+
+    try {
+      await ref.read(prefsRepairServiceProvider).clearAppPreferences();
+    } catch (e, st) {
+      logger.error('CloudService', '清空本机偏好设置失败', e, st);
+      if (mounted) {
+        await AppDialog.error(
+          context,
+          title: l10n.cloudConfigLoadFailedResetTitle,
+          message: l10n.cloudConfigLoadFailedMessage,
+        );
+      }
+      return;
+    }
+
+    logger.info('CloudService', '已清空本机偏好设置，重读云配置');
+    _retryCloudConfigLoad();
+    if (mounted) showToast(context, l10n.cloudConfigLoadFailedResetDone);
+  }
+
+  /// 配置读不出来时的逃生动作：把激活项落回 local（只写一个字符串，
+  /// 不读凭据），让用户先回到「离线模式」继续用本机账本。
+  Future<void> _useOfflineModeFromError() async {
+    final store = ref.read(cloudServiceStoreProvider);
+    try {
+      await store.activate(CloudBackendType.local);
+    } catch (e, st) {
+      // 偏好存储整体不可写：只能如实告知，别假装切换成功
+      logger.error('CloudService', '配置读取失败后切离线模式也失败', e, st);
+      if (mounted) {
+        await AppDialog.error(
+          context,
+          title: AppLocalizations.of(context).cloudSwitchFailedTitle,
+          message: AppLocalizations.of(context).cloudConfigLoadFailedMessage,
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    _retryCloudConfigLoad();
+    setState(() {
+      _selectedTab = 'offline';
+      _showErrorDetail = false;
+    });
   }
 
   Future<void> _switchService(CloudBackendType type) async {
