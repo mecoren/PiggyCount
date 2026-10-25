@@ -163,8 +163,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('洞察筛选'), findsOneWidget);
     expect(find.text('交易类型'), findsOneWidget);
+    // 抽屉内的选格必须是项目自己的 PiggySelectChip，不能再退回 Material 的
+    // FilterChip / ChoiceChip（M3 默认高度、留白与配色跟抽屉其它字段不是一套）。
+    expect(find.byType(FilterChip), findsNothing);
+    expect(find.byType(ChoiceChip), findsNothing);
+    expect(
+        find.byKey(const ValueKey('analyticsFilterType_expense')),
+        findsOneWidget);
 
-    await tester.tap(find.widgetWithText(FilterChip, '收入'));
+    await tester.tap(find.byKey(const ValueKey('analyticsFilterType_income')));
     await tester.pump();
     await tester.tap(find.text('确定'));
     await tester.pumpAndSettle();
@@ -226,9 +233,11 @@ void main() {
     expect(find.text('标签'), findsWidgets);
 
     await tester.enterText(find.byType(TextFormField), '咖啡');
-    await tester.tap(find.widgetWithText(FilterChip, '日常'));
+    await tester.tap(
+        find.byKey(const ValueKey('analyticsFilterOption_sid_single_日常')));
     await tester.pump();
-    await tester.tap(find.widgetWithText(FilterChip, '外出'));
+    await tester.tap(
+        find.byKey(const ValueKey('analyticsFilterOption_sid_multi_外出')));
     await tester.pump();
     await tester.tap(find.text('确定'));
     await tester.pumpAndSettle();

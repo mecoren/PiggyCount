@@ -7,6 +7,7 @@ import '../../data/models/custom_field_values.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/theme_providers.dart';
 import '../../styles/tokens.dart';
+import '../ui/select_chip.dart';
 import '../ui/wheel_date_picker.dart';
 
 /// v46 交易编辑器里的「自定义字段」录入分区。
@@ -461,7 +462,7 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
         runSpacing: 8,
         children: [
           for (final opt in options)
-            _SelectChip(
+            PiggySelectChip(
               key: ValueKey('custom_field_option_${syncId}_$opt'),
               label: opt,
               selected: selected.contains(opt),
@@ -496,49 +497,4 @@ class _CustomFieldsSectionState extends ConsumerState<CustomFieldsSection> {
       '${d.hour.toString().padLeft(2, '0')}:'
       '${d.minute.toString().padLeft(2, '0')}:'
       '${d.second.toString().padLeft(2, '0')}';
-}
-
-/// v54 单选/多选的选项 chip（自绘以复用设计令牌与既有圆角/配色）。
-class _SelectChip extends StatelessWidget {
-  const _SelectChip({
-    super.key,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected
-              ? primary.withValues(alpha: 0.12)
-              : PiggyTokens.surface(context),
-          borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-          border: Border.all(
-            color: selected ? primary : PiggyTokens.border(context),
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: PiggyTextTokens.fs14,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-            color: selected ? primary : PiggyTokens.textPrimary(context),
-          ),
-        ),
-      ),
-    );
-  }
 }

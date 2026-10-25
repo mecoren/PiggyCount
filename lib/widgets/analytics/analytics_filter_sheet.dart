@@ -184,10 +184,11 @@ class _AnalyticsFilterSheetState extends ConsumerState<_AnalyticsFilterSheet> {
                 (value: 'income', label: l10n.homeIncome),
                 (value: 'transfer', label: l10n.transferTitle),
               ])
-                FilterChip(
-                  label: Text(entry.label),
+                PiggySelectChip(
+                  key: ValueKey('analyticsFilterType_${entry.value}'),
+                  label: entry.label,
                   selected: _types.contains(entry.value),
-                  onSelected: (_) => _toggleType(entry.value),
+                  onTap: () => _toggleType(entry.value),
                 ),
             ],
           ),
@@ -227,21 +228,20 @@ class _AnalyticsFilterSheetState extends ConsumerState<_AnalyticsFilterSheet> {
       runSpacing: PiggyDimens.p8,
       children: [
         for (final option in choices)
-          FilterChip(
-            label: Text(option),
+          PiggySelectChip(
+            key: ValueKey('analyticsFilterOption_${sid}_$option'),
+            label: option,
             selected: selected.contains(option),
-            onSelected: (on) => setState(() {
+            onTap: () => setState(() {
               final set = {...(_selectValues[sid] ?? const <String>{})};
-              if (on) {
-                if (field.fieldType == CustomFieldType.singleSelect) {
-                  set
-                    ..clear()
-                    ..add(option);
-                } else {
-                  set.add(option);
-                }
-              } else {
+              if (set.contains(option)) {
                 set.remove(option);
+              } else if (field.fieldType == CustomFieldType.singleSelect) {
+                set
+                  ..clear()
+                  ..add(option);
+              } else {
+                set.add(option);
               }
               if (set.isEmpty) {
                 _selectValues.remove(sid);
