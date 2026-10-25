@@ -57,35 +57,26 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 80,
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: providersAsync.when(
-                data: (providers) => _buildProviderList(providers),
-                loading: () => DelayedSkeleton(
-                  placeholder: const SizedBox.expand(),
-                  child: PulseSkeleton(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: const [
-                          SkeletonListTile(),
-                          SkeletonListTile(),
-                          SkeletonListTile(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                error: (e, _) => Center(child: Text('$e')),
+      // 标题栏避让做进列表自身 padding（不能包在 body 外），
+      // 滚动内容才能穿到标题栏下方、磨砂才有内容可模糊。
+      body: providersAsync.when(
+        data: (providers) => _buildProviderList(providers),
+        loading: () => DelayedSkeleton(
+          placeholder: const SizedBox.expand(),
+          child: PulseSkeleton(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: const [
+                  SkeletonListTile(),
+                  SkeletonListTile(),
+                  SkeletonListTile(),
+                ],
               ),
             ),
-          ],
+          ),
         ),
+        error: (e, _) => Center(child: Text('$e')),
       ),
     );
   }
@@ -94,16 +85,24 @@ class _AIProviderManagePageState extends ConsumerState<AIProviderManagePage> {
     final l10n = AppLocalizations.of(context);
 
     if (providers.isEmpty) {
-      return AppEmpty(
-        text: l10n.aiProviderEmpty,
-        icon: Icons.cloud_off,
+      return Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: AppEmpty(
+          text: l10n.aiProviderEmpty,
+          icon: Icons.cloud_off,
+        ),
       );
     }
 
     return ListView.builder(
-      padding: EdgeInsets.symmetric(
-        horizontal: 12.0.scaled(context, ref),
-        vertical: 8.0.scaled(context, ref),
+      // top 含标题栏避让（双行标题栏 80dp）
+      padding: EdgeInsets.only(
+        left: 12.0.scaled(context, ref),
+        right: 12.0.scaled(context, ref),
+        top: MediaQuery.of(context).padding.top + 80 + 8.0.scaled(context, ref),
+        bottom: 8.0.scaled(context, ref),
       ),
       itemCount: providers.length,
       itemBuilder: (context, index) {

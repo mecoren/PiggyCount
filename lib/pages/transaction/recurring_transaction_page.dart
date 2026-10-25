@@ -36,69 +36,69 @@ class RecurringTransactionPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  PiggyHaptics.light();
-                  ref.invalidate(allRecurringTransactionsProvider);
-                  try {
-                    await ref.read(allRecurringTransactionsProvider.future);
-                  } catch (_) {
-                    // 失败保持静默，错误分支由 when 展示
-                  }
-                },
-                child: recurringTransactionsAsync.when(
-                  // skipLoading*: 下拉刷新后保留旧数据渲染，避免整页闪 loading
-                  skipLoadingOnReload: true,
-                  skipLoadingOnRefresh: true,
-                  loading: () => Center(
-                      child: PiggySpinner(
-                          size: 36, color: PiggyTokens.primary(context))),
-                  error: (error, stack) => Center(
-                    child: Text('Error: $error'),
-                  ),
-                  data: (recurringTransactions) {
-                    if (recurringTransactions.isEmpty) {
-                      return AppEmpty(
-                        text: AppLocalizations.of(context)
-                            .recurringTransactionEmpty,
-                        subtext: AppLocalizations.of(context)
-                            .recurringTransactionEmptyHint,
-                        icon: Icons.repeat,
-                      );
-                    }
-
-                    return ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 16),
-                      // AlwaysScrollable: 内容不满一屏时也能下拉刷新
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: recurringTransactions.length +
-                          1, // +1 for usage guide card
-                      itemBuilder: (context, index) {
-                        // 第一个显示使用说明卡片
-                        if (index == 0) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _UsageGuideCard(),
-                          );
-                        }
-                        // 后续显示周期记账卡片
-                        final recurring = recurringTransactions[index - 1];
-                        return _RecurringTransactionCard(recurring: recurring);
-                      },
-                    );
-                  },
+      // 标题栏避让做进列表自身 padding（不能包在 body 外）：
+      // 否则滚动视口从标题栏下沿开始，内容穿不到标题栏后面，磨砂无内容可模糊。
+      body: RefreshIndicator(
+        onRefresh: () async {
+          PiggyHaptics.light();
+          ref.invalidate(allRecurringTransactionsProvider);
+          try {
+            await ref.read(allRecurringTransactionsProvider.future);
+          } catch (_) {
+            // 失败保持静默，错误分支由 when 展示
+          }
+        },
+        child: recurringTransactionsAsync.when(
+          // skipLoading*: 下拉刷新后保留旧数据渲染，避免整页闪 loading
+          skipLoadingOnReload: true,
+          skipLoadingOnRefresh: true,
+          loading: () => Center(
+              child:
+                  PiggySpinner(size: 36, color: PiggyTokens.primary(context))),
+          error: (error, stack) => Center(
+            child: Text('Error: $error'),
+          ),
+          data: (recurringTransactions) {
+            if (recurringTransactions.isEmpty) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  top: PiggyTokens.topScrollablePadding(context),
                 ),
+                child: AppEmpty(
+                  text: AppLocalizations.of(context).recurringTransactionEmpty,
+                  subtext: AppLocalizations.of(context)
+                      .recurringTransactionEmptyHint,
+                  icon: Icons.repeat,
+                ),
+              );
+            }
+
+            return ListView.builder(
+              // top 含标题栏避让，滚动内容可从标题栏下方穿过
+              padding: EdgeInsets.fromLTRB(
+                12,
+                PiggyTokens.topScrollablePadding(context) + 16,
+                12,
+                16,
               ),
-            ),
-          ],
+              // AlwaysScrollable: 内容不满一屏时也能下拉刷新
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount:
+                  recurringTransactions.length + 1, // +1 for usage guide card
+              itemBuilder: (context, index) {
+                // 第一个显示使用说明卡片
+                if (index == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _UsageGuideCard(),
+                  );
+                }
+                // 后续显示周期记账卡片
+                final recurring = recurringTransactions[index - 1];
+                return _RecurringTransactionCard(recurring: recurring);
+              },
+            );
+          },
         ),
       ),
     );
@@ -219,8 +219,8 @@ class _RecurringTransactionCard extends ConsumerWidget {
                                   ledgerName,
                                   style: PiggyTextTokens.label(context)
                                       .copyWith(
-                                          color:
-                                              PiggyTokens.textTertiary(context)),
+                                          color: PiggyTokens.textTertiary(
+                                              context)),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 );
@@ -368,8 +368,7 @@ class _RecurringTransactionCard extends ConsumerWidget {
                           if (context.mounted) {
                             // 统一走项目 toast（暗色反色胶囊），不用 Material
                             // 默认贴底 SnackBar —— 后者与全局提示样式不同源
-                            showToast(
-                                context,
+                            showToast(context,
                                 '${AppLocalizations.of(context).commonFailed}: $e');
                           }
                         }

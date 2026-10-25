@@ -57,40 +57,36 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
         subtitle: l10n.aiSettingsSubtitle,
         showBack: true,
       ),
-      body: Padding(
+      // 标题栏避让做进列表自身 padding（不能包在 body 外），
+      // 滚动内容才能穿到标题栏下方、磨砂才有内容可模糊。
+      body: ListView(
+        // top 含标题栏避让（双行标题栏 80dp）
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 80,
+          left: 12.0.scaled(context, ref),
+          right: 12.0.scaled(context, ref),
+          top: MediaQuery.of(context).padding.top +
+              80 +
+              8.0.scaled(context, ref),
+          bottom: 8.0.scaled(context, ref),
         ),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 12.0.scaled(context, ref),
-                  vertical: 8.0.scaled(context, ref),
-                ),
-                children: [
-                  // 1. 总开关
-                  _buildEnableSection(config),
-                  SizedBox(height: 8.0.scaled(context, ref)),
+        children: [
+          // 1. 总开关
+          _buildEnableSection(config),
+          SizedBox(height: 8.0.scaled(context, ref)),
 
-                  // 2. 服务商管理入口
-                  _buildProviderManageEntry(),
-                  SizedBox(height: 8.0.scaled(context, ref)),
+          // 2. 服务商管理入口
+          _buildProviderManageEntry(),
+          SizedBox(height: 8.0.scaled(context, ref)),
 
-                  // 3. 能力绑定
-                  _buildCapabilityBindingSection(),
-                  SizedBox(height: 8.0.scaled(context, ref)),
+          // 3. 能力绑定
+          _buildCapabilityBindingSection(),
+          SizedBox(height: 8.0.scaled(context, ref)),
 
-                  // 4. 高级设置（可折叠）
-                  _buildAdvancedSettingsSection(config),
+          // 4. 高级设置（可折叠）
+          _buildAdvancedSettingsSection(config),
 
-                  SizedBox(height: 32.0.scaled(context, ref)),
-                ],
-              ),
-            ),
-          ],
-        ),
+          SizedBox(height: 32.0.scaled(context, ref)),
+        ],
       ),
     );
   }
@@ -121,7 +117,8 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
             },
             title: Text(
               l10n.aiEnableTitle,
-              style: const TextStyle(fontSize: PiggyTextTokens.fs16, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                  fontSize: PiggyTextTokens.fs16, fontWeight: FontWeight.w600),
             ),
             subtitle: Text(l10n.aiEnableSubtitle),
             activeColor: primaryColor,
@@ -146,7 +143,8 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
         leading: Icon(Icons.cloud_outlined, color: primaryColor),
         title: Text(
           l10n.aiProviderManageTitle,
-          style: const TextStyle(fontSize: PiggyTextTokens.fs16, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+              fontSize: PiggyTextTokens.fs16, fontWeight: FontWeight.w600),
         ),
         subtitle: Text(l10n.aiProviderManageSubtitle),
         trailing: const Icon(Icons.chevron_right),
@@ -185,7 +183,8 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
                 Text(
                   l10n.aiCapabilitySelectTitle,
                   style: const TextStyle(
-                      fontSize: PiggyTextTokens.fs16, fontWeight: FontWeight.w600),
+                      fontSize: PiggyTextTokens.fs16,
+                      fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -303,8 +302,10 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
     return ListTile(
       dense: true,
       leading: Icon(icon, size: 22, color: primaryColor),
-      title: Text(title, style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
+      title:
+          Text(title, style: const TextStyle(fontSize: PiggyTextTokens.fs14)),
+      subtitle: Text(subtitle,
+          style: const TextStyle(fontSize: PiggyTextTokens.fs12)),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -416,7 +417,8 @@ class _AISettingsPageState extends ConsumerState<AISettingsPage> {
           leading: Icon(Icons.tune, size: 20, color: primaryColor),
           title: Text(
             l10n.aiPromptAdvancedSettings,
-            style: const TextStyle(fontSize: PiggyTextTokens.fs16, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+                fontSize: PiggyTextTokens.fs16, fontWeight: FontWeight.w600),
           ),
           subtitle: Text(
             l10n.aiAdvancedSettingsDesc,

@@ -121,27 +121,26 @@ class _CustomFieldAnalysisPageState
             ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 80),
-        child: fields.when(
-          loading: () => const Center(child: PiggySpinner()),
-          // 附属页失败不吞错：落日志 + 空态（禁空 catch 约束）。
-          error: (e, st) {
-            logger.warning('洞察', '字段分析页聚合失败: $e\n$st');
-            return AppEmpty(text: l10n.commonError);
-          },
-          data: (data) {
-            _currentData = data;
-            return _body(context, l10n, data);
-          },
-        ),
+      // 标题栏避让做进列表自身 padding（不能包在 body 外），
+      // 滚动内容才能穿到标题栏下方、磨砂才有内容可模糊。
+      body: fields.when(
+        loading: () => const Center(child: PiggySpinner()),
+        // 附属页失败不吞错：落日志 + 空态（禁空 catch 约束）。
+        error: (e, st) {
+          logger.warning('洞察', '字段分析页聚合失败: $e\n$st');
+          return AppEmpty(text: l10n.commonError);
+        },
+        data: (data) {
+          _currentData = data;
+          return _body(context, l10n, data);
+        },
       ),
     );
   }
 
   /// 导出 CSV（F4）：聚合/明细两份，产出「表头+行」后走回调或系统分享。
-  Future<void> _exportCsv(
-      BuildContext context, AppLocalizations l10n, CustomFieldCsvKind kind) async {
+  Future<void> _exportCsv(BuildContext context, AppLocalizations l10n,
+      CustomFieldCsvKind kind) async {
     final rows = switch (kind) {
       CustomFieldCsvKind.aggregate => buildCustomFieldAggregateCsvRows(
           l10n: l10n,
@@ -171,15 +170,14 @@ class _CustomFieldAnalysisPageState
       ),
     ]);
     final defs = results[0] as List<CustomFieldDefinition>;
-    final txs = results[1]
-        as List<
-            ({
-              Transaction t,
-              Category? category,
-              List<Tag> tags,
-              List<TransactionAttachment> attachments,
-              Account? account,
-            })>;
+    final txs = results[1] as List<
+        ({
+          Transaction t,
+          Category? category,
+          List<Tag> tags,
+          List<TransactionAttachment> attachments,
+          Account? account,
+        })>;
     // 与聚合同口径：半开区间 [start, end) + 排除「不计收支」（customFieldStatsRows
     // 的 WHERE 条件），且时间轴同源（默认口径按记账时间；选了自定义字段时间
     // 口径时按该字段的日期 —— 否则屏幕上按字段日期汇总、导出的明细却按记账
@@ -189,7 +187,8 @@ class _CustomFieldAnalysisPageState
     final rows = [
       for (final r in txs)
         if (!r.t.excludeFromStats &&
-            widget.timeMetric.inRange(r.t, start: widget.start, end: widget.end))
+            widget.timeMetric
+                .inRange(r.t, start: widget.start, end: widget.end))
           r.t,
     ];
     return buildCustomFieldDetailCsvRows(l10n: l10n, defs: defs, txs: rows);
@@ -201,11 +200,14 @@ class _CustomFieldAnalysisPageState
     try {
       final dir = await getTemporaryDirectory();
       final stamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final suffix = kind == CustomFieldCsvKind.aggregate ? 'summary' : 'detail';
-      final file = File('${dir.path}/piggycount_field_stats_${stamp}_$suffix.csv');
+      final suffix =
+          kind == CustomFieldCsvKind.aggregate ? 'summary' : 'detail';
+      final file =
+          File('${dir.path}/piggycount_field_stats_${stamp}_$suffix.csv');
       await file.writeAsString(encodeCsvWithBom(rows));
       await SharePlus.instance.share(
-        ShareParams(files: [XFile(file.path)], text: l10n.customFieldExportSuccess),
+        ShareParams(
+            files: [XFile(file.path)], text: l10n.customFieldExportSuccess),
       );
       await file.delete();
     } catch (e) {
@@ -223,11 +225,17 @@ class _CustomFieldAnalysisPageState
         '${f.format(widget.end.subtract(const Duration(days: 1)))}';
   }
 
-  Widget _body(BuildContext context, AppLocalizations l10n, List<FieldStats> data) {
+  Widget _body(
+      BuildContext context, AppLocalizations l10n, List<FieldStats> data) {
     if (data.isEmpty) {
-      return AppEmpty(
-        text: l10n.commonEmpty,
-        subtext: l10n.customFieldAnalysisEmptySubtext,
+      return Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: AppEmpty(
+          text: l10n.commonEmpty,
+          subtext: l10n.customFieldAnalysisEmptySubtext,
+        ),
       );
     }
     // 初始选中校正：fieldSyncId 不存在（如字段已删）时回退第一个字段。
@@ -244,7 +252,13 @@ class _CustomFieldAnalysisPageState
     );
     final dim = widget.type == 'income' ? 'income' : 'expense';
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      // top 含标题栏避让（双行标题栏 80dp）
+      padding: EdgeInsets.fromLTRB(
+        16,
+        MediaQuery.of(context).padding.top + 80 + 8,
+        16,
+        24,
+      ),
       children: [
         SingleChildScrollView(
           key: const Key('field-switch-chips'),
@@ -288,8 +302,12 @@ class _CustomFieldAnalysisPageState
   /// 下钻 → 打开搜索页并带该字段值条件（F3「下钻即筛选」）。
   void _drillToSearch(FieldDrillTarget target) {
     final cond = switch (target) {
-      FieldDrillValue(:final fieldSyncId, :final fieldName, :final fieldType,
-        :final value) =>
+      FieldDrillValue(
+        :final fieldSyncId,
+        :final fieldName,
+        :final fieldType,
+        :final value
+      ) =>
         CustomFieldCondition.eq(
           fieldSyncId: fieldSyncId,
           fieldName: fieldName,
@@ -313,8 +331,7 @@ class _CustomFieldAnalysisPageState
     };
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) =>
-            SearchPage(initialCustomFieldConditions: [cond]),
+        builder: (_) => SearchPage(initialCustomFieldConditions: [cond]),
       ),
     );
   }

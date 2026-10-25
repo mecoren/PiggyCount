@@ -65,133 +65,125 @@ class _NetWorthTrendPageState extends ConsumerState<NetWorthTrendPage> {
     final dates = _rangeDates(earliest);
     final seriesAsync = ref.watch(netWorthTrendSeriesProvider(
         (startDate: dates.start, endDate: dates.end)));
-    final multi =
-        (ref.watch(usedCurrenciesProvider).value?.length ?? 1) > 1;
+    final multi = (ref.watch(usedCurrenciesProvider).value?.length ?? 1) > 1;
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: PiggyTitleBar(
           title: l10n.netWorthTrendTitle, showBack: true, compact: true),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: seriesAsync.when(
-                data: (daily) {
-                  if (daily.length < 2) {
-                    return Center(
-                      child: Text(
-                        l10n.commonEmpty,
-                        style:
-                            TextStyle(color: PiggyTokens.textTertiary(context)),
-                      ),
-                    );
-                  }
-                  final monthly = downsampleMonthly(daily);
-                  final values = monthly.map(_pick).toList();
-                  final first = values.first;
-                  final last = values.last;
-                  final delta = last - first;
-                  final pct = first != 0 ? (delta / first.abs() * 100) : 0.0;
-                  return ListView(
-                    padding: EdgeInsets.all(12.0.scaled(context, ref)),
-                    children: [
-                      _rangeSelector(l10n, primary),
-                      SizedBox(height: 8.0.scaled(context, ref)),
-                      _lineSelector(l10n, primary),
-                      SizedBox(height: 12.0.scaled(context, ref)),
-                      // 期初 → 期末涨跌摘要
-                      Row(
-                        children: [
-                          AmountText(
-                            value: first,
-                            signed: false,
-                            showCurrency: true,
-                            style: TextStyle(
-                                fontSize: PiggyTextTokens.fs13,
-                                color: PiggyTokens.textTertiary(context)),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 6.0.scaled(context, ref)),
-                            child: Icon(Icons.arrow_forward,
-                                size: 14,
-                                color: PiggyTokens.iconTertiary(context)),
-                          ),
-                          AmountText(
-                            value: last,
-                            signed: false,
-                            showCurrency: true,
-                            style: PiggyTextTokens.strongTitle(context),
-                          ),
-                          const Spacer(),
-                          // 期初净值为 0 时 pct 无意义(会显示误导的「+0.0%」),不显。
-                          if (!hide && first != 0)
-                            Text(
-                              '${delta >= 0 ? '+' : ''}${pct.toStringAsFixed(1)}%',
-                              style: TextStyle(
-                                  fontSize: PiggyTextTokens.fs14,
-                                  fontWeight: FontWeight.w600,
-                                  color: delta >= 0
-                                      ? PiggyTokens.incomeColor(context, ref)
-                                      : PiggyTokens.expenseColor(context, ref)),
-                            ),
-                        ],
-                      ),
-                      SizedBox(height: 12.0.scaled(context, ref)),
-                      SizedBox(
-                        height: 240.0.scaled(context, ref),
-                        // RepaintBoundary:趋势图触摸/tooltip 重绘不扩散整页
-                        child: RepaintBoundary(
-                          child: LineChart(
-                            values: values,
-                            xLabels: monthly
-                                .map((e) =>
-                                    '${e.date.year % 100}/${e.date.month}')
-                                .toList(),
-                            highlightIndex: values.length - 1,
-                            onSwipeLeft: () {},
-                            onSwipeRight: () {},
-                            showHint: false,
-                            hideAmounts: hide,
-                            themeColor: primary,
-                            whiteBg: !PiggyTokens.isDark(context),
-                            isDark: PiggyTokens.isDark(context),
-                            showGrid: true,
-                            showDots: true,
-                            annotate: true,
-                          ),
-                        ),
-                      ),
-                      if (multi)
-                        Padding(
-                          padding:
-                              EdgeInsets.only(top: 12.0.scaled(context, ref)),
-                          child: Text(
-                            l10n.netWorthTrendMultiCurrencyNote,
-                            style: PiggyTextTokens.caption(context),
-                          ),
-                        ),
-                    ],
-                  );
-                },
-                loading: () => Center(
-                  child: PiggySpinner(
-                      size: 36, color: PiggyTokens.primary(context)),
-                ),
-                error: (_, __) => Center(
-                  child: Text(
-                    l10n.commonError,
-                    style: TextStyle(color: PiggyTokens.textTertiary(context)),
+      // 标题栏避让做进列表自身 padding（不能包在 body 外），
+      // 滚动内容才能穿到标题栏下方、磨砂才有内容可模糊。
+      body: seriesAsync.when(
+        data: (daily) {
+          if (daily.length < 2) {
+            return Center(
+              child: Text(
+                l10n.commonEmpty,
+                style: TextStyle(color: PiggyTokens.textTertiary(context)),
+              ),
+            );
+          }
+          final monthly = downsampleMonthly(daily);
+          final values = monthly.map(_pick).toList();
+          final first = values.first;
+          final last = values.last;
+          final delta = last - first;
+          final pct = first != 0 ? (delta / first.abs() * 100) : 0.0;
+          return ListView(
+            // top 含标题栏避让，内容可从标题栏下方穿过
+            padding: EdgeInsets.only(
+              left: 12.0.scaled(context, ref),
+              right: 12.0.scaled(context, ref),
+              top: PiggyTokens.topScrollablePadding(context) +
+                  12.0.scaled(context, ref),
+              bottom: 12.0.scaled(context, ref),
+            ),
+            children: [
+              _rangeSelector(l10n, primary),
+              SizedBox(height: 8.0.scaled(context, ref)),
+              _lineSelector(l10n, primary),
+              SizedBox(height: 12.0.scaled(context, ref)),
+              // 期初 → 期末涨跌摘要
+              Row(
+                children: [
+                  AmountText(
+                    value: first,
+                    signed: false,
+                    showCurrency: true,
+                    style: TextStyle(
+                        fontSize: PiggyTextTokens.fs13,
+                        color: PiggyTokens.textTertiary(context)),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 6.0.scaled(context, ref)),
+                    child: Icon(Icons.arrow_forward,
+                        size: 14, color: PiggyTokens.iconTertiary(context)),
+                  ),
+                  AmountText(
+                    value: last,
+                    signed: false,
+                    showCurrency: true,
+                    style: PiggyTextTokens.strongTitle(context),
+                  ),
+                  const Spacer(),
+                  // 期初净值为 0 时 pct 无意义(会显示误导的「+0.0%」),不显。
+                  if (!hide && first != 0)
+                    Text(
+                      '${delta >= 0 ? '+' : ''}${pct.toStringAsFixed(1)}%',
+                      style: TextStyle(
+                          fontSize: PiggyTextTokens.fs14,
+                          fontWeight: FontWeight.w600,
+                          color: delta >= 0
+                              ? PiggyTokens.incomeColor(context, ref)
+                              : PiggyTokens.expenseColor(context, ref)),
+                    ),
+                ],
+              ),
+              SizedBox(height: 12.0.scaled(context, ref)),
+              SizedBox(
+                height: 240.0.scaled(context, ref),
+                // RepaintBoundary:趋势图触摸/tooltip 重绘不扩散整页
+                child: RepaintBoundary(
+                  child: LineChart(
+                    values: values,
+                    xLabels: monthly
+                        .map((e) => '${e.date.year % 100}/${e.date.month}')
+                        .toList(),
+                    highlightIndex: values.length - 1,
+                    onSwipeLeft: () {},
+                    onSwipeRight: () {},
+                    showHint: false,
+                    hideAmounts: hide,
+                    themeColor: primary,
+                    whiteBg: !PiggyTokens.isDark(context),
+                    isDark: PiggyTokens.isDark(context),
+                    showGrid: true,
+                    showDots: true,
+                    annotate: true,
                   ),
                 ),
               ),
-            ),
-          ],
+              if (multi)
+                Padding(
+                  padding: EdgeInsets.only(top: 12.0.scaled(context, ref)),
+                  child: Text(
+                    l10n.netWorthTrendMultiCurrencyNote,
+                    style: PiggyTextTokens.caption(context),
+                  ),
+                ),
+            ],
+          );
+        },
+        loading: () => Center(
+          child: PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
+        ),
+        error: (_, __) => Center(
+          child: Text(
+            l10n.commonError,
+            style: TextStyle(color: PiggyTokens.textTertiary(context)),
+          ),
         ),
       ),
     );

@@ -61,50 +61,63 @@ class _DevPerfDashboardPageState extends State<DevPerfDashboardPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 80,
-        ),
-        child: PerfMetricsCollector.supported
-            ? _buildBody(context, l10n)
-            : AppEmpty(
+      // 标题栏避让做进列表自身 padding（不能包在 body 外），
+      // 滚动内容才能穿到标题栏下方、磨砂才有内容可模糊。
+      body: PerfMetricsCollector.supported
+          ? _buildBody(context, l10n)
+          : Padding(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 80,
+              ),
+              child: AppEmpty(
                 text: l10n.devPerfUnsupported,
                 subtext: l10n.devPerfUnsupportedHint,
               ),
-      ),
+            ),
     );
   }
 
   Widget _buildBody(BuildContext context, AppLocalizations l10n) {
     final samples = _collector.samples;
     if (samples.isEmpty) {
-      return AppEmpty(text: l10n.devPerfNoData, subtext: l10n.devPerfHint);
+      return Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.of(context).padding.top + 80,
+        ),
+        child: AppEmpty(text: l10n.devPerfNoData, subtext: l10n.devPerfHint),
+      );
     }
 
     final latest = samples.last;
-    final recent = samples.length > 60
-        ? samples.sublist(samples.length - 60)
-        : samples;
-    final p90 = _percentile(
-        recent.map((s) => s.totalMs).toList()..sort(), 90);
+    final recent =
+        samples.length > 60 ? samples.sublist(samples.length - 60) : samples;
+    final p90 = _percentile(recent.map((s) => s.totalMs).toList()..sort(), 90);
     // FPS = 最近 1s 内落格的帧数（用样本时间戳算，不用 1000/帧耗时估算）
     final windowStart = latest.at.subtract(const Duration(seconds: 1));
     final fps = samples.where((s) => !s.at.isBefore(windowStart)).length;
     final fpsColor = fps >= 55
         ? PiggyTokens.success(context)
-        : (fps >= 40 ? PiggyTokens.warning(context) : PiggyTokens.error(context));
+        : (fps >= 40
+            ? PiggyTokens.warning(context)
+            : PiggyTokens.error(context));
 
     return ListView(
-      padding: const EdgeInsets.only(bottom: PiggyDimens.p24),
+      // top 含标题栏避让（双行标题栏 80dp），内容可从标题栏下方穿过
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 80,
+        bottom: PiggyDimens.p24,
+      ),
       children: [
         Row(
           children: [
             _metricCard(context, l10n.devPerfFps, '$fps',
                 color: fpsColor, unit: 'fps'),
-            _metricCard(context, l10n.devPerfUiFrame,
-                latest.buildMs.toStringAsFixed(1), unit: 'ms'),
+            _metricCard(
+                context, l10n.devPerfUiFrame, latest.buildMs.toStringAsFixed(1),
+                unit: 'ms'),
             _metricCard(context, l10n.devPerfRasterFrame,
-                latest.rasterMs.toStringAsFixed(1), unit: 'ms'),
+                latest.rasterMs.toStringAsFixed(1),
+                unit: 'ms'),
           ],
         ),
         const SizedBox(height: PiggyDimens.p12),
@@ -196,7 +209,8 @@ class _DevPerfDashboardPageState extends State<DevPerfDashboardPage> {
   /// 线性插值分位（与 `scripts/profile_frames.py` 的 pct 口径同为"最近秩"）。
   double _percentile(List<double> sorted, int p) {
     if (sorted.isEmpty) return 0;
-    final idx = math.min(sorted.length - 1, (p / 100.0 * sorted.length).floor());
+    final idx =
+        math.min(sorted.length - 1, (p / 100.0 * sorted.length).floor());
     return sorted[idx];
   }
 }
@@ -227,14 +241,17 @@ class _FrameSparklinePainter extends CustomPainter {
 
     // 16.67ms 预算线
     final y = size.height * (1 - budgetLine / maxMs);
-    canvas.drawLine(Offset(0, y), Offset(size.width, y),
+    canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width, y),
         Paint()
           ..color = baselineColor
           ..strokeWidth = 1);
 
     for (var i = 0; i < totals.length; i++) {
       final h = (totals[i] / maxMs).clamp(0.0, 1.0) * size.height;
-      paint.color = totals[i] > budgetLine ? barColor : barColor.withValues(alpha: 0.35);
+      paint.color =
+          totals[i] > budgetLine ? barColor : barColor.withValues(alpha: 0.35);
       final left = i * barWidth;
       canvas.drawRRect(
         RRect.fromRectAndRadius(

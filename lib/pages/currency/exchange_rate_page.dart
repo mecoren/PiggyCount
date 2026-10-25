@@ -97,128 +97,123 @@ class _ExchangeRatePageState extends ConsumerState<ExchangeRatePage> {
             ),
         ],
       ),
-      body: Padding(
+      // 标题栏避让做进列表自身 padding（不能包在 body 外），
+      // 滚动内容才能穿到标题栏下方、磨砂才有内容可模糊。
+      body: ListView(
+        // top 含标题栏避让，内容可从标题栏下方穿过
         padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
+          left: 12.0.scaled(context, ref),
+          right: 12.0.scaled(context, ref),
+          top: PiggyTokens.topScrollablePadding(context) +
+              8.0.scaled(context, ref),
+          bottom: 8.0.scaled(context, ref),
         ),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
+        children: [
+          // 1. 主币种
+          SectionCard(
+            margin: EdgeInsets.zero,
+            borderColor: primary,
+            child: InkWell(
+              onTap: () => _pickBaseCurrency(context),
+              borderRadius: BorderRadius.circular(
+                  PiggyDimens.radiusSm.scaled(context, ref)),
+              child: Padding(
                 padding: EdgeInsets.symmetric(
-                  horizontal: 12.0.scaled(context, ref),
                   vertical: 8.0.scaled(context, ref),
                 ),
+                child: Row(
+                  children: [
+                    Text(
+                      l10n.baseCurrencyLabel,
+                      style: PiggyTextTokens.title(context),
+                    ),
+                    const Spacer(),
+                    Text(
+                      displayCurrency(base, context),
+                      style: PiggyTextTokens.body(context).copyWith(
+                        color: PiggyTokens.textSecondary(context),
+                      ),
+                    ),
+                    SizedBox(width: 4.0.scaled(context, ref)),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 18.0.scaled(context, ref),
+                      color: PiggyTokens.iconTertiary(context),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: 12.0.scaled(context, ref)),
+
+          // 2. 汇率列表 / 空态
+          if (quotes.isEmpty)
+            SectionCard(
+              margin: EdgeInsets.zero,
+              borderColor: primary,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: 32.0.scaled(context, ref),
+                  horizontal: 16.0.scaled(context, ref),
+                ),
+                child: Center(
+                  child: Text(
+                    l10n.ratesEmptyHint,
+                    textAlign: TextAlign.center,
+                    style: PiggyTextTokens.label(context).copyWith(
+                      fontSize: PiggyTextTokens.fs13,
+                      height: 1.4,
+                      color: PiggyTokens.textTertiary(context),
+                    ),
+                  ),
+                ),
+              ),
+            )
+          else
+            SectionCard(
+              margin: EdgeInsets.zero,
+              padding: EdgeInsets.zero,
+              borderColor: primary,
+              child: Column(
                 children: [
-                  // 1. 主币种
-                  SectionCard(
-                    margin: EdgeInsets.zero,
-                    borderColor: primary,
-                    child: InkWell(
-                      onTap: () => _pickBaseCurrency(context),
-                      borderRadius:
-                          BorderRadius.circular(PiggyDimens.radiusSm.scaled(context, ref)),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: 8.0.scaled(context, ref),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              l10n.baseCurrencyLabel,
-                              style: PiggyTextTokens.title(context),
-                            ),
-                            const Spacer(),
-                            Text(
-                              displayCurrency(base, context),
-                              style: PiggyTextTokens.body(context).copyWith(
-                                color: PiggyTokens.textSecondary(context),
-                              ),
-                            ),
-                            SizedBox(width: 4.0.scaled(context, ref)),
-                            Icon(
-                              Icons.chevron_right,
-                              size: 18.0.scaled(context, ref),
-                              color: PiggyTokens.iconTertiary(context),
-                            ),
-                          ],
-                        ),
+                  for (int i = 0; i < quotes.length; i++) ...[
+                    if (i > 0)
+                      Divider(
+                        height: 1,
+                        indent: 12.0.scaled(context, ref),
+                        endIndent: 12.0.scaled(context, ref),
+                        color: PiggyTokens.divider(context),
                       ),
+                    _RateRow(
+                      quote: quotes[i],
+                      base: base,
+                      eff: rates[quotes[i]],
+                      primary: primary,
+                      fmt6: _fmt6,
+                      onTap: () =>
+                          _editRate(context, quotes[i], base, rates[quotes[i]]),
                     ),
-                  ),
-                  SizedBox(height: 12.0.scaled(context, ref)),
-
-                  // 2. 汇率列表 / 空态
-                  if (quotes.isEmpty)
-                    SectionCard(
-                      margin: EdgeInsets.zero,
-                      borderColor: primary,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          vertical: 32.0.scaled(context, ref),
-                          horizontal: 16.0.scaled(context, ref),
-                        ),
-                        child: Center(
-                          child: Text(
-                            l10n.ratesEmptyHint,
-                            textAlign: TextAlign.center,
-                            style: PiggyTextTokens.label(context).copyWith(
-                              fontSize: PiggyTextTokens.fs13,
-                              height: 1.4,
-                              color: PiggyTokens.textTertiary(context),
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    SectionCard(
-                      margin: EdgeInsets.zero,
-                      padding: EdgeInsets.zero,
-                      borderColor: primary,
-                      child: Column(
-                        children: [
-                          for (int i = 0; i < quotes.length; i++) ...[
-                            if (i > 0)
-                              Divider(
-                                height: 1,
-                                indent: 12.0.scaled(context, ref),
-                                endIndent: 12.0.scaled(context, ref),
-                                color: PiggyTokens.divider(context),
-                              ),
-                            _RateRow(
-                              quote: quotes[i],
-                              base: base,
-                              eff: rates[quotes[i]],
-                              primary: primary,
-                              fmt6: _fmt6,
-                              onTap: () => _editRate(
-                                  context, quotes[i], base, rates[quotes[i]]),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                  SizedBox(height: 16.0.scaled(context, ref)),
-                  // 3. 免责声明
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 4.0.scaled(context, ref),
-                    ),
-                    child: Text(
-                      l10n.rateDisclaimer,
-                      style: PiggyTextTokens.caption(context).copyWith(
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 8.0.scaled(context, ref)),
+                  ],
                 ],
               ),
             ),
-          ],
-        ),
+
+          SizedBox(height: 16.0.scaled(context, ref)),
+          // 3. 免责声明
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: 4.0.scaled(context, ref),
+            ),
+            child: Text(
+              l10n.rateDisclaimer,
+              style: PiggyTextTokens.caption(context).copyWith(
+                height: 1.4,
+              ),
+            ),
+          ),
+          SizedBox(height: 8.0.scaled(context, ref)),
+        ],
       ),
     );
   }

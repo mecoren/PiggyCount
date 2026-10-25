@@ -273,134 +273,139 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
         subtitle: _rangeText(),
         showBack: true,
       ),
-      body: Padding(
-        padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 80),
-        child: FutureBuilder<_ReportData>(
-          future: _futureFor(ledgerId, refreshTick, amountMetric),
-          builder: (context, snap) {
-            if (snap.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text('${l10n.commonError}: ${snap.error}'),
+      // 标题栏避让做进列表自身 padding（不能包在 body 外），
+      // 滚动内容才能穿到标题栏下方、磨砂才有内容可模糊。
+      body: FutureBuilder<_ReportData>(
+        future: _futureFor(ledgerId, refreshTick, amountMetric),
+        builder: (context, snap) {
+          if (snap.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('${l10n.commonError}: ${snap.error}'),
+              ),
+            );
+          }
+          // 在途查询继续渲染上一份结果（首屏才转圈）：切区间/切收支只是
+          // 数字就地更新，不再整页塌成转圈再重建——闪动与滚动位置丢失
+          // （ListView 被销毁重建）的根因就在这一行判断。
+          final data = snap.data ?? _lastData;
+          if (data == null) {
+            return Center(
+              child: PiggySpinner(
+                size: 36,
+                color: PiggyTokens.primary(context),
+              ),
+            );
+          }
+          final loading = snap.connectionState != ConnectionState.done;
+          final dimWord =
+              _dim == 'expense' ? l10n.homeExpense : l10n.homeIncome;
+          return Stack(
+            children: [
+              ListView(
+                // top 含标题栏避让（双行标题栏 80dp）
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  MediaQuery.of(context).padding.top + 80 + 8,
+                  16,
+                  24,
                 ),
-              );
-            }
-            // 在途查询继续渲染上一份结果（首屏才转圈）：切区间/切收支只是
-            // 数字就地更新，不再整页塌成转圈再重建——闪动与滚动位置丢失
-            // （ListView 被销毁重建）的根因就在这一行判断。
-            final data = snap.data ?? _lastData;
-            if (data == null) {
-              return Center(
-                child: PiggySpinner(
-                  size: 36,
-                  color: PiggyTokens.primary(context),
-                ),
-              );
-            }
-            final loading = snap.connectionState != ConnectionState.done;
-            final dimWord =
-                _dim == 'expense' ? l10n.homeExpense : l10n.homeIncome;
-            return Stack(
-              children: [
-                ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  children: [
-                    _rangeCard(context, l10n),
+                children: [
+                  _rangeCard(context, l10n),
+                  const SizedBox(height: 12),
+                  _compareCard(context, l10n, data),
+                  const SizedBox(height: 12),
+                  // 支出/收入维度 + 金额口径：项目通用 tab 样式
+                  // （WaitSlidingSegmentedControl），与洞察页同款；口径 chip
+                  // 改的是同一个全局值，本页数字随之重算（缓存键含口径）。
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 168,
+                        child: WaitSlidingSegmentedControl<String>(
+                          selected: _dim,
+                          height: 32,
+                          fontSize: PiggyTextTokens.fs13,
+                          segments: [
+                            WaitSlidingSegment(
+                              value: 'expense',
+                              label: l10n.homeExpense,
+                            ),
+                            WaitSlidingSegment(
+                              value: 'income',
+                              label: l10n.homeIncome,
+                            ),
+                          ],
+                          onValueChanged: (value) =>
+                              setState(() => _dim = value),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const AmountMetricChip(),
+                    ],
+                  ),
+                  // 口径说明单独一行：该行余宽不足以放下整句（会截断成半句），
+                  // 故放到下方独立小字行。
+                  const AmountMetricNote(
+                    padding: EdgeInsets.only(top: 6),
+                  ),
+                  if (data.txCount == 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 24),
+                      child: AppEmpty(
+                          text: l10n.commonEmpty,
+                          subtext: l10n.rangeReportEmptySubtext),
+                    )
+                  else ...[
                     const SizedBox(height: 12),
-                    _compareCard(context, l10n, data),
+                    _card(
+                      context,
+                      title: l10n.analyticsTrendTitle(dimWord),
+                      child: SizedBox(
+                        height: 220,
+                        child: RepaintBoundary(
+                          child: _trend(context, l10n, data, dimWord),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 12),
-                    // 支出/收入维度 + 金额口径：项目通用 tab 样式
-                    // （WaitSlidingSegmentedControl），与洞察页同款；口径 chip
-                    // 改的是同一个全局值，本页数字随之重算（缓存键含口径）。
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 168,
-                          child: WaitSlidingSegmentedControl<String>(
-                            selected: _dim,
-                            height: 32,
-                            fontSize: PiggyTextTokens.fs13,
-                            segments: [
-                              WaitSlidingSegment(
-                                value: 'expense',
-                                label: l10n.homeExpense,
-                              ),
-                              WaitSlidingSegment(
-                                value: 'income',
-                                label: l10n.homeIncome,
-                              ),
-                            ],
-                            onValueChanged: (value) =>
-                                setState(() => _dim = value),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const AmountMetricChip(),
-                      ],
+                    _card(
+                      context,
+                      title: l10n.analyticsCategoryComposition(dimWord),
+                      child: _categoryRanking(context, data),
                     ),
-                    // 口径说明单独一行：该行余宽不足以放下整句（会截断成半句），
-                    // 故放到下方独立小字行。
-                    const AmountMetricNote(
-                      padding: EdgeInsets.only(top: 6),
+                    const SizedBox(height: 12),
+                    _card(
+                      context,
+                      title: l10n.analyticsTagComposition(dimWord),
+                      child: _tagRanking(context, l10n, data),
                     ),
-                    if (data.txCount == 0)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 24),
-                        child: AppEmpty(
-                            text: l10n.commonEmpty,
-                            subtext: l10n.rangeReportEmptySubtext),
-                      )
-                    else ...[
+                    // B2(v47):自定义字段汇总(有定义且有值才出现)。
+                    if (data.customFields.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       _card(
                         context,
-                        title: l10n.analyticsTrendTitle(dimWord),
-                        child: SizedBox(
-                          height: 220,
-                          child: RepaintBoundary(
-                            child: _trend(context, l10n, data, dimWord),
-                          ),
-                        ),
+                        title: l10n.rangeReportCustomFieldTitle,
+                        child: CustomFieldStatsView(
+                            fields: data.customFields, dim: _dim),
                       ),
-                      const SizedBox(height: 12),
-                      _card(
-                        context,
-                        title: l10n.analyticsCategoryComposition(dimWord),
-                        child: _categoryRanking(context, data),
-                      ),
-                      const SizedBox(height: 12),
-                      _card(
-                        context,
-                        title: l10n.analyticsTagComposition(dimWord),
-                        child: _tagRanking(context, l10n, data),
-                      ),
-                      // B2(v47):自定义字段汇总(有定义且有值才出现)。
-                      if (data.customFields.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        _card(
-                          context,
-                          title: l10n.rangeReportCustomFieldTitle,
-                          child: CustomFieldStatsView(
-                              fields: data.customFields, dim: _dim),
-                        ),
-                      ],
                     ],
                   ],
+                ],
+              ),
+              // 更新中提示：贴顶 2px 进度条（滚走也不会丢），替代原来
+              // 整屏转圈的粗暴反馈。
+              if (loading)
+                const Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: LinearProgressIndicator(minHeight: 2),
                 ),
-                // 更新中提示：贴顶 2px 进度条（滚走也不会丢），替代原来
-                // 整屏转圈的粗暴反馈。
-                if (loading)
-                  const Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: LinearProgressIndicator(minHeight: 2),
-                  ),
-              ],
-            );
-          },
-        ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -529,7 +534,8 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
                           signed: false,
                           useCompactFormat: true,
                           style: const TextStyle(
-                              fontSize: PiggyTextTokens.fs14, fontWeight: FontWeight.w700))),
+                              fontSize: PiggyTextTokens.fs14,
+                              fontWeight: FontWeight.w700))),
                   Expanded(
                       child: _deltaCell(context, ref, row.$2, row.$3,
                           goodWhenUp: row.$5)),
@@ -572,7 +578,9 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
               ? '—'
               : '${rate > 0 ? '+' : ''}${(rate * 100).toStringAsFixed(1)}%',
           style: TextStyle(
-              fontSize: PiggyTextTokens.fs13, fontWeight: FontWeight.w600, color: rateColor),
+              fontSize: PiggyTextTokens.fs13,
+              fontWeight: FontWeight.w600,
+              color: rateColor),
         ),
         AmountText(
           value: prev,
@@ -725,8 +733,9 @@ class _RangeReportPageState extends ConsumerState<RangeReportPage> {
                 signed: false,
                 showCurrency: true,
                 useCompactFormat: true,
-                style:
-                    const TextStyle(fontSize: PiggyTextTokens.fs14, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                    fontSize: PiggyTextTokens.fs14,
+                    fontWeight: FontWeight.w600),
               ),
             ],
           ),

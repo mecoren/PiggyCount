@@ -17,7 +17,6 @@ class IOSAutoBillingPage extends ConsumerStatefulWidget {
 }
 
 class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
-
   @override
   Widget build(BuildContext context) {
     final primaryColor = ref.watch(primaryColorProvider);
@@ -31,54 +30,50 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
         title: l10n.autoScreenshotBillingIosTitle,
         showBack: true,
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
+      // 标题栏避让做进列表自身 padding（不能包在 body 外），
+      // 滚动内容才能穿到标题栏下方、磨砂才有内容可模糊。
+      body: ListView(
+        // top 含标题栏避让，内容可从标题栏下方穿过
+        padding: EdgeInsets.fromLTRB(
+          16,
+          PiggyTokens.topScrollablePadding(context) + 16,
+          16,
+          16,
         ),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // 视频教程（置顶）
-                  _buildTutorialCard(context, primaryColor, l10n),
+        children: [
+          // 视频教程（置顶）
+          _buildTutorialCard(context, primaryColor, l10n),
 
-                  const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-                  // iOS 15版本提示
-                  if (!supportsAppIntents) _buildVersionWarning(context, primaryColor),
-                  if (!supportsAppIntents) const SizedBox(height: 16),
+          // iOS 15版本提示
+          if (!supportsAppIntents) _buildVersionWarning(context, primaryColor),
+          if (!supportsAppIntents) const SizedBox(height: 16),
 
-                  // 一键获取快捷指令（主推路径）
-                  _buildImportCard(context, primaryColor, l10n),
+          // 一键获取快捷指令（主推路径）
+          _buildImportCard(context, primaryColor, l10n),
 
-                  const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-                  // 功能说明
-                  _buildInfoCard(
-                    context,
-                    primaryColor,
-                    icon: Icons.info_outline,
-                    title: l10n.featureDescription,
-                    content: l10n.iosAutoFeatureDesc,
-                  ),
+          // 功能说明
+          _buildInfoCard(
+            context,
+            primaryColor,
+            icon: Icons.info_outline,
+            title: l10n.featureDescription,
+            content: l10n.iosAutoFeatureDesc,
+          ),
 
-                  const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-                  // 双击背部快速触发说明
-                  _buildBackTapCard(context, primaryColor, l10n),
+          // 双击背部快速触发说明
+          _buildBackTapCard(context, primaryColor, l10n),
 
-                  const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-                  // 快捷指令配置指南
-                  _buildShortcutsGuide(context, primaryColor),
-
-                ],
-              ),
-            ),
-          ],
-        ),
+          // 快捷指令配置指南
+          _buildShortcutsGuide(context, primaryColor),
+        ],
       ),
     );
   }
@@ -88,7 +83,8 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
   static const String _shortcutImportUrl =
       'https://www.icloud.com/shortcuts/fda5016c98eb474f840f2f91396bd241';
 
-  Future<void> _openShortcut(BuildContext context, AppLocalizations l10n) async {
+  Future<void> _openShortcut(
+      BuildContext context, AppLocalizations l10n) async {
     final url = Uri.parse(_shortcutImportUrl);
     var ok = false;
     if (await canLaunchUrl(url)) {
@@ -155,7 +151,6 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
       ),
     );
   }
-
 
   Widget _buildBackTapCard(
     BuildContext context,
@@ -289,12 +284,14 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
               decoration: BoxDecoration(
                 color: PiggyTokens.success(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(PiggyDimens.radiusSm),
-                border: Border.all(color: PiggyTokens.success(context).withValues(alpha: 0.3)),
+                border: Border.all(
+                    color: PiggyTokens.success(context).withValues(alpha: 0.3)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.check_circle_outline, color: PiggyTokens.success(context), size: 20),
+                  Icon(Icons.check_circle_outline,
+                      color: PiggyTokens.success(context), size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -353,7 +350,6 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
     );
   }
 
-
   Widget _buildTutorialCard(
     BuildContext context,
     Color primaryColor,
@@ -402,7 +398,8 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
                     Text(
                       l10n.iosAutoTutorialDesc,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: PiggyTokens.textPrimary(context).withValues(alpha: 0.6),
+                        color: PiggyTokens.textPrimary(context)
+                            .withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -429,12 +426,14 @@ class _IOSAutoBillingPageState extends ConsumerState<IOSAutoBillingPage> {
       decoration: BoxDecoration(
         color: PiggyTokens.warning(context).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(PiggyDimens.radiusLg),
-        border: Border.all(color: PiggyTokens.warning(context).withValues(alpha: 0.3)),
+        border: Border.all(
+            color: PiggyTokens.warning(context).withValues(alpha: 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.warning_amber_rounded, color: PiggyTokens.warning(context), size: 24),
+          Icon(Icons.warning_amber_rounded,
+              color: PiggyTokens.warning(context), size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

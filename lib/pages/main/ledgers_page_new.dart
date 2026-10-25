@@ -128,23 +128,14 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: _buildProgressiveList(
-                context,
-                ref,
-                currentId,
-                localLedgersAsync,
-                remoteLedgersAsync,
-              ),
-            ),
-          ],
-        ),
+      // 标题栏避让做进列表自身 padding（不能包在 body 外），
+      // 滚动内容才能穿到标题栏下方、磨砂才有内容可模糊。
+      body: _buildProgressiveList(
+        context,
+        ref,
+        currentId,
+        localLedgersAsync,
+        remoteLedgersAsync,
       ),
     );
   }
@@ -235,8 +226,11 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     Object? remoteError,
   }) {
     return ListView(
-      padding: EdgeInsets.symmetric(
-        vertical: 8.0.scaled(context, ref),
+      // top 含标题栏避让，滚动内容可从标题栏下方穿过
+      padding: EdgeInsets.only(
+        top: PiggyTokens.topScrollablePadding(context) +
+            8.0.scaled(context, ref),
+        bottom: 8.0.scaled(context, ref),
       ),
       children: [
         // 本地账本区域
@@ -1309,7 +1303,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
                       Text(
                         l10n.ledgersConflictMessage,
                         style: const TextStyle(
-                            fontSize: PiggyTextTokens.fs14, fontWeight: FontWeight.w500),
+                            fontSize: PiggyTextTokens.fs14,
+                            fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(height: 16),
 

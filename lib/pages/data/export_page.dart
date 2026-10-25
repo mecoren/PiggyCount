@@ -43,9 +43,10 @@ class _ExportPageState extends ConsumerState<ExportPage> {
   String _pdfKind = 'month';
   DateTime _pdfMonth = DateTime(DateTime.now().year, DateTime.now().month, 1);
   int _pdfYear = DateTime.now().year;
-  late DateTime _pdfRangeStart = DateTime(DateTime.now().year, DateTime.now().month, 1);
-  late DateTime _pdfRangeEnd =
-      DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day + 1);
+  late DateTime _pdfRangeStart =
+      DateTime(DateTime.now().year, DateTime.now().month, 1);
+  late DateTime _pdfRangeEnd = DateTime(
+      DateTime.now().year, DateTime.now().month, DateTime.now().day + 1);
 
   static final DateFormat _stampFormat = DateFormat('yyyyMMdd_HHmmss');
   static final DateFormat _dateFormat = DateFormat('yyyy.MM.dd');
@@ -61,43 +62,46 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         title: l10n.exportTitle,
         showBack: true,
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
+      // 标题栏避让做进列表自身 padding（不能包在 body 外），
+      // 滚动内容才能穿到标题栏下方、磨砂才有内容可模糊。
+      body: ListView(
+        // top 含标题栏避让，内容可从标题栏下方穿过
+        padding: EdgeInsets.fromLTRB(
+          16,
+          PiggyTokens.topScrollablePadding(context) + 8,
+          16,
+          24,
         ),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            Text(l10n.exportDescription),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: exporting ? null : () => _export(repo, ledgerId),
-              icon: const Icon(Icons.save_alt_outlined),
-              label: Text(PlatformInfo.isIOS
-                  ? l10n.exportButtonIOS
-                  : l10n.exportButtonAndroid),
+        children: [
+          Text(l10n.exportDescription),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: exporting ? null : () => _export(repo, ledgerId),
+            icon: const Icon(Icons.save_alt_outlined),
+            label: Text(PlatformInfo.isIOS
+                ? l10n.exportButtonIOS
+                : l10n.exportButtonAndroid),
+          ),
+          if (exporting) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                PiggySpinner(size: 20, color: PiggyTokens.primary(context)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: LinearProgressIndicator(
+                      value: progress == 0 ? null : progress),
+                ),
+              ],
             ),
-            if (exporting) ...[
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  PiggySpinner(size: 20, color: PiggyTokens.primary(context)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: LinearProgressIndicator(
-                        value: progress == 0 ? null : progress),
-                  ),
-                ],
-              ),
-            ],
-            if (savedPath != null) ...[
-              const SizedBox(height: 12),
-              Text(l10n.exportSavedTo(savedPath!)),
-            ],
-            const SizedBox(height: 28),
-            _pdfSection(context, l10n),
           ],
-        ),
+          if (savedPath != null) ...[
+            const SizedBox(height: 12),
+            Text(l10n.exportSavedTo(savedPath!)),
+          ],
+          const SizedBox(height: 28),
+          _pdfSection(context, l10n),
+        ],
       ),
     );
   }
@@ -267,7 +271,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         return (_pdfRangeStart, _pdfRangeEnd);
       case 'month':
       default:
-        final r = periodForLabel(_pdfMonth.year, _pdfMonth.month, monthStartDay);
+        final r =
+            periodForLabel(_pdfMonth.year, _pdfMonth.month, monthStartDay);
         return (r.start, r.end);
     }
   }
@@ -368,8 +373,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
     final l10nDialog = AppLocalizations.of(context);
     if (shareAfter) {
       // 触发分享面板
-      await SharePlus.instance.share(ShareParams(
-          files: [XFile(path)], text: l10nDialog.exportShareText));
+      await SharePlus.instance.share(
+          ShareParams(files: [XFile(path)], text: l10nDialog.exportShareText));
       // 分享面板关闭后再校验,页面已销毁则不再弹成功提示
       if (!mounted) return;
       await AppDialog.info(context,

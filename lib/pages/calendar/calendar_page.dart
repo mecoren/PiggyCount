@@ -170,8 +170,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
     // 节假日本地缓存（DB 为空时 Service 回落 2026 预置表，冷启动 / 离线仍可标注）。
     // 加载中先给空 map —— 日历照常渲染，只是暂不带休/班徽标，避免整页闪骨架。
-    final holidays = ref.watch(holidayMapProvider).value ??
-        const <String, HolidayEntry>{};
+    final holidays =
+        ref.watch(holidayMapProvider).value ?? const <String, HolidayEntry>{};
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
@@ -199,62 +199,55 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           ),
         ],
       ),
-      body: Padding(
+      // 标题栏避让做进列表自身 padding（不能包在 body 外）：
+      // 否则滚动视口从标题栏下沿开始，内容穿不到标题栏后面，磨砂无内容可模糊。
+      body: ListView(
+        // top 含标题栏避让，日历卡可从标题栏下方穿过
         padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
+          left: 12.0.scaled(context, ref),
+          right: 12.0.scaled(context, ref),
+          top: PiggyTokens.topScrollablePadding(context) +
+              8.0.scaled(context, ref),
+          bottom: 8.0.scaled(context, ref),
         ),
-        child: Column(
-          children: [
-            // 日历主体
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 12.0.scaled(context, ref),
-                  vertical: 8.0.scaled(context, ref),
+        children: [
+          // 日历视图(小米口径:素卡,不带主题色描边)
+          SectionCard(
+            margin: EdgeInsets.zero,
+            child: dailyTotalsAsync.when(
+              // 记账等触发 calendarRefreshProvider 时不切到 loading,
+              // 旧统计保留,等新数据来无缝替换 — 避免日历整页 spinner 闪烁
+              skipLoadingOnReload: true,
+              // 切月 loading:网格(日期/农历/徽标/周末色)不依赖统计,
+              // 必须照常渲染 —— 换成骨架会让整卡塌空白再弹回,
+              // 正是滑月白闪的根源;只有金额行晚一两帧补上
+              data: (dailyTotals) {
+                _totalsCache[monthTotalsParams.month] = dailyTotals;
+                return _buildCalendar(
+                    context, dailyTotals, holidays, primaryColor);
+              },
+              loading: () => _buildCalendar(
+                context,
+                _totalsCache[_focusedMonth] ??
+                    const <String, (double, double)>{},
+                holidays,
+                primaryColor,
+              ),
+              error: (err, stack) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text('Error: $err'),
                 ),
-                children: [
-                  // 日历视图(小米口径:素卡,不带主题色描边)
-                  SectionCard(
-                    margin: EdgeInsets.zero,
-                    child: dailyTotalsAsync.when(
-                      // 记账等触发 calendarRefreshProvider 时不切到 loading,
-                      // 旧统计保留,等新数据来无缝替换 — 避免日历整页 spinner 闪烁
-                      skipLoadingOnReload: true,
-                      // 切月 loading:网格(日期/农历/徽标/周末色)不依赖统计,
-                      // 必须照常渲染 —— 换成骨架会让整卡塌空白再弹回,
-                      // 正是滑月白闪的根源;只有金额行晚一两帧补上
-                      data: (dailyTotals) {
-                        _totalsCache[monthTotalsParams.month] = dailyTotals;
-                        return _buildCalendar(
-                            context, dailyTotals, holidays, primaryColor);
-                      },
-                      loading: () => _buildCalendar(
-                        context,
-                        _totalsCache[_focusedMonth] ??
-                            const <String, (double, double)>{},
-                        holidays,
-                        primaryColor,
-                      ),
-                      error: (err, stack) => Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Text('Error: $err'),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: 12.0.scaled(context, ref)),
-
-                  // 选中日期的交易列表（无日期标题和统计）
-                  if (_selectedDay != null)
-                    _buildDateTransactionsList(
-                        context, ledgerId, _selectedDay!),
-                ],
               ),
             ),
-          ],
-        ),
+          ),
+
+          SizedBox(height: 12.0.scaled(context, ref)),
+
+          // 选中日期的交易列表（无日期标题和统计）
+          if (_selectedDay != null)
+            _buildDateTransactionsList(context, ledgerId, _selectedDay!),
+        ],
       ),
     );
   }
@@ -579,10 +572,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   .toList();
 
               // v47：自定义字段角标（无值/定义解析不出 → 不显示）。
-              final customBadges = ref
-                      .watch(customFieldValueBadgesProvider)
-                      .value?[item.t.id] ??
-                  const <({String name, String display})>[];
+              final customBadges =
+                  ref.watch(customFieldValueBadgesProvider).value?[item.t.id] ??
+                      const <({String name, String display})>[];
               final customBadgeTexts = [
                 for (final b in customBadges) '${b.name}: ${b.display}',
               ];

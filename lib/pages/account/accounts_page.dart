@@ -137,166 +137,156 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
-        ),
-        child: Column(
-          children: [
-            // ======== 主内容 ========
-            Expanded(
-              child: accountsAsync.when(
-                skipLoadingOnReload: true,
-                data: (accounts) {
-                  final groups = _reorderingGroups ?? _groupAccounts(accounts);
+      // 标题栏避让做进列表自身 padding（不能包在 body 外）：
+      // 否则滚动视口从标题栏下沿开始，内容穿不到标题栏后面，磨砂无内容可模糊。
+      body: accountsAsync.when(
+        skipLoadingOnReload: true,
+        data: (accounts) {
+          final groups = _reorderingGroups ?? _groupAccounts(accounts);
 
-                  return ListView(
-                    padding: EdgeInsets.only(
-                      left: 12.0.scaled(context, ref),
-                      right: 12.0.scaled(context, ref),
-                      top: 8.0.scaled(context, ref),
-                      bottom: widget.asTab
-                          ? 8.0.scaled(context, ref) +
-                              56 +
-                              MediaQuery.of(context).padding.bottom +
-                              24
-                          : 8.0.scaled(context, ref),
-                    ),
-                    children: [
-                      if (accounts.isEmpty)
-                        SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.4,
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.account_balance_wallet_outlined,
-                                  size: 64.0.scaled(context, ref),
-                                  color: primaryColor.withValues(alpha: 0.4),
-                                ),
-                                SizedBox(height: 16.0.scaled(context, ref)),
-                                Text(
-                                  l10n.accountsEmptyMessage,
-                                  style: TextStyle(
-                                    fontSize: PiggyTextTokens.fs16,
-                                    color: PiggyTokens.textSecondary(context),
-                                  ),
-                                ),
-                                SizedBox(height: 24.0.scaled(context, ref)),
-                                ElevatedButton.icon(
-                                  onPressed: () =>
-                                      _addAccount(context, ref, ledgerId),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: primaryColor,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  icon: const Icon(Icons.add),
-                                  label: Text(l10n.accountAddButton),
-                                ),
-                              ],
-                            ),
+          return ListView(
+            padding: EdgeInsets.only(
+              left: 12.0.scaled(context, ref),
+              right: 12.0.scaled(context, ref),
+              // top 含标题栏避让，卡片可从标题栏下方穿过
+              top: PiggyTokens.topScrollablePadding(context) +
+                  8.0.scaled(context, ref),
+              bottom: widget.asTab
+                  ? 8.0.scaled(context, ref) +
+                      56 +
+                      MediaQuery.of(context).padding.bottom +
+                      24
+                  : 8.0.scaled(context, ref),
+            ),
+            children: [
+              if (accounts.isEmpty)
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.4,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 64.0.scaled(context, ref),
+                          color: primaryColor.withValues(alpha: 0.4),
+                        ),
+                        SizedBox(height: 16.0.scaled(context, ref)),
+                        Text(
+                          l10n.accountsEmptyMessage,
+                          style: TextStyle(
+                            fontSize: PiggyTextTokens.fs16,
+                            color: PiggyTokens.textSecondary(context),
                           ),
-                        )
-                      else ...[
-                        // 0. 净资产汇总 + 资产构成（合并卡片）
-                        _buildNetWorthAndCompositionCard(
-                          context,
-                          ref,
-                          netWorthByCurrencyAsync,
-                          compositionAsync,
-                          primaryColor,
                         ),
-
-                        // 2. 资产账户分组
-                        ..._buildClassificationSection(
-                          context: context,
-                          l10n: l10n,
-                          title: l10n.assetAccounts,
-                          icon: Icons.trending_up,
-                          iconColor: PiggyTokens.incomeColor(context, ref),
-                          typeOrder: assetTypeOrder,
-                          groups: groups,
-                          allStats: allStatsAsync.value,
-                          primaryColor: primaryColor,
-                          ledgerId: ledgerId,
-                        ),
-
-                        // 3. 负债账户分组
-                        ..._buildClassificationSection(
-                          context: context,
-                          l10n: l10n,
-                          title: l10n.liabilityAccounts,
-                          icon: Icons.trending_down,
-                          iconColor: PiggyTokens.expenseColor(context, ref),
-                          typeOrder: liabilityTypeOrder,
-                          groups: groups,
-                          allStats: allStatsAsync.value,
-                          primaryColor: primaryColor,
-                          ledgerId: ledgerId,
-                        ),
-
-                        // 4. 其他未知类型(排除隐藏账户,账户隐藏 #240)
-                        ...groups.keys
-                            .where((type) =>
-                                !accountTypeOrder.contains(type) &&
-                                groups[type]!.any((a) => !a.hidden))
-                            .map((type) {
-                          final groupList =
-                              groups[type]!.where((a) => !a.hidden).toList();
-                          return _AccountTypeGroup(
-                            type: type,
-                            accounts: groupList,
-                            primaryColor: primaryColor,
-                            allStats: allStatsAsync.value,
-                            onReorder: (oldIndex, newIndex) =>
-                                _onReorder(type, groupList, oldIndex, newIndex),
-                            onTap: (account) =>
-                                _viewAccountDetail(context, ref, account),
-                            onEdit: (account) =>
-                                _editAccount(context, ref, account, ledgerId),
-                          );
-                        }),
-
-                        // 5. 已隐藏账户分区(账户隐藏 #240,D2:主列表退场,
-                        // 分区头小计与净资产卡差额对账)
-                        _HiddenAccountsSection(
-                          accounts: accounts.where((a) => a.hidden).toList(),
-                          allStats: allStatsAsync.value,
-                          primaryColor: primaryColor,
-                          onTap: (account) =>
-                              _viewAccountDetail(context, ref, account),
-                          onEdit: (account) =>
-                              _editAccount(context, ref, account, ledgerId),
-                          onRestore: (account) =>
-                              _restoreAccount(context, ref, account),
+                        SizedBox(height: 24.0.scaled(context, ref)),
+                        ElevatedButton.icon(
+                          onPressed: () => _addAccount(context, ref, ledgerId),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            foregroundColor: Colors.white,
+                          ),
+                          icon: const Icon(Icons.add),
+                          label: Text(l10n.accountAddButton),
                         ),
                       ],
-                    ],
-                  );
-                },
-                loading: () => DelayedSkeleton(
-                  placeholder: const SizedBox.expand(),
-                  child: PulseSkeleton(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: const [
-                          SkeletonListTile(),
-                          SkeletonListTile(),
-                          SkeletonListTile(),
-                          SkeletonListTile(),
-                        ],
-                      ),
                     ),
                   ),
+                )
+              else ...[
+                // 0. 净资产汇总 + 资产构成（合并卡片）
+                _buildNetWorthAndCompositionCard(
+                  context,
+                  ref,
+                  netWorthByCurrencyAsync,
+                  compositionAsync,
+                  primaryColor,
                 ),
-                error: (err, stack) => Center(
-                  child: Text('${l10n.commonError}: $err'),
+
+                // 2. 资产账户分组
+                ..._buildClassificationSection(
+                  context: context,
+                  l10n: l10n,
+                  title: l10n.assetAccounts,
+                  icon: Icons.trending_up,
+                  iconColor: PiggyTokens.incomeColor(context, ref),
+                  typeOrder: assetTypeOrder,
+                  groups: groups,
+                  allStats: allStatsAsync.value,
+                  primaryColor: primaryColor,
+                  ledgerId: ledgerId,
                 ),
+
+                // 3. 负债账户分组
+                ..._buildClassificationSection(
+                  context: context,
+                  l10n: l10n,
+                  title: l10n.liabilityAccounts,
+                  icon: Icons.trending_down,
+                  iconColor: PiggyTokens.expenseColor(context, ref),
+                  typeOrder: liabilityTypeOrder,
+                  groups: groups,
+                  allStats: allStatsAsync.value,
+                  primaryColor: primaryColor,
+                  ledgerId: ledgerId,
+                ),
+
+                // 4. 其他未知类型(排除隐藏账户,账户隐藏 #240)
+                ...groups.keys
+                    .where((type) =>
+                        !accountTypeOrder.contains(type) &&
+                        groups[type]!.any((a) => !a.hidden))
+                    .map((type) {
+                  final groupList =
+                      groups[type]!.where((a) => !a.hidden).toList();
+                  return _AccountTypeGroup(
+                    type: type,
+                    accounts: groupList,
+                    primaryColor: primaryColor,
+                    allStats: allStatsAsync.value,
+                    onReorder: (oldIndex, newIndex) =>
+                        _onReorder(type, groupList, oldIndex, newIndex),
+                    onTap: (account) =>
+                        _viewAccountDetail(context, ref, account),
+                    onEdit: (account) =>
+                        _editAccount(context, ref, account, ledgerId),
+                  );
+                }),
+
+                // 5. 已隐藏账户分区(账户隐藏 #240,D2:主列表退场,
+                // 分区头小计与净资产卡差额对账)
+                _HiddenAccountsSection(
+                  accounts: accounts.where((a) => a.hidden).toList(),
+                  allStats: allStatsAsync.value,
+                  primaryColor: primaryColor,
+                  onTap: (account) => _viewAccountDetail(context, ref, account),
+                  onEdit: (account) =>
+                      _editAccount(context, ref, account, ledgerId),
+                  onRestore: (account) =>
+                      _restoreAccount(context, ref, account),
+                ),
+              ],
+            ],
+          );
+        },
+        loading: () => DelayedSkeleton(
+          placeholder: const SizedBox.expand(),
+          child: PulseSkeleton(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: const [
+                  SkeletonListTile(),
+                  SkeletonListTile(),
+                  SkeletonListTile(),
+                  SkeletonListTile(),
+                ],
               ),
             ),
-          ],
+          ),
+        ),
+        error: (err, stack) => Center(
+          child: Text('${l10n.commonError}: $err'),
         ),
       ),
     );
@@ -1107,7 +1097,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             SizedBox(width: 6.0.scaled(context, ref)),
             Text(
               title,
-              style: PiggyTextTokens.boldTitle(context).copyWith(fontSize: PiggyTextTokens.fs16),
+              style: PiggyTextTokens.boldTitle(context)
+                  .copyWith(fontSize: PiggyTextTokens.fs16),
             ),
             const Spacer(),
             if (convertActive)
@@ -1230,8 +1221,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                   // (多币种恒折算,与 Web 端对齐),这里只保留汇率管理入口。
                   Consumer(
                     builder: (context, ref, _) {
-                      final used =
-                          ref.watch(usedCurrenciesProvider).value;
+                      final used = ref.watch(usedCurrenciesProvider).value;
                       if (used == null || used.length < 2) {
                         return const SizedBox.shrink();
                       }

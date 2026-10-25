@@ -40,7 +40,8 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final ledgerId = ref.watch(currentLedgerIdProvider);
-    final definitionsAsync = ref.watch(customFieldDefinitionsProvider(ledgerId));
+    final definitionsAsync =
+        ref.watch(customFieldDefinitionsProvider(ledgerId));
     // F5：逐字段「已填写 n 笔」——引导用户知道数据完备度（全账本口径，
     // 不限统计区间）。计数失败时按空 map 渲染（0 笔），不阻塞列表。
     final filledCounts =
@@ -63,20 +64,23 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
               label: Text(l10n.customFieldAdd),
             )
           : null,
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 80,
+      // 标题栏避让做进列表自身 padding（不能包在 body 外）：
+      // 否则滚动视口从标题栏下沿开始，内容永远穿不到标题栏后面，
+      // 标题栏的渐进磨砂无内容可模糊。
+      body: definitionsAsync.when(
+        loading: () => Center(
+          child: PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
         ),
-        child: definitionsAsync.when(
-          loading: () => Center(
-            child: PiggySpinner(size: 36, color: PiggyTokens.primary(context)),
-          ),
-          error: (error, _) => Center(
-            child: Text('${l10n.commonError}: $error'),
-          ),
-          data: (definitions) {
-            if (definitions.isEmpty) {
-              return AppEmpty(
+        error: (error, _) => Center(
+          child: Text('${l10n.commonError}: $error'),
+        ),
+        data: (definitions) {
+          if (definitions.isEmpty) {
+            return Padding(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 80,
+              ),
+              child: AppEmpty(
                 text: l10n.customFieldManageEmpty,
                 subtext: l10n.customFieldManageEmptyHint,
                 icon: Icons.playlist_add,
@@ -85,20 +89,29 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
                   icon: const Icon(Icons.add),
                   label: Text(l10n.customFieldAdd),
                 ),
-              );
-            }
-            final ordered = _pendingOrder ?? definitions;
-            return _buildList(ordered, l10n, filledCounts);
-          },
-        ),
+              ),
+            );
+          }
+          final ordered = _pendingOrder ?? definitions;
+          return _buildList(context, ordered, l10n, filledCounts);
+        },
       ),
     );
   }
 
-  Widget _buildList(List<CustomFieldDefinition> definitions,
-      AppLocalizations l10n, Map<String, int> filledCounts) {
+  Widget _buildList(
+      BuildContext context,
+      List<CustomFieldDefinition> definitions,
+      AppLocalizations l10n,
+      Map<String, int> filledCounts) {
     return ReorderableListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+      // top 含标题栏避让（状态栏 + 80dp 双行标题栏 + 8 呼吸）
+      padding: EdgeInsets.fromLTRB(
+        16,
+        MediaQuery.of(context).padding.top + 80 + 8,
+        16,
+        96,
+      ),
       itemCount: definitions.length,
       // 排序提示：长按拖动手感不直观，给一行常驻说明（E2：接线在途键）。
       header: Padding(
@@ -218,8 +231,8 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
   // 交互
   // ---------------------------------------------------------------
 
-  Future<void> _onReorder(List<CustomFieldDefinition> definitions,
-      int oldIndex, int newIndex) async {
+  Future<void> _onReorder(List<CustomFieldDefinition> definitions, int oldIndex,
+      int newIndex) async {
     if (newIndex == oldIndex) return;
     final reordered = [...definitions];
     final moved = reordered.removeAt(oldIndex);
@@ -236,7 +249,9 @@ class _CustomFieldManagePageState extends ConsumerState<CustomFieldManagePage> {
       ref.read(customFieldListRefreshProvider.notifier).state++;
       _triggerSync();
     } catch (e) {
-      if (mounted) showToast(context, '${AppLocalizations.of(context).commonFailed}: $e');
+      if (mounted) {
+        showToast(context, '${AppLocalizations.of(context).commonFailed}: $e');
+      }
     } finally {
       if (mounted) setState(() => _pendingOrder = null);
     }
@@ -817,7 +832,8 @@ class _CustomFieldEditSheetState extends ConsumerState<_CustomFieldEditSheet> {
 
 /// v54 选项编辑行：一个可编辑文本框 + 原始值（保存时判改名）。
 class _OptionRow {
-  _OptionRow(this.original) : controller = TextEditingController(text: original);
+  _OptionRow(this.original)
+      : controller = TextEditingController(text: original);
 
   /// 编辑开始时的选项文本（'' = 本次新增，不参与改名级联）。
   final String original;

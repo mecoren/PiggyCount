@@ -186,72 +186,77 @@ class _AmountDeviationPageState extends ConsumerState<AmountDeviationPage> {
         subtitle: _rangeText(),
         showBack: true,
       ),
-      body: Padding(
-        padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 80),
-        child: FutureBuilder<_DeviationData>(
-          future: _futureFor(ledgerId, refreshTick),
-          builder: (context, snap) {
-            if (snap.connectionState != ConnectionState.done) {
-              return Center(
-                child: PiggySpinner(
-                  size: 36,
-                  color: PiggyTokens.primary(context),
+      // 标题栏避让做进列表自身 padding（不能包在 body 外），
+      // 滚动内容才能穿到标题栏下方、磨砂才有内容可模糊。
+      body: FutureBuilder<_DeviationData>(
+        future: _futureFor(ledgerId, refreshTick),
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return Center(
+              child: PiggySpinner(
+                size: 36,
+                color: PiggyTokens.primary(context),
+              ),
+            );
+          }
+          if (snap.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('${l10n.commonError}: ${snap.error}'),
+              ),
+            );
+          }
+          final data = snap.data!;
+          return ListView(
+            // top 含标题栏避让（双行标题栏 80dp）
+            padding: EdgeInsets.fromLTRB(
+              16,
+              MediaQuery.of(context).padding.top + 80 + 8,
+              16,
+              24,
+            ),
+            children: [
+              _rangeCard(context, l10n),
+              const SizedBox(height: 12),
+              _dimChips(l10n),
+              const SizedBox(height: 8),
+              _metricChips(l10n),
+              if (data.summary.deviated == 0) ...[
+                const SizedBox(height: 24),
+                AppEmpty(
+                  text: l10n.commonEmpty,
+                  subtext: l10n.amountDeviationEmptySubtext,
                 ),
-              );
-            }
-            if (snap.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text('${l10n.commonError}: ${snap.error}'),
-                ),
-              );
-            }
-            final data = snap.data!;
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              children: [
-                _rangeCard(context, l10n),
+              ] else ...[
                 const SizedBox(height: 12),
-                _dimChips(l10n),
-                const SizedBox(height: 8),
-                _metricChips(l10n),
-                if (data.summary.deviated == 0) ...[
-                  const SizedBox(height: 24),
-                  AppEmpty(
-                    text: l10n.commonEmpty,
-                    subtext: l10n.amountDeviationEmptySubtext,
-                  ),
-                ] else ...[
-                  const SizedBox(height: 12),
-                  _summaryCard(context, l10n, data),
+                _summaryCard(context, l10n, data),
+                const SizedBox(height: 12),
+                _card(
+                  context,
+                  title: l10n.amountDeviationTrendTitle,
+                  child: _trendChart(context, l10n, data),
+                ),
+                if (data.cats.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   _card(
                     context,
-                    title: l10n.amountDeviationTrendTitle,
-                    child: _trendChart(context, l10n, data),
+                    title: l10n.amountDeviationCategoryTitle,
+                    child: _categoryRanking(context, l10n, data),
                   ),
-                  if (data.cats.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    _card(
-                      context,
-                      title: l10n.amountDeviationCategoryTitle,
-                      child: _categoryRanking(context, l10n, data),
-                    ),
-                  ],
-                  if (data.insights.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    _card(
-                      context,
-                      title: l10n.amountDeviationInsightTitle,
-                      child: _insightList(context, l10n, data),
-                    ),
-                  ],
+                ],
+                if (data.insights.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _card(
+                    context,
+                    title: l10n.amountDeviationInsightTitle,
+                    child: _insightList(context, l10n, data),
+                  ),
                 ],
               ],
-            );
-          },
-        ),
+            ],
+          );
+        },
       ),
     );
   }

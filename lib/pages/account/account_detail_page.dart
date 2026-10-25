@@ -240,80 +240,74 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
           ),
         ],
       ),
-      body: Padding(
+      // 标题栏避让做进列表自身 padding（不能包在 body 外），
+      // 滚动内容才能穿到标题栏下方、磨砂才有内容可模糊。
+      body: ListView(
+        controller: _scrollController,
+        // top 含标题栏避让（双行标题栏 80dp）
         padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 80,
+          top: MediaQuery.of(context).padding.top +
+              80 +
+              8.0.scaled(context, ref),
+          bottom: 8.0.scaled(context, ref),
         ),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                controller: _scrollController,
-                padding: EdgeInsets.symmetric(
-                  horizontal: 0,
-                  vertical: 8.0.scaled(context, ref),
-                ),
-                children: [
-                  if (isValuation) ...[
-                    // 估值账户：显示估值卡片
-                    _buildValuationCard(context, ref, account, statsAsync,
-                        currencyCode, primaryColor, l10n),
-                    // v52：投资账户的持仓明细（有持仓才返回内容；无持仓时估值卡
-                    // 底部已有「管理持仓」入口引导录入）
-                    ..._buildHoldingsSection(context, ref, account, l10n),
-                  ] else ...[
-                    // 信用卡不显示"收入/支出"卡(概念错位),概览卡=欠款/额度/还款即主卡;
-                    // 其它可交易账户仍显示 余额/收入/支出
-                    if (account.type != 'credit_card') ...[
-                      _buildStatsCard(context, ref, account, statsAsync,
-                          currencyCode, l10n),
-                      SizedBox(height: 4.0.scaled(context, ref)),
-                    ],
-                    // 账户概览卡片（合并 metadata + 类型统计）
-                    _buildOverviewCard(
-                      context,
-                      ref,
-                      account,
-                      statsAsync,
-                      currencyCode,
-                      primaryColor,
-                      typeColor,
-                      l10n,
-                    ),
+        children: [
+          if (isValuation) ...[
+            // 估值账户：显示估值卡片
+            _buildValuationCard(context, ref, account, statsAsync, currencyCode,
+                primaryColor, l10n),
+            // v52：投资账户的持仓明细（有持仓才返回内容；无持仓时估值卡
+            // 底部已有「管理持仓」入口引导录入）
+            ..._buildHoldingsSection(context, ref, account, l10n),
+          ] else ...[
+            // 信用卡不显示"收入/支出"卡(概念错位),概览卡=欠款/额度/还款即主卡;
+            // 其它可交易账户仍显示 余额/收入/支出
+            if (account.type != 'credit_card') ...[
+              _buildStatsCard(
+                  context, ref, account, statsAsync, currencyCode, l10n),
+              SizedBox(height: 4.0.scaled(context, ref)),
+            ],
+            // 账户概览卡片（合并 metadata + 类型统计）
+            _buildOverviewCard(
+              context,
+              ref,
+              account,
+              statsAsync,
+              currencyCode,
+              primaryColor,
+              typeColor,
+              l10n,
+            ),
 
-                    SizedBox(height: 8.0.scaled(context, ref)),
+            SizedBox(height: 8.0.scaled(context, ref)),
 
-                    // 图表区域（支出分布/收入分布 切换;信用卡仅消费分布）
-                    _buildDetailChartSection(
-                      context,
-                      ref,
-                      l10n,
-                      primaryColor,
-                      expenseStatsAsync,
-                      incomeStatsAsync,
-                      typeColor,
-                      isCreditCard: account.type == 'credit_card',
-                    ),
+            // 图表区域（支出分布/收入分布 切换;信用卡仅消费分布）
+            _buildDetailChartSection(
+              context,
+              ref,
+              l10n,
+              primaryColor,
+              expenseStatsAsync,
+              incomeStatsAsync,
+              typeColor,
+              isCreditCard: account.type == 'credit_card',
+            ),
 
-                    SizedBox(height: 12.0.scaled(context, ref)),
+            SizedBox(height: 12.0.scaled(context, ref)),
 
-                    // 交易列表（分页，懒加载：每笔交易作为外层 ListView 的独立
-                    // item 按需构建，避免分页累积的交易全部一次性 layout/paint）
-                    ..._buildTransactionListItems(
-                      context,
-                      paginationState,
-                      currencyCode,
-                      primaryColor,
-                      categoriesAsync.asData?.value ?? [],
-                      l10n,
-                      typeColor,
-                    ),
-                  ],
-                ],
-              ),
+            // 交易列表（分页，懒加载：每笔交易作为外层 ListView 的独立
+            // item 按需构建，避免分页累积的交易全部一次性 layout/paint）
+            ..._buildTransactionListItems(
+              context,
+              paginationState,
+              currencyCode,
+              primaryColor,
+              categoriesAsync.asData?.value ?? [],
+              l10n,
+              typeColor,
             ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -401,13 +395,14 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     // 内的同一套 helper 算出来的，见 db.dart 的 Holdings 注释）——此时手工估值
     // 入口必须隐藏、金额改为只读展示。两个口径并存是最容易让用户怀疑「算错了」
     // 的形态，也会让人不知道手填的值到底算不算数。
-    final summary =
-        ref.watch(accountHoldingsSummaryProvider(account.id)).value;
+    final summary = ref.watch(accountHoldingsSummaryProvider(account.id)).value;
     final fromHoldings = summary != null && summary.total > 0;
     final canManageHoldings = isInvestmentType(account.type);
     final valueLabel = fromHoldings
         ? l10n.holdingSummaryMarketValue
-        : (isLiability ? l10n.valuationCurrentDebt : l10n.valuationCurrentValue);
+        : (isLiability
+            ? l10n.valuationCurrentDebt
+            : l10n.valuationCurrentValue);
     final updateLabel =
         isLiability ? l10n.valuationUpdateDebt : l10n.valuationUpdateValue;
 
@@ -515,8 +510,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                     size: 16,
                     color: Colors.white,
                   ),
-                  label:
-                      Text(fromHoldings ? l10n.holdingManageAction : updateLabel),
+                  label: Text(
+                      fromHoldings ? l10n.holdingManageAction : updateLabel),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
@@ -577,12 +572,10 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     AppLocalizations l10n,
   ) {
     if (!isInvestmentType(account.type)) return const [];
-    final holdings =
-        ref.watch(holdingsByAccountProvider(account.id)).value ??
-            const <db.Holding>[];
+    final holdings = ref.watch(holdingsByAccountProvider(account.id)).value ??
+        const <db.Holding>[];
     if (holdings.isEmpty) return const [];
-    final summary =
-        ref.watch(accountHoldingsSummaryProvider(account.id)).value;
+    final summary = ref.watch(accountHoldingsSummaryProvider(account.id)).value;
 
     // 详情页只铺前几条，避免把整个账户页拉成持仓列表；其余交给持仓页。
     const maxInline = 5;
@@ -653,9 +646,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     final result = await showDialog<double>(
       context: context,
       builder: (ctx) => _ValuationInputDialog(
-        title: isLiability
-            ? l10n.valuationUpdateDebt
-            : l10n.valuationUpdateValue,
+        title:
+            isLiability ? l10n.valuationUpdateDebt : l10n.valuationUpdateValue,
         initialText: account.initialBalance.abs().toStringAsFixed(2),
         currencyCode: currencyCode,
         hint: isLiability ? l10n.valuationDebtHint : l10n.valuationAccountHint,
@@ -823,7 +815,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               Text(
                 l10n.creditCardOwed,
                 style: TextStyle(
-                    fontSize: PiggyTextTokens.fs13, color: PiggyTokens.textSecondary(context)),
+                    fontSize: PiggyTextTokens.fs13,
+                    color: PiggyTokens.textSecondary(context)),
               ),
               const Spacer(),
               AmountText(
@@ -1356,7 +1349,8 @@ class _OverviewStatCell extends ConsumerWidget {
           signed: false,
           showCurrency: false,
           useCompactFormat: ref.watch(compactAmountProvider),
-          style: PiggyTextTokens.strongTitle(context).copyWith(fontSize: PiggyTextTokens.fs16),
+          style: PiggyTextTokens.strongTitle(context)
+              .copyWith(fontSize: PiggyTextTokens.fs16),
         ),
         const SizedBox(height: 2),
         Text(
@@ -1448,7 +1442,8 @@ class _DetailStatCell extends ConsumerWidget {
           showCurrency: true,
           useCompactFormat: ref.watch(compactAmountProvider),
           currencyCode: currencyCode,
-          style: PiggyTextTokens.boldTitle(context).copyWith(fontSize: PiggyTextTokens.fs16),
+          style: PiggyTextTokens.boldTitle(context)
+              .copyWith(fontSize: PiggyTextTokens.fs16),
         ),
       ],
     );
@@ -1564,10 +1559,9 @@ class _TransactionTile extends ConsumerWidget {
 
     // v47：自定义字段角标 —— 并入日期次要行（本页是自绘行，不走
     // TransactionListItem）。无值/定义解析不出 → 只显示日期。
-    final customBadges = ref
-            .watch(customFieldValueBadgesProvider)
-            .value?[transaction.id] ??
-        const <({String name, String display})>[];
+    final customBadges =
+        ref.watch(customFieldValueBadgesProvider).value?[transaction.id] ??
+            const <({String name, String display})>[];
     final secondaryLineText = [
       _formatDate(transaction.happenedAt),
       for (final b in customBadges) '${b.name}: ${b.display}',

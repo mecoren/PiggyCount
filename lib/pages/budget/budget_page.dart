@@ -38,23 +38,14 @@ class BudgetPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: overviewAsync.when(
-                data: (overview) => _buildContent(context, ref, overview),
-                loading: () => Center(
-                    child: PiggySpinner(
-                        size: 36, color: PiggyTokens.primary(context))),
-                error: (e, _) => Center(child: Text('Error: $e')),
-              ),
-            ),
-          ],
-        ),
+      // 标题栏避让做进列表自身 padding（不能包在 body 外）：
+      // 否则滚动视口从标题栏下沿开始，内容穿不到标题栏后面，
+      // 标题栏的渐进磨砂无内容可模糊。
+      body: overviewAsync.when(
+        data: (overview) => _buildContent(context, ref, overview),
+        loading: () => Center(
+            child: PiggySpinner(size: 36, color: PiggyTokens.primary(context))),
+        error: (e, _) => Center(child: Text('Error: $e')),
       ),
     );
   }
@@ -67,13 +58,22 @@ class BudgetPage extends ConsumerWidget {
     final currencySymbol = getCurrencySymbol(currencyCode);
 
     if (overview == null || overview.totalBudget == null) {
-      return _buildEmptyState(context, ref, l10n);
+      return Padding(
+        padding: EdgeInsets.only(
+          top: PiggyTokens.topScrollablePadding(context),
+        ),
+        child: _buildEmptyState(context, ref, l10n),
+      );
     }
 
     return ListView(
-      padding: EdgeInsets.symmetric(
-        horizontal: 12.0.scaled(context, ref),
-        vertical: 8.0.scaled(context, ref),
+      // top 含标题栏避让，滚动内容可从标题栏下方穿过
+      padding: EdgeInsets.only(
+        left: 12.0.scaled(context, ref),
+        right: 12.0.scaled(context, ref),
+        top: PiggyTokens.topScrollablePadding(context) +
+            8.0.scaled(context, ref),
+        bottom: 8.0.scaled(context, ref),
       ),
       children: [
         // 总预算概览卡片

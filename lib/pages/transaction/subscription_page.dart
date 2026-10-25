@@ -50,83 +50,81 @@ class SubscriptionPage extends ConsumerWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  PiggyHaptics.light();
-                  ref.invalidate(subscriptionOverviewProvider);
-                  try {
-                    await ref.read(subscriptionOverviewProvider.future);
-                  } catch (_) {
-                    // 失败保持静默，错误分支由 when 展示
-                  }
-                },
-                child: overviewAsync.when(
-                  // skipLoading*: 下拉刷新后保留旧数据渲染，避免整页闪 loading
-                  skipLoadingOnReload: true,
-                  skipLoadingOnRefresh: true,
-                  loading: () => Center(
-                    child: PiggySpinner(
-                      size: 36,
-                      color: PiggyTokens.primary(context),
-                    ),
-                  ),
-                  error: (error, stack) => Center(
-                    child: Text('${l10n.commonFailed}: $error'),
-                  ),
-                  data: (overview) {
-                    if (overview.items.isEmpty) {
-                      return _EmptyView(
-                        onCreate: () => _createSubscription(context, ref),
-                      );
-                    }
-                    return ListView(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12.0.scaled(context, ref),
-                        vertical: 8.0.scaled(context, ref),
-                      ),
-                      // AlwaysScrollable: 内容不满一屏时也能下拉刷新
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        _SummaryCard(summary: overview.summary),
-                        SizedBox(height: 12.0.scaled(context, ref)),
-                        SectionCard(
-                          margin: EdgeInsets.zero,
-                          borderColor: ref.watch(primaryColorProvider),
-                          child: Column(
-                            children: [
-                              for (final item in overview.items)
-                                _SubscriptionTile(
-                                  item: item,
-                                  baseCurrency: overview.summary.currencyCode,
-                                  onTap: () async {
-                                    final result =
-                                        await showRecurringFormBottomSheet(
-                                      context,
-                                      recurring: item.recurring,
-                                    );
-                                    if (result == true) {
-                                      ref.invalidate(
-                                          subscriptionOverviewProvider);
-                                    }
-                                  },
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
+      // 标题栏避让做进列表自身 padding（不能包在 body 外）：
+      // 否则滚动视口从标题栏下沿开始，内容穿不到标题栏后面，磨砂无内容可模糊。
+      body: RefreshIndicator(
+        onRefresh: () async {
+          PiggyHaptics.light();
+          ref.invalidate(subscriptionOverviewProvider);
+          try {
+            await ref.read(subscriptionOverviewProvider.future);
+          } catch (_) {
+            // 失败保持静默，错误分支由 when 展示
+          }
+        },
+        child: overviewAsync.when(
+          // skipLoading*: 下拉刷新后保留旧数据渲染，避免整页闪 loading
+          skipLoadingOnReload: true,
+          skipLoadingOnRefresh: true,
+          loading: () => Center(
+            child: PiggySpinner(
+              size: 36,
+              color: PiggyTokens.primary(context),
             ),
-          ],
+          ),
+          error: (error, stack) => Center(
+            child: Text('${l10n.commonFailed}: $error'),
+          ),
+          data: (overview) {
+            if (overview.items.isEmpty) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  top: PiggyTokens.topScrollablePadding(context),
+                ),
+                child: _EmptyView(
+                  onCreate: () => _createSubscription(context, ref),
+                ),
+              );
+            }
+            return ListView(
+              // top 含标题栏避让，滚动内容可从标题栏下方穿过
+              padding: EdgeInsets.only(
+                left: 12.0.scaled(context, ref),
+                right: 12.0.scaled(context, ref),
+                top: PiggyTokens.topScrollablePadding(context) +
+                    8.0.scaled(context, ref),
+                bottom: 8.0.scaled(context, ref),
+              ),
+              // AlwaysScrollable: 内容不满一屏时也能下拉刷新
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                _SummaryCard(summary: overview.summary),
+                SizedBox(height: 12.0.scaled(context, ref)),
+                SectionCard(
+                  margin: EdgeInsets.zero,
+                  borderColor: ref.watch(primaryColorProvider),
+                  child: Column(
+                    children: [
+                      for (final item in overview.items)
+                        _SubscriptionTile(
+                          item: item,
+                          baseCurrency: overview.summary.currencyCode,
+                          onTap: () async {
+                            final result = await showRecurringFormBottomSheet(
+                              context,
+                              recurring: item.recurring,
+                            );
+                            if (result == true) {
+                              ref.invalidate(subscriptionOverviewProvider);
+                            }
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -161,7 +159,8 @@ class _EmptyView extends StatelessWidget {
             icon: Icons.subscriptions_outlined,
             action: ElevatedButton.icon(
               onPressed: onCreate,
-              icon: Icon(Icons.add, color: PiggyTokens.buttonPrimaryText(context)),
+              icon: Icon(Icons.add,
+                  color: PiggyTokens.buttonPrimaryText(context)),
               label: Text(l10n.subscriptionEmptyAction),
               style: ElevatedButton.styleFrom(
                 backgroundColor: PiggyTokens.buttonPrimary(context),

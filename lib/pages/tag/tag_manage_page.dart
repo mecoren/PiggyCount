@@ -53,30 +53,26 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
           _buildMoreMenu(context, l10n, primaryColor),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 80,
+      // 标题栏避让必须做进滚动容器自身的 padding（不能包在 body 外）：
+      // 否则滚动视口从标题栏下沿开始，内容永远画不到标题栏后面，
+      // 标题栏的渐进磨砂就没有可模糊的内容。
+      body: tagsAsync.when(
+        loading: () => Center(
+            child: PiggySpinner(size: 36, color: PiggyTokens.primary(context))),
+        error: (error, stack) => Center(
+          child: Text('${l10n.commonError}: $error'),
         ),
-        child: Column(
-          children: [
-            Expanded(
-              child: tagsAsync.when(
-                loading: () => Center(
-                    child: PiggySpinner(
-                        size: 36, color: PiggyTokens.primary(context))),
-                error: (error, stack) => Center(
-                  child: Text('${l10n.commonError}: $error'),
-                ),
-                data: (tags) {
-                  if (tags.isEmpty) {
-                    return _buildEmptyState(l10n);
-                  }
-                  return _buildTagGrid(tags, l10n);
-                },
+        data: (tags) {
+          if (tags.isEmpty) {
+            return Padding(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 80,
               ),
-            ),
-          ],
-        ),
+              child: _buildEmptyState(l10n),
+            );
+          }
+          return _buildTagGrid(tags, l10n);
+        },
       ),
     );
   }
@@ -99,7 +95,14 @@ class _TagManagePageState extends ConsumerState<TagManagePage> {
     AppLocalizations l10n,
   ) {
     return GridView.builder(
-      padding: const EdgeInsets.all(16),
+      // top 含标题栏避让（状态栏 + 80dp 双行标题栏 + 16 呼吸），
+      // 让滚动内容能从标题栏下方穿过。
+      padding: EdgeInsets.fromLTRB(
+        16,
+        MediaQuery.of(context).padding.top + 80 + 16,
+        16,
+        16 + MediaQuery.of(context).padding.bottom,
+      ),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         childAspectRatio: 1.6,
