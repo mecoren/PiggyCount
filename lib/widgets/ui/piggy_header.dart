@@ -489,9 +489,7 @@ class _PiggyHeaderShell extends ConsumerWidget {
     // 只剩磨砂层 + 自带 tint）：开模糊时默认底色与皮肤完全淡出，只留磨砂；
     // 关模糊时恢复原实色 + 皮肤；自定义底色的调用方仅稀释、不淡出。
     final baseBg = backgroundColor ?? PiggyTokens.tabBarBackground(context);
-    final bgAlpha = hasBlur
-        ? (hasCustomBg ? baseBg.a * 0.6 : 0.0)
-        : baseBg.a;
+    final bgAlpha = hasBlur ? (hasCustomBg ? baseBg.a * 0.6 : 0.0) : baseBg.a;
     final bgColor = baseBg.withValues(alpha: bgAlpha);
 
     // 纯磨砂态下皮肤是否淡出（同上，只对默认底色生效）
@@ -515,6 +513,25 @@ class _PiggyHeaderShell extends ConsumerWidget {
           ),
         // 层 A：中性实色背景（纯磨砂态 alpha=0，仅保持层序一致）
         Positioned.fill(child: ColoredBox(color: bgColor)),
+        // 层 A1：主色玻璃渐变（顶强底弱）。纯磨砂态下方若是纯背景（有固定
+        // 头部/常驻卡片的页面：首页、洞察、储蓄目标等），模糊后仍是纯色，
+        // 白 tint 叠白底完全看不见；这层品牌色渐变才是这些页面上可见的
+        // 「头部模糊渐变」质感来源。有内容滚过时它同时给磨砂加一层色调。
+        if (hasBlur)
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    primaryColor.withValues(alpha: isDark ? 0.10 : 0.14),
+                    primaryColor.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+          ),
         // 层 B：HeaderSkin 装饰层（0.85 不透明度护栏；纯磨砂态淡出）
         if (showSkin)
           Positioned.fill(
