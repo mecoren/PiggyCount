@@ -64,21 +64,25 @@ class MinePage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
-      body: Column(
-        children: [
-          // 全宽主题色头部（ProfileCard 自身处理状态栏避让）
-          const ProfileCard(),
-          // 可滚动设置列表
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.fromLTRB(
-                PiggyDimens.p16,
-                PiggyDimens.p12,
-                PiggyDimens.p16,
-                PiggyDimens.p16 + MediaQuery.of(context).padding.bottom + 56 + 12,
-              ),
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
+      body: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _ProfileHeaderDelegate(
+              minExtent: ProfileCard.collapsedHeight(context, ref),
+              maxExtent: ProfileCard.expandedHeight(context, ref),
+            ),
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              PiggyDimens.p16,
+              PiggyDimens.p12,
+              PiggyDimens.p16,
+              PiggyDimens.p16 + MediaQuery.of(context).padding.bottom + 56 + 12,
+            ),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
                 // ── 云同步与备份 ──
                 SettingsSectionLabel(l10n.mineCloudBackupSection),
                 SizedBox(height: 8.0.scaled(context, ref)),
@@ -88,39 +92,39 @@ class MinePage extends ConsumerWidget {
                   return SettingsCard(
                     children: [
                       SettingsNavItem(
-                          icon: Icons.cloud_queue_outlined,
-                          title: AppLocalizations.of(sectionContext)
-                              .mineCloudService,
-                          subtitle: activeCfg.when(
-                            loading: () => AppLocalizations.of(sectionContext)
-                                .mineCloudServiceLoading,
-                            error: (e, _) =>
-                                '${AppLocalizations.of(sectionContext).commonError}: $e',
-                            data: (cfg) {
-                              switch (cfg.type) {
-                                case CloudBackendType.local:
-                                  return AppLocalizations.of(sectionContext)
-                                      .mineCloudServiceOffline;
-                                case CloudBackendType.webdav:
-                                  return AppLocalizations.of(sectionContext)
-                                      .mineCloudServiceWebDAV;
-                                case CloudBackendType.icloud:
-                                  return 'iCloud';
-                                case CloudBackendType.supabase:
-                                  return AppLocalizations.of(sectionContext)
-                                      .mineCloudServiceCustom;
-                                case CloudBackendType.s3:
-                                  return 'S3';
-                              }
-                            },
-                          ),
-                          onTap: () async {
-                            await Navigator.of(sectionContext).push(
-                              MaterialPageRoute(
-                                  builder: (_) => const CloudServicePage()),
-                            );
+                        icon: Icons.cloud_queue_outlined,
+                        title: AppLocalizations.of(sectionContext)
+                            .mineCloudService,
+                        subtitle: activeCfg.when(
+                          loading: () => AppLocalizations.of(sectionContext)
+                              .mineCloudServiceLoading,
+                          error: (e, _) =>
+                              '${AppLocalizations.of(sectionContext).commonError}: $e',
+                          data: (cfg) {
+                            switch (cfg.type) {
+                              case CloudBackendType.local:
+                                return AppLocalizations.of(sectionContext)
+                                    .mineCloudServiceOffline;
+                              case CloudBackendType.webdav:
+                                return AppLocalizations.of(sectionContext)
+                                    .mineCloudServiceWebDAV;
+                              case CloudBackendType.icloud:
+                                return 'iCloud';
+                              case CloudBackendType.supabase:
+                                return AppLocalizations.of(sectionContext)
+                                    .mineCloudServiceCustom;
+                              case CloudBackendType.s3:
+                                return 'S3';
+                            }
                           },
                         ),
+                        onTap: () async {
+                          await Navigator.of(sectionContext).push(
+                            MaterialPageRoute(
+                                builder: (_) => const CloudServicePage()),
+                          );
+                        },
+                      ),
                       // 同步状态
                       Builder(
                         builder: (ctx) {
@@ -239,8 +243,7 @@ class MinePage extends ConsumerWidget {
                                     (isFirstLoad || refreshing)) {
                                   trailingWidget = PiggySpinner(
                                     size: 20,
-                                    color:
-                                        PiggyTokens.primary(sectionContext),
+                                    color: PiggyTokens.primary(sectionContext),
                                   );
                                 } else if (showCheckIcon) {
                                   trailingWidget = Icon(
@@ -321,8 +324,7 @@ class MinePage extends ConsumerWidget {
                         onTap: () async {
                           await Navigator.of(context).push(
                             MaterialPageRoute(
-                                builder: (_) =>
-                                    const CustomFieldManagePage()),
+                                builder: (_) => const CustomFieldManagePage()),
                           );
                         },
                       ),
@@ -442,14 +444,14 @@ class MinePage extends ConsumerWidget {
                     // 行情与投资（v52：行情源预留入口 + 投资持仓说明）
                     SettingsNavItem(
                       icon: Icons.trending_up_outlined,
-                      title: AppLocalizations.of(context).investmentSettingsTitle,
+                      title:
+                          AppLocalizations.of(context).investmentSettingsTitle,
                       subtitle:
                           AppLocalizations.of(context).investmentSettingsDesc,
                       onTap: () async {
                         await Navigator.of(context).push(
                           MaterialPageRoute(
-                              builder: (_) =>
-                                  const InvestmentSettingsPage()),
+                              builder: (_) => const InvestmentSettingsPage()),
                         );
                       },
                     ),
@@ -560,13 +562,40 @@ class MinePage extends ConsumerWidget {
                   ],
                 ),
                 SizedBox(height: 32.0.scaled(context, ref)),
-              ],
+              ]),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _ProfileHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _ProfileHeaderDelegate({required this.minExtent, required this.maxExtent});
+
+  @override
+  final double minExtent;
+
+  @override
+  final double maxExtent;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final distance = maxExtent - minExtent;
+    final progress = distance == 0
+        ? 0.0
+        : (shrinkOffset / distance).clamp(0.0, 1.0).toDouble();
+    return ProfileCard(collapseProgress: progress);
+  }
+
+  @override
+  bool shouldRebuild(_ProfileHeaderDelegate oldDelegate) =>
+      minExtent != oldDelegate.minExtent || maxExtent != oldDelegate.maxExtent;
 }
 
 /// 请求应用评分

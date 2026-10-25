@@ -13,6 +13,7 @@ import 'amount_text.dart';
 import 'piggy_icon.dart';
 import '../ui/toast.dart';
 import '../ui/dialog.dart';
+import '../ui/gradient_backdrop_filter.dart';
 import '../ui/piggy_input.dart';
 import '../ui/piggy_spinner.dart';
 
@@ -28,7 +29,18 @@ import '../ui/piggy_spinner.dart';
 /// - 小眼睛切换金额隐藏
 /// - 3 列统计（天数 / 记录数 / 余额）
 class ProfileCard extends ConsumerStatefulWidget {
-  const ProfileCard({super.key});
+  const ProfileCard({super.key, this.collapseProgress = 0});
+
+  final double collapseProgress;
+
+  static double collapsedHeight(BuildContext context, WidgetRef ref) =>
+      MediaQuery.paddingOf(context).top +
+      12.0.scaled(context, ref) +
+      48.0.scaled(context, ref) +
+      24.0.scaled(context, ref);
+
+  static double expandedHeight(BuildContext context, WidgetRef ref) =>
+      collapsedHeight(context, ref) + 132.0.scaled(context, ref);
 
   @override
   ConsumerState<ProfileCard> createState() => _ProfileCardState();
@@ -243,153 +255,205 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
     final numStyle = PiggyTextTokens.strongTitle(context)
         .copyWith(fontSize: PiggyTextTokens.fs20, color: headerForeground);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.zero,
-      child: Container(
-        decoration: BoxDecoration(
-          color: headerBg,
-          borderRadius: BorderRadius.zero,
-        ),
-        child: Stack(
-          children: [
-            // 头部皮肤装饰层（0.85 不透明度护栏对比度，与 PiggyHeader 一致）
-            if (skin != null)
-              Positioned.fill(
-                child: Opacity(
-                  opacity: 0.85,
-                  child: skin.builder(primary, isDark),
-                ),
+    final progress = widget.collapseProgress.clamp(0.0, 1.0).toDouble();
+    final profileSectionHeight = 132.0.scaled(context, ref);
+
+    return ClipRect(
+      child: Stack(
+        children: [
+          // 模糊层必须先于半透明底色绘制，才能捕获下方滚入的菜单。
+          Positioned.fill(
+            child: GradientBackdropFilter(
+              maxSigma: 24,
+              opacity: progress,
+            ),
+          ),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: headerBg.withValues(alpha: 0.95 * (1 - progress)),
               ),
-            // 主内容
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                16.0.scaled(context, ref),
-                statusBarHeight + 12.0.scaled(context, ref),
-                16.0.scaled(context, ref),
-                24.0.scaled(context, ref),
+            ),
+          ),
+          if (skin != null)
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.85 * (1 - progress),
+                child: skin.builder(primary, isDark),
               ),
-              child: Column(
-                children: [
-                  // 头像/Logo
-                  GestureDetector(
-                    onTap: _showProfileOptions,
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 80.0.scaled(context, ref),
-                          height: 80.0.scaled(context, ref),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: headerForeground.withValues(alpha: 0.15),
-                            border: Border.all(
-                              color: headerForeground.withValues(alpha: 0.4),
-                              width: 2,
-                            ),
-                          ),
-                          child: ClipOval(
-                            child: _isLoadingAvatar
-                                ? Center(
-                                    child: SizedBox(
-                                      width: 20.0.scaled(context, ref),
-                                      height: 20.0.scaled(context, ref),
-                                      child: PiggySpinner(
-                                        color: headerForeground,
-                                      ),
+            ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              16.0.scaled(context, ref),
+              statusBarHeight + 12.0.scaled(context, ref),
+              16.0.scaled(context, ref),
+              24.0.scaled(context, ref),
+            ),
+            child: Column(
+              children: [
+                SizedBox(
+                  height: profileSectionHeight * (1 - progress),
+                  child: ClipRect(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      heightFactor: 1 - progress,
+                      child: IgnorePointer(
+                        ignoring: progress == 1,
+                        child: ExcludeSemantics(
+                          excluding: progress == 1,
+                          child: Opacity(
+                            key: const ValueKey('profile-collapsible-content'),
+                            opacity: 1 - progress,
+                            child: OverflowBox(
+                              minHeight: profileSectionHeight,
+                              maxHeight: profileSectionHeight,
+                              child: Column(
+                                children: [
+                                  GestureDetector(
+                                    onTap: _showProfileOptions,
+                                    child: Stack(
+                                      children: [
+                                        Container(
+                                          width: 80.0.scaled(context, ref),
+                                          height: 80.0.scaled(context, ref),
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: headerForeground.withValues(
+                                                alpha: 0.15),
+                                            border: Border.all(
+                                              color: headerForeground
+                                                  .withValues(alpha: 0.4),
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child: ClipOval(
+                                            child: _isLoadingAvatar
+                                                ? Center(
+                                                    child: SizedBox(
+                                                      width: 20.0
+                                                          .scaled(context, ref),
+                                                      height: 20.0
+                                                          .scaled(context, ref),
+                                                      child: PiggySpinner(
+                                                        color: headerForeground,
+                                                      ),
+                                                    ),
+                                                  )
+                                                : (effectiveAvatarPath != null
+                                                    ? Image.file(
+                                                        key: ValueKey(
+                                                            effectiveAvatarPath),
+                                                        File(
+                                                            effectiveAvatarPath),
+                                                        fit: BoxFit.cover,
+                                                        cacheWidth: (80.0
+                                                                    .scaled(
+                                                                        context,
+                                                                        ref) *
+                                                                MediaQuery
+                                                                    .devicePixelRatioOf(
+                                                                        context))
+                                                            .round(),
+                                                        errorBuilder: (context,
+                                                            error, stackTrace) {
+                                                          return PiggyIcon(
+                                                            size: 40.0.scaled(
+                                                                context, ref),
+                                                          );
+                                                        },
+                                                      )
+                                                    : PiggyIcon(
+                                                        size: 40.0.scaled(
+                                                            context, ref),
+                                                      )),
+                                          ),
+                                        ),
+                                        Positioned(
+                                          right: 0,
+                                          bottom: 0,
+                                          child: Container(
+                                            width: 24.0.scaled(context, ref),
+                                            height: 24.0.scaled(context, ref),
+                                            decoration: BoxDecoration(
+                                              color: headerForeground,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                  color: headerBg, width: 2),
+                                            ),
+                                            child: Icon(
+                                              Icons.edit,
+                                              size: 12.0.scaled(context, ref),
+                                              color: headerBg,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  )
-                                : (effectiveAvatarPath != null
-                                    ? Image.file(
-                                        // key 加入 path：Flutter 以 (File, key) 区
-                                        // 分不同图片，否则从 A.jpg 换到 B.jpg（路径
-                                        // 不同但 widget 复用）有时仍显示缓存的 A。
-                                        key: ValueKey(effectiveAvatarPath),
-                                        File(effectiveAvatarPath),
-                                        fit: BoxFit.cover,
-                                        // 80px 头像格:解码宽度钉在 80×dpr,
-                                        // 头像原图(相机出图数 MB)不再整张进内存。
-                                        cacheWidth: (80.0.scaled(context, ref) *
-                                                MediaQuery
-                                                    .devicePixelRatioOf(
-                                                        context))
-                                            .round(),
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                          return PiggyIcon(
-                                            size: 40.0.scaled(context, ref),
-                                          );
-                                        },
-                                      )
-                                    : PiggyIcon(
-                                        size: 40.0.scaled(context, ref),
-                                      )),
+                                  ),
+                                  SizedBox(height: 12.0.scaled(context, ref)),
+                                  SizedBox(
+                                    height: 24.0.scaled(context, ref),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        if (displayName.isNotEmpty) ...[
+                                          Icon(greeting.icon,
+                                              size: 18.0.scaled(context, ref),
+                                              color: headerForeground),
+                                          SizedBox(
+                                              width: 6.0.scaled(context, ref)),
+                                        ],
+                                        Flexible(
+                                          child: GestureDetector(
+                                            behavior: HitTestBehavior.opaque,
+                                            onTap: _showEditDisplayName,
+                                            child: Text(
+                                              headerText,
+                                              style: nameStyle,
+                                              textAlign: TextAlign.center,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                            width: 8.0.scaled(context, ref)),
+                                        GestureDetector(
+                                          onTap: () {
+                                            final cur =
+                                                ref.read(hideAmountsProvider);
+                                            ref
+                                                .read(hideAmountsProvider
+                                                    .notifier)
+                                                .state = !cur;
+                                          },
+                                          child: Icon(
+                                            hide
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            size: 18,
+                                            color: headerForeground,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(height: 16.0.scaled(context, ref)),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            width: 24.0.scaled(context, ref),
-                            height: 24.0.scaled(context, ref),
-                            decoration: BoxDecoration(
-                              color: headerForeground,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: headerBg, width: 2),
-                            ),
-                            child: Icon(
-                              Icons.edit,
-                              size: 12.0.scaled(context, ref),
-                              color: headerBg,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                  SizedBox(height: 12.0.scaled(context, ref)),
-                  // 昵称行:已设置 = 「时段图标 + 问候,昵称」(与 web 一致),未设置 =
-                  // Slogan;名字可点直接编辑(发现性主入口在头像:点头像→编辑资料,可改
-                  // 昵称/头像)。小眼睛(隐藏金额)紧跟其后,整体居中。
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      if (displayName.isNotEmpty) ...[
-                        Icon(greeting.icon,
-                            size: 18.0.scaled(context, ref),
-                            color: headerForeground),
-                        SizedBox(width: 6.0.scaled(context, ref)),
-                      ],
-                      Flexible(
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: _showEditDisplayName,
-                          child: Text(
-                            headerText,
-                            style: nameStyle,
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 8.0.scaled(context, ref)),
-                      GestureDetector(
-                        onTap: () {
-                          final cur = ref.read(hideAmountsProvider);
-                          ref.read(hideAmountsProvider.notifier).state = !cur;
-                        },
-                        child: Icon(
-                          hide
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                          size: 18,
-                          color: headerForeground,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16.0.scaled(context, ref)),
-                  // 统计数据
-                  Row(
+                ),
+                SizedBox(
+                  key: const ValueKey('profile-statistics'),
+                  height: 48.0.scaled(context, ref),
+                  child: Row(
                     children: [
                       Expanded(
                         child: _StatCell(
@@ -427,25 +491,12 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            // 底部 0.5px 高光线（呼应 PiggyHeader 层 D）
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 0.5,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(
-                        alpha: isDark ? 0.15 : 0.08,
-                      ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+
+        ],
       ),
     );
   }
@@ -488,16 +539,22 @@ class _StatCell extends ConsumerWidget {
       valueWidget = Text(value.toString(), style: numStyle);
     }
 
-    return Column(
-      crossAxisAlignment:
-          centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-      children: [
-        valueWidget,
-        SizedBox(height: 4.0.scaled(context, ref)), // 数字与标签间距增大
-        Text(label,
-            style: labelStyle,
-            textAlign: centered ? TextAlign.center : TextAlign.start),
-      ],
+    // FittedBox 让数字+标签按槽位缩放：系统字号/设备缩放变化时不再 1px 溢出
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: centered ? Alignment.center : Alignment.topLeft,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment:
+            centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+        children: [
+          valueWidget,
+          SizedBox(height: 4.0.scaled(context, ref)), // 数字与标签间距增大
+          Text(label,
+              style: labelStyle,
+              textAlign: centered ? TextAlign.center : TextAlign.start),
+        ],
+      ),
     );
   }
 }

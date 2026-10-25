@@ -1,17 +1,18 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:progressive_background_blur/progressive_background_blur.dart';
 
 /// 渐变玻璃背景组件（无级渐变模糊）
 ///
-/// 移植自 wait-home 项目。使用单一 [BackdropFilter] 配合 [ShaderMask]
-/// （BlendMode.dstIn）实现无级渐变模糊，避免条带式分段的视觉割裂。
+/// 最初移植自 wait-home 项目，2026-10-25 重写为真·渐进模糊。
 ///
-/// 原理：
+/// 原理（2026-10-25 重写）：
 /// - [ClipRect] 限制模糊区域，避免 GPU 模糊整个屏幕（性能关键）
-/// - [BackdropFilter] 以 [maxSigma] 模糊背景
-/// - [ShaderMask] + [BlendMode.dstIn] 用垂直渐变控制 alpha（顶全显 → 底透明），
-///   使模糊层从顶部完整可见平滑过渡到底部完全透明，露出原始内容
+/// - Impeller：[ProgressiveBlur] 用 fragment shader 两遍高斯 + sigma 插值，
+///   顶部 [maxSigma] 最模糊 → 底部 0 清晰，是真正的小米/iOS 式渐进模糊
+/// - Skia 降级：[BackdropFilter] + 内部 [ShaderMask]（BlendMode.dstIn），
+///   仅 tint 顶→底渐隐、模糊量仍均匀（Skia 不支持 shader 背景滤镜，无法渐进）
 /// - 叠加垂直渐变 tint 增强磨砂质感
 class GradientBackdropFilter extends StatelessWidget {
   const GradientBackdropFilter({
@@ -44,8 +45,8 @@ class GradientBackdropFilter extends StatelessWidget {
   /// 整体不透明度（0.0=完全透明跳过模糊，1.0=完全显示）。
   ///
   /// 用于滚动驱动渐显：未滚动时传 0.0 跳过 BackdropFilter 计算；
-  /// 滚动中传 0.0~1.0 之间的值由 Opacity widget 控制整体显隐。
-  /// 模糊 sigma 恒定不变，仅整体透明度变化，保证满帧。
+  /// 滚动中传 0.0~1.0 之间的值会折进渐变 mask 的 alpha（不是 Opacity 包裹）。
+  /// 模糊 sigma 恒定不变，仅遮罩透明度变化，保证满帧且 backdrop 始终可读。
   final double opacity;
 
   /// 是否让底部保持不透明（隔绝下方组件颜色渗透）。
@@ -69,9 +70,8 @@ class GradientBackdropFilter extends StatelessWidget {
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final tintColor = isDark
-        ? const Color(0xFF181A22)
-        : const Color(0xFFFFFFFF);
+    final tintColor =
+        isDark ? const Color(0xFF181A22) : const Color(0xFFFFFFFF);
 
     final content = LayoutBuilder(
       builder: (context, constraints) {
@@ -93,17 +93,6 @@ class GradientBackdropFilter extends StatelessWidget {
           );
         }
 
-        // 无级渐变模糊：ClipRect + BackdropFilter + ShaderMask(dstIn)
-        // bottomOpaque=true 时全程 alpha=1.0，隔绝下方颜色渗透；
-        // 否则顶 alpha=1.0 → 底 alpha=0.0，露出滚动内容。
-        final maskColors = bottomOpaque
-            ? const [Colors.white, Colors.white]
-            : const [
-                Colors.white,
-                Color(0xD9FFFFFF), // 顶部 1.0 → 中部 0.85 平滑过渡
-                Colors.transparent,
-              ];
-        final maskStops = bottomOpaque ? null : [0.0, 0.5, 1.0];
         final tintColors = bottomOpaque
             ? [
                 tintColor.withValues(alpha: maxTintOpacity),
@@ -113,38 +102,68 @@ class GradientBackdropFilter extends StatelessWidget {
                 tintColor.withValues(alpha: maxTintOpacity),
                 tintColor.withValues(alpha: minTintOpacity),
               ];
+        final tint = DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: tintColors,
+            ),
+          ),
+        );
+
+        // Impeller：fragment shader 做真·sigma 渐变（底部 0=清晰，顶部 maxSigma 最糊）。
+        // Skia 降级：BackdropFilter + 内部 ShaderMask，只有 tint 渐变、模糊仍均匀。
+        // 两条路径都禁止用 Opacity 包裹、或把 ShaderMask 套到 BackdropFilter 外：
+        // saveLayer 会让 backdrop 读不到下层滚动内容，模糊整块失效
+        // （2026-10-25 golden 探针实测 A/B 结构对比）。
+        final Widget blurred;
+        if (ImageFilter.isShaderFilterSupported) {
+          // shader 的 sigma 单位是物理像素（包文档），必须乘 DPR 才与
+          // BackdropFilter 的逻辑像素 sigma 观感一致，否则真机上模糊弱 2~3 倍，
+          // 顶部该最糊的区域反而看得清文字（2026-10-25 真机实测）。
+          final sigmaScale = MediaQuery.devicePixelRatioOf(context);
+          final sigma = maxSigma * opacity * sigmaScale;
+          blurred = ProgressiveBlur(
+            sigmaStart: sigma,
+            sigmaEnd: bottomOpaque ? sigma : 0,
+            child: tint,
+          );
+        } else {
+          final maskColors = bottomOpaque
+              ? const [Colors.white, Colors.white]
+              : const [
+                  Colors.white,
+                  Color(0xD9FFFFFF),
+                  Colors.transparent,
+                ];
+          final maskStops = bottomOpaque ? null : [0.0, 0.5, 1.0];
+          blurred = BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: maxSigma,
+              sigmaY: maxSigma,
+            ),
+            child: ShaderMask(
+              shaderCallback: (bounds) => LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  for (final color in maskColors)
+                    color.withValues(alpha: color.a * opacity),
+                ],
+                stops: maskStops,
+              ).createShader(bounds),
+              blendMode: BlendMode.dstIn,
+              child: tint,
+            ),
+          );
+        }
 
         return ClipRect(
           child: Stack(
             children: [
-              // 层 1：全模糊背景 + ShaderMask 渐变 alpha（顶全显 → 底透明）
-              Positioned.fill(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(
-                    sigmaX: maxSigma,
-                    sigmaY: maxSigma,
-                  ),
-                  child: ShaderMask(
-                    shaderCallback: (bounds) => LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: maskColors,
-                      stops: maskStops,
-                    ).createShader(bounds),
-                    blendMode: BlendMode.dstIn,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: tintColors,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // 层 2：前景内容（不受渐变 alpha 影响）
+              Positioned.fill(child: blurred),
+              // 前景内容（不受渐变 alpha 影响）
               if (child != null) Positioned.fill(child: child!),
             ],
           ),
@@ -152,13 +171,8 @@ class GradientBackdropFilter extends StatelessWidget {
       },
     );
 
-    // opacity == 1.0 时无需 Opacity 包裹，减少一层 widget
-    if (opacity >= 1.0) {
-      return content;
-    }
-
-    // 渐显过程中用 Opacity 控制整体透明度（Impeller 硬件加速）
-    return Opacity(opacity: opacity, child: content);
+    // 整体透明度已折进上方 mask 颜色，这里不再套 Opacity（saveLayer 会弄瞎模糊）
+    return content;
   }
 }
 

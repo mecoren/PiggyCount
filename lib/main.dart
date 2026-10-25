@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:progressive_background_blur/progressive_background_blur.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
@@ -61,6 +62,10 @@ Future<void> main() async {
   // `PaintingBinding.handleMemoryPressure()` 会 `imageCache.clear()`,
   // 不受本处上限影响。
   _configureImageCache();
+
+  // 预编译渐进模糊 shader（包作者建议 runApp 前调用，避免首次出现模糊时
+  // 突变）；Skia 后端内部自动跳过。
+  unawaited(ProgressiveBlur.precache());
 
   // 全局异常兜底:release 下未捕获异常不再只进系统日志,统一持久化到
   // 日志中心(48h 本地),用户报障时可在「日志中心」页导出给开发者定位。
