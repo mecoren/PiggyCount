@@ -2959,6 +2959,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceShowTransactionTimeDesc => '在账单列表显示时分，编辑时可选择时间';
 
   @override
+  String get appearanceHeaderBlur => '头部模糊强度';
+
+  @override
+  String get appearanceHeaderBlurDesc => '吸顶标题栏与「我的」页头部的磨砂程度，全部页面统一生效（0 为关闭）';
+
+  @override
   String get appearanceQuickEntryMode => '快捷记账模式';
 
   @override
@@ -12329,6 +12335,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get appearanceShowTransactionTimeDesc => '在帳單列表顯示時分，編輯時可選擇時間';
+
+  @override
+  String get appearanceHeaderBlur => '頭部模糊強度';
+
+  @override
+  String get appearanceHeaderBlurDesc => '吸頂標題欄與「我的」頁頭部的磨砂程度，全部頁面統一生效（0 為關閉）';
 
   @override
   String get appearanceQuickEntryMode => '快捷記帳模式';

@@ -125,6 +125,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
                   );
                 },
               ),
+              // 我的页头部模糊强度
+              const _HeaderBlurSliderRow(),
             ],
           ),
           const SizedBox(height: 16),
@@ -524,7 +526,8 @@ class AppearanceSettingsPage extends ConsumerWidget {
                             l10n.appearanceNoteHistoryLimitHint,
                             style: TextStyle(
                               color: PiggyTokens.textSecondary(context),
-                              fontSize: PiggyTextTokens.fs12.scaled(context, ref),
+                              fontSize:
+                                  PiggyTextTokens.fs12.scaled(context, ref),
                             ),
                           ),
                         ],
@@ -636,6 +639,75 @@ class AppearanceSettingsPage extends ConsumerWidget {
           icon: Icons.palette_outlined,
         ),
       ],
+    );
+  }
+}
+
+/// 我的页头部模糊强度滑杆行。
+///
+/// 视觉规格对齐 [SettingsNavItem]（无 trailing 形态）：horizontal 16 /
+/// vertical 14、裸 24px 主色图标、12px 间距、标题 bodyMedium w500、
+/// 副标题 bodySmall onSurfaceVariant；滑杆拖动即时生效并持久化。
+class _HeaderBlurSliderRow extends ConsumerWidget {
+  const _HeaderBlurSliderRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final sigma = ref.watch(headerBlurSigmaProvider);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.blur_on_outlined,
+            size: 24,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.appearanceHeaderBlur,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  l10n.appearanceHeaderBlurDesc,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                Slider(
+                  value: sigma.clamp(headerBlurSigmaMin, headerBlurSigmaMax),
+                  min: headerBlurSigmaMin,
+                  max: headerBlurSigmaMax,
+                  divisions: (headerBlurSigmaMax - headerBlurSigmaMin).toInt(),
+                  label: sigma.toStringAsFixed(0),
+                  onChanged: (v) =>
+                      ref.read(headerBlurSigmaProvider.notifier).state = v,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 28,
+            child: Text(
+              sigma.toStringAsFixed(0),
+              textAlign: TextAlign.end,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

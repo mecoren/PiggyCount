@@ -5516,6 +5516,18 @@ abstract class AppLocalizations {
   /// **'Display time in transaction list, allow time selection when editing'**
   String get appearanceShowTransactionTimeDesc;
 
+  /// No description provided for @appearanceHeaderBlur.
+  ///
+  /// In en, this message translates to:
+  /// **'Header Blur Strength'**
+  String get appearanceHeaderBlur;
+
+  /// No description provided for @appearanceHeaderBlurDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Frosting level of pinned title bars and the Mine tab header, applied app-wide (0 = off)'**
+  String get appearanceHeaderBlurDesc;
+
   /// No description provided for @appearanceQuickEntryMode.
   ///
   /// In en, this message translates to:

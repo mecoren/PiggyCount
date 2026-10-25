@@ -277,6 +277,8 @@ final appSplashInitProvider = FutureProvider<void>((ref) async {
       ref.watch(displayNameInitProvider.future),
       ref.watch(baseCurrencyInitProvider.future),
       ref.watch(headerSkinInitProvider.future),
+      // 标题栏/我的页头部模糊强度（pref 读取 + 变更写回）
+      ref.watch(headerBlurSigmaInitProvider.future),
       ref.watch(securityInitProvider.future),
       // P1-E 快捷记账模式开关（pref 读取 + 变更写回），与上面各项同批加载
       ref.watch(quickEntryModeEnabledInitProvider.future),

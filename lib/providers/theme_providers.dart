@@ -49,8 +49,8 @@ final themeModeInitProvider = FutureProvider<void>((ref) async {
 // PiggyPersonalizeDefaults.defaultPrimaryColor 常量（单源，防漂移）。
 // 老用户已在 prefs 存过 primaryColor 的，由 primaryColorInitProvider
 // 覆盖为本机选择；未存过的新用户走此默认。
-final primaryColorProvider = StateProvider<Color>(
-    (ref) => PiggyPersonalizeDefaults.defaultPrimaryColor);
+final primaryColorProvider =
+    StateProvider<Color>((ref) => PiggyPersonalizeDefaults.defaultPrimaryColor);
 
 // 是否隐藏金额显示
 final hideAmountsProvider = StateProvider<bool>((ref) => false);
@@ -67,7 +67,10 @@ final primaryColorInitProvider = FutureProvider<void>((ref) async {
     ref.read(primaryColorProvider.notifier).state = Color(saved);
   }
   ref.listen<Color>(primaryColorProvider, (prev, next) async {
-    final colorValue = (next.a * 255).toInt() << 24 | (next.r * 255).toInt() << 16 | (next.g * 255).toInt() << 8 | (next.b * 255).toInt();
+    final colorValue = (next.a * 255).toInt() << 24 |
+        (next.r * 255).toInt() << 16 |
+        (next.g * 255).toInt() << 8 |
+        (next.b * 255).toInt();
     await prefs.setInt('primaryColor', colorValue);
     // Update widget with new theme color
     try {
@@ -90,7 +93,6 @@ final primaryColorInitProvider = FutureProvider<void>((ref) async {
     } catch (e) {
       // Silently fail
     }
-
   });
 });
 
@@ -174,6 +176,29 @@ final showTransactionTimeInitProvider = FutureProvider<void>((ref) async {
   }
   ref.listen<bool>(showTransactionTimeProvider, (prev, next) async {
     await prefs.setBool('showTransactionTime', next);
+  });
+});
+
+// 我的页头部折叠后的玻璃模糊强度（逻辑像素 sigma）。
+// 0 = 无模糊，24 = 最强（shader 有效上限约 42 物理像素，经 DPR 换算后
+// 24 逻辑像素已顶满，超出无视觉增益）。仅本地持久化，不进外观配置导出。
+const headerBlurSigmaDefault = 5.0;
+const headerBlurSigmaMin = 0.0;
+const headerBlurSigmaMax = 24.0;
+
+final headerBlurSigmaProvider =
+    StateProvider<double>((ref) => headerBlurSigmaDefault);
+
+// 头部模糊强度持久化初始化（读取 + 变更写回，范式同 showTransactionTime）
+final headerBlurSigmaInitProvider = FutureProvider<void>((ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  final saved = prefs.getDouble('headerBlurSigma');
+  if (saved != null) {
+    ref.read(headerBlurSigmaProvider.notifier).state =
+        saved.clamp(headerBlurSigmaMin, headerBlurSigmaMax);
+  }
+  ref.listen<double>(headerBlurSigmaProvider, (prev, next) async {
+    await prefs.setDouble('headerBlurSigma', next);
   });
 });
 
@@ -353,7 +378,9 @@ enum IncomeExpenseColorScheme {
   static IncomeExpenseColorScheme fromKey(Object? raw) {
     if (raw is bool) {
       // 兼容老 prefs: true → redIncome, false → greenIncome。
-      return raw ? IncomeExpenseColorScheme.redIncome : IncomeExpenseColorScheme.greenIncome;
+      return raw
+          ? IncomeExpenseColorScheme.redIncome
+          : IncomeExpenseColorScheme.greenIncome;
     }
     if (raw is String) {
       for (final v in IncomeExpenseColorScheme.values) {
@@ -379,8 +406,7 @@ final incomeExpenseColorSchemeProvider =
 
 // 收支颜色方案持久化初始化(同时承担 bool → enum 的迁移,见
 // [IncomeExpenseColorScheme.fromKey])。
-final incomeExpenseColorSchemeInitProvider =
-    FutureProvider<void>((ref) async {
+final incomeExpenseColorSchemeInitProvider = FutureProvider<void>((ref) async {
   final prefs = await SharedPreferences.getInstance();
   // 同时读 string 和 bool,新版本写 string,旧版本写的是 bool。
   final savedString = prefs.getString('incomeExpenseColorScheme');
@@ -393,8 +419,8 @@ final incomeExpenseColorSchemeInitProvider =
       ref.read(incomeExpenseColorSchemeProvider.notifier).state = next;
     }
   }
-  ref.listen<IncomeExpenseColorScheme>(
-      incomeExpenseColorSchemeProvider, (prev, next) async {
+  ref.listen<IncomeExpenseColorScheme>(incomeExpenseColorSchemeProvider,
+      (prev, next) async {
     await prefs.setString('incomeExpenseColorScheme', next.persistenceKey);
     try {
       final repository = ref.read(repositoryProvider);
@@ -416,7 +442,6 @@ final incomeExpenseColorSchemeInitProvider =
     } catch (e) {
       // Silently fail
     }
-
   });
 });
 

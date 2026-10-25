@@ -2983,6 +2983,13 @@ class AppLocalizationsKo extends AppLocalizations {
       '거래 목록에 시간을 표시하고, 편집 시 시간 선택을 허용합니다';
 
   @override
+  String get appearanceHeaderBlur => '헤더 블러 강도';
+
+  @override
+  String get appearanceHeaderBlurDesc =>
+      '고정 제목 표시줄과 내 탭 헤더의 블러 정도, 모든 페이지에 일괄 적용됩니다 (0 = 끄기)';
+
+  @override
   String get appearanceQuickEntryMode => '빠른 기록 모드';
 
   @override

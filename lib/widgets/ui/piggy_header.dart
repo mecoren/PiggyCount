@@ -6,23 +6,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/theme_providers.dart';
 import '../../styles/header_skins.dart';
 import '../../styles/tokens.dart';
+import 'gradient_backdrop_filter.dart';
 
 /// PiggyCount 统一头部组件族。
 ///
 /// 替代 [GlassTitleBar]/[GlassHomeBar]/[GlassHeader] 与已弃用的 [PrimaryHeader]，
-/// 采用「95% 中性实色 + 直渲 HeaderSkin + 1px 高光线」视觉语言，
-/// 与底部导航栏 [PiggyTokens.tabBarBackground] 同色，消除 app 级 BackdropFilter 开销。
+/// 采用「中性底色 + 直渲 HeaderSkin + 1px 高光线」视觉语言，
+/// 与底部导航栏 [PiggyTokens.tabBarBackground] 同色。
 ///
-/// 视觉层结构（四层 Stack，无模糊）：
+/// 视觉层结构（五层 Stack，渐进模糊可选）：
 /// ```
 /// Stack
-///  ├─ 层 A：95% 中性实色背景（PiggyTokens.tabBarBackground）
-///  ├─ 层 B：HeaderSkin 装饰层（Opacity 0.85，护栏对比度）
+///  ├─ 层 A0：渐进模糊层（GradientBackdropFilter，sigma 读全局
+///  │         headerBlurSigmaProvider，由个性化设置「头部模糊强度」滑杆统一控制；
+///  │         sigma 为 0 时整层省略，恢复纯实色观感、零滤镜开销）
+///  ├─ 层 A：中性实色背景（PiggyTokens.tabBarBackground；开模糊且为默认底色时
+///  │         alpha→0（纯磨砂态，对齐「我的」页折叠态），关模糊时 95% 实色）
+///  ├─ 层 B：HeaderSkin 装饰层（Opacity 0.85，护栏对比度；纯磨砂态淡出）
 ///  ├─ 层 C：SafeArea(bottom: false) + 前景内容
-///  └─ 层 D：0.5px 底部高光线（onSurface α0.15 暗 / α0.08 亮）
+///  └─ 层 D：0.5px 底部高光线（onSurface α0.15 暗 / α0.08 亮；纯磨砂态隐藏）
 /// ```
 ///
-/// 详见 prd/ui_optimization_review/design.md。
+/// 模糊层要求页面 `extendBodyBehindAppBar: true` 且内容可从标题栏下方滚过，
+/// 才能看到磨砂效果；否则模糊的是纯背景色，视觉无变化、仅多一次滤镜开销
+/// （sigma = 0 时无开销）。详见 prd/ui_optimization_review/design.md。
 
 /// 用于 `Scaffold.appBar` 的统一标题栏（替代 `GlassTitleBar`）。
 ///
@@ -53,11 +60,14 @@ class PiggyTitleBar extends StatelessWidget implements PreferredSizeWidget {
     this.topPadding = 0,
     this.backgroundColor,
     // —— 以下参数为兼容旧 GlassTitleBar API 保留，内部忽略 ——
-    @Deprecated('No longer used; PiggyTitleBar is always solid.')
+    @Deprecated(
+        'No longer used; blur is controlled globally by headerBlurSigmaProvider.')
     this.blur = true,
-    @Deprecated('No longer used; PiggyTitleBar has no blur.')
+    @Deprecated(
+        'No longer used; blur is controlled globally by headerBlurSigmaProvider.')
     this.maxSigma = 20.0,
-    @Deprecated('No longer used; PiggyTitleBar has no blur.')
+    @Deprecated(
+        'No longer used; blur is controlled globally by headerBlurSigmaProvider.')
     this.minSigma = 2.0,
     @Deprecated('No longer used; PiggyTitleBar always shows highlight line.')
     this.showHighlightLine = true,
@@ -257,9 +267,11 @@ class PiggyHomeBar extends StatelessWidget implements PreferredSizeWidget {
     this.onMenuTap,
     this.actions,
     this.primary = true,
-    @Deprecated('No longer used; PiggyHomeBar is always solid.')
+    @Deprecated(
+        'No longer used; blur is controlled globally by headerBlurSigmaProvider.')
     this.blur = true,
-    @Deprecated('No longer used; PiggyHomeBar is always opaque.')
+    @Deprecated(
+        'No longer used; blur is controlled globally by headerBlurSigmaProvider.')
     this.bottomOpaque = false,
   });
 
@@ -335,9 +347,11 @@ class PiggyHeader extends ConsumerWidget {
     this.bottom,
     this.bottomHeight = 0,
     // —— 以下参数为兼容旧 GlassHeader API 保留，内部忽略 ——
-    @Deprecated('No longer used; PiggyHeader is always opaque.')
+    @Deprecated(
+        'No longer used; blur is controlled globally by headerBlurSigmaProvider.')
     this.bottomOpaque = false,
-    @Deprecated('No longer used; PiggyHeader has no blur.')
+    @Deprecated(
+        'No longer used; blur is controlled globally by headerBlurSigmaProvider.')
     this.maxSigma = 20.0,
     @Deprecated('No longer used; PiggyHeader always shows highlight line.')
     this.showHighlightLine = true,
@@ -438,7 +452,7 @@ class PiggyHeader extends ConsumerWidget {
   }
 }
 
-/// 统一的头部外壳：四层 Stack（实色底 + 皮肤 + 前景 + 高光线）。
+/// 统一的头部外壳：五层 Stack（可选模糊层 + 实色底 + 皮肤 + 前景 + 高光线）。
 class _PiggyHeaderShell extends ConsumerWidget {
   const _PiggyHeaderShell({
     required this.foreground,
@@ -465,8 +479,70 @@ class _PiggyHeaderShell extends ConsumerWidget {
     final skin = headerSkinById(ref.watch(headerSkinProvider));
     final primaryColor = ref.watch(primaryColorProvider);
 
-    // 95% 中性实色背景；调用方可自定义（如底部抽屉与页面背景融合）。
-    final bgColor = backgroundColor ?? PiggyTokens.tabBarBackground(context);
+    // 模糊强度：个性化设置「头部模糊强度」滑杆（0 = 关闭，恢复纯实色）
+    final blurSigma = ref.watch(headerBlurSigmaProvider);
+    final hasBlur = blurSigma > 0;
+    // 调用方自带底色（底部抽屉等）时不做「纯磨砂」淡出，只按比例稀释。
+    final hasCustomBg = backgroundColor != null;
+
+    // 对齐「我的」页折叠态的观感（profile_card：bg alpha→0、皮肤淡出，
+    // 只剩磨砂层 + 自带 tint）：开模糊时默认底色与皮肤完全淡出，只留磨砂；
+    // 关模糊时恢复原实色 + 皮肤；自定义底色的调用方仅稀释、不淡出。
+    final baseBg = backgroundColor ?? PiggyTokens.tabBarBackground(context);
+    final bgAlpha = hasBlur
+        ? (hasCustomBg ? baseBg.a * 0.6 : 0.0)
+        : baseBg.a;
+    final bgColor = baseBg.withValues(alpha: bgAlpha);
+
+    // 纯磨砂态下皮肤是否淡出（同上，只对默认底色生效）
+    final showSkin = skin != null && !(hasBlur && !hasCustomBg);
+
+    final Widget layers = Stack(
+      children: [
+        // 层 A0：渐进模糊层（先于底色绘制，磨砂下方滚入的内容）。
+        // 默认渐进模式（bottomOpaque: false）：顶部 sigma 最强 → 底部渐隐到 0，
+        // tint 同步顶→底渐隐，与「我的」页头部同款渐变观感。
+        // tint 比默认值略重：内容一屏装得下、或固定头部（内容不会经过栏下）的
+        // 页面里，这层渐变是唯一可见的「玻璃条」质感来源——没有它标题栏
+        // 和页面纯背景完全同色，看起来像没有模糊。
+        if (hasBlur)
+          Positioned.fill(
+            child: GradientBackdropFilter(
+              maxSigma: blurSigma,
+              maxTintOpacity: 0.32,
+              minTintOpacity: 0.06,
+            ),
+          ),
+        // 层 A：中性实色背景（纯磨砂态 alpha=0，仅保持层序一致）
+        Positioned.fill(child: ColoredBox(color: bgColor)),
+        // 层 B：HeaderSkin 装饰层（0.85 不透明度护栏；纯磨砂态淡出）
+        if (showSkin)
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.85,
+              child: skin.builder(primaryColor, isDark),
+            ),
+          ),
+        // 层 C：前景内容（SafeArea 处理状态栏避让）
+        SafeArea(bottom: false, child: foreground),
+        // 层 D：底部 0.5px 高光线（纯磨砂态隐藏：「我的」头部没有这条线，
+        // 渐隐区底部再叠线会显出一条突兀的横线）
+        if (!hasBlur)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 0.5,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: colorScheme.onSurface.withValues(
+                  alpha: isDark ? 0.15 : 0.08,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -475,38 +551,10 @@ class _PiggyHeaderShell extends ConsumerWidget {
         statusBarIconBrightness: statusBarIconBrightness,
         statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
       ),
-      child: RepaintBoundary(
-        child: Stack(
-          children: [
-            // 层 A：95% 中性实色背景
-            Positioned.fill(child: ColoredBox(color: bgColor)),
-            // 层 B：HeaderSkin 装饰层（0.85 不透明度护栏）
-            if (skin != null)
-              Positioned.fill(
-                child: Opacity(
-                  opacity: 0.85,
-                  child: skin.builder(primaryColor, isDark),
-                ),
-              ),
-            // 层 C：前景内容（SafeArea 处理状态栏避让）
-            SafeArea(bottom: false, child: foreground),
-            // 层 D：底部 0.5px 高光线
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 0.5,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colorScheme.onSurface.withValues(
-                    alpha: isDark ? 0.15 : 0.08,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      // 纯磨砂态不套 RepaintBoundary：重绘边界会隔离合成层，挡住
+      // BackdropFilter 读取边界外的页面滚动内容（实测栏内只见纯色、
+      // 磨砂不生效）；实色态无滤镜，保留重绘隔离。
+      child: hasBlur ? layers : RepaintBoundary(child: layers),
     );
   }
 }

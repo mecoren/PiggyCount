@@ -93,9 +93,26 @@ void main() {
     expect(find.text('5003'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('个性化设置的模糊强度接入头部模糊层', (tester) async {
+    await tester.pumpWidget(_profileHost(1, blurSigma: 4.0));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<GradientBackdropFilter>(
+            find.byType(GradientBackdropFilter),
+          )
+          .maxSigma,
+      4.0,
+    );
+  });
 }
 
-Widget _profileHost(double progress, {double textScale = 1.0}) {
+Widget _profileHost(
+  double progress, {
+  double textScale = 1.0,
+  double? blurSigma,
+}) {
   return ProviderScope(
     overrides: [
       avatarPathProvider.overrideWith((ref) async => null),
@@ -104,6 +121,8 @@ Widget _profileHost(double progress, {double textScale = 1.0}) {
       ),
       currentBalanceProvider(1).overrideWith((ref) async => 9039346.89),
       currentLedgerProvider.overrideWith((ref) => Stream.value(null)),
+      if (blurSigma != null)
+        headerBlurSigmaProvider.overrideWith((ref) => blurSigma),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

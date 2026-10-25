@@ -3053,6 +3053,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Display time in transaction list, allow time selection when editing';
 
   @override
+  String get appearanceHeaderBlur => 'Header Blur Strength';
+
+  @override
+  String get appearanceHeaderBlurDesc =>
+      'Frosting level of pinned title bars and the Mine tab header, applied app-wide (0 = off)';
+
+  @override
   String get appearanceQuickEntryMode => 'Quick Entry Mode';
 
   @override

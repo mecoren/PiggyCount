@@ -262,9 +262,10 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
       child: Stack(
         children: [
           // 模糊层必须先于半透明底色绘制，才能捕获下方滚入的菜单。
+          // 强度取用户在个性化设置里选的值（headerBlurSigmaProvider，默认 5）。
           Positioned.fill(
             child: GradientBackdropFilter(
-              maxSigma: 24,
+              maxSigma: ref.watch(headerBlurSigmaProvider),
               opacity: progress,
             ),
           ),
@@ -495,7 +496,6 @@ class _ProfileCardState extends ConsumerState<ProfileCard> {
               ],
             ),
           ),
-
         ],
       ),
     );
