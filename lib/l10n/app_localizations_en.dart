@@ -860,6 +860,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importCustomFieldMappingSkip => 'Ignore this column';
 
   @override
+  String get importCustomFieldExtraColumns =>
+      'Other unrecognized columns (ignored by default; can map to custom fields)';
+
+  @override
   String importCustomFieldColumns(int count) {
     return '$count custom field column(s) detected';
   }

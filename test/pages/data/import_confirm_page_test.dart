@@ -588,7 +588,8 @@ void main() {
       await openConfirmPage(tester);
       await settleParsing(tester);
 
-      expect(find.text(zh(tester).importCustomFieldMappingTitle), findsOneWidget);
+      expect(
+          find.text(zh(tester).importCustomFieldMappingTitle), findsOneWidget);
       await tester.tap(
         find.byKey(const ValueKey('custom-field-map-旧列名-__auto__')),
       );
@@ -601,11 +602,86 @@ void main() {
       await drainImportTimers(tester);
 
       final defs = await db.select(db.customFieldDefinitions).get();
-      debugPrint('defs=${defs.map((d) => '${d.name}/${d.syncId}').toList()}');
       expect(defs.length, 1, reason: '映射到已有字段，不应重复建字段');
       final tx = (await db.select(db.transactions).get()).single;
+      expect(
+          CustomFieldValueCodec.decode(tx.customValuesJson), {'cf-tax': 8.5});
+    });
+
+    testWidgets('未识别列默认忽略，不建字段', (tester) async {
+      await pumpHost(
+        tester,
+        csvText: '日期,类型,金额,分类,发票号\n'
+            '2026-09-01,支出,12.50,餐饮,X-1\n',
+      );
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+
+      expect(
+          find.text(zh(tester).importCustomFieldExtraColumns), findsOneWidget);
+      await tapStartImport(tester);
+      await drainImportTimers(tester);
+
+      expect(await db.select(db.customFieldDefinitions).get(), isEmpty);
+      final tx = (await db.select(db.transactions).get()).single;
+      expect(tx.customValuesJson, isNull);
+    });
+
+    testWidgets('未识别列可映射到已有自定义字段', (tester) async {
+      await seedField(name: '税费', syncId: 'cf-tax');
+
+      await pumpHost(
+        tester,
+        csvText: '日期,类型,金额,分类,发票号\n'
+            '2026-09-01,支出,12.50,餐饮,8.5\n',
+      );
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+
+      final mapDropdown =
+          find.byKey(const ValueKey('custom-field-map-#col:4-__skip__'));
+      await tester.ensureVisible(mapDropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(mapDropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('税费').last);
+      await tester.pumpAndSettle();
+
+      await tapStartImport(tester);
+      await drainImportTimers(tester);
+
+      expect((await db.select(db.customFieldDefinitions).get()).length, 1);
+      final tx = (await db.select(db.transactions).get()).single;
+      expect(
+          CustomFieldValueCodec.decode(tx.customValuesJson), {'cf-tax': 8.5});
+    });
+
+    testWidgets('未识别列可自动新建自定义字段', (tester) async {
+      await pumpHost(
+        tester,
+        csvText: '日期,类型,金额,分类,发票号\n'
+            '2026-09-01,支出,12.50,餐饮,X-1\n',
+      );
+      await openConfirmPage(tester);
+      await settleParsing(tester);
+
+      final mapDropdown =
+          find.byKey(const ValueKey('custom-field-map-#col:4-__skip__'));
+      await tester.ensureVisible(mapDropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(mapDropdown);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(zh(tester).importCustomFieldMappingAuto).last);
+      await tester.pumpAndSettle();
+
+      await tapStartImport(tester);
+      await drainImportTimers(tester);
+
+      final def = (await db.select(db.customFieldDefinitions).get()).single;
+      expect(def.name, '发票号');
+      final tx = (await db.select(db.transactions).get()).single;
       expect(CustomFieldValueCodec.decode(tx.customValuesJson),
-          {'cf-tax': 8.5});
+          {def.syncId: 'X-1'});
     });
 
     testWidgets('自定义字段列可显式忽略', (tester) async {

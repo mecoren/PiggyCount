@@ -300,6 +300,7 @@
   "importCustomFieldMappingTarget": "대상 필드",
   "importCustomFieldMappingAuto": "열 이름으로 자동 매칭",
   "importCustomFieldMappingSkip": "이 열 무시",
+  "importCustomFieldExtraColumns": "기타 인식되지 않은 열 (기본값 무시, 사용자 정의 필드로 매핑 가능)",
   "importCustomFieldColumns": "사용자 정의 필드 열 {count}개를 찾았습니다",
   "@importCustomFieldColumns": {
     "placeholders": {

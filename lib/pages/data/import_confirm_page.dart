@@ -74,6 +74,11 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
 
   static const _customFieldAuto = '__auto__';
   static const _customFieldSkip = '__skip__';
+  static const _extraColumnKeyPrefix = '#col:';
+
+  static String _extraColumnKey(int index) => '$_extraColumnKeyPrefix$index';
+
+  bool _isExtraColumn(String key) => key.startsWith(_extraColumnKeyPrefix);
 
   bool importing = false;
   int ok = 0, fail = 0, skipped = 0; // skipped: 跳过的非收支类型记录
@@ -149,6 +154,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     // 新格式：`custom_field:<字段名>` 独立列。这里只记录列位置，字段名 /
     // 类型在导入前由用户逐项确认，不做静默自动创建。
     _customFieldColumns = {};
+    _customFieldTargets.clear();
+    final usedByBuiltins = mapping.values.whereType<int>().toSet();
     for (var i = 0; i < headers.length; i++) {
       final header = headers[i];
       if (!header.startsWith(customFieldCsvHeaderPrefix)) continue;
@@ -157,8 +164,20 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       if (rawName.isNotEmpty) {
         final key = rawName.toLowerCase();
         _customFieldColumns[key] = (name: rawName, index: i);
-        _customFieldTargets.putIfAbsent(key, () => _customFieldAuto);
+        _customFieldTargets[key] = _customFieldAuto;
       }
+    }
+    // 第三方 CSV 的未识别列：默认忽略，用户可在第一步主动映射成自定义字段。
+    for (var i = 0; i < headers.length; i++) {
+      final header = headers[i];
+      if (header.isEmpty ||
+          header.startsWith(customFieldCsvHeaderPrefix) ||
+          usedByBuiltins.contains(i)) {
+        continue;
+      }
+      final key = _extraColumnKey(i);
+      _customFieldColumns[key] = (name: header, index: i);
+      _customFieldTargets[key] = _customFieldSkip;
     }
   }
 
@@ -293,65 +312,30 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                             color: PiggyTokens.textSecondary(context)),
                       ),
                       const SizedBox(height: 8),
-                      for (final entry in _customFieldColumns.entries)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(entry.value.name),
-                              const SizedBox(height: 6),
-                              DropdownButtonFormField<String>(
-                                key: ValueKey(
-                                  'custom-field-map-${entry.key}-'
-                                  '${_customFieldTargets[entry.key]}',
-                                ),
-                                initialValue: _customFieldTargets[entry.key] ??
-                                    _customFieldAuto,
-                                isExpanded: true,
-                                decoration: piggyOutlinedDecoration(
-                                  context,
-                                  label: AppLocalizations.of(context)
-                                      .importCustomFieldMappingTarget,
-                                ),
-                                items: [
-                                  DropdownMenuItem(
-                                    value: _customFieldAuto,
-                                    child: Text(AppLocalizations.of(context)
-                                        .importCustomFieldMappingAuto),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: _customFieldSkip,
-                                    child: Text(AppLocalizations.of(context)
-                                        .importCustomFieldMappingSkip),
-                                  ),
-                                  for (final field in (ref
-                                          .watch(
-                                              customFieldsForCurrentLedgerProvider)
-                                          .value ??
-                                      const <schema.CustomFieldDefinition>[]))
-                                    if (field.syncId != null &&
-                                        field.syncId!.isNotEmpty)
-                                      DropdownMenuItem(
-                                        value: field.syncId,
-                                        enabled:
-                                            !_customFieldTargetUsedElsewhere(
-                                          field.syncId!,
-                                          entry.key,
-                                        ),
-                                        child: Text(field.name),
-                                      ),
-                                ],
-                                onChanged: (value) {
-                                  if (value == null) return;
-                                  setState(() {
-                                    _customFieldTargets[entry.key] = value;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
+                      for (final entry in _customFieldColumns.entries
+                          .where((e) => !_isExtraColumn(e.key)))
+                        _customFieldMappingRow(
+                          entry,
+                          AppLocalizations.of(context),
                         ),
+                      if (_customFieldColumns.keys.any(_isExtraColumn)) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          AppLocalizations.of(context)
+                              .importCustomFieldExtraColumns,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: PiggyTokens.textSecondary(context),
+                                  ),
+                        ),
+                        const SizedBox(height: 8),
+                        for (final entry in _customFieldColumns.entries
+                            .where((e) => _isExtraColumn(e.key)))
+                          _customFieldMappingRow(
+                            entry,
+                            AppLocalizations.of(context),
+                          ),
+                      ],
                     ],
                     const SizedBox(height: 12),
                     // 预览仅展示前 N 行，避免大文件一次性渲染导致卡顿
@@ -549,6 +533,62 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     );
   }
 
+  Widget _customFieldMappingRow(
+    MapEntry<String, ({String name, int index})> entry,
+    AppLocalizations l10n,
+  ) {
+    final fields = ref.watch(customFieldsForCurrentLedgerProvider).value ??
+        const <schema.CustomFieldDefinition>[];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(entry.value.name),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<String>(
+            key: ValueKey(
+              'custom-field-map-${entry.key}-'
+              '${_customFieldTargets[entry.key]}',
+            ),
+            initialValue: _customFieldTargets[entry.key] ?? _customFieldAuto,
+            isExpanded: true,
+            decoration: piggyOutlinedDecoration(
+              context,
+              label: l10n.importCustomFieldMappingTarget,
+            ),
+            items: [
+              DropdownMenuItem(
+                value: _customFieldAuto,
+                child: Text(l10n.importCustomFieldMappingAuto),
+              ),
+              DropdownMenuItem(
+                value: _customFieldSkip,
+                child: Text(l10n.importCustomFieldMappingSkip),
+              ),
+              for (final field in fields)
+                if (field.syncId != null && field.syncId!.isNotEmpty)
+                  DropdownMenuItem(
+                    value: field.syncId,
+                    enabled: !_customFieldTargetUsedElsewhere(
+                      field.syncId!,
+                      entry.key,
+                    ),
+                    child: Text(field.name),
+                  ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _customFieldTargets[entry.key] = value;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _mapRow(String label, String key, List<DropdownMenuItem<int>> items) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -609,7 +649,6 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       for (final f in customFieldDefs) f.name.trim().toLowerCase(): f.fieldType,
     };
     // 第一步显式映射到已有字段的列：以用户选择为准，不再按表头名称猜。
-    debugPrint('DEBUG targets=$_customFieldTargets defs=${customFieldBySyncId.keys}');
     _customFieldColumnSyncIds.clear();
     for (final entry in _customFieldColumns.entries) {
       final target = _customFieldTargets[entry.key] ?? _customFieldAuto;
@@ -682,7 +721,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       if (_customFieldColumnSyncIds.containsKey(entry.key)) continue;
       final target = _customFieldTargets[entry.key] ?? _customFieldAuto;
       if (target == _customFieldSkip) continue;
-      final syncId = customFieldNameToSyncId[entry.key];
+      final nameKey = entry.value.name.trim().toLowerCase();
+      final syncId = customFieldNameToSyncId[nameKey];
       if (syncId == null) continue;
       _customFieldColumnSyncIds[entry.key] = syncId;
       _customFieldNameToType[entry.key] =
@@ -1341,6 +1381,11 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     }
 
     for (final entry in _customFieldColumns.entries) {
+      final target = _customFieldTargets[entry.key] ?? _customFieldAuto;
+      if (target == _customFieldSkip ||
+          _customFieldColumnSyncIds.containsKey(entry.key)) {
+        continue;
+      }
       for (var i = dataStart; i < rows.length; i++) {
         final r = rows[i];
         if (entry.value.index >= r.length) continue;

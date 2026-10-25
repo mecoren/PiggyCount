@@ -461,6 +461,7 @@
   "importCustomFieldMappingTarget": "目标字段",
   "importCustomFieldMappingAuto": "按列名自动匹配",
   "importCustomFieldMappingSkip": "忽略此列",
+  "importCustomFieldExtraColumns": "其他未识别列（默认忽略，可映射为自定义字段）",
   "importCustomFieldColumns": "已识别 {count} 个自定义字段独立列",
   "@importCustomFieldColumns": {
     "placeholders": {

@@ -836,6 +836,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importCustomFieldMappingSkip => '忽略此列';
 
   @override
+  String get importCustomFieldExtraColumns => '其他未识别列（默认忽略，可映射为自定义字段）';
+
+  @override
   String importCustomFieldColumns(int count) {
     return '已识别 $count 个自定义字段独立列';
   }
@@ -10298,6 +10301,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get importCustomFieldMappingSkip => '忽略此欄';
+
+  @override
+  String get importCustomFieldExtraColumns => '其他未識別欄（預設忽略，可對應為自訂欄位）';
 
   @override
   String importCustomFieldColumns(int count) {

@@ -848,6 +848,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get importCustomFieldMappingSkip => '이 열 무시';
 
   @override
+  String get importCustomFieldExtraColumns =>
+      '기타 인식되지 않은 열 (기본값 무시, 사용자 정의 필드로 매핑 가능)';
+
+  @override
   String importCustomFieldColumns(int count) {
     return '사용자 정의 필드 열 $count개를 찾았습니다';
   }

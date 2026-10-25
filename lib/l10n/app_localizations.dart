@@ -1590,6 +1590,12 @@ abstract class AppLocalizations {
   /// **'Ignore this column'**
   String get importCustomFieldMappingSkip;
 
+  /// No description provided for @importCustomFieldExtraColumns.
+  ///
+  /// In en, this message translates to:
+  /// **'Other unrecognized columns (ignored by default; can map to custom fields)'**
+  String get importCustomFieldExtraColumns;
+
   /// No description provided for @importCustomFieldColumns.
   ///
   /// In en, this message translates to:

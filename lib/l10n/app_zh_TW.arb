@@ -340,6 +340,7 @@
   "importCustomFieldMappingTarget": "目標欄位",
   "importCustomFieldMappingAuto": "依欄名自動比對",
   "importCustomFieldMappingSkip": "忽略此欄",
+  "importCustomFieldExtraColumns": "其他未識別欄（預設忽略，可對應為自訂欄位）",
   "importCustomFieldColumns": "已識別 {count} 個自訂欄位獨立欄",
   "@importCustomFieldColumns": {
     "placeholders": {

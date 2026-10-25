@@ -461,6 +461,7 @@
   "importCustomFieldMappingTarget": "Target field",
   "importCustomFieldMappingAuto": "Auto-match by column name",
   "importCustomFieldMappingSkip": "Ignore this column",
+  "importCustomFieldExtraColumns": "Other unrecognized columns (ignored by default; can map to custom fields)",
   "importCustomFieldColumns": "{count} custom field column(s) detected",
   "@importCustomFieldColumns": {
     "placeholders": {
