@@ -33,6 +33,7 @@ import 'package:piggycount/providers/sync_providers.dart';
 import 'package:piggycount/providers/ui_state_providers.dart';
 import 'package:piggycount/widgets/ui/segmented_control.dart';
 import 'package:piggycount/widgets/ui/wait_sliding_segmented_control.dart';
+import 'package:piggycount/widgets/ui/piggy_header.dart';
 import 'package:piggycount/widgets/ui/piggy_spinner.dart';
 
 /// 可挂起的仓储：[blocked] 打开后 [totalsByDay] 停在闸门不再返回，用来把页面
@@ -156,6 +157,26 @@ void main() {
     expect(find.text('350.00'), findsWidgets);
   });
 
+  // 头部磨砂（GradientBackdropFilter）只有「下面真的滚过内容」才看得出效果：
+  // 头部必须是覆盖层（贴屏幕顶、不占布局位），列表视口也必须是整块 body，
+  // 靠列表自身 padding 让出头部高度。退回 body: Column 就会让列表视口从头部
+  // 下沿开始、卡片永远穿不到头部后面（磨砂只剩一片纯色）。
+  testWidgets('列表铺满 body + 首屏留白让出头部覆盖层', (tester) async {
+    await pump(tester);
+    final listFinder = find.byType(ListView);
+    expect(listFinder, findsOneWidget);
+    final listRect = tester.getRect(listFinder);
+    final headerRect = tester.getRect(find.byType(PiggyHeader));
+    final padding = tester.widget<ListView>(listFinder).padding! as EdgeInsets;
+
+    expect(headerRect.top, 0, reason: '头部覆盖层要贴屏幕顶（自带状态栏避让）');
+    expect(listRect.top, 0, reason: '列表视口从屏幕顶开始，卡片才能滚到头部下方');
+    expect(listRect.height, greaterThan(headerRect.height),
+        reason: '列表不能只占头部以下的剩余高度');
+    expect(padding.top, greaterThanOrEqualTo(headerRect.height),
+        reason: '首屏内容必须整块落在头部下沿之下（留白取实测头部高度）');
+  });
+
   testWidgets('洞察筛选抽屉：选择交易类型后显示已启用与条件摘要', (tester) async {
     await pump(tester);
 
@@ -167,8 +188,7 @@ void main() {
     // FilterChip / ChoiceChip（M3 默认高度、留白与配色跟抽屉其它字段不是一套）。
     expect(find.byType(FilterChip), findsNothing);
     expect(find.byType(ChoiceChip), findsNothing);
-    expect(
-        find.byKey(const ValueKey('analyticsFilterType_expense')),
+    expect(find.byKey(const ValueKey('analyticsFilterType_expense')),
         findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('analyticsFilterType_income')));
@@ -233,11 +253,11 @@ void main() {
     expect(find.text('标签'), findsWidgets);
 
     await tester.enterText(find.byType(TextFormField), '咖啡');
-    await tester.tap(
-        find.byKey(const ValueKey('analyticsFilterOption_sid_single_日常')));
+    await tester
+        .tap(find.byKey(const ValueKey('analyticsFilterOption_sid_single_日常')));
     await tester.pump();
-    await tester.tap(
-        find.byKey(const ValueKey('analyticsFilterOption_sid_multi_外出')));
+    await tester
+        .tap(find.byKey(const ValueKey('analyticsFilterOption_sid_multi_外出')));
     await tester.pump();
     await tester.tap(find.text('确定'));
     await tester.pumpAndSettle();

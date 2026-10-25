@@ -85,6 +85,33 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   final Map<String, (String, InsightsData)> _resultCache = {};
   String? _cacheScope;
 
+  /// 头部覆盖层（标题/口径条/筛选栏 + 口径说明 + 外币横幅）的挂点，
+  /// 只用于量它的高度 —— 见 [_measureHeaderHeight]。
+  final GlobalKey _headerKey = GlobalKey();
+
+  /// 头部覆盖层实测高度：列表铺满整个 body（卡片可滚到头部下方，磨砂才有
+  /// 内容可模糊），但首屏内容必须从头部下沿开始。这个高度不能用常量兜——
+  /// [AmountMetricNote] / [TimeMetricNote] / 外币横幅都是条件渲染，高度随
+  /// 口径与账本内容变。
+  double _headerHeight = 0;
+
+  /// 在 build 里登记「帧末量一次头部高度」。
+  ///
+  /// 量高度必须在布局提交之后（build 期间 render 尺寸还是上一帧的），所以走
+  /// post-frame；变化不足 0.5 不 setState，否则「setState → 再量 → 再 setState」
+  /// 会无限重建。
+  void _measureHeaderHeight() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = _headerKey.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.hasSize) return;
+      final h = box.size.height;
+      if ((h - _headerHeight).abs() > 0.5) {
+        setState(() => _headerHeight = h);
+      }
+    });
+  }
+
   /// U8 缓存的记忆化入口：键命中返回已发 future；未命中发起查询并替换
   /// 旧条目（单条容量，见 _lastAnalyticsFuture 注释）。
   ///
@@ -531,6 +558,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 帧末量一次头部覆盖层高度（说明行 / 外币横幅条件渲染，高度不固定）；
+    // 首帧量到前按 0 计，此时内容被头部覆盖层遮住，没有可见跳动。
+    _measureHeaderHeight();
+    final headerInset = _headerHeight;
     final repo = ref.watch(repositoryProvider);
     final ledgerId = ref.watch(currentLedgerIdProvider);
     final selMonth = ref.watch(selectedMonthProvider);
@@ -693,284 +724,12 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
     }
 
     return Scaffold(
-      body: Column(
+      body: Stack(
         children: [
-          PiggyHeader(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  child: Row(
-                    children: [
-                      Icon(Icons.bar_chart_outlined,
-                          color: PiggyTokens.textPrimary(context)),
-                      const SizedBox(width: 8),
-                      Text(
-                        AppLocalizations.of(context).tabInsights,
-                        style: PiggyTextTokens.title(context),
-                      ),
-                      // 统计口径条：金额口径（记账金额 / 原始金额）+ 统计时间口径
-                      // （记账时间 / 日期型自定义字段）装进**同一个轨道**，与下方
-                      // 周/月/季度… 的滑块分段控件同源（同轨道底 / 同圆角 / 同主色
-                      // 胶囊表示「非默认口径」）。2026-10-16 用户反馈：两枚自带
-                      // 描边的独立小胶囊与下方控件像两个体系、太突兀。
-                      //
-                      // 2026-10-16 二次修订（用户：「选完对应的文字后大小会变，
-                      // 而且好丑」）：这里**去掉 Spacer、去掉整条等比缩放**——
-                      // - 原来标题与口径条之间夹一个 `Spacer`，它与口径条各分一半
-                      //   剩余宽度，360dp 窄屏只留给口径条 89.5dp（而内容要 187dp）；
-                      // - 原来靠 `FittedBox(BoxFit.scaleDown)` 兜底，于是文案一换
-                      //   缩放比例就换（「记账金额」0.48 / 「水费」0.67），字号在
-                      //   6dp / 8.7dp 之间跳，既跳且糊。
-                      // 现在口径条独占剩余宽度、封顶 [kMetricBarMaxWidth]，两段由
-                      // `Expanded` 等分、超长文案走省略号：**切口径时整条尺寸不变**，
-                      // 只有文字与胶囊底色变化。无日期型字段时时间那段不参与 flex
-                      // （见 TimeMetricChip），金额段独占同一个槽位，仍不超上限。
-                      const SizedBox(width: 12),
-                      Flexible(
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(
-                                maxWidth: kMetricBarMaxWidth),
-                            child: PiggySegmentTrack(
-                              height: kMetricBarHeight,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.max,
-                                children: const [
-                                  AmountMetricChip(
-                                      style: MetricChipStyle.segment),
-                                  TimeMetricChip(
-                                      style: MetricChipStyle.segment),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      // F2 自定义区间报表入口（任意起止 + 环比/同比 + 标签维度）
-                      Tooltip(
-                        message: AppLocalizations.of(context).rangeReportTitle,
-                        child: IconButton(
-                          icon: Icon(Icons.date_range_outlined,
-                              color: PiggyTokens.textPrimary(context)),
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (_) => const RangeReportPage()),
-                            );
-                          },
-                        ),
-                      ),
-                      // 分享按钮（自定义区间无海报模板，隐藏入口，Q5）
-                      if (_scope != AnalyticsScope.custom)
-                        IconButton(
-                          icon: Icon(Icons.share,
-                              color: PiggyTokens.textPrimary(context)),
-                          tooltip:
-                              AppLocalizations.of(context).sharePosterShare,
-                          onPressed: () async {
-                            final ledgerId = ref.read(currentLedgerIdProvider);
-                            if (ledgerId == 0) {
-                              showToast(
-                                  context,
-                                  AppLocalizations.of(context)
-                                      .sharePosterNoLedger);
-                              return;
-                            }
-
-                            // 显示加载弹窗：项目统一阻塞进度弹窗
-                            final block = showBlockingProgressDialog(
-                              context,
-                              title: AppLocalizations.of(context)
-                                  .mineShareGenerating,
-                            );
-
-                            try {
-                              if (context.mounted) {
-                                await block.close(); // 关闭加载对话框
-                                if (!context.mounted) return;
-
-                                // 使用动态预览对话框（支持隐藏收入）
-                                // 注意：周报回退到该周所在月的月报海报（现状语义）
-                                // 季度→年报回退（Q5）；自定义区间无海报模板，
-                                // 分享入口已隐藏（Q5），null 仅作防御性兜底。
-                                final poster = switch (_scope) {
-                                  AnalyticsScope.week => (
-                                      type: 'month',
-                                      year: _selWeek.year,
-                                      month: _selWeek.month,
-                                    ),
-                                  AnalyticsScope.month => (
-                                      type: 'month',
-                                      year: selMonth.year,
-                                      month: selMonth.month,
-                                    ),
-                                  AnalyticsScope.quarter => (
-                                      type: 'year',
-                                      year: selMonth.year,
-                                      month: null,
-                                    ),
-                                  AnalyticsScope.year => (
-                                      type: 'year',
-                                      year: selMonth.year,
-                                      month: null,
-                                    ),
-                                  AnalyticsScope.custom => null,
-                                  AnalyticsScope.all => (
-                                      type: 'ledger',
-                                      year: null,
-                                      month: null,
-                                    ),
-                                };
-                                if (poster == null) return;
-                                await SharePosterService
-                                    .showDynamicPosterPreview(
-                                  context,
-                                  ref,
-                                  type: poster.type,
-                                  ledgerId: ledgerId,
-                                  year: poster.year,
-                                  month: poster.month,
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                await block.close(); // 关闭加载对话框
-                                if (!context.mounted) return;
-                                showToast(context,
-                                    '${AppLocalizations.of(context).commonError}: $e');
-                              }
-                            }
-                          },
-                        ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-                  child: WaitSlidingSegmentedControl<AnalyticsScope>(
-                    selected: _scope,
-                    height: 38,
-                    fontSize: PiggyTextTokens.fs14,
-                    segments: [
-                      WaitSlidingSegment(
-                        value: AnalyticsScope.week,
-                        label: AppLocalizations.of(context).analyticsWeek,
-                      ),
-                      WaitSlidingSegment(
-                        value: AnalyticsScope.month,
-                        label: AppLocalizations.of(context).analyticsMonth,
-                      ),
-                      WaitSlidingSegment(
-                        value: AnalyticsScope.quarter,
-                        label: AppLocalizations.of(context).analyticsQuarter,
-                      ),
-                      WaitSlidingSegment(
-                        value: AnalyticsScope.year,
-                        label: AppLocalizations.of(context).analyticsYear,
-                      ),
-                      WaitSlidingSegment(
-                        value: AnalyticsScope.custom,
-                        label: AppLocalizations.of(context).analyticsCustom,
-                      ),
-                      WaitSlidingSegment(
-                        value: AnalyticsScope.all,
-                        label: AppLocalizations.of(context).analyticsAll,
-                      ),
-                    ],
-                    onValueChanged: (value) => setState(() {
-                      _scope = value;
-                      if (value == AnalyticsScope.quarter) {
-                        // 切到季档：锚点吸附到所在季度首月标签月
-                        // （月/季/年共享 selectedMonthProvider，D5）
-                        final sel = ref.read(selectedMonthProvider);
-                        ref.read(selectedMonthProvider.notifier).state =
-                            DateTime(
-                                sel.year, ((sel.month - 1) ~/ 3) * 3 + 1, 1);
-                      }
-                    }),
-                  ),
-                ),
-                // 周期导航行：‹ 范围文案 › 居左，支出/收入/结余三段胶囊居右
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                  child: Row(
-                    children: [
-                      if (_scope != AnalyticsScope.all)
-                        _periodNavArrow(
-                            context, Icons.chevron_left, _onChartSwipeRight),
-                      Expanded(
-                        child: InkWell(
-                          onTap: _scope != AnalyticsScope.all
-                              ? _showPeriodPicker
-                              : null,
-                          child: Center(
-                            child: Text(
-                              _navPeriodLabel(context, selMonth),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style:
-                                  // 周视角文案如 "08.03～08.09",两侧圆形箭头 +
-                                  // 右侧胶囊挤压可用宽度;字号 16 在窄屏上会截断,
-                                  // 微降到 15 给周范围留足显示空间。
-                                  PiggyTextTokens.strongTitle(context),
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (_scope != AnalyticsScope.all)
-                        _periodNavArrow(
-                            context, Icons.chevron_right, _onChartSwipeLeft),
-                      const SizedBox(width: 8),
-                      // 支出/收入/结余：与顶部周/月/年/全部同款滑块胶囊（紧凑高度）
-                      SizedBox(
-                        width: 168,
-                        child: WaitSlidingSegmentedControl<String>(
-                          selected: _type,
-                          height: 32,
-                          fontSize: PiggyTextTokens.fs13,
-                          segments: [
-                            WaitSlidingSegment(
-                              value: 'expense',
-                              label: AppLocalizations.of(context).homeExpense,
-                            ),
-                            WaitSlidingSegment(
-                              value: 'income',
-                              label: AppLocalizations.of(context).homeIncome,
-                            ),
-                            WaitSlidingSegment(
-                              value: 'balance',
-                              label: AppLocalizations.of(context).homeBalance,
-                            ),
-                          ],
-                          onValueChanged: (v) => setState(() => _type = v),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _buildFilterBar(
-                  AppLocalizations.of(context),
-                  ref.watch(primaryColorProvider),
-                ),
-              ],
-            ),
-          ),
-          // 非默认金额口径的说明行（默认口径下零高，不占版面）
-          const AmountMetricNote(),
-          // 非默认统计时间口径的说明行（默认口径下零高，不占版面）
-          const TimeMetricNote(),
-          // v30 L11:检测到未折算外币交易 → 补折算横幅(用户确认后按当前汇率重算)
-          _buildRecalcForeignBanner(context),
-          // v30 折算脚注(01 §五):账本含外币交易时说明统计口径
-          _buildConvertedFootnote(context),
-          Expanded(
+          // 内容层：列表铺满整个 body，首屏留白由列表自身 padding 让出
+          // （_headerHeight）。这样卡片能滚到头部下方 —— 头部磨砂层只有
+          // 下面真的滚过内容才看得出效果，否则模糊的是纯背景色。
+          Positioned.fill(
             child: FutureBuilder(
               // ⚠️ 这里曾挂 `key: ValueKey('analytics_$_type')`——切支出/收入/
               // 结余时 key 变 → 整个 FutureBuilder 元素被销毁重建 → snapshot
@@ -1146,7 +905,9 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                       }
                     },
                     child: ListView(
-                      padding: const EdgeInsets.all(16),
+                      // top 让出头部覆盖层：内容可从头部下方滚过
+                      padding:
+                          EdgeInsets.fromLTRB(16, headerInset + 16, 16, 16),
                       children: [
                         if (_filter.isNotEmpty) ...[
                           AppEmpty(
@@ -1733,7 +1494,8 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                     }
                   },
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    // top 让出头部覆盖层：内容可从头部下方滚过
+                    padding: EdgeInsets.fromLTRB(16, headerInset + 8, 16, 16),
                     children: [
                       // 注册表驱动渲染：可见卡片的「卡片 + 后置间距」片段
                       // 依序展开，树形与收编前逐节点一致；底部留白非卡片保持原样
@@ -1750,7 +1512,310 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                 );
               },
             ),
-          )
+          ),
+          // 头部层：标题/口径条/筛选栏 + 口径说明 + 外币横幅，盖在内容之上。
+          // 高度实测（_headerKey）：说明行与横幅都是条件渲染，高度随口径变。
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: KeyedSubtree(
+              key: _headerKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  PiggyHeader(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                          child: Row(
+                            children: [
+                              Icon(Icons.bar_chart_outlined,
+                                  color: PiggyTokens.textPrimary(context)),
+                              const SizedBox(width: 8),
+                              Text(
+                                AppLocalizations.of(context).tabInsights,
+                                style: PiggyTextTokens.title(context),
+                              ),
+                              // 统计口径条：金额口径（记账金额 / 原始金额）+ 统计时间口径
+                              // （记账时间 / 日期型自定义字段）装进**同一个轨道**，与下方
+                              // 周/月/季度… 的滑块分段控件同源（同轨道底 / 同圆角 / 同主色
+                              // 胶囊表示「非默认口径」）。2026-10-16 用户反馈：两枚自带
+                              // 描边的独立小胶囊与下方控件像两个体系、太突兀。
+                              //
+                              // 2026-10-16 二次修订（用户：「选完对应的文字后大小会变，
+                              // 而且好丑」）：这里**去掉 Spacer、去掉整条等比缩放**——
+                              // - 原来标题与口径条之间夹一个 `Spacer`，它与口径条各分一半
+                              //   剩余宽度，360dp 窄屏只留给口径条 89.5dp（而内容要 187dp）；
+                              // - 原来靠 `FittedBox(BoxFit.scaleDown)` 兜底，于是文案一换
+                              //   缩放比例就换（「记账金额」0.48 / 「水费」0.67），字号在
+                              //   6dp / 8.7dp 之间跳，既跳且糊。
+                              // 现在口径条独占剩余宽度、封顶 [kMetricBarMaxWidth]，两段由
+                              // `Expanded` 等分、超长文案走省略号：**切口径时整条尺寸不变**，
+                              // 只有文字与胶囊底色变化。无日期型字段时时间那段不参与 flex
+                              // （见 TimeMetricChip），金额段独占同一个槽位，仍不超上限。
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                        maxWidth: kMetricBarMaxWidth),
+                                    child: PiggySegmentTrack(
+                                      height: kMetricBarHeight,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.max,
+                                        children: const [
+                                          AmountMetricChip(
+                                              style: MetricChipStyle.segment),
+                                          TimeMetricChip(
+                                              style: MetricChipStyle.segment),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              // F2 自定义区间报表入口（任意起止 + 环比/同比 + 标签维度）
+                              Tooltip(
+                                message: AppLocalizations.of(context)
+                                    .rangeReportTitle,
+                                child: IconButton(
+                                  icon: Icon(Icons.date_range_outlined,
+                                      color: PiggyTokens.textPrimary(context)),
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const RangeReportPage()),
+                                    );
+                                  },
+                                ),
+                              ),
+                              // 分享按钮（自定义区间无海报模板，隐藏入口，Q5）
+                              if (_scope != AnalyticsScope.custom)
+                                IconButton(
+                                  icon: Icon(Icons.share,
+                                      color: PiggyTokens.textPrimary(context)),
+                                  tooltip: AppLocalizations.of(context)
+                                      .sharePosterShare,
+                                  onPressed: () async {
+                                    final ledgerId =
+                                        ref.read(currentLedgerIdProvider);
+                                    if (ledgerId == 0) {
+                                      showToast(
+                                          context,
+                                          AppLocalizations.of(context)
+                                              .sharePosterNoLedger);
+                                      return;
+                                    }
+
+                                    // 显示加载弹窗：项目统一阻塞进度弹窗
+                                    final block = showBlockingProgressDialog(
+                                      context,
+                                      title: AppLocalizations.of(context)
+                                          .mineShareGenerating,
+                                    );
+
+                                    try {
+                                      if (context.mounted) {
+                                        await block.close(); // 关闭加载对话框
+                                        if (!context.mounted) return;
+
+                                        // 使用动态预览对话框（支持隐藏收入）
+                                        // 注意：周报回退到该周所在月的月报海报（现状语义）
+                                        // 季度→年报回退（Q5）；自定义区间无海报模板，
+                                        // 分享入口已隐藏（Q5），null 仅作防御性兜底。
+                                        final poster = switch (_scope) {
+                                          AnalyticsScope.week => (
+                                              type: 'month',
+                                              year: _selWeek.year,
+                                              month: _selWeek.month,
+                                            ),
+                                          AnalyticsScope.month => (
+                                              type: 'month',
+                                              year: selMonth.year,
+                                              month: selMonth.month,
+                                            ),
+                                          AnalyticsScope.quarter => (
+                                              type: 'year',
+                                              year: selMonth.year,
+                                              month: null,
+                                            ),
+                                          AnalyticsScope.year => (
+                                              type: 'year',
+                                              year: selMonth.year,
+                                              month: null,
+                                            ),
+                                          AnalyticsScope.custom => null,
+                                          AnalyticsScope.all => (
+                                              type: 'ledger',
+                                              year: null,
+                                              month: null,
+                                            ),
+                                        };
+                                        if (poster == null) return;
+                                        await SharePosterService
+                                            .showDynamicPosterPreview(
+                                          context,
+                                          ref,
+                                          type: poster.type,
+                                          ledgerId: ledgerId,
+                                          year: poster.year,
+                                          month: poster.month,
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (context.mounted) {
+                                        await block.close(); // 关闭加载对话框
+                                        if (!context.mounted) return;
+                                        showToast(context,
+                                            '${AppLocalizations.of(context).commonError}: $e');
+                                      }
+                                    }
+                                  },
+                                ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+                          child: WaitSlidingSegmentedControl<AnalyticsScope>(
+                            selected: _scope,
+                            height: 38,
+                            fontSize: PiggyTextTokens.fs14,
+                            segments: [
+                              WaitSlidingSegment(
+                                value: AnalyticsScope.week,
+                                label:
+                                    AppLocalizations.of(context).analyticsWeek,
+                              ),
+                              WaitSlidingSegment(
+                                value: AnalyticsScope.month,
+                                label:
+                                    AppLocalizations.of(context).analyticsMonth,
+                              ),
+                              WaitSlidingSegment(
+                                value: AnalyticsScope.quarter,
+                                label: AppLocalizations.of(context)
+                                    .analyticsQuarter,
+                              ),
+                              WaitSlidingSegment(
+                                value: AnalyticsScope.year,
+                                label:
+                                    AppLocalizations.of(context).analyticsYear,
+                              ),
+                              WaitSlidingSegment(
+                                value: AnalyticsScope.custom,
+                                label: AppLocalizations.of(context)
+                                    .analyticsCustom,
+                              ),
+                              WaitSlidingSegment(
+                                value: AnalyticsScope.all,
+                                label:
+                                    AppLocalizations.of(context).analyticsAll,
+                              ),
+                            ],
+                            onValueChanged: (value) => setState(() {
+                              _scope = value;
+                              if (value == AnalyticsScope.quarter) {
+                                // 切到季档：锚点吸附到所在季度首月标签月
+                                // （月/季/年共享 selectedMonthProvider，D5）
+                                final sel = ref.read(selectedMonthProvider);
+                                ref.read(selectedMonthProvider.notifier).state =
+                                    DateTime(sel.year,
+                                        ((sel.month - 1) ~/ 3) * 3 + 1, 1);
+                              }
+                            }),
+                          ),
+                        ),
+                        // 周期导航行：‹ 范围文案 › 居左，支出/收入/结余三段胶囊居右
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                          child: Row(
+                            children: [
+                              if (_scope != AnalyticsScope.all)
+                                _periodNavArrow(context, Icons.chevron_left,
+                                    _onChartSwipeRight),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: _scope != AnalyticsScope.all
+                                      ? _showPeriodPicker
+                                      : null,
+                                  child: Center(
+                                    child: Text(
+                                      _navPeriodLabel(context, selMonth),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style:
+                                          // 周视角文案如 "08.03～08.09",两侧圆形箭头 +
+                                          // 右侧胶囊挤压可用宽度;字号 16 在窄屏上会截断,
+                                          // 微降到 15 给周范围留足显示空间。
+                                          PiggyTextTokens.strongTitle(context),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (_scope != AnalyticsScope.all)
+                                _periodNavArrow(context, Icons.chevron_right,
+                                    _onChartSwipeLeft),
+                              const SizedBox(width: 8),
+                              // 支出/收入/结余：与顶部周/月/年/全部同款滑块胶囊（紧凑高度）
+                              SizedBox(
+                                width: 168,
+                                child: WaitSlidingSegmentedControl<String>(
+                                  selected: _type,
+                                  height: 32,
+                                  fontSize: PiggyTextTokens.fs13,
+                                  segments: [
+                                    WaitSlidingSegment(
+                                      value: 'expense',
+                                      label: AppLocalizations.of(context)
+                                          .homeExpense,
+                                    ),
+                                    WaitSlidingSegment(
+                                      value: 'income',
+                                      label: AppLocalizations.of(context)
+                                          .homeIncome,
+                                    ),
+                                    WaitSlidingSegment(
+                                      value: 'balance',
+                                      label: AppLocalizations.of(context)
+                                          .homeBalance,
+                                    ),
+                                  ],
+                                  onValueChanged: (v) =>
+                                      setState(() => _type = v),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _buildFilterBar(
+                          AppLocalizations.of(context),
+                          ref.watch(primaryColorProvider),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // 非默认金额口径的说明行（默认口径下零高，不占版面）
+                  const AmountMetricNote(),
+                  // 非默认统计时间口径的说明行（默认口径下零高，不占版面）
+                  const TimeMetricNote(),
+                  // v30 L11:检测到未折算外币交易 → 补折算横幅(用户确认后按当前汇率重算)
+                  _buildRecalcForeignBanner(context),
+                  // v30 折算脚注(01 §五):账本含外币交易时说明统计口径
+                  _buildConvertedFootnote(context),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
