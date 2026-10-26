@@ -40,9 +40,57 @@ class ChangelogVersion {
 /// 全部版本，最新在前
 const kChangelogVersions = <ChangelogVersion>[
   ChangelogVersion(
+    version: '0.2.0',
+    date: '2026-10-26',
+    summary:
+        '标题栏升级为可穿透的渐进磨砂，汇总数据随滚动收进标题栏；洞察与搜索支持按自定义字段筛选统计，导入导出打通自定义字段列；修掉云配置读取失败时的静默与几处界面瑕疵。',
+    sections: [
+      ChangelogSection(
+        icon: Icons.blur_on_outlined,
+        title: '标题栏与磨砂',
+        items: [
+          '全局标题栏改为渐进磨砂：内容可以滚动到标题栏下方，越过标题栏时背景逐步模糊',
+          '白底页面也加上一层淡主题色玻璃渐变，标题栏与内容的边界更清晰',
+          '「外观设置」新增「头部模糊强度」，0 为关闭，全部页面统一生效',
+          '「我的」页头部折叠吸顶，顶部统计单元字号随宽度自适应，不再挤掉数字',
+          '云同步、加密设置、洞察等页面把避让留白移进滚动区，磨砂效果不再被空白挡住',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.stacked_line_chart_rounded,
+        title: '汇总收进标题栏',
+        items: [
+          '资产页的净资产三栏收进标题行，向下滑动后淡入，列表获得更多可视空间',
+          '储蓄目标与订阅管理的汇总（目标进度 / 年支出 / 月均 / 订阅数）随滚动收进标题栏右上角',
+          '储蓄汇总改成与订阅管理页同款两栏版式，进度与金额并排，标题栏读数不再因页面不同而跳变',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.view_column_outlined,
+        title: '自定义字段',
+        items: [
+          '洞察页新增按自定义字段值筛选的统计卡，可切换求和 / 均值 / 最小 / 最大',
+          '筛选抽屉与搜索页共用同一套条件，字段选项的选中样式也统一成一种 chip',
+          '导入确认页可把未识别的 CSV 列映射为自定义字段，映射一次会话内保持',
+          '导出表头按当前账本的字段定义动态生成，与导入映射口径一致',
+        ],
+      ),
+      ChangelogSection(
+        icon: Icons.build_outlined,
+        title: '修复与改进',
+        items: [
+          '云服务配置读取失败时显式提示原因，并提供本机偏好的自救入口，不再卡在空白配置页',
+          '欢迎引导重进时不再撞账本唯一约束，种子初始化改为幂等',
+          '交易列表吸附日期头改按内容坐标当帧判定，不再与卡片顶边重线，圆角缺口垫上页面底色',
+        ],
+      ),
+    ],
+  ),
+  ChangelogVersion(
     version: '0.1.10',
     date: '2026-10-24',
-    summary: 'AI 可以直接查账；账单导入默认自动识别并支持钱迹 / 随手记；应用锁可设 4 / 6 位 PIN；大账本的统计、预算与搜索更快，多语言与无障碍细节同步补齐。',
+    summary:
+        'AI 可以直接查账；账单导入默认自动识别并支持钱迹 / 随手记；应用锁可设 4 / 6 位 PIN；大账本的统计、预算与搜索更快，多语言与无障碍细节同步补齐。',
     sections: [
       ChangelogSection(
         icon: Icons.smart_toy_outlined,
@@ -99,7 +147,8 @@ const kChangelogVersions = <ChangelogVersion>[
   ChangelogVersion(
     version: '0.1.9',
     date: '2026-10-16',
-    summary: '洞察与报表新增「统计口径」：金额可按原始金额或金额型自定义字段统计，时间可按日期型自定义字段统计；日期 / 时间滚轮抽屉支持物理键盘直接输入。',
+    summary:
+        '洞察与报表新增「统计口径」：金额可按原始金额或金额型自定义字段统计，时间可按日期型自定义字段统计；日期 / 时间滚轮抽屉支持物理键盘直接输入。',
     sections: [
       ChangelogSection(
         icon: Icons.tune,
@@ -125,7 +174,8 @@ const kChangelogVersions = <ChangelogVersion>[
   ChangelogVersion(
     version: '0.1.8',
     date: '2026-10-15',
-    summary: '记账键盘输入更稳：模拟器 / 投屏注入按键也能输入，运算后 Enter 先求值、Esc 关闭弹层；表单抽屉按钮与输入框样式全项目统一。',
+    summary:
+        '记账键盘输入更稳：模拟器 / 投屏注入按键也能输入，运算后 Enter 先求值、Esc 关闭弹层；表单抽屉按钮与输入框样式全项目统一。',
     sections: [
       ChangelogSection(
         icon: Icons.keyboard_outlined,
@@ -207,7 +257,8 @@ const kChangelogVersions = <ChangelogVersion>[
   ChangelogVersion(
     version: '0.1.6',
     date: '2026-10-12',
-    summary: '记账抽屉新增「带出上一笔」，一键复刻上一笔的分类 / 账户 / 备注 / 标签等字段，只补金额即可保存；连续记账自动继承上一笔的分类与账户。',
+    summary:
+        '记账抽屉新增「带出上一笔」，一键复刻上一笔的分类 / 账户 / 备注 / 标签等字段，只补金额即可保存；连续记账自动继承上一笔的分类与账户。',
     sections: [
       ChangelogSection(
         icon: Icons.copy_all_outlined,
