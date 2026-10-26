@@ -24,6 +24,7 @@ import 'package:piggycount/pages/transaction/search_page.dart';
 import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/providers/theme_providers.dart';
 import 'package:piggycount/utils/transaction_search_filter.dart';
+import 'package:piggycount/widgets/ui/closable_chip.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -140,7 +141,7 @@ void main() {
     await tester.tap(find.descendant(
       of: find.ancestor(
         of: find.text('渠道：微信'),
-        matching: find.byType(Chip),
+        matching: find.byType(PiggyClosableChip),
       ),
       matching: find.byIcon(Icons.close),
     ));

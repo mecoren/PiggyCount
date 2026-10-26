@@ -31,6 +31,7 @@ import 'package:piggycount/pages/main/analytics_page.dart';
 import 'package:piggycount/providers/database_providers.dart';
 import 'package:piggycount/providers/sync_providers.dart';
 import 'package:piggycount/providers/ui_state_providers.dart';
+import 'package:piggycount/widgets/ui/closable_chip.dart';
 import 'package:piggycount/widgets/ui/segmented_control.dart';
 import 'package:piggycount/widgets/ui/wait_sliding_segmented_control.dart';
 import 'package:piggycount/widgets/ui/piggy_header.dart';
@@ -197,7 +198,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('筛选已启用'), findsOneWidget);
-    expect(find.widgetWithText(InputChip, '收入'), findsOneWidget);
+    // 已应用条件是项目自己的 PiggyClosableChip（主色浅底 + 主色描边），
+    // 不能再退回 Material 的 InputChip（M3 默认 8 圆角 + surface 白底 + 红叉，
+    // 与左侧「筛选已启用」描边胶囊不是一套语言）。
+    expect(find.widgetWithText(PiggyClosableChip, '收入'), findsOneWidget);
+    expect(find.byType(InputChip), findsNothing);
     expect(find.text('当前筛选没有匹配账单'), findsOneWidget);
 
     await tester.tap(find.text('清空筛选'));
@@ -262,9 +267,9 @@ void main() {
     await tester.tap(find.text('确定'));
     await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(InputChip, '商户：咖啡'), findsOneWidget);
-    expect(find.widgetWithText(InputChip, '场景：日常'), findsOneWidget);
-    expect(find.widgetWithText(InputChip, '标签：外出'), findsOneWidget);
+    expect(find.widgetWithText(PiggyClosableChip, '商户：咖啡'), findsOneWidget);
+    expect(find.widgetWithText(PiggyClosableChip, '场景：日常'), findsOneWidget);
+    expect(find.widgetWithText(PiggyClosableChip, '标签：外出'), findsOneWidget);
   });
 
   testWidgets('筛选清空：文本框内容同步清空', (tester) async {

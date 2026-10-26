@@ -244,26 +244,27 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   }
 
   Widget _buildFilterBar(AppLocalizations l10n, Color primary) {
+    // 已应用条件一律走项目自己的 [PiggyClosableChip]（主色浅底 + 主色描边），
+    // **不要**退回 Material 的 InputChip：默认 8 圆角 + surface 白底 + 红叉，
+    // 跟左侧的「筛选 / 筛选已启用」描边胶囊不是一套语言（见组件注释）。
     final chips = <Widget>[
       for (final type in (_filter.types.toList()..sort()))
-        InputChip(
-          label: Text(_typeFilterLabel(type, l10n)),
+        PiggyClosableChip(
+          label: _typeFilterLabel(type, l10n),
           onDeleted: () => setState(() {
             final next = {..._filter.types}..remove(type);
             _filter = _filter.copyWith(types: next);
           }),
-          deleteIconColor: PiggyTokens.error(context),
         ),
       for (final condition in _filter.customFieldConditions)
-        InputChip(
-          label: Text(_conditionFilterLabel(condition, l10n)),
+        PiggyClosableChip(
+          label: _conditionFilterLabel(condition, l10n),
           onDeleted: () => setState(() {
             _filter = _filter.copyWith(customFieldConditions: [
               for (final c in _filter.customFieldConditions)
                 if (c != condition) c,
             ]);
           }),
-          deleteIconColor: PiggyTokens.error(context),
         ),
     ];
     return Padding(
@@ -296,7 +297,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   children: [
                     for (final chip in chips)
                       Padding(
-                        padding: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.only(right: PiggyDimens.p8),
                         child: chip,
                       ),
                   ],

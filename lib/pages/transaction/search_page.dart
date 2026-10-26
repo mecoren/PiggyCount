@@ -500,27 +500,15 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     }
   }
 
-  /// 已选筛选条件 chip（主色描边 + 浅底 + 删除叉），各维度统一样式。
+  /// 已选筛选条件 chip（主色浅底 + 主色描边 + 主色删除叉），各维度统一样式。
+  ///
+  /// 走项目统一的 [PiggyClosableChip]：此前这里是 Material `Chip`（M3 默认
+  /// 8 圆角 + surface 白底 + 字号 14），与洞察页筛选行、分段控件不是一套语言。
   Widget _buildFilterChip({
     required String label,
-    required Color primaryColor,
     required VoidCallback onDeleted,
-  }) {
-    return Chip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: PiggyTextTokens.fs12,
-          color: primaryColor,
-        ),
-      ),
-      backgroundColor: primaryColor.withValues(alpha: 0.1),
-      side: BorderSide(color: primaryColor, width: 1),
-      deleteIconColor: primaryColor,
-      deleteIcon: const Icon(Icons.close, size: 16),
-      onDeleted: onDeleted,
-    );
-  }
+  }) =>
+      PiggyClosableChip(label: label, onDeleted: onDeleted);
 
   /// 构建收入/支出汇总标签
   Widget _buildSummaryChip({
@@ -553,7 +541,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final ledgerId = ref.watch(currentLedgerIdProvider);
     final hide = ref.watch(hideAmountsProvider);
     final l10n = AppLocalizations.of(context);
-    final primaryColor = ref.watch(primaryColorProvider);
 
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
@@ -659,7 +646,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             _buildFilterChip(
                               label:
                                   '${l10n.searchCategoryFilter}: ${CategoryUtils.getDisplayName(_selectedCategory!.name, context)}',
-                              primaryColor: primaryColor,
                               onDeleted: () {
                                 setState(() {
                                   _selectedCategory = null;
@@ -671,7 +657,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             _buildFilterChip(
                               label:
                                   '${l10n.searchAmountFilter}: ${_minAmount?.toStringAsFixed(2) ?? '0'} ~ ${_maxAmount?.toStringAsFixed(2) ?? '∞'}',
-                              primaryColor: primaryColor,
                               onDeleted: () {
                                 setState(() {
                                   _minAmount = null;
@@ -684,7 +669,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             _buildFilterChip(
                               label:
                                   '${l10n.searchDateFilter}: ${_startDate != null ? '${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}' : l10n.searchDateStart} ~ ${_endDate != null ? '${_endDate!.year}-${_endDate!.month.toString().padLeft(2, '0')}-${_endDate!.day.toString().padLeft(2, '0')}' : l10n.searchDateEnd}',
-                              primaryColor: primaryColor,
                               onDeleted: () {
                                 setState(() {
                                   _startDate = null;
@@ -697,7 +681,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             _buildFilterChip(
                               label:
                                   '${l10n.searchAccountFilter}: ${_selectedAccount!.name}',
-                              primaryColor: primaryColor,
                               onDeleted: () {
                                 setState(() {
                                   _selectedAccount = null;
@@ -709,7 +692,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             _buildFilterChip(
                               label:
                                   '${l10n.searchTagFilter}: ${l10n.searchTagFilterSelected(_selectedTagIds.length)}',
-                              primaryColor: primaryColor,
                               onDeleted: () {
                                 setState(_selectedTagIds.clear);
                                 _refreshSearch();
@@ -719,7 +701,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             _buildFilterChip(
                               label:
                                   '${l10n.searchAttachmentFilter}: ${_hasAttachmentFilter! ? l10n.searchAttachmentHas : l10n.searchAttachmentNone}',
-                              primaryColor: primaryColor,
                               onDeleted: () {
                                 setState(() {
                                   _hasAttachmentFilter = null;
@@ -731,7 +712,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             _buildFilterChip(
                               label:
                                   '${l10n.searchCurrencyFilter}: ${_selectedCurrency!}',
-                              primaryColor: primaryColor,
                               onDeleted: () {
                                 setState(() {
                                   _selectedCurrency = null;
@@ -759,7 +739,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                     upper == null ? '≥$lower' : '$lower~$upper',
                                 },
                               ),
-                              primaryColor: primaryColor,
                               onDeleted: () {
                                 setState(() => _customFieldConditions = [
                                       for (final c in _customFieldConditions)
