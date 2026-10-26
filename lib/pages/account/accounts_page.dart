@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show SchedulerPhase;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:collection/collection.dart';
 
@@ -42,13 +44,90 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
   /// 拖拽后临时保持本地排序，防止 stream rebuild 闪烁
   Map<String, List<db.Account>>? _reorderingGroups;
 
+  /// 净资产汇总块的锚点：滑动时用它判定「整块是否已滚进标题栏后面」。
+  final GlobalKey _netWorthBlockKey = GlobalKey();
+
+  /// 标题行三栏汇总的折叠进度（0 = 完全隐藏，1 = 完全显示）。
+  /// 用 ValueNotifier 而不是 setState：滚动中只有标题行那一段需要重建，
+  /// 整页（含账户长列表 + 走势图）跟着重排会掉帧。
+  final ValueNotifier<double> _pinnedProgress = ValueNotifier<double>(0);
+
+  final ScrollController _scrollController = ScrollController();
+  bool _pinnedMeasureScheduled = false;
+
+  /// 净资产块底边在**内容坐标**里的位置（不随滚动变化）。
+  ///
+  /// 必须缓存：ListView 懒加载会把滚出缓存的汇总块整块卸载，`GlobalKey` 那时
+  /// 拿不到 RenderBox —— 若此时把进度归零，标题行三栏会在滑到深处时突然消失。
+  double? _netWorthBlockContentBottom;
+
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScrollForPinnedSummary);
     // 进页静默刷新汇率:内部自带多币种总闸(D6)+ 24h 节流,单币种零请求。
     WidgetsBinding.instance.addPostFrameCallback((_) {
       refreshExchangeRatesFromUi(ref);
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScrollForPinnedSummary);
+    _scrollController.dispose();
+    _pinnedProgress.dispose();
+    super.dispose();
+  }
+
+  void _onScrollForPinnedSummary() {
+    // 布局阶段（如内容变短被 correctPixels 夹回）里改 notifier 会撞
+    // markNeedsBuild during build，退到帧后再算。
+    if (WidgetsBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      _schedulePinnedMeasure();
+      return;
+    }
+    _updatePinnedProgress();
+  }
+
+  /// 帧后补测：数据到位 / 折算切换 / 字号变化都会改汇总块高度，
+  /// 只在同帧没排过队时测一次，避免滚动中反复测量。
+  void _schedulePinnedMeasure() {
+    if (_pinnedMeasureScheduled) return;
+    _pinnedMeasureScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pinnedMeasureScheduled = false;
+      if (!mounted) return;
+      _updatePinnedProgress();
+    });
+  }
+
+  void _updatePinnedProgress() {
+    if (!mounted) return;
+    final offset = _scrollController.hasClients
+        ? _scrollController.offset
+        : 0.0;
+
+    // 汇总块还在树上就刷新一次内容坐标（数据 / 折算 / 字号变化会改它的高度）。
+    final box =
+        _netWorthBlockKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box != null && box.attached && box.hasSize) {
+      // extendBodyBehindAppBar 下 body 从屏幕顶部开始，全局坐标即可直接换算：
+      // 内容坐标 = 全局坐标 + 当前滚动偏移。
+      _netWorthBlockContentBottom =
+          box.localToGlobal(Offset.zero).dy + box.size.height + offset;
+    }
+
+    final contentBottom = _netWorthBlockContentBottom;
+    if (contentBottom == null) {
+      // 尚未量到（还在 loading / 空账户无汇总卡）：不显示吸顶条。
+      _pinnedProgress.value = 0;
+      return;
+    }
+    _pinnedProgress.value = pinnedSummaryProgress(
+      blockBottom: contentBottom - offset,
+      appBarBottom: PiggyTokens.topScrollablePadding(context),
+    );
   }
 
   Map<String, List<db.Account>> _groupAccounts(List<db.Account> accounts) {
@@ -118,7 +197,13 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
       appBar: PiggyTitleBar(
-        title: l10n.accountsTitle,
+        // 标题行自带「净资产 / 总资产 / 总负债」三栏汇总：净资产卡滑进标题栏
+        // 后面之后，三栏在「资产管理」右边淡入（标题栏本身是磨砂玻璃，所以它
+        // 天然跟着模糊）。preferredSize 不变，不会因为出现而让 body 重排。
+        titleWidget: _AccountsTitleSummary(
+          title: l10n.accountsTitle,
+          progress: _pinnedProgress,
+        ),
         showBack: !widget.asTab,
         compact: true,
         // 顺序(左 → 右):加号 / 设置。
@@ -144,7 +229,11 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         data: (accounts) {
           final groups = _reorderingGroups ?? _groupAccounts(accounts);
 
+          // 数据到位 / 折算切换会改汇总块高度，帧后补测一次折叠进度。
+          _schedulePinnedMeasure();
+
           return ListView(
+            controller: _scrollController,
             padding: EdgeInsets.only(
               left: 12.0.scaled(context, ref),
               right: 12.0.scaled(context, ref),
@@ -327,8 +416,11 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           // 净资产部分
           netWorthAsync.when(
             skipLoadingOnReload: true,
-            data: (nwByCurrency) =>
-                _buildNetWorthContent(context, ref, nwByCurrency),
+            // 用 KeyedSubtree 挂锚点：吸顶汇总条靠它的底边判定是否已滑进标题栏。
+            data: (nwByCurrency) => KeyedSubtree(
+              key: _netWorthBlockKey,
+              child: _buildNetWorthContent(context, ref, nwByCurrency),
+            ),
             loading: () => DelayedSkeleton(
               placeholder: SizedBox(height: 80.0.scaled(context, ref)),
               child: PulseSkeleton(
@@ -1344,6 +1436,209 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     ref.read(statsRefreshProvider.notifier).state++;
 
     if (context.mounted) showToast(context, l10n.accountRestoredToast);
+  }
+}
+
+/// 标题行三栏汇总的折叠进度：净资产汇总块底边越过标题栏下沿后，用 [window]
+/// 逻辑像素的过渡窗口把「净资产 / 总资产 / 总负债」淡入（0 = 隐藏，1 = 常显）。
+///
+/// 单独抽出来便于单测：符号写反会造成「没滑上去就冒出三栏 / 滑到底也不出现」，
+/// 而这类时序问题在真机上很难一眼看出来。
+double pinnedSummaryProgress({
+  required double blockBottom,
+  required double appBarBottom,
+  double window = 36,
+}) {
+  if (window <= 0) return blockBottom <= appBarBottom ? 1.0 : 0.0;
+  return ((appBarBottom - blockBottom) / window).clamp(0.0, 1.0).toDouble();
+}
+
+/// 标题行内的净资产三栏汇总：「资产管理」右边淡入「净资产 / 总资产 / 总负债」。
+///
+/// 净资产卡整块滑进标题栏后面之后才出现 —— 它就在标题栏（磨砂玻璃层）内部，
+/// 所以天然带着模糊底色。出现与否只重建这一段子树，标题栏 preferredSize 不变，
+/// body 不会跟着重排。
+class _AccountsTitleSummary extends ConsumerWidget {
+  const _AccountsTitleSummary({required this.title, required this.progress});
+
+  final String title;
+  final ValueListenable<double> progress;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Row(
+      children: [
+        // 与 PiggyTitleBar 内置标题同款字号 / 字重 / 颜色
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: PiggyTextTokens.fs17,
+            fontWeight: FontWeight.w500,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        Expanded(
+          child: ValueListenableBuilder<double>(
+            valueListenable: progress,
+            builder: (context, value, child) {
+              if (value <= 0) return const SizedBox.shrink();
+              return Padding(
+                padding: EdgeInsets.only(left: 8.0.scaled(context, ref)),
+                child: Opacity(opacity: value, child: child),
+              );
+            },
+            child: const _TitleNetWorthStats(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 标题行三栏的数据口径：与净资产卡 `_buildNetWorthContent` 一致 ——
+/// 折算态（多币种）优先，否则退回首币种原币值。
+class _TitleNetWorthStats extends ConsumerWidget {
+  const _TitleNetWorthStats();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final incomeColor = PiggyTokens.incomeColor(context, ref);
+    final expenseColor = PiggyTokens.expenseColor(context, ref);
+
+    final multiCurrencyActive = ref.watch(multiCurrencyActiveProvider);
+    final converted = ref.watch(convertedNetWorthProvider).value;
+    final nwByCurrency =
+        ref.watch(netWorthBreakdownByCurrencyProvider).value ?? const {};
+
+    final bool approx;
+    final double netWorth;
+    final double totalAssets;
+    final double totalLiabilities;
+
+    if (multiCurrencyActive && converted != null) {
+      approx = true;
+      netWorth = converted.netWorth;
+      totalAssets = converted.totalAssets;
+      totalLiabilities = converted.totalLiabilities.abs();
+    } else {
+      // 折算未就绪（如汇率还没同步）时退回首币种原币值，与卡片同口径。
+      approx = false;
+      final nw = nwByCurrency.values.firstOrNull ??
+          (totalAssets: 0.0, totalLiabilities: 0.0, netWorth: 0.0);
+      netWorth = nw.netWorth;
+      totalAssets = nw.totalAssets;
+      totalLiabilities = nw.totalLiabilities.abs();
+    }
+
+    final divider = Container(
+      width: 1,
+      height: 22.0.scaled(context, ref),
+      color: PiggyTokens.divider(context),
+    );
+
+    return Row(
+      children: [
+        Expanded(
+          child: _TitleStatCell(
+            label: l10n.accountTotalBalance,
+            value: netWorth,
+            valueColor: netWorth >= 0 ? incomeColor : expenseColor,
+            approx: approx,
+          ),
+        ),
+        divider,
+        Expanded(
+          child: _TitleStatCell(
+            label: l10n.totalAssets,
+            value: totalAssets,
+            valueColor: incomeColor,
+            approx: approx,
+          ),
+        ),
+        divider,
+        Expanded(
+          child: _TitleStatCell(
+            label: l10n.totalLiabilities,
+            value: totalLiabilities,
+            valueColor: expenseColor,
+            approx: approx,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 标题行里的单栏小统计：一行小字标签 + 一行金额。
+///
+/// 标题行只有「资产管理」右边那点宽度（窄屏约 200dp 三栏平分），所以这里
+/// **强制走大额缩写**（万 / k / M），不跟随「大额缩写」开关；长金额再套
+/// FittedBox 缩字号兜底，绝不换行把标题栏撑高。
+class _TitleStatCell extends StatelessWidget {
+  const _TitleStatCell({
+    required this.label,
+    required this.value,
+    required this.valueColor,
+    this.approx = false,
+  });
+
+  final String label;
+  final double value;
+  final Color valueColor;
+
+  /// 折算口径（多币种折到主币种）时，数值前加「≈」。
+  final bool approx;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: PiggyTextTokens.fs10,
+            color: PiggyTokens.textTertiary(context),
+          ),
+        ),
+        const SizedBox(height: 1),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (approx) ...[
+                Text(
+                  '≈',
+                  style: TextStyle(
+                    fontSize: PiggyTextTokens.fs11,
+                    color: PiggyTokens.textTertiary(context),
+                  ),
+                ),
+                const SizedBox(width: 1),
+              ],
+              AmountText(
+                value: value,
+                signed: false,
+                showCurrency: false,
+                useCompactFormat: true,
+                style: TextStyle(
+                  fontSize: PiggyTextTokens.fs13,
+                  fontWeight: FontWeight.w600,
+                  color: valueColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 
