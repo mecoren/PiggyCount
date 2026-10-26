@@ -16940,6 +16940,12 @@ abstract class AppLocalizations {
   /// **'{n} subscription(s)'**
   String subscriptionCountLabel(int n);
 
+  /// 订阅管理页标题栏紧凑汇总里「订阅数」那一栏的小标签（空间极小，需短词）
+  ///
+  /// In en, this message translates to:
+  /// **'Subs'**
+  String get subscriptionCountShort;
+
   /// No description provided for @subscriptionForeignHint.
   ///
   /// In en, this message translates to:

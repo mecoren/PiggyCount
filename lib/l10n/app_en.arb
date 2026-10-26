@@ -4579,6 +4579,10 @@
       }
     }
   },
+  "subscriptionCountShort": "Subs",
+  "@subscriptionCountShort": {
+    "description": "订阅管理页标题栏紧凑汇总里「订阅数」那一栏的小标签（空间极小，需短词）"
+  },
   "subscriptionForeignHint": "{n} foreign-currency subscription(s) excluded from the total",
   "@subscriptionForeignHint": {
     "placeholders": {

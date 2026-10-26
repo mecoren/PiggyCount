@@ -3056,6 +3056,7 @@
   "subscriptionAnnualLabel": "연간",
   "subscriptionMonthlyLabel": "월평균",
   "subscriptionCountLabel": "구독 {n}개",
+  "subscriptionCountShort": "구독 수",
   "subscriptionForeignHint": "외화 구독 {n}개는 합계에서 제외됨",
   "subscriptionNextDue": "다음 결제 {date}",
   "subscriptionNoNextDue": "종료됨",

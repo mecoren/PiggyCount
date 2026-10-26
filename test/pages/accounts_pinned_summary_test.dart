@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:piggycount/pages/account/accounts_page.dart';
+import 'package:piggycount/utils/pinned_summary_progress.dart';
 
 /// 资产页标题行「净资产 / 总资产 / 总负债」三栏的折叠进度守门测试。
 ///

@@ -117,6 +117,32 @@ void main() {
     expect(find.textContaining('每年'), findsOneWidget);
   });
 
+  testWidgets('汇总卡滑进标题栏后，年支出 / 月均 / 订阅数收进「订阅管理」右边',
+      (tester) async {
+    // 条目要多到列表真的能滚：内容不满一屏时拖动不会产生滚动偏移
+    for (var i = 0; i < 12; i++) {
+      await seed(frequency: 'monthly', amount: 10, note: '订阅$i');
+    }
+    await pump(tester);
+
+    // 首屏：汇总数字只在汇总卡里有一份，标题栏里不该同时出现（否则读屏重复）
+    expect(find.text('订阅数'), findsNothing);
+    expect(find.text('年支出'), findsOneWidget);
+
+    await tester.drag(find.byType(ListView), const Offset(0, -240));
+    await tester.pumpAndSettle();
+
+    // 汇总卡整块滚进磨砂层后面之后，标题栏里出现同口径的紧凑三栏
+    expect(find.text('订阅数'), findsOneWidget);
+    // 「订阅管理」右边、标题栏内部的纵向位置
+    expect(tester.getTopLeft(find.text('订阅数')).dy, lessThan(kToolbarHeight));
+
+    // 滑回顶部即收起，不会与汇总卡重复
+    await tester.drag(find.byType(ListView), const Offset(0, 400));
+    await tester.pumpAndSettle();
+    expect(find.text('订阅数'), findsNothing);
+  });
+
   testWidgets('外币订阅只计数不计入合计，并给出提示', (tester) async {
     await seed(frequency: 'monthly', amount: 100, note: '视频会员'); // 本位币
     await seed(

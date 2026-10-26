@@ -9457,6 +9457,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get subscriptionCountShort => 'Subs';
+
+  @override
   String subscriptionForeignHint(int n) {
     return '$n foreign-currency subscription(s) excluded from the total';
   }

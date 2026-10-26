@@ -9093,6 +9093,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get subscriptionCountShort => '订阅数';
+
+  @override
   String subscriptionForeignHint(int n) {
     return '另有 $n 个外币订阅未计入合计';
   }
@@ -18747,6 +18750,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String subscriptionCountLabel(int n) {
     return '共 $n 個訂閱';
   }
+
+  @override
+  String get subscriptionCountShort => '訂閱數';
 
   @override
   String subscriptionForeignHint(int n) {

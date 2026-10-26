@@ -18,6 +18,7 @@ import '../../data/db.dart' as db;
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
 import '../../utils/ui_scale_extensions.dart';
+import '../../utils/pinned_summary_progress.dart';
 import '../../utils/account_type_utils.dart';
 import '../../utils/currencies.dart';
 import '../../widgets/charts/asset_composition_chart.dart';
@@ -1437,20 +1438,6 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
 
     if (context.mounted) showToast(context, l10n.accountRestoredToast);
   }
-}
-
-/// 标题行三栏汇总的折叠进度：净资产汇总块底边越过标题栏下沿后，用 [window]
-/// 逻辑像素的过渡窗口把「净资产 / 总资产 / 总负债」淡入（0 = 隐藏，1 = 常显）。
-///
-/// 单独抽出来便于单测：符号写反会造成「没滑上去就冒出三栏 / 滑到底也不出现」，
-/// 而这类时序问题在真机上很难一眼看出来。
-double pinnedSummaryProgress({
-  required double blockBottom,
-  required double appBarBottom,
-  double window = 36,
-}) {
-  if (window <= 0) return blockBottom <= appBarBottom ? 1.0 : 0.0;
-  return ((appBarBottom - blockBottom) / window).clamp(0.0, 1.0).toDouble();
 }
 
 /// 标题行内的净资产三栏汇总：「资产管理」右边淡入「净资产 / 总资产 / 总负债」。

@@ -3653,6 +3653,7 @@
   "subscriptionAnnualLabel": "年支出",
   "subscriptionMonthlyLabel": "月均",
   "subscriptionCountLabel": "共 {n} 個訂閱",
+  "subscriptionCountShort": "訂閱數",
   "subscriptionForeignHint": "另有 {n} 個外幣訂閱未計入合計",
   "subscriptionNextDue": "下次扣款 {date}",
   "subscriptionNoNextDue": "已結束",

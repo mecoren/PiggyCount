@@ -9203,6 +9203,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get subscriptionCountShort => '구독 수';
+
+  @override
   String subscriptionForeignHint(int n) {
     return '외화 구독 $n개는 합계에서 제외됨';
   }
