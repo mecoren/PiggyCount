@@ -107,6 +107,149 @@ class AppLocalizationsKo extends AppLocalizations {
   String get devPerfEntrySubtitle => '실시간 FPS와 프레임 시간(debug 전용)';
 
   @override
+  String get devSeedTitle => '테스트 데이터 생성';
+
+  @override
+  String get devSeedEntryTitle => '테스트 데이터 생성';
+
+  @override
+  String get devSeedEntrySubtitle =>
+      '계정 / 거래 / 예산 등 테스트 데이터를 한 번에 생성합니다(debug 전용)';
+
+  @override
+  String get devSeedHint =>
+      '안내: 생성 전에 【T】 표시가 붙은 이전 테스트 데이터를 먼저 삭제합니다. 생성되는 모든 행에는 【T】 접두사가 붙어 직접 입력한 데이터와 구분됩니다.';
+
+  @override
+  String get devSeedEnvironment => '실행 환경';
+
+  @override
+  String get devSeedEnvFlavor => 'Flavor';
+
+  @override
+  String get devSeedEnvMode => 'Mode';
+
+  @override
+  String get devSeedEnvPlatform => '플랫폼';
+
+  @override
+  String get devSeedEnvPackage => '패키지';
+
+  @override
+  String get devSeedEnvVersion => '버전';
+
+  @override
+  String get devSeedUnavailable =>
+      '이 기능은 dev flavor의 디버그 빌드에서만 사용할 수 있으며, 배포 빌드에는 포함되지 않습니다.';
+
+  @override
+  String devSeedGenerateSecondMessage(Object total) {
+    return '최종 확인: 위 환경에 약 $total개 테스트 행을 기록하며, 이전 【T】 데이터를 먼저 삭제합니다.';
+  }
+
+  @override
+  String get devSeedCleanupSecondMessage =>
+      '최종 확인: 위 환경의 【T】 표시 테스트 데이터를 모두 삭제합니다. 되돌릴 수 없습니다.';
+
+  @override
+  String devSeedCurrentLedgerName(Object name) {
+    return '현재 장부: $name';
+  }
+
+  @override
+  String devSeedPlanSummary(Object total) {
+    return '약 $total개 행을 기록합니다';
+  }
+
+  @override
+  String get devSeedEntityAccounts => '계정';
+
+  @override
+  String get devSeedEntityCategories => '분류';
+
+  @override
+  String get devSeedEntityTags => '태그';
+
+  @override
+  String get devSeedEntityCustomFields => '사용자 정의 필드';
+
+  @override
+  String get devSeedEntityBudgets => '분류 예산';
+
+  @override
+  String get devSeedEntityRecurring => '반복 청구';
+
+  @override
+  String get devSeedEntitySavingsGoals => '저축 목표';
+
+  @override
+  String get devSeedEntityHoldings => '투자 보유';
+
+  @override
+  String get devSeedEntityTransactions => '거래';
+
+  @override
+  String get devSeedEntityLedgers => '추가 테스트 장부';
+
+  @override
+  String get devSeedGenerate => '테스트 데이터 생성(이전 데이터 정리)';
+
+  @override
+  String get devSeedCleanup => '테스트 데이터만 정리';
+
+  @override
+  String get devSeedRunning => '처리 중…';
+
+  @override
+  String devSeedStageLabel(Object stage) {
+    return '현재 단계: $stage';
+  }
+
+  @override
+  String get devSeedStageCleanup => '이전 테스트 데이터 정리 중';
+
+  @override
+  String get devSeedDone => '생성 완료';
+
+  @override
+  String devSeedDoneDetail(Object cleaned, Object created) {
+    return '정리 $cleaned개 · 기록 $created개';
+  }
+
+  @override
+  String devSeedFailedCount(Object failed) {
+    return '실패 $failed개';
+  }
+
+  @override
+  String devSeedElapsed(Object ms) {
+    return '소요 ${ms}ms';
+  }
+
+  @override
+  String get devSeedRefreshHint => '목록이 갱신되지 않으면 홈으로 돌아갔다 다시 들어오거나 앱을 재시작하세요.';
+
+  @override
+  String devSeedCleanupDone(Object count) {
+    return '테스트 데이터 $count개를 정리했습니다';
+  }
+
+  @override
+  String get devSeedCleanupConfirmTitle => '테스트 데이터를 정리할까요?';
+
+  @override
+  String get devSeedCleanupConfirmMessage =>
+      '이 기기의 【T】 표시 테스트 데이터(거래 / 계정 / 분류 / 태그 / 예산 / 반복 / 목표 / 보유 / 필드 / 테스트 장부)만 삭제합니다. 직접 입력한 데이터는 영향받지 않습니다. 되돌릴 수 없습니다.';
+
+  @override
+  String get devSeedGenerateConfirmTitle => '테스트 데이터를 생성할까요?';
+
+  @override
+  String devSeedGenerateConfirmMessage(Object total) {
+    return '【T】 표시가 붙은 이전 테스트 데이터를 먼저 정리한 뒤 약 $total개 행을 기록합니다(거래 3000건 중심). 테스트 데이터만 건드리며 직접 입력한 데이터는 건드리지 않습니다.';
+  }
+
+  @override
   String get devPerfFps => 'FPS';
 
   @override

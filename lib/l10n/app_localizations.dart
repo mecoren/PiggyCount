@@ -275,6 +275,246 @@ abstract class AppLocalizations {
   /// **'Live FPS and frame timings (debug only)'**
   String get devPerfEntrySubtitle;
 
+  /// No description provided for @devSeedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Test data generator'**
+  String get devSeedTitle;
+
+  /// No description provided for @devSeedEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Test data generator'**
+  String get devSeedEntryTitle;
+
+  /// No description provided for @devSeedEntrySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bulk-create accounts, transactions, budgets and more (debug only)'**
+  String get devSeedEntrySubtitle;
+
+  /// No description provided for @devSeedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Note: the previous batch of 【T】-marked test rows is removed before generating. Every generated row is prefixed with 【T】 so it stays distinguishable from hand-entered data.'**
+  String get devSeedHint;
+
+  /// No description provided for @devSeedEnvironment.
+  ///
+  /// In en, this message translates to:
+  /// **'Environment'**
+  String get devSeedEnvironment;
+
+  /// No description provided for @devSeedEnvFlavor.
+  ///
+  /// In en, this message translates to:
+  /// **'Flavor'**
+  String get devSeedEnvFlavor;
+
+  /// No description provided for @devSeedEnvMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Mode'**
+  String get devSeedEnvMode;
+
+  /// No description provided for @devSeedEnvPlatform.
+  ///
+  /// In en, this message translates to:
+  /// **'Platform'**
+  String get devSeedEnvPlatform;
+
+  /// No description provided for @devSeedEnvPackage.
+  ///
+  /// In en, this message translates to:
+  /// **'Package'**
+  String get devSeedEnvPackage;
+
+  /// No description provided for @devSeedEnvVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version'**
+  String get devSeedEnvVersion;
+
+  /// No description provided for @devSeedUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This tool is only available in the dev flavor\'s debug build. It is not included in production builds.'**
+  String get devSeedUnavailable;
+
+  /// No description provided for @devSeedGenerateSecondMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final check: about {total} rows will be written into the environment shown above, after deleting the previous 【T】 batch.'**
+  String devSeedGenerateSecondMessage(Object total);
+
+  /// No description provided for @devSeedCleanupSecondMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Final check: all 【T】-marked test rows in the environment shown above will be deleted. This cannot be undone.'**
+  String get devSeedCleanupSecondMessage;
+
+  /// No description provided for @devSeedCurrentLedgerName.
+  ///
+  /// In en, this message translates to:
+  /// **'Current ledger: {name}'**
+  String devSeedCurrentLedgerName(Object name);
+
+  /// No description provided for @devSeedPlanSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'About {total} rows will be written'**
+  String devSeedPlanSummary(Object total);
+
+  /// No description provided for @devSeedEntityAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts'**
+  String get devSeedEntityAccounts;
+
+  /// No description provided for @devSeedEntityCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get devSeedEntityCategories;
+
+  /// No description provided for @devSeedEntityTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get devSeedEntityTags;
+
+  /// No description provided for @devSeedEntityCustomFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom fields'**
+  String get devSeedEntityCustomFields;
+
+  /// No description provided for @devSeedEntityBudgets.
+  ///
+  /// In en, this message translates to:
+  /// **'Category budgets'**
+  String get devSeedEntityBudgets;
+
+  /// No description provided for @devSeedEntityRecurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring bills'**
+  String get devSeedEntityRecurring;
+
+  /// No description provided for @devSeedEntitySavingsGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings goals'**
+  String get devSeedEntitySavingsGoals;
+
+  /// No description provided for @devSeedEntityHoldings.
+  ///
+  /// In en, this message translates to:
+  /// **'Holdings'**
+  String get devSeedEntityHoldings;
+
+  /// No description provided for @devSeedEntityTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions'**
+  String get devSeedEntityTransactions;
+
+  /// No description provided for @devSeedEntityLedgers.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra test ledgers'**
+  String get devSeedEntityLedgers;
+
+  /// No description provided for @devSeedGenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate test data (clears the previous batch)'**
+  String get devSeedGenerate;
+
+  /// No description provided for @devSeedCleanup.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear test data only'**
+  String get devSeedCleanup;
+
+  /// No description provided for @devSeedRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Working…'**
+  String get devSeedRunning;
+
+  /// No description provided for @devSeedStageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage: {stage}'**
+  String devSeedStageLabel(Object stage);
+
+  /// No description provided for @devSeedStageCleanup.
+  ///
+  /// In en, this message translates to:
+  /// **'Clearing the previous test batch'**
+  String get devSeedStageCleanup;
+
+  /// No description provided for @devSeedDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get devSeedDone;
+
+  /// No description provided for @devSeedDoneDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared {cleaned} rows · Wrote {created} rows'**
+  String devSeedDoneDetail(Object cleaned, Object created);
+
+  /// No description provided for @devSeedFailedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{failed} rows failed'**
+  String devSeedFailedCount(Object failed);
+
+  /// No description provided for @devSeedElapsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Took {ms} ms'**
+  String devSeedElapsed(Object ms);
+
+  /// No description provided for @devSeedRefreshHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If a list still looks stale, go back to Home and re-enter, or restart the app.'**
+  String get devSeedRefreshHint;
+
+  /// No description provided for @devSeedCleanupDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared {count} test rows'**
+  String devSeedCleanupDone(Object count);
+
+  /// No description provided for @devSeedCleanupConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear test data?'**
+  String get devSeedCleanupConfirmTitle;
+
+  /// No description provided for @devSeedCleanupConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Removes every 【T】-prefixed test row on this device (transactions, accounts, categories, tags, budgets, recurring bills, goals, holdings, fields, test ledgers). Hand-entered data is untouched. This cannot be undone.'**
+  String get devSeedCleanupConfirmMessage;
+
+  /// No description provided for @devSeedGenerateConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate test data?'**
+  String get devSeedGenerateConfirmTitle;
+
+  /// No description provided for @devSeedGenerateConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The previous 【T】-marked test batch is cleared first, then about {total} rows are written (3000 transactions). Only test rows are affected; hand-entered data is never touched.'**
+  String devSeedGenerateConfirmMessage(Object total);
+
   /// No description provided for @devPerfFps.
   ///
   /// In en, this message translates to:

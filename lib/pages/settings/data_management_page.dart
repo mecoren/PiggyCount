@@ -20,9 +20,11 @@ import '../settings/attachment_preview_page.dart';
 import '../maintenance/orphan_cleanup_page.dart';
 import '../maintenance/recycle_bin_page.dart';
 import '../maintenance/dev_perf_dashboard_page.dart';
+import '../maintenance/dev_test_data_page.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/attachment_export_import_service.dart';
 
+import '../../utils/dev_tool_gate.dart';
 import '../../utils/platform_info.dart';
 
 /// 数据管理二级页面
@@ -234,6 +236,20 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                     await Navigator.of(context).push(
                       MaterialPageRoute(
                           builder: (_) => const DevPerfDashboardPage()),
+                    );
+                  },
+                ),
+              // 测试数据生成（仅 dev flavor 的 debug / profile 包；release 与
+              // prod flavor 下 DevToolGate.enabled 编译期即为 false，整块裁掉）
+              if (DevToolGate.enabled)
+                SettingsNavItem(
+                  icon: Icons.science_outlined,
+                  title: l10n.devSeedEntryTitle,
+                  subtitle: l10n.devSeedEntrySubtitle,
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) => const DevTestDataPage()),
                     );
                   },
                 ),

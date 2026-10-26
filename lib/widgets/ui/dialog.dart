@@ -443,11 +443,14 @@ Future<bool> showDoubleDangerConfirmDialog(
   String? okLabel,
   String? cancelLabel,
   int countdownSeconds = 5,
+  Widget? firstMessageWidget,
+  Widget? secondMessageWidget,
 }) async {
   final first = await showDangerConfirmDialog(
     context,
     title: title,
     message: firstMessage,
+    messageWidget: firstMessageWidget,
     okLabel: okLabel,
     cancelLabel: cancelLabel,
     countdownSeconds: countdownSeconds,
@@ -457,6 +460,7 @@ Future<bool> showDoubleDangerConfirmDialog(
     context,
     title: title,
     message: secondMessage,
+    messageWidget: secondMessageWidget,
     okLabel: okLabel,
     cancelLabel: cancelLabel,
     countdownSeconds: countdownSeconds,
@@ -481,6 +485,7 @@ Future<bool> showDangerConfirmDialog(
   String? okLabel,
   String? cancelLabel,
   int countdownSeconds = 5,
+  Widget? messageWidget,
 }) {
   final l10n = AppLocalizations.of(context);
   return showDialog<bool>(
@@ -489,6 +494,7 @@ Future<bool> showDangerConfirmDialog(
     builder: (dctx) => _DangerConfirmDialog(
       title: title,
       message: message,
+      messageWidget: messageWidget,
       okLabel: okLabel ?? l10n.commonConfirm,
       cancelLabel: cancelLabel ?? l10n.commonCancel,
       countdownSeconds: countdownSeconds,
@@ -502,11 +508,18 @@ class _DangerConfirmDialog extends StatefulWidget {
     required this.message,
     required this.okLabel,
     required this.cancelLabel,
+    this.messageWidget,
     this.countdownSeconds = 5,
   });
 
   final String title;
   final String message;
+
+  /// 说明正文下方的附加内容（如结构化的「运行环境」清单）。
+  ///
+  /// 只用 [String] 表达时换行 / 加粗都做不了，长内容会被挤成一段居中文本；
+  /// 需要「一行一项 + 加粗」时传这里。
+  final Widget? messageWidget;
   final String okLabel;
   final String cancelLabel;
   final int countdownSeconds;
@@ -553,6 +566,7 @@ class _DangerConfirmDialogState extends State<_DangerConfirmDialog> {
       child: _IosAlertShell(
         title: widget.title,
         message: widget.message,
+        extraContent: widget.messageWidget,
         cancelLabel: widget.cancelLabel,
         onCancel: () => Navigator.pop(context, false),
         // 倒计时未结束禁用确认；按钮文案随剩余秒数变化提示等待
@@ -647,6 +661,7 @@ class _IosAlertShell extends StatelessWidget {
   const _IosAlertShell({
     required this.title,
     required this.message,
+    this.extraContent,
     this.cancelLabel,
     this.onCancel,
     required this.okLabel,
@@ -660,6 +675,9 @@ class _IosAlertShell extends StatelessWidget {
 
   final String title;
   final String message;
+
+  /// 正文下方的附加区块（左对齐，可放多行加粗文本）。
+  final Widget? extraContent;
 
   /// 为空 = 单按钮模式（通知类）：底部单个全宽确认钮，无竖线。
   final String? cancelLabel;
@@ -722,6 +740,10 @@ class _IosAlertShell extends StatelessWidget {
                     )
                   else
                     messageText,
+                  if (extraContent != null) ...[
+                    const SizedBox(height: PiggyDimens.p12),
+                    extraContent!,
+                  ],
                 ],
               ),
             ),

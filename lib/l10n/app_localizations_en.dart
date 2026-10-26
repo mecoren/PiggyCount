@@ -110,6 +110,151 @@ class AppLocalizationsEn extends AppLocalizations {
   String get devPerfEntrySubtitle => 'Live FPS and frame timings (debug only)';
 
   @override
+  String get devSeedTitle => 'Test data generator';
+
+  @override
+  String get devSeedEntryTitle => 'Test data generator';
+
+  @override
+  String get devSeedEntrySubtitle =>
+      'Bulk-create accounts, transactions, budgets and more (debug only)';
+
+  @override
+  String get devSeedHint =>
+      'Note: the previous batch of 【T】-marked test rows is removed before generating. Every generated row is prefixed with 【T】 so it stays distinguishable from hand-entered data.';
+
+  @override
+  String get devSeedEnvironment => 'Environment';
+
+  @override
+  String get devSeedEnvFlavor => 'Flavor';
+
+  @override
+  String get devSeedEnvMode => 'Mode';
+
+  @override
+  String get devSeedEnvPlatform => 'Platform';
+
+  @override
+  String get devSeedEnvPackage => 'Package';
+
+  @override
+  String get devSeedEnvVersion => 'Version';
+
+  @override
+  String get devSeedUnavailable =>
+      'This tool is only available in the dev flavor\'s debug build. It is not included in production builds.';
+
+  @override
+  String devSeedGenerateSecondMessage(Object total) {
+    return 'Final check: about $total rows will be written into the environment shown above, after deleting the previous 【T】 batch.';
+  }
+
+  @override
+  String get devSeedCleanupSecondMessage =>
+      'Final check: all 【T】-marked test rows in the environment shown above will be deleted. This cannot be undone.';
+
+  @override
+  String devSeedCurrentLedgerName(Object name) {
+    return 'Current ledger: $name';
+  }
+
+  @override
+  String devSeedPlanSummary(Object total) {
+    return 'About $total rows will be written';
+  }
+
+  @override
+  String get devSeedEntityAccounts => 'Accounts';
+
+  @override
+  String get devSeedEntityCategories => 'Categories';
+
+  @override
+  String get devSeedEntityTags => 'Tags';
+
+  @override
+  String get devSeedEntityCustomFields => 'Custom fields';
+
+  @override
+  String get devSeedEntityBudgets => 'Category budgets';
+
+  @override
+  String get devSeedEntityRecurring => 'Recurring bills';
+
+  @override
+  String get devSeedEntitySavingsGoals => 'Savings goals';
+
+  @override
+  String get devSeedEntityHoldings => 'Holdings';
+
+  @override
+  String get devSeedEntityTransactions => 'Transactions';
+
+  @override
+  String get devSeedEntityLedgers => 'Extra test ledgers';
+
+  @override
+  String get devSeedGenerate =>
+      'Generate test data (clears the previous batch)';
+
+  @override
+  String get devSeedCleanup => 'Clear test data only';
+
+  @override
+  String get devSeedRunning => 'Working…';
+
+  @override
+  String devSeedStageLabel(Object stage) {
+    return 'Stage: $stage';
+  }
+
+  @override
+  String get devSeedStageCleanup => 'Clearing the previous test batch';
+
+  @override
+  String get devSeedDone => 'Done';
+
+  @override
+  String devSeedDoneDetail(Object cleaned, Object created) {
+    return 'Cleared $cleaned rows · Wrote $created rows';
+  }
+
+  @override
+  String devSeedFailedCount(Object failed) {
+    return '$failed rows failed';
+  }
+
+  @override
+  String devSeedElapsed(Object ms) {
+    return 'Took $ms ms';
+  }
+
+  @override
+  String get devSeedRefreshHint =>
+      'If a list still looks stale, go back to Home and re-enter, or restart the app.';
+
+  @override
+  String devSeedCleanupDone(Object count) {
+    return 'Cleared $count test rows';
+  }
+
+  @override
+  String get devSeedCleanupConfirmTitle => 'Clear test data?';
+
+  @override
+  String get devSeedCleanupConfirmMessage =>
+      'Removes every 【T】-prefixed test row on this device (transactions, accounts, categories, tags, budgets, recurring bills, goals, holdings, fields, test ledgers). Hand-entered data is untouched. This cannot be undone.';
+
+  @override
+  String get devSeedGenerateConfirmTitle => 'Generate test data?';
+
+  @override
+  String devSeedGenerateConfirmMessage(Object total) {
+    return 'The previous 【T】-marked test batch is cleared first, then about $total rows are written (3000 transactions). Only test rows are affected; hand-entered data is never touched.';
+  }
+
+  @override
   String get devPerfFps => 'FPS';
 
   @override

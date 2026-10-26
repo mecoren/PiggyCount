@@ -101,6 +101,146 @@ class AppLocalizationsZh extends AppLocalizations {
   String get devPerfEntrySubtitle => '查看实时帧率与帧耗时（仅 debug）';
 
   @override
+  String get devSeedTitle => '测试数据生成';
+
+  @override
+  String get devSeedEntryTitle => '测试数据生成';
+
+  @override
+  String get devSeedEntrySubtitle => '批量生成账户 / 交易 / 预算等测试数据（仅 debug）';
+
+  @override
+  String get devSeedHint =>
+      '说明：生成前会先清掉上一批带【T】标记的测试数据；所有生成的行都带【T】前缀，便于和手工录入的数据区分。';
+
+  @override
+  String get devSeedEnvironment => '运行环境';
+
+  @override
+  String get devSeedEnvFlavor => 'Flavor';
+
+  @override
+  String get devSeedEnvMode => 'Mode';
+
+  @override
+  String get devSeedEnvPlatform => '平台';
+
+  @override
+  String get devSeedEnvPackage => '安装包';
+
+  @override
+  String get devSeedEnvVersion => '版本';
+
+  @override
+  String get devSeedUnavailable => '该功能只在 dev flavor 的调试包中可用，生产包不包含此功能。';
+
+  @override
+  String devSeedGenerateSecondMessage(Object total) {
+    return '最后确认：将在上方环境中写入约 $total 条测试数据，并先删除上一批【T】数据。';
+  }
+
+  @override
+  String get devSeedCleanupSecondMessage => '最后确认：将删除上方环境中所有【T】标记的测试数据，不可撤销。';
+
+  @override
+  String devSeedCurrentLedgerName(Object name) {
+    return '当前账本：$name';
+  }
+
+  @override
+  String devSeedPlanSummary(Object total) {
+    return '预计写入约 $total 条记录';
+  }
+
+  @override
+  String get devSeedEntityAccounts => '账户';
+
+  @override
+  String get devSeedEntityCategories => '分类';
+
+  @override
+  String get devSeedEntityTags => '标签';
+
+  @override
+  String get devSeedEntityCustomFields => '自定义字段';
+
+  @override
+  String get devSeedEntityBudgets => '分类预算';
+
+  @override
+  String get devSeedEntityRecurring => '周期账单';
+
+  @override
+  String get devSeedEntitySavingsGoals => '储蓄目标';
+
+  @override
+  String get devSeedEntityHoldings => '投资持仓';
+
+  @override
+  String get devSeedEntityTransactions => '交易';
+
+  @override
+  String get devSeedEntityLedgers => '附加测试账本';
+
+  @override
+  String get devSeedGenerate => '生成测试数据（先清理旧数据）';
+
+  @override
+  String get devSeedCleanup => '只清理测试数据';
+
+  @override
+  String get devSeedRunning => '正在处理…';
+
+  @override
+  String devSeedStageLabel(Object stage) {
+    return '当前阶段：$stage';
+  }
+
+  @override
+  String get devSeedStageCleanup => '正在清理旧测试数据';
+
+  @override
+  String get devSeedDone => '生成完成';
+
+  @override
+  String devSeedDoneDetail(Object cleaned, Object created) {
+    return '清理 $cleaned 条 · 写入 $created 条';
+  }
+
+  @override
+  String devSeedFailedCount(Object failed) {
+    return '失败 $failed 条';
+  }
+
+  @override
+  String devSeedElapsed(Object ms) {
+    return '耗时 $ms 毫秒';
+  }
+
+  @override
+  String get devSeedRefreshHint => '列表若未刷新，请返回首页重进或重启 App。';
+
+  @override
+  String devSeedCleanupDone(Object count) {
+    return '已清理 $count 条测试数据';
+  }
+
+  @override
+  String get devSeedCleanupConfirmTitle => '清理测试数据？';
+
+  @override
+  String get devSeedCleanupConfirmMessage =>
+      '只删除本机所有带【T】标记的测试数据（交易 / 账户 / 分类 / 标签 / 预算 / 周期 / 目标 / 持仓 / 字段 / 测试账本），不影响手工录入的数据。此操作不可撤销。';
+
+  @override
+  String get devSeedGenerateConfirmTitle => '生成测试数据？';
+
+  @override
+  String devSeedGenerateConfirmMessage(Object total) {
+    return '会先清掉上一批带【T】标记的测试数据，再写入约 $total 条记录（以 3000 笔交易为主）。只会动测试数据，不会碰手工录入的数据。';
+  }
+
+  @override
   String get devPerfFps => '帧率';
 
   @override
@@ -9602,6 +9742,146 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get devPerfEntrySubtitle => '檢視即時畫面更新率與畫面耗時（僅 debug）';
+
+  @override
+  String get devSeedTitle => '測試資料產生';
+
+  @override
+  String get devSeedEntryTitle => '測試資料產生';
+
+  @override
+  String get devSeedEntrySubtitle => '批次建立帳戶 / 交易 / 預算等測試資料（僅 debug）';
+
+  @override
+  String get devSeedHint =>
+      '說明：產生前會先清掉上一批帶【T】標記的測試資料；所有產生的資料列都帶【T】前綴，方便與手動輸入的資料區分。';
+
+  @override
+  String get devSeedEnvironment => '執行環境';
+
+  @override
+  String get devSeedEnvFlavor => 'Flavor';
+
+  @override
+  String get devSeedEnvMode => 'Mode';
+
+  @override
+  String get devSeedEnvPlatform => '平台';
+
+  @override
+  String get devSeedEnvPackage => '安裝包';
+
+  @override
+  String get devSeedEnvVersion => '版本';
+
+  @override
+  String get devSeedUnavailable => '此功能僅在 dev flavor 的除錯版中可用，正式版不包含此功能。';
+
+  @override
+  String devSeedGenerateSecondMessage(Object total) {
+    return '最後確認：將在上方環境中寫入約 $total 筆測試資料，並先刪除上一批【T】資料。';
+  }
+
+  @override
+  String get devSeedCleanupSecondMessage => '最後確認：將刪除上方環境中所有【T】標記的測試資料，無法復原。';
+
+  @override
+  String devSeedCurrentLedgerName(Object name) {
+    return '目前帳本：$name';
+  }
+
+  @override
+  String devSeedPlanSummary(Object total) {
+    return '預計寫入約 $total 筆記錄';
+  }
+
+  @override
+  String get devSeedEntityAccounts => '帳戶';
+
+  @override
+  String get devSeedEntityCategories => '分類';
+
+  @override
+  String get devSeedEntityTags => '標籤';
+
+  @override
+  String get devSeedEntityCustomFields => '自訂欄位';
+
+  @override
+  String get devSeedEntityBudgets => '分類預算';
+
+  @override
+  String get devSeedEntityRecurring => '週期帳單';
+
+  @override
+  String get devSeedEntitySavingsGoals => '儲蓄目標';
+
+  @override
+  String get devSeedEntityHoldings => '投資持倉';
+
+  @override
+  String get devSeedEntityTransactions => '交易';
+
+  @override
+  String get devSeedEntityLedgers => '附加測試帳本';
+
+  @override
+  String get devSeedGenerate => '產生測試資料（先清理舊資料）';
+
+  @override
+  String get devSeedCleanup => '只清理測試資料';
+
+  @override
+  String get devSeedRunning => '正在處理…';
+
+  @override
+  String devSeedStageLabel(Object stage) {
+    return '目前階段：$stage';
+  }
+
+  @override
+  String get devSeedStageCleanup => '正在清理舊測試資料';
+
+  @override
+  String get devSeedDone => '產生完成';
+
+  @override
+  String devSeedDoneDetail(Object cleaned, Object created) {
+    return '清除 $cleaned 筆 · 寫入 $created 筆';
+  }
+
+  @override
+  String devSeedFailedCount(Object failed) {
+    return '失敗 $failed 筆';
+  }
+
+  @override
+  String devSeedElapsed(Object ms) {
+    return '耗時 $ms 毫秒';
+  }
+
+  @override
+  String get devSeedRefreshHint => '若列表未重新整理，請返回首頁重新進入或重啟 App。';
+
+  @override
+  String devSeedCleanupDone(Object count) {
+    return '已清理 $count 筆測試資料';
+  }
+
+  @override
+  String get devSeedCleanupConfirmTitle => '清理測試資料？';
+
+  @override
+  String get devSeedCleanupConfirmMessage =>
+      '只刪除本機所有帶【T】標記的測試資料（交易 / 帳戶 / 分類 / 標籤 / 預算 / 週期 / 目標 / 持倉 / 欄位 / 測試帳本），不影響手動輸入的資料。此操作無法復原。';
+
+  @override
+  String get devSeedGenerateConfirmTitle => '產生測試資料？';
+
+  @override
+  String devSeedGenerateConfirmMessage(Object total) {
+    return '會先清掉上一批帶【T】標記的測試資料，再寫入約 $total 筆記錄（以 3000 筆交易為主）。只會動測試資料，不會碰手動輸入的資料。';
+  }
 
   @override
   String get devPerfFps => '畫面更新率';
