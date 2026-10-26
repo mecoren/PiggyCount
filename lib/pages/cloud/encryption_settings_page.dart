@@ -338,13 +338,17 @@ class _EncryptionSettingsPageState
         title: l10n.cloudSyncEncryptSettings,
         showBack: true,
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: PiggyTokens.topScrollablePadding(context),
+      // 标题栏避让做进列表自身 padding（不能包在 body 外）：否则滚动视口从
+      // 标题栏下沿开始，内容穿不到标题栏后面，磨砂层下只有一片纯背景色，
+      // 逐级渐变模糊（顶部最糊 → 底部清晰）就看不出来。
+      body: ListView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          PiggyTokens.topScrollablePadding(context) + 16,
+          16,
+          16,
         ),
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+        children: [
             // 整库加密（本地库文件）—— 与下方的云端 E2EE 是两件独立的事
             const LocalDbEncryptionSection(),
             const SizedBox(height: 12),
@@ -494,8 +498,7 @@ class _EncryptionSettingsPageState
                   ),
                 ),
               ),
-          ],
-        ),
+        ],
       ),
     );
   }

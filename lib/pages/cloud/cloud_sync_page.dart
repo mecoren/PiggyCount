@@ -723,6 +723,15 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
       );
     }
 
+    // 头部让位量（状态栏 + 标题栏 88dp）。标题栏是叠在 body 之上的磨砂层，
+    // 让位量必须写进**滚动内容的内边距**、不能整体 Padding 下移 body —— 否则
+    // 列表视口从标题栏下沿开始，卡片永远滚不到磨砂层下面，模糊层下只剩一片
+    // 纯背景色，逐级渐变模糊（顶部最糊 → 底部清晰）根本看不出来。
+    // 口径同分析页「头部改覆盖层，列表铺满 body 支撑磨砂」。
+    final headerInset = MediaQuery.of(context).padding.top + 88;
+    final hasTopBanner = ref.watch(cloudConfigCorruptionProvider) != null ||
+        ref.watch(cloudMigrationWarningProvider) != null;
+
     return Scaffold(
       backgroundColor: PiggyTokens.scaffoldBackground(context),
       extendBodyBehindAppBar: true,
@@ -732,15 +741,24 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
         showBack: true,
         topPadding: 8,
       ),
-      body: Padding(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 88,
-        ),
-        child: Column(
-          children: [
-            _buildConfigCorruptionBanner(context),
-            _buildMigrationWarningBanner(context),
-            Expanded(
+      body: Column(
+        children: [
+          // 顶部横幅本身不可滚动：无横幅时让位交给下方列表的内边距（列表
+          // 视口从屏幕顶开始，卡片才能钻到磨砂层下面）；有横幅时由横幅
+          // 自己让出 headerInset，否则会被标题栏盖住。
+          if (hasTopBanner)
+            Padding(
+              padding: EdgeInsets.only(top: headerInset),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildConfigCorruptionBanner(context),
+                  _buildMigrationWarningBanner(context),
+                ],
+              ),
+            ),
+          Expanded(
               child: authAsync.when(
                 loading: () => DelayedSkeleton(
                   placeholder: const SizedBox.expand(),
@@ -922,7 +940,14 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                     return RefreshIndicator(
                         onRefresh: _onRefresh,
                         child: ListView(
-                          padding: const EdgeInsets.all(16),
+                          // 无横幅时由列表自己让出标题栏高度：视口从屏幕顶
+                          // 开始，卡片能滚到磨砂层下方（有横幅时横幅已让位）。
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            (hasTopBanner ? 0 : headerInset) + 16,
+                            16,
+                            16,
+                          ),
                           children: [
                             // 提示文案
                             Padding(
@@ -2195,8 +2220,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
                 ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
