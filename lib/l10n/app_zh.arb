@@ -63,6 +63,8 @@
   "devSeedStageCleanup": "正在清理旧测试数据",
   "devSeedDone": "生成完成",
   "devSeedDoneDetail": "清理 {cleaned} 条 · 写入 {created} 条",
+  "devSeedCreatedDetail": "写入明细",
+  "devSeedCleanedDetail": "清理明细",
   "devSeedFailedCount": "失败 {failed} 条",
   "devSeedElapsed": "耗时 {ms} 毫秒",
   "devSeedRefreshHint": "列表若未刷新，请返回首页重进或重启 App。",

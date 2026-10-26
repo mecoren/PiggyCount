@@ -63,6 +63,8 @@
   "devSeedStageCleanup": "이전 테스트 데이터 정리 중",
   "devSeedDone": "생성 완료",
   "devSeedDoneDetail": "정리 {cleaned}개 · 기록 {created}개",
+  "devSeedCreatedDetail": "기록 내역",
+  "devSeedCleanedDetail": "정리 내역",
   "devSeedFailedCount": "실패 {failed}개",
   "devSeedElapsed": "소요 {ms}ms",
   "devSeedRefreshHint": "목록이 갱신되지 않으면 홈으로 돌아갔다 다시 들어오거나 앱을 재시작하세요.",

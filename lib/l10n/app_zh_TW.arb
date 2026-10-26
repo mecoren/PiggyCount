@@ -62,6 +62,8 @@
   "devSeedStageCleanup": "正在清理舊測試資料",
   "devSeedDone": "產生完成",
   "devSeedDoneDetail": "清除 {cleaned} 筆 · 寫入 {created} 筆",
+  "devSeedCreatedDetail": "寫入明細",
+  "devSeedCleanedDetail": "清理明細",
   "devSeedFailedCount": "失敗 {failed} 筆",
   "devSeedElapsed": "耗時 {ms} 毫秒",
   "devSeedRefreshHint": "若列表未重新整理，請返回首頁重新進入或重啟 App。",

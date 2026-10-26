@@ -34,7 +34,7 @@ class _DevTestDataPageState extends ConsumerState<DevTestDataPage> {
   int _done = 0;
   int _total = 0;
   DevSeedResult? _result;
-  String? _cleanupSummary;
+  Map<String, int>? _cleaned;
 
   /// 真实包名 / 版本（dev flavor 的 applicationId 带 `.dev` 后缀），
   /// 只用于在二次确认里标明当前环境。
@@ -239,6 +239,11 @@ class _DevTestDataPageState extends ConsumerState<DevTestDataPage> {
                     style: PiggyTextTokens.label(context)
                         .copyWith(color: PiggyTokens.textTertiary(context)),
                   ),
+                  const SizedBox(height: PiggyDimens.p12),
+                  _Breakdown(
+                    title: l10n.devSeedCreatedDetail,
+                    counts: _result!.created,
+                  ),
                   const SizedBox(height: PiggyDimens.p8),
                   Text(
                     l10n.devSeedRefreshHint,
@@ -249,12 +254,26 @@ class _DevTestDataPageState extends ConsumerState<DevTestDataPage> {
               ),
             ),
           ],
-          if (_cleanupSummary != null && !_busy) ...[
+          if (_cleaned != null && !_busy) ...[
             const SizedBox(height: PiggyDimens.p20),
-            Text(
-              _cleanupSummary!,
-              style: PiggyTextTokens.label(context)
-                  .copyWith(color: PiggyTokens.textSecondary(context)),
+            SectionCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.devSeedCleanupDone(
+                      _cleaned!.values.fold<int>(0, (a, b) => a + b),
+                    ),
+                    style: PiggyTextTokens.body(context)
+                        .copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: PiggyDimens.p12),
+                  _Breakdown(
+                    title: l10n.devSeedCleanedDetail,
+                    counts: _cleaned!,
+                  ),
+                ],
+              ),
             ),
           ],
         ],
@@ -288,7 +307,7 @@ class _DevTestDataPageState extends ConsumerState<DevTestDataPage> {
       _done = 0;
       _total = 0;
       _result = null;
-      _cleanupSummary = null;
+      _cleaned = null;
     });
 
     try {
@@ -349,7 +368,7 @@ class _DevTestDataPageState extends ConsumerState<DevTestDataPage> {
       _stage = DevSeedStage.cleanup;
       _done = 0;
       _total = 0;
-      _cleanupSummary = null;
+      _cleaned = null;
     });
 
     try {
@@ -363,7 +382,7 @@ class _DevTestDataPageState extends ConsumerState<DevTestDataPage> {
       final total = cleaned.values.fold<int>(0, (a, b) => a + b);
       setState(() {
         _result = null;
-        _cleanupSummary = l10n.devSeedCleanupDone(total);
+        _cleaned = cleaned;
       });
       showToast(context, l10n.devSeedCleanupDone(total));
     } catch (e) {
@@ -409,36 +428,98 @@ class _DevTestDataPageState extends ConsumerState<DevTestDataPage> {
   }
 
   String _stageLabel(AppLocalizations l10n, String? stage) {
-    switch (stage) {
-      case DevSeedStage.cleanup:
-        return l10n.devSeedStageCleanup;
-      case DevSeedStage.accounts:
-        return l10n.devSeedEntityAccounts;
-      case DevSeedStage.categories:
-        return l10n.devSeedEntityCategories;
-      case DevSeedStage.tags:
-        return l10n.devSeedEntityTags;
-      case DevSeedStage.customFields:
-        return l10n.devSeedEntityCustomFields;
-      case DevSeedStage.budgets:
-        return l10n.devSeedEntityBudgets;
-      case DevSeedStage.totalBudget:
-        return l10n.devSeedEntityTotalBudget;
-      case DevSeedStage.recurring:
-        return l10n.devSeedEntityRecurring;
-      case DevSeedStage.savingsGoals:
-        return l10n.devSeedEntitySavingsGoals;
-      case DevSeedStage.holdings:
-        return l10n.devSeedEntityHoldings;
-      case DevSeedStage.transactions:
-        return l10n.devSeedEntityTransactions;
-      case DevSeedStage.trash:
-        return l10n.devSeedEntityTrash;
-      case DevSeedStage.ledgers:
-        return l10n.devSeedEntityLedgers;
-      default:
-        return l10n.devSeedRunning;
-    }
+    if (stage == DevSeedStage.cleanup) return l10n.devSeedStageCleanup;
+    if (stage == null) return l10n.devSeedRunning;
+    final label = _entityLabelOf(l10n, stage);
+    return label.isEmpty ? l10n.devSeedRunning : label;
+  }
+}
+
+/// 实体阶段的显示名（进度条、写入明细、清理明细共用一份映射）。
+///
+/// 未知 stage 返回空串，由调用方决定回落文案 —— 服务层的 stage 是内部标识，
+/// 不能直接漏给用户。
+String _entityLabelOf(AppLocalizations l10n, String stage) {
+  switch (stage) {
+    case DevSeedStage.accounts:
+      return l10n.devSeedEntityAccounts;
+    case DevSeedStage.categories:
+      return l10n.devSeedEntityCategories;
+    case DevSeedStage.tags:
+      return l10n.devSeedEntityTags;
+    case DevSeedStage.customFields:
+      return l10n.devSeedEntityCustomFields;
+    case DevSeedStage.budgets:
+      return l10n.devSeedEntityBudgets;
+    case DevSeedStage.totalBudget:
+      return l10n.devSeedEntityTotalBudget;
+    case DevSeedStage.recurring:
+      return l10n.devSeedEntityRecurring;
+    case DevSeedStage.savingsGoals:
+      return l10n.devSeedEntitySavingsGoals;
+    case DevSeedStage.holdings:
+      return l10n.devSeedEntityHoldings;
+    case DevSeedStage.transactions:
+      return l10n.devSeedEntityTransactions;
+    case DevSeedStage.trash:
+      return l10n.devSeedEntityTrash;
+    case DevSeedStage.ledgers:
+      return l10n.devSeedEntityLedgers;
+    default:
+      return '';
+  }
+}
+
+/// 写入 / 清理明细：按 [DevSeedStage.all] 的顺序逐项列条数，只显示非零项。
+///
+/// 之前只给总数，用户想核对「预算 / 回收站到底写没写进去」还得自己翻页面；
+/// 这里直接给出每类实体的实际条数。
+class _Breakdown extends StatelessWidget {
+  const _Breakdown({required this.title, required this.counts});
+
+  final String title;
+  final Map<String, int> counts;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final rows = <({String label, int count})>[
+      for (final stage in DevSeedStage.all)
+        if ((counts[stage] ?? 0) > 0)
+          (label: _entityLabelOf(l10n, stage), count: counts[stage]!),
+    ];
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    final titleStyle = PiggyTextTokens.label(context).copyWith(
+      fontWeight: FontWeight.w600,
+      color: PiggyTokens.textSecondary(context),
+    );
+    final rowStyle = PiggyTextTokens.label(context).copyWith(
+      color: PiggyTokens.textSecondary(context),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: titleStyle),
+        const SizedBox(height: PiggyDimens.p4),
+        for (final row in rows)
+          Padding(
+            padding: const EdgeInsets.only(top: PiggyDimens.p4),
+            child: Row(
+              children: [
+                Expanded(child: Text(row.label, style: rowStyle)),
+                Text(
+                  '${row.count}',
+                  style: rowStyle.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: PiggyTokens.textPrimary(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
   }
 }
 

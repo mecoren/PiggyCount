@@ -223,6 +223,12 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get devSeedCreatedDetail => '기록 내역';
+
+  @override
+  String get devSeedCleanedDetail => '정리 내역';
+
+  @override
   String devSeedFailedCount(Object failed) {
     return '실패 $failed개';
   }

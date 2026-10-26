@@ -227,6 +227,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get devSeedCreatedDetail => 'Written';
+
+  @override
+  String get devSeedCleanedDetail => 'Cleared';
+
+  @override
   String devSeedFailedCount(Object failed) {
     return '$failed rows failed';
   }

@@ -479,6 +479,18 @@ abstract class AppLocalizations {
   /// **'Cleared {cleaned} rows · Wrote {created} rows'**
   String devSeedDoneDetail(Object cleaned, Object created);
 
+  /// No description provided for @devSeedCreatedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Written'**
+  String get devSeedCreatedDetail;
+
+  /// No description provided for @devSeedCleanedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Cleared'**
+  String get devSeedCleanedDetail;
+
   /// No description provided for @devSeedFailedCount.
   ///
   /// In en, this message translates to:

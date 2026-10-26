@@ -63,6 +63,8 @@
   "devSeedStageCleanup": "Clearing the previous test batch",
   "devSeedDone": "Done",
   "devSeedDoneDetail": "Cleared {cleaned} rows · Wrote {created} rows",
+  "devSeedCreatedDetail": "Written",
+  "devSeedCleanedDetail": "Cleared",
   "devSeedFailedCount": "{failed} rows failed",
   "devSeedElapsed": "Took {ms} ms",
   "devSeedRefreshHint": "If a list still looks stale, go back to Home and re-enter, or restart the app.",

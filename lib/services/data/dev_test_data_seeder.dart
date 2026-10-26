@@ -318,7 +318,7 @@ class DevTestDataSeeder {
         onProgress?.call(DevSeedStage.cleanup, done, total);
 
     // 1) 当前账本的交易（连带 tag / 附件关联由仓库清理）。
-    report(0, 8);
+    report(0, 10);
     final txs = await repo.getTransactionsByLedger(ledgerId);
     final seededTxs = txs.where((t) => marked(t.note)).toList();
     if (seededTxs.isNotEmpty) {
@@ -344,26 +344,31 @@ class DevTestDataSeeder {
     if (purged > 0) cleaned[DevSeedStage.trash] = purged;
 
     // 3) 分类预算：预算本身没有名称，靠「引用了测试分类」判定。
-    report(1, 8);
+    //    分类与预算各只读一次，后续复用（少两次全表扫描）。
+    report(3, 10);
     final categories = await repo.getAllCategories();
-    final seededCategoryIds =
-        categories.where((c) => marked(c.name)).map((c) => c.id).toSet();
+    final seededCategories = categories.where((c) => marked(c.name)).toList();
+    final seededCategoryIds = seededCategories.map((c) => c.id).toSet();
+    final budgets = await repo.getAllBudgets(ledgerId);
+    final deletedBudgetIds = <int>{};
     if (seededCategoryIds.isNotEmpty) {
-      var deleted = 0;
-      for (final budget in await repo.getAllBudgets(ledgerId)) {
+      for (final budget in budgets) {
         final categoryId = budget.categoryId;
         if (categoryId != null && seededCategoryIds.contains(categoryId)) {
           await repo.deleteBudget(budget.id);
-          deleted++;
+          deletedBudgetIds.add(budget.id);
         }
       }
-      if (deleted > 0) cleaned[DevSeedStage.budgets] = deleted;
+      if (deletedBudgetIds.isNotEmpty) {
+        cleaned[DevSeedStage.budgets] = deletedBudgetIds.length;
+      }
     }
 
     // 3b) 总预算：只有「哨兵金额」才是测试行。**必须等分类预算删完、且账本里
     // 只剩它自己时才删** —— `deleteBudget` 对 total 是级联清掉整账本预算，
     // 顺手删会把用户自己的预算一起带走。
-    final remainingBudgets = await repo.getAllBudgets(ledgerId);
+    final remainingBudgets =
+        budgets.where((b) => !deletedBudgetIds.contains(b.id)).toList();
     final seedTotals = remainingBudgets
         .where((b) => b.type == 'total' && _isSeedTotalBudget(b.amount))
         .toList();
@@ -373,7 +378,7 @@ class DevTestDataSeeder {
     }
 
     // 3) 周期账单。
-    report(2, 8);
+    report(4, 10);
     var recurring = 0;
     for (final item in await repo.getRecurringTransactionsByLedger(ledgerId)) {
       if (marked(item.note)) {
@@ -384,7 +389,7 @@ class DevTestDataSeeder {
     if (recurring > 0) cleaned[DevSeedStage.recurring] = recurring;
 
     // 4) 储蓄目标。
-    report(3, 8);
+    report(5, 10);
     var goals = 0;
     for (final goal in await repo.getSavingsGoalsByLedger(ledgerId)) {
       if (marked(goal.name)) {
@@ -395,7 +400,7 @@ class DevTestDataSeeder {
     if (goals > 0) cleaned[DevSeedStage.savingsGoals] = goals;
 
     // 5) 投资持仓（user-global，跨账本可见）。
-    report(4, 8);
+    report(6, 10);
     var holdings = 0;
     for (final holding in await repo.getAllHoldings()) {
       if (marked(holding.name)) {
@@ -406,7 +411,7 @@ class DevTestDataSeeder {
     if (holdings > 0) cleaned[DevSeedStage.holdings] = holdings;
 
     // 6) 自定义字段定义（会同时清掉交易里的值）。
-    report(5, 8);
+    report(7, 10);
     var fields = 0;
     for (final def in await repo.getDefinitionsForLedger(ledgerId)) {
       if (marked(def.name)) {
@@ -417,7 +422,7 @@ class DevTestDataSeeder {
     if (fields > 0) cleaned[DevSeedStage.customFields] = fields;
 
     // 7) 标签。
-    report(6, 8);
+    report(8, 10);
     var tags = 0;
     for (final tag in await repo.getAllTags()) {
       if (marked(tag.name)) {
@@ -427,20 +432,22 @@ class DevTestDataSeeder {
     }
     if (tags > 0) cleaned[DevSeedStage.tags] = tags;
 
-    // 8) 分类（子分类随父分类删除）。
+    // 8) 分类（子分类随父分类删除，计数按「所有被标记的分类行」算，
+    //    与实际生成量对齐；复用上面那次 getAllCategories 结果）。
     var deletedCategories = 0;
-    for (final category in await repo.getAllCategories()) {
-      if (marked(category.name) && category.parentId == null) {
+    for (final category in seededCategories) {
+      if (category.parentId == null) {
         await repo.deleteCategory(category.id);
         deletedCategories++;
       }
     }
-    if (deletedCategories > 0) {
-      cleaned[DevSeedStage.categories] = deletedCategories;
+    if (seededCategories.isNotEmpty) {
+      cleaned[DevSeedStage.categories] = seededCategories.length;
+      logger.info('DevSeed', '删除测试分类根节点 $deletedCategories 个');
     }
 
     // 9) 账户。
-    report(7, 8);
+    report(9, 10);
     var accounts = 0;
     for (final account in await repo.getAllAccounts()) {
       if (marked(account.name)) {
@@ -460,7 +467,7 @@ class DevTestDataSeeder {
     }
     if (ledgers > 0) cleaned[DevSeedStage.ledgers] = ledgers;
 
-    report(8, 8);
+    report(10, 10);
     logger.info('DevSeed', '清理测试数据完成: $cleaned');
     return cleaned;
   }
@@ -571,7 +578,7 @@ class DevTestDataSeeder {
       }
     }
 
-    Future<void> createSubCategory({
+    Future<int?> createSubCategory({
       required int parentId,
       required String name,
       required String kind,
@@ -579,7 +586,7 @@ class DevTestDataSeeder {
       required int sortOrder,
     }) async {
       try {
-        await repo.createSubCategory(
+        final id = await repo.createSubCategory(
           parentId: parentId,
           name: name,
           kind: kind,
@@ -588,9 +595,11 @@ class DevTestDataSeeder {
         );
         created[DevSeedStage.categories] =
             (created[DevSeedStage.categories] ?? 0) + 1;
+        return id;
       } catch (e) {
         failed++;
         logger.warning('DevSeed', '创建子分类失败: $name ($e)');
+        return null;
       }
     }
 
@@ -608,13 +617,14 @@ class DevTestDataSeeder {
       if (parentId == null) continue;
       expenseCategories.add(parentId);
       for (var j = 0; j < 1; j++) {
-        await createSubCategory(
+        final childId = await createSubCategory(
           parentId: parentId,
           name: '$marker支出子类 ${(i + 1).toString().padLeft(3, '0')}-${j + 1}',
           kind: 'expense',
           icon: icon,
           sortOrder: j,
         );
+        if (childId != null) expenseCategories.add(childId);
       }
       onProgress?.call(
         DevSeedStage.categories,
@@ -636,31 +646,19 @@ class DevTestDataSeeder {
       );
       if (parentId == null) continue;
       incomeCategories.add(parentId);
-      await createSubCategory(
+      final childId = await createSubCategory(
         parentId: parentId,
         name: '$marker收入子类 ${(i + 1).toString().padLeft(3, '0')}-1',
         kind: 'income',
         icon: icon,
         sortOrder: 0,
       );
+      if (childId != null) incomeCategories.add(childId);
       onProgress?.call(
         DevSeedStage.categories,
         created[DevSeedStage.categories] ?? 0,
         plan.categories,
       );
-    }
-
-    // 子分类也要能记账（叶子分类），把它们的 id 一起纳入候选。
-    final allCats = await repo.getAllCategories();
-    for (final category in allCats) {
-      if (!category.name.startsWith(marker)) continue;
-      final parentId = category.parentId;
-      if (parentId == null) continue;
-      if (category.kind == 'expense') {
-        expenseCategories.add(category.id);
-      } else if (category.kind == 'income') {
-        incomeCategories.add(category.id);
-      }
     }
 
     // 3) 标签。

@@ -214,6 +214,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get devSeedCreatedDetail => '写入明细';
+
+  @override
+  String get devSeedCleanedDetail => '清理明细';
+
+  @override
   String devSeedFailedCount(Object failed) {
     return '失败 $failed 条';
   }
@@ -9861,6 +9867,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String devSeedDoneDetail(Object cleaned, Object created) {
     return '清除 $cleaned 筆 · 寫入 $created 筆';
   }
+
+  @override
+  String get devSeedCreatedDetail => '寫入明細';
+
+  @override
+  String get devSeedCleanedDetail => '清理明細';
 
   @override
   String devSeedFailedCount(Object failed) {
