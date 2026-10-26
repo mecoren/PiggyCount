@@ -371,7 +371,7 @@ class _CompactSummaryRow extends ConsumerWidget {
     return Row(
       children: [
         Expanded(
-          child: _CompactStatCell(
+          child: PinnedTitleStat(
             label: l10n.subscriptionAnnualLabel,
             value: AmountText(
               value: summary.annualAmount,
@@ -385,7 +385,7 @@ class _CompactSummaryRow extends ConsumerWidget {
         ),
         divider,
         Expanded(
-          child: _CompactStatCell(
+          child: PinnedTitleStat(
             label: l10n.subscriptionMonthlyLabel,
             value: AmountText(
               value: summary.monthlyAmount,
@@ -401,40 +401,11 @@ class _CompactSummaryRow extends ConsumerWidget {
         ),
         divider,
         Expanded(
-          child: _CompactStatCell(
+          child: PinnedTitleStat(
             label: l10n.subscriptionCountShort,
             value: Text('${summary.count}', style: valueStyle),
           ),
         ),
-      ],
-    );
-  }
-}
-
-/// 紧凑汇总的一栏：一行小字标签 + 一行数值。
-class _CompactStatCell extends StatelessWidget {
-  const _CompactStatCell({required this.label, required this.value});
-
-  final String label;
-  final Widget value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: PiggyTextTokens.fs10,
-            color: PiggyTokens.textTertiary(context),
-          ),
-        ),
-        const SizedBox(height: 1),
-        FittedBox(fit: BoxFit.scaleDown, child: value),
       ],
     );
   }

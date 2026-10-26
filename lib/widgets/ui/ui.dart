@@ -20,6 +20,7 @@ export 'sheet_header.dart';
 export 'segmented_control.dart';
 export 'select_chip.dart';
 export 'value_row.dart';
+export 'pinned_title_stat.dart';
 export 'wheel_time_picker.dart';
 export 'wheel_picker.dart';
 

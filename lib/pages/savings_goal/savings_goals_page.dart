@@ -193,9 +193,14 @@ class _SavingsGoalsPageState extends ConsumerState<SavingsGoalsPage> {
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.centerRight,
-                            child: _CompactSummary(
-                              summary: summary,
-                              currencyCode: currencyCode,
+                            // FittedBox 给子树的宽度约束是无界的，而紧凑汇总
+                            // 用 Expanded 平分两栏 —— 必须自己带一个确定宽度。
+                            child: SizedBox(
+                              width: 148.0.scaled(context, ref),
+                              child: _CompactSummary(
+                                summary: summary,
+                                currencyCode: currencyCode,
+                              ),
                             ),
                           ),
                         ),
@@ -311,8 +316,10 @@ class _SummaryCard extends ConsumerWidget {
 
 /// 标题栏右上角的紧凑汇总：汇总卡往上滑走之后，「总目标 / 总已存」收到这里。
 ///
-/// 两行「标签 + 紧凑金额（万 / 千）」，字号取 caption 档 —— 它是常驻提示，
-/// 不能跟标题抢字重；金额仍走 [AmountText]，跟随全局「隐藏金额」开关。
+/// 版式与订阅管理页 / 资产页的标题行汇总一致：两栏「小字标签在上、金额在下」，
+/// 中间一条竖分隔线（见 [PinnedTitleStat]）。此前是两行「标签 + 金额」横排，
+/// 每行都要吃掉一大段宽度，右对齐的长金额更容易顶到标题。
+/// 金额仍走 [AmountText]，跟随全局「隐藏金额」开关。
 class _CompactSummary extends ConsumerWidget {
   const _CompactSummary({required this.summary, required this.currencyCode});
 
@@ -323,34 +330,31 @@ class _CompactSummary extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final hide = ref.watch(hideAmountsProvider);
-    final labelStyle = PiggyTextTokens.caption(context)
-        .copyWith(color: PiggyTokens.textTertiary(context));
     final valueStyle =
         PiggyTextTokens.caption(context).copyWith(fontWeight: FontWeight.w600);
 
-    Widget line(String label, double value) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label, style: labelStyle),
-            SizedBox(width: PiggyDimens.p4.scaled(context, ref)),
-            AmountText(
-              value: value,
-              signed: false,
-              showCurrency: true,
-              currencyCode: currencyCode,
-              useCompactFormat: true,
-              hide: hide,
-              style: valueStyle,
-            ),
-          ],
+    Widget cell(String label, double value) => PinnedTitleStat(
+          label: label,
+          value: AmountText(
+            value: value,
+            signed: false,
+            showCurrency: true,
+            currencyCode: currencyCode,
+            useCompactFormat: true,
+            hide: hide,
+            style: valueStyle,
+          ),
         );
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
+    return Row(
       children: [
-        line(l10n.savingsGoalTotalTarget, summary.totalTarget),
-        line(l10n.savingsGoalTotalSaved, summary.totalSaved),
+        Expanded(child: cell(l10n.savingsGoalTotalTarget, summary.totalTarget)),
+        Container(
+          width: 1,
+          height: 20.0.scaled(context, ref),
+          color: PiggyTokens.divider(context),
+        ),
+        Expanded(child: cell(l10n.savingsGoalTotalSaved, summary.totalSaved)),
       ],
     );
   }
