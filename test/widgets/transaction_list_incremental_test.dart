@@ -13,6 +13,7 @@ import 'package:piggycount/data/db.dart';
 import 'package:piggycount/data/repositories/local/local_repository.dart';
 import 'package:piggycount/l10n/app_localizations.dart';
 import 'package:piggycount/providers/database_providers.dart';
+import 'package:piggycount/styles/tokens.dart';
 import 'package:piggycount/widgets/biz/transaction_list.dart';
 
 typedef TxItem = ({
@@ -52,14 +53,25 @@ void main() {
 
   tearDown(() async => db.close());
 
-  test('吸附日期：取日期倒序里第一个仍可见的组', () {
+  test('吸附日期：视口顶落在哪一天（内容坐标比对）', () {
     const ordered = ['2026-10-03', '2026-10-02', '2026-10-01'];
+    const tops = {'2026-10-03': 0.0, '2026-10-02': 120.0, '2026-10-01': 240.0};
+
+    // 停在顶部：首组卡片顶边正好贴着视口顶 → 真实组头完整可见，不吸附
+    expect(pinnedDayKeyFor(ordered, tops, 0), isNull);
+    // 刚好停在组与组的交界：同理不吸附
+    expect(pinnedDayKeyFor(ordered, tops, 120), isNull);
+    // 沉下去一丝就吸附（不晚一帧）
+    expect(pinnedDayKeyFor(ordered, tops, 0.6), '2026-10-03');
+    expect(pinnedDayKeyFor(ordered, tops, 121), '2026-10-02');
+    expect(pinnedDayKeyFor(ordered, tops, 300), '2026-10-01');
+    // 还没构建过的组不参与判定
+    expect(pinnedDayKeyFor(ordered, const {}, 300), isNull);
+    // 每组之间缺失（未构建）时仍取最后一个已知的上边界
     expect(
-      firstVisibleDayKey(ordered, {'2026-10-02', '2026-10-01'}),
+      pinnedDayKeyFor(ordered, const {'2026-10-02': 120.0}, 300),
       '2026-10-02',
     );
-    expect(firstVisibleDayKey(ordered, {'2026-10-01'}), '2026-10-01');
-    expect(firstVisibleDayKey(ordered, {}), isNull);
   });
 
   Widget host(
@@ -119,10 +131,60 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.drag(find.byType(TransactionList), const Offset(0, -420));
-    await tester.pumpAndSettle();
 
+    // 当帧判定：drag 的指针事件已同步更新滚动 offset，吸附状态必须**立刻**成立。
+    // 晚一帧（旧实现：post-frame 量位置再 setState）会在首滑时让真实组头先被裁掉
+    // 一帧、吸附头下一帧才盖上来 —— 用户看到的就是「日期抖一下」。
+    expect(key.currentState!.stickyPinned, isTrue);
+
+    await tester.pumpAndSettle();
     expect(key.currentState!.stickyPinned, isTrue);
     expect(find.byKey(const Key('sticky-date-header')), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  // 吸附态是「圆角卡片顶边」：面层圆角 + 主色描边（半径与首组日卡片一致，
+  // 接管瞬间能接上），底下垫一层**页面背景色**的方角，只从两个圆角缺口露出。
+  // 垫底色必须是背景色而不是卡片白——涂白就等于圆角外侧是一块白角，会把主色
+  // 描边顶到里侧，观感正是「上滑时两侧各挑出一个白色直角」。
+  testWidgets('stickyDateHeader：吸附头为圆角卡片顶边，缺口垫页面背景色',
+      (tester) async {
+    final key = GlobalKey<TransactionListState>();
+    await tester.pumpWidget(host([
+      for (var d = 1; d <= 10; d++)
+        item(d, DateTime(2024, 1, d), amount: d.toDouble()),
+    ], key, sticky: true));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(TransactionList), const Offset(0, -420));
+    await tester.pumpAndSettle();
+
+    final bandFinder = find.byKey(const Key('sticky-date-header-band'));
+    expect(bandFinder, findsOneWidget);
+    final band = tester.widget<Container>(bandFinder);
+    final deco = band.decoration! as BoxDecoration;
+    expect(
+      deco.borderRadius,
+      const BorderRadius.vertical(top: Radius.circular(PiggyDimens.radiusLg)),
+    );
+    expect((deco.border! as Border).left.width, 1.5);
+    expect((deco.border! as Border).top.width, 1.5);
+    // 满宽：左右竖线与卡片自己的边线落在同一条线上
+    expect(
+      tester.getSize(bandFinder).width,
+      tester.getSize(find.byType(TransactionList)).width -
+          PiggyDimens.cardMargin.horizontal,
+    );
+
+    final fillerFinder = find.byKey(const Key('sticky-date-header-corner-filler'));
+    expect(fillerFinder, findsOneWidget);
+    final filler = tester.widget<DecoratedBox>(fillerFinder);
+    final fillerColor = (filler.decoration as BoxDecoration).color;
+    final ctx = tester.element(fillerFinder);
+    expect(fillerColor, PiggyTokens.scaffoldBackground(ctx));
+    expect(fillerColor, isNot(PiggyTokens.surface(ctx)));
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));

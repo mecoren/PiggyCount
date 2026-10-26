@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_list_view/flutter_list_view.dart';
@@ -24,12 +25,31 @@ import '../../l10n/app_localizations.dart';
 import '../../services/attachment_service.dart';
 import '../../utils/month_range.dart';
 
-/// 吸附日期的纯选择逻辑：按日期倒序的组里取第一个仍可见的日期。
-String? firstVisibleDayKey(Iterable<String> orderedKeys, Set<String> visible) {
+/// 吸附日期的纯选择逻辑：视口顶（滚动 offset）落在哪一天。
+///
+/// [contentTops] 是各日卡片顶边在**内容坐标**里的位置（= 测量时的滚动 offset +
+/// 相对视口顶的位移）。内容坐标不随滚动变化，所以拿「当前 offset」直接比对即可
+/// **当帧**得出结果，不必等 post-frame 再量一次位置。
+///
+/// 先找出「盖住视口顶」的那一组（最后一个顶边 ≤ 视口顶的日期），再要求它已经
+/// **严格**沉到视口顶之上：视口顶正好落在某组顶边上时（= 列表停在顶部、或滚动
+/// 刚好停在组与组的交界）不算吸附——那一天的组头本来就完整可见，再叠一层会与
+/// 卡片自己的圆角顶边合成两条线（观感是两侧挑出两个尖）。
+String? pinnedDayKeyFor(
+  Iterable<String> orderedKeys, // 按内容先后排列（= 日期倒序）
+  Map<String, double> contentTops,
+  double pixels,
+) {
+  String? covering;
   for (final key in orderedKeys) {
-    if (visible.contains(key)) return key;
+    final top = contentTops[key];
+    if (top == null) continue; // 这组卡片还没构建过，等帧后补测
+    if (top > pixels) break; // 顶边还在视口顶下方，后面的只会更靠下
+    covering = key;
   }
-  return null;
+  if (covering == null) return null;
+  // 0.5px 容差：亚像素级抖动不算「沉下去」，避免在边界上反复吸 / 不吸。
+  return contentTops[covering]! < pixels - 0.5 ? covering : null;
 }
 
 /// 可复用的交易列表组件
@@ -153,61 +173,84 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
   final GlobalKey _stickyViewportKey = GlobalKey();
   final Map<String, GlobalKey> _dayGroupKeys = {};
-  String? _stickyDateKey;
-  bool _stickyPinned = false;
-  bool _stickyUpdateScheduled = false;
+
+  /// 吸附日头状态（吸哪一天 / 是否吸住）。
+  /// 用 ValueNotifier 而不是 setState：它只影响头顶那一条，若走 setState 会连带
+  /// 重建整个 TransactionList（含整个 FlutterListViewDelegate），滚动中每跨一天
+  /// 就重造一次列表 —— 掉帧 + 位置微跳，观感就是抖动。
+  final ValueNotifier<({String? dateKey, bool pinned})> _stickyState =
+      ValueNotifier<({String? dateKey, bool pinned})>(
+          (dateKey: null, pinned: false));
+
+  /// 各日卡片顶边在**内容坐标**里的位置（见 [pinnedDayKeyFor]）。
+  /// 内容坐标不随滚动变化，一次测量可复用到之后任意一帧，因此滚动监听里用当前
+  /// offset 直接比对就能当帧定出吸附日。旧实现是「每帧 post-frame 量位置 →
+  /// setState」，晚一帧才盖吸附头：首滑时那一帧里真实组头已经滚出视口顶、吸附头
+  /// 还没出现，日期文字先被裁掉再跳回原位，这就是用户看到的抖动。
+  final Map<String, double> _dayContentTops = {};
+  bool _stickyMeasureScheduled = false;
 
   bool get _stickyEnabled => widget.stickyDateHeader && widget.wrapInOuterCard;
 
   @visibleForTesting
-  String? get stickyDateKey => _stickyDateKey;
+  String? get stickyDateKey => _stickyState.value.dateKey;
 
   @visibleForTesting
-  bool get stickyPinned => _stickyPinned;
+  bool get stickyPinned => _stickyState.value.pinned;
+
+  double? get _scrollPixels =>
+      _controller.hasClients ? _controller.position.pixels : null;
 
   GlobalKey _dayGroupKey(String dateKey) =>
       _dayGroupKeys.putIfAbsent(dateKey, GlobalKey.new);
 
-  /// 用已构建日期卡片的真实位置判断吸附日：视口顶部之上最近的一组。
-  /// 只遍历构建过的分组 key（约一屏数量），不随总交易数增长。
-  void _scheduleStickyUpdate() {
-    if (!_stickyEnabled || _stickyUpdateScheduled) return;
-    _stickyUpdateScheduled = true;
+  /// 帧后测量：把已构建日卡片的顶边换算成内容坐标存起来（只遍历构建过的分组
+  /// key，约一屏数量，不随总交易数增长）。滚动不改内容坐标，只是新滑进来的卡片
+  /// 要先量一次才能参与判定。
+  void _scheduleStickyMeasure() {
+    if (!_stickyEnabled || _stickyMeasureScheduled) return;
+    _stickyMeasureScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _stickyUpdateScheduled = false;
-      if (!mounted) return;
+      _stickyMeasureScheduled = false;
+      if (!mounted || !_stickyEnabled) return;
+      final pixels = _scrollPixels;
       final viewportBox =
           _stickyViewportKey.currentContext?.findRenderObject() as RenderBox?;
-      if (viewportBox == null || !viewportBox.attached) return;
+      if (pixels == null || viewportBox == null || !viewportBox.attached) return;
       final top = viewportBox.localToGlobal(Offset.zero).dy;
-      final visible = <String>{};
-      double? firstTop;
       for (final dayKey in _grouper.sortedDayKeys) {
         final box = _dayGroupKeys[dayKey]?.currentContext?.findRenderObject()
             as RenderBox?;
         if (box == null || !box.attached || !box.hasSize) continue;
-        final dy = box.localToGlobal(Offset.zero).dy;
-        if (dy + box.size.height <= top + 0.5) continue;
-        visible.add(dayKey);
-        firstTop ??= dy;
+        _dayContentTops[dayKey] =
+            pixels + (box.localToGlobal(Offset.zero).dy - top);
       }
-      final next = firstVisibleDayKey(_grouper.sortedDayKeys, visible);
-      // 严格「已滚出视口顶」才算吸附：`<= top` 会让列表停在顶部（首组卡片
-      // 顶边正好贴着视口顶）时也叠一层吸附头，与卡片自己的圆角顶边重合成
-      // 两条线（观感就是两侧挑出两个"尖"）。此时真实组头本来就完整可见，
-      // 不需要吸附层。
-      final pinned = next != null && firstTop != null && firstTop < top - 0.5;
-      if (next != _stickyDateKey || pinned != _stickyPinned) {
-        setState(() {
-          _stickyDateKey = next;
-          _stickyPinned = pinned;
-        });
-      }
+      _refreshSticky();
     });
   }
 
   void _onScrollForSticky() {
-    if (_stickyEnabled) _scheduleStickyUpdate();
+    if (!_stickyEnabled) return;
+    // 手势 / fling 的滚动都发生在 build 之前，可以当帧更新（这才是「不抖」的
+    // 关键）。只有「内容变短被 correctPixels 夹回」这类滚动落在 layout 阶段，
+    // 那时不能 markNeedsBuild，退到帧后再算。
+    if (WidgetsBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      _scheduleStickyMeasure();
+      return;
+    }
+    _refreshSticky();
+    // 顺带补测：滚动中新滑进来的日卡片必须先有内容坐标才能参与判定。
+    _scheduleStickyMeasure();
+  }
+
+  void _refreshSticky() {
+    if (!_stickyEnabled) return;
+    final pixels = _scrollPixels;
+    if (pixels == null) return;
+    final key = pinnedDayKeyFor(_grouper.sortedDayKeys, _dayContentTops, pixels);
+    final next = (dateKey: key, pinned: key != null);
+    if (next != _stickyState.value) _stickyState.value = next;
   }
 
   // 缓存标签数据（仅用于非预加载模式）
@@ -382,6 +425,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
   @override
   void dispose() {
     _controller.removeListener(_onScrollForSticky);
+    _stickyState.dispose();
     if (widget.controller == null) {
       _controller.dispose(); // 只在我们创建的controller时才dispose
     }
@@ -578,6 +622,10 @@ class TransactionListState extends ConsumerState<TransactionList> {
 
   @override
   Widget build(BuildContext context) {
+    // 吸附条描边色：在这里取一次（而不是在吸附条的 builder 里 watch），保证
+    // 依赖登记的时机稳定。
+    final primaryColor = ref.watch(primaryColorProvider);
+
     // 监听标签刷新信号，当标签变化时重新加载
     final tagRefreshVersion = ref.watch(tagListRefreshProvider);
     if (tagRefreshVersion != _lastTagRefreshVersion) {
@@ -794,25 +842,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
       ),
     );
 
-    if (_stickyEnabled) _scheduleStickyUpdate();
-    final stickyKey = _stickyDateKey;
-    final showSticky = _stickyEnabled && _stickyPinned && stickyKey != null;
-    final stickyList = stickyKey == null
-        ? const <({
-            Transaction t,
-            Category? category,
-            Account? account,
-            Account? toAccount
-          })>[]
-        : _grouper.dayGroups[stickyKey] ??
-            const <({
-              Transaction t,
-              Category? category,
-              Account? account,
-              Account? toAccount
-            })>[];
-    final stickyTotals =
-        stickyKey == null ? (0.0, 0.0) : _dayTotalsFor(stickyKey, stickyList);
+    if (_stickyEnabled) _scheduleStickyMeasure();
 
     return Container(
       margin: PiggyDimens.cardMargin,
@@ -820,46 +850,69 @@ class TransactionListState extends ConsumerState<TransactionList> {
         key: _stickyViewportKey,
         children: [
           listView,
-          if (showSticky)
+          if (_stickyEnabled)
+            // 常驻的 Positioned + ValueListenableBuilder：吸附状态变化只重建这
+            // 一条（不吸住时返回 0 尺寸盒子），不会重建上面的 listView，因此
+            // 滚动中跨天 / 吸住的那一帧不会连带重新布局整个列表。
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              // 方角满宽白底垫在圆角框下面：框的顶部两个圆角是**缺口**，不垫底
-              // 时下层日卡片连续的左右主色边线会从缺口里各露出一截，看着就是
-              // 「往上滑时两侧挑出两个尖」。垫底与卡片同为 surface，圆角外那块
-              // 白与卡片背景连成一片，看不出接缝，圆角轮廓照旧。
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: PiggyTokens.surface(context)),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: PiggyTokens.surface(context),
-                    border: Border(
-                      top: BorderSide(
-                        color: ref.watch(primaryColorProvider),
-                        width: 1.5,
+              child: ValueListenableBuilder<({String? dateKey, bool pinned})>(
+                valueListenable: _stickyState,
+                builder: (context, sticky, _) {
+                  final stickyKey = sticky.dateKey;
+                  if (!sticky.pinned || stickyKey == null) {
+                    return const SizedBox.shrink();
+                  }
+                  final stickyList = _grouper.dayGroups[stickyKey];
+                  final stickyTotals = stickyList == null
+                      ? (0.0, 0.0)
+                      : _dayTotalsFor(stickyKey, stickyList);
+                  // 两层：面层是「卡片顶边」（surface + 主色 1.5 描边 + 顶部
+                  // 圆角，圆角取 radiusLg 与首组日卡片一致，滚动接管的瞬间能与
+                  // 卡片顶边严丝合缝地接上）；底下一层方角、**页面背景色**，只从
+                  // 面层的两个圆角缺口里露出来。
+                  //
+                  // 缺口必须涂「页面背景色」而不是卡片白：吸附头压在日卡片的
+                  // 中段，圆角外侧那块在下层属于卡片本体（surface 白）。涂白时
+                  // 白角一路顶到卡片边线、把主色描边挤到里侧，观感就是「上滑时
+                  // 两侧各挑出一个白色直角」。涂成页面背景色后，缺口与吸附头上
+                  // 方 / 左侧的页面背景连成一片，圆角才是真正的轮廓线；顺带也
+                  // 盖住了下层卡片在缺口处露出的主色竖线（不垫底的那版就是
+                  // 「两侧挑出两个尖」）。
+                  //
+                  // ⚠️ 首页列表直接坐在 Scaffold 纯色背景上，这里才敢用
+                  // scaffoldBackground 平涂。若将来给列表铺渐变 / 图片背景，这
+                  // 里要换成与背景一致的绘制方式，否则两个角会出现色块。
+                  return DecoratedBox(
+                    key: const Key('sticky-date-header-corner-filler'),
+                    decoration: BoxDecoration(
+                      color: PiggyTokens.scaffoldBackground(context),
+                    ),
+                    child: Container(
+                      key: const Key('sticky-date-header-band'),
+                      decoration: BoxDecoration(
+                        color: PiggyTokens.surface(context),
+                        border: Border(
+                          top: BorderSide(color: primaryColor, width: 1.5),
+                          left: BorderSide(color: primaryColor, width: 1.5),
+                          right: BorderSide(color: primaryColor, width: 1.5),
+                        ),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(PiggyDimens.radiusLg),
+                        ),
                       ),
-                      left: BorderSide(
-                        color: ref.watch(primaryColorProvider),
-                        width: 1.5,
-                      ),
-                      right: BorderSide(
-                        color: ref.watch(primaryColorProvider),
-                        width: 1.5,
+                      child: DaySectionHeader(
+                        key: const Key('sticky-date-header'),
+                        dateText: stickyKey,
+                        income: stickyTotals.$1,
+                        expense: stickyTotals.$2,
+                        hide: widget.hideAmounts,
                       ),
                     ),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(PiggyDimens.radiusLg),
-                    ),
-                  ),
-                  child: DaySectionHeader(
-                    key: const Key('sticky-date-header'),
-                    dateText: stickyKey,
-                    income: stickyTotals.$1,
-                    expense: stickyTotals.$2,
-                    hide: widget.hideAmounts,
-                  ),
-                ),
+                  );
+                },
               ),
             ),
         ],
