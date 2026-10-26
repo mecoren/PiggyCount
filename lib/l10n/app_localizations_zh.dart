@@ -111,7 +111,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get devSeedHint =>
-      '说明：生成前会先清掉上一批带【T】标记的测试数据；所有生成的行都带【T】前缀，便于和手工录入的数据区分。';
+      '说明：生成前会先清掉上一批测试数据；交易 / 账户 / 分类 / 标签 / 周期 / 目标 / 持仓 / 字段带【T】标记，预算与回收站按所属测试数据识别，可整批精确清理。';
 
   @override
   String get devSeedEnvironment => '运行环境';
@@ -166,6 +166,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get devSeedEntityBudgets => '分类预算';
+
+  @override
+  String get devSeedEntityTotalBudget => '总预算';
+
+  @override
+  String get devSeedEntityTrash => '回收站';
 
   @override
   String get devSeedEntityRecurring => '周期账单';
@@ -230,7 +236,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get devSeedCleanupConfirmMessage =>
-      '只删除本机所有带【T】标记的测试数据（交易 / 账户 / 分类 / 标签 / 预算 / 周期 / 目标 / 持仓 / 字段 / 测试账本），不影响手工录入的数据。此操作不可撤销。';
+      '只删除本机所有测试数据（交易 / 回收站 / 账户 / 分类 / 标签 / 预算 / 总预算 / 周期 / 目标 / 持仓 / 字段 / 测试账本），不影响手工录入的数据。此操作不可撤销。';
 
   @override
   String get devSeedGenerateConfirmTitle => '生成测试数据？';
@@ -9754,7 +9760,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get devSeedHint =>
-      '說明：產生前會先清掉上一批帶【T】標記的測試資料；所有產生的資料列都帶【T】前綴，方便與手動輸入的資料區分。';
+      '說明：產生前會先清掉上一批測試資料；交易 / 帳戶 / 分類 / 標籤 / 週期 / 目標 / 持倉 / 欄位帶【T】標記，預算與回收筒依所屬測試資料識別，可整批精確清理。';
 
   @override
   String get devSeedEnvironment => '執行環境';
@@ -9809,6 +9815,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get devSeedEntityBudgets => '分類預算';
+
+  @override
+  String get devSeedEntityTotalBudget => '總預算';
+
+  @override
+  String get devSeedEntityTrash => '回收筒';
 
   @override
   String get devSeedEntityRecurring => '週期帳單';
@@ -9873,7 +9885,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get devSeedCleanupConfirmMessage =>
-      '只刪除本機所有帶【T】標記的測試資料（交易 / 帳戶 / 分類 / 標籤 / 預算 / 週期 / 目標 / 持倉 / 欄位 / 測試帳本），不影響手動輸入的資料。此操作無法復原。';
+      '只刪除本機所有測試資料（交易 / 回收筒 / 帳戶 / 分類 / 標籤 / 預算 / 總預算 / 週期 / 目標 / 持倉 / 欄位 / 測試帳本），不影響手動輸入的資料。此操作無法復原。';
 
   @override
   String get devSeedGenerateConfirmTitle => '產生測試資料？';

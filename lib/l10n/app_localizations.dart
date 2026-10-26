@@ -296,7 +296,7 @@ abstract class AppLocalizations {
   /// No description provided for @devSeedHint.
   ///
   /// In en, this message translates to:
-  /// **'Note: the previous batch of 【T】-marked test rows is removed before generating. Every generated row is prefixed with 【T】 so it stays distinguishable from hand-entered data.'**
+  /// **'Note: the previous test batch is removed first. Transactions, accounts, categories, tags, recurring bills, goals, holdings and fields carry the 【T】 mark; budgets and the recycle bin are identified through their test parents, so the whole batch can be cleaned exactly.'**
   String get devSeedHint;
 
   /// No description provided for @devSeedEnvironment.
@@ -394,6 +394,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Category budgets'**
   String get devSeedEntityBudgets;
+
+  /// No description provided for @devSeedEntityTotalBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Total budget'**
+  String get devSeedEntityTotalBudget;
+
+  /// No description provided for @devSeedEntityTrash.
+  ///
+  /// In en, this message translates to:
+  /// **'Recycle bin'**
+  String get devSeedEntityTrash;
 
   /// No description provided for @devSeedEntityRecurring.
   ///
@@ -500,7 +512,7 @@ abstract class AppLocalizations {
   /// No description provided for @devSeedCleanupConfirmMessage.
   ///
   /// In en, this message translates to:
-  /// **'Removes every 【T】-prefixed test row on this device (transactions, accounts, categories, tags, budgets, recurring bills, goals, holdings, fields, test ledgers). Hand-entered data is untouched. This cannot be undone.'**
+  /// **'Removes every test row on this device (transactions, recycle bin, accounts, categories, tags, budgets, total budget, recurring bills, goals, holdings, fields, test ledgers). Hand-entered data is untouched. This cannot be undone.'**
   String get devSeedCleanupConfirmMessage;
 
   /// No description provided for @devSeedGenerateConfirmTitle.

@@ -22,8 +22,10 @@ void main() {
     savingsGoals: 5,
     holdings: 5,
     transactions: 60,
+    trashTransactions: 30,
     extraLedgers: 1,
     extraLedgerTransactions: 10,
+    extraLedgerBudgets: 5,
     refundPairs: 3,
   );
 
@@ -48,7 +50,10 @@ void main() {
     expect(result.created[DevSeedStage.categories], plan.categories);
     expect(result.created[DevSeedStage.tags], plan.tags);
     expect(result.created[DevSeedStage.customFields], plan.customFields);
-    expect(result.created[DevSeedStage.budgets], plan.budgets);
+    expect(
+      result.created[DevSeedStage.budgets],
+      plan.budgets + plan.extraLedgers * plan.extraLedgerBudgets,
+    );
     expect(result.created[DevSeedStage.recurring], plan.recurring);
     expect(result.created[DevSeedStage.savingsGoals], plan.savingsGoals);
     expect(result.created[DevSeedStage.holdings], plan.holdings);
@@ -81,6 +86,22 @@ void main() {
       txs.map((t) => t.id).toList(),
     );
     expect(tagged.values.where((tags) => tags.isNotEmpty), isNotEmpty);
+
+    // 总预算：预算页有总预算才渲染分类预算，必须真的建出来。
+    expect(result.created[DevSeedStage.totalBudget], 1 + plan.extraLedgers);
+    final total = await repo.getTotalBudget(ledgerId);
+    expect(total, isNotNull);
+    expect(total!.amount, DevTestDataSeeder.seedTotalBudgetAmount);
+
+    // 回收站：软删后的行不在 transactions 里，只出现在 deleted_transactions。
+    expect(result.created[DevSeedStage.trash], plan.trashTransactions);
+    final trash = await repo.getDeletedTransactions(ledgerId: ledgerId);
+    expect(trash.length, plan.trashTransactions);
+    expect(
+      txs.length,
+      plan.transactions + plan.refundPairs * 2,
+      reason: '回收站流水不应留在交易主表',
+    );
   });
 
   test('产物全部带标记，清理后本机不再残留测试数据', () async {
@@ -116,6 +137,8 @@ void main() {
       isEmpty,
     );
     expect((await repo.getAllBudgets(ledgerId)), isEmpty);
+    expect(await repo.getDeletedTransactions(ledgerId: ledgerId), isEmpty);
+    expect(await repo.getTotalBudget(ledgerId), isNull);
     expect(
       (await repo.getRecurringTransactionsByLedger(ledgerId))
           .where((r) => marked(r.note)),
@@ -148,6 +171,10 @@ void main() {
 
     expect(second.failed, 0);
     expect((await repo.getTransactionsByLedger(ledgerId)).length, firstCount);
+    expect(
+      (await repo.getDeletedTransactions(ledgerId: ledgerId)).length,
+      plan.trashTransactions,
+    );
     expect(
       (await repo.getAllAccounts())
           .where((a) => a.name.startsWith(DevTestDataSeeder.marker))

@@ -141,7 +141,12 @@ class _DevTestDataPageState extends ConsumerState<DevTestDataPage> {
               ),
               _CountRow(
                 label: l10n.devSeedEntityBudgets,
-                count: _plan.budgets,
+                count: _plan.budgets +
+                    _plan.extraLedgers * _plan.extraLedgerBudgets,
+              ),
+              _CountRow(
+                label: l10n.devSeedEntityTotalBudget,
+                count: 1 + _plan.extraLedgers,
               ),
               _CountRow(
                 label: l10n.devSeedEntityRecurring,
@@ -159,6 +164,10 @@ class _DevTestDataPageState extends ConsumerState<DevTestDataPage> {
                 label: l10n.devSeedEntityTransactions,
                 count: _plan.transactions +
                     _plan.extraLedgers * _plan.extraLedgerTransactions,
+              ),
+              _CountRow(
+                label: l10n.devSeedEntityTrash,
+                count: _plan.trashTransactions,
               ),
               _CountRow(
                 label: l10n.devSeedEntityLedgers,
@@ -393,6 +402,7 @@ class _DevTestDataPageState extends ConsumerState<DevTestDataPage> {
     ref.invalidate(categoriesProvider);
     ref.invalidate(transferCategoryProvider);
     ref.invalidate(allBudgetsProvider);
+    ref.invalidate(totalBudgetProvider);
     ref.invalidate(budgetOverviewProvider);
     ref.invalidate(categoryBudgetsProvider);
     ref.read(syncGenerationProvider.notifier).state++;
@@ -412,6 +422,8 @@ class _DevTestDataPageState extends ConsumerState<DevTestDataPage> {
         return l10n.devSeedEntityCustomFields;
       case DevSeedStage.budgets:
         return l10n.devSeedEntityBudgets;
+      case DevSeedStage.totalBudget:
+        return l10n.devSeedEntityTotalBudget;
       case DevSeedStage.recurring:
         return l10n.devSeedEntityRecurring;
       case DevSeedStage.savingsGoals:
@@ -420,6 +432,8 @@ class _DevTestDataPageState extends ConsumerState<DevTestDataPage> {
         return l10n.devSeedEntityHoldings;
       case DevSeedStage.transactions:
         return l10n.devSeedEntityTransactions;
+      case DevSeedStage.trash:
+        return l10n.devSeedEntityTrash;
       case DevSeedStage.ledgers:
         return l10n.devSeedEntityLedgers;
       default:

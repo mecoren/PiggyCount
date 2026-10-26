@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:drift/drift.dart' as d;
@@ -10,9 +11,9 @@ import '../system/logger_service.dart';
 
 /// 测试数据规模：每类实体各生成多少条。
 ///
-/// 默认档位即「几千条」：交易 3000 + 账户 120 + 分类 200 + 标签 200 + 预算 120
-/// + 周期账单 120 + 储蓄目标 100 + 持仓 150 + 自定义字段 10，另附 2 个测试账本
-/// 各 150 笔交易。
+/// 默认档位即「几千条」：交易 3000 + 账户 120 + 分类 200 + 标签 200 + 分类预算
+/// 120 + 总预算 1 + 回收站 200 + 周期账单 120 + 储蓄目标 100 + 持仓 150 +
+/// 自定义字段 10，另附 2 个测试账本各 150 笔交易 + 20 条分类预算。
 class DevSeedPlan {
   const DevSeedPlan({
     this.accounts = 120,
@@ -24,8 +25,10 @@ class DevSeedPlan {
     this.savingsGoals = 100,
     this.holdings = 150,
     this.transactions = 3000,
+    this.trashTransactions = 200,
     this.extraLedgers = 2,
     this.extraLedgerTransactions = 150,
+    this.extraLedgerBudgets = 20,
     this.refundPairs = 30,
   });
 
@@ -37,17 +40,24 @@ class DevSeedPlan {
 
   final int tags;
   final int customFields;
+
+  /// 当前账本的分类预算条数。
   final int budgets;
+
   final int recurring;
   final int savingsGoals;
   final int holdings;
 
-  /// 当前账本的交易条数。
+  /// 当前账本的交易条数（不含回收站）。
   final int transactions;
 
-  /// 额外创建的测试账本数量（只写交易，用于验证账本切换 / 统计隔离）。
+  /// 回收站里的（已软删）交易条数。
+  final int trashTransactions;
+
+  /// 额外创建的测试账本数量（写交易 + 分类预算，用于验证账本切换 / 统计隔离）。
   final int extraLedgers;
   final int extraLedgerTransactions;
+  final int extraLedgerBudgets;
 
   /// 退款关联的（原支出 + 退款收入）对数。
   final int refundPairs;
@@ -59,12 +69,14 @@ class DevSeedPlan {
       tags +
       customFields +
       budgets +
+      1 + // 总预算
+      trashTransactions +
       recurring +
       savingsGoals +
       holdings +
       transactions +
       extraLedgers +
-      extraLedgers * extraLedgerTransactions;
+      extraLedgers * (extraLedgerTransactions + extraLedgerBudgets + 1);
 }
 
 /// 生成 / 清理结果。
@@ -101,10 +113,12 @@ class DevSeedStage {
   static const tags = 'tags';
   static const customFields = 'customFields';
   static const budgets = 'budgets';
+  static const totalBudget = 'totalBudget';
   static const recurring = 'recurring';
   static const savingsGoals = 'savingsGoals';
   static const holdings = 'holdings';
   static const transactions = 'transactions';
+  static const trash = 'trash';
   static const ledgers = 'ledgers';
 
   static const all = [
@@ -113,10 +127,12 @@ class DevSeedStage {
     tags,
     customFields,
     budgets,
+    totalBudget,
     recurring,
     savingsGoals,
     holdings,
     transactions,
+    trash,
     ledgers,
   ];
 }
@@ -142,6 +158,13 @@ class DevTestDataSeeder {
   /// 测试数据标记：账户 / 分类 / 标签 / 字段 / 目标 / 持仓落在名称前缀，
   /// 交易与周期规则落在备注前缀。
   static const String marker = '【T】';
+
+  /// 总预算的哨兵金额。
+  ///
+  /// `budgets` 表没有名称 / 备注列，无法挂 [marker]；总预算又只有「一条」，
+  /// 只能靠一个明显不真实的金额来识别测试行（清理时精确匹配）。这是刻意的
+  /// 取舍：宁可金额看起来假，也不去改 schema / 加清单文件。
+  static const double seedTotalBudgetAmount = 123456.78;
 
   static const _uuid = Uuid();
 
@@ -310,7 +333,17 @@ class DevTestDataSeeder {
       cleaned[DevSeedStage.transactions] = seededTxs.length;
     }
 
-    // 2) 分类预算：预算本身没有名称，靠「引用了测试分类」判定。
+    // 2) 回收站：deleted_transactions.payload 是原交易 JSON，靠【T】备注判定。
+    var purged = 0;
+    for (final row in await repo.getDeletedTransactions(ledgerId: ledgerId)) {
+      if (marked(_noteOfPayload(row.payload))) {
+        await repo.purgeDeletedTransaction(row.txId);
+        purged++;
+      }
+    }
+    if (purged > 0) cleaned[DevSeedStage.trash] = purged;
+
+    // 3) 分类预算：预算本身没有名称，靠「引用了测试分类」判定。
     report(1, 8);
     final categories = await repo.getAllCategories();
     final seededCategoryIds =
@@ -325,6 +358,18 @@ class DevTestDataSeeder {
         }
       }
       if (deleted > 0) cleaned[DevSeedStage.budgets] = deleted;
+    }
+
+    // 3b) 总预算：只有「哨兵金额」才是测试行。**必须等分类预算删完、且账本里
+    // 只剩它自己时才删** —— `deleteBudget` 对 total 是级联清掉整账本预算，
+    // 顺手删会把用户自己的预算一起带走。
+    final remainingBudgets = await repo.getAllBudgets(ledgerId);
+    final seedTotals = remainingBudgets
+        .where((b) => b.type == 'total' && _isSeedTotalBudget(b.amount))
+        .toList();
+    if (seedTotals.isNotEmpty && remainingBudgets.length == seedTotals.length) {
+      await repo.deleteBudget(seedTotals.first.id);
+      cleaned[DevSeedStage.totalBudget] = seedTotals.length;
     }
 
     // 3) 周期账单。
@@ -660,11 +705,40 @@ class DevTestDataSeeder {
     final fieldDefs = await repo.getDefinitionsForLedger(ledgerId);
     final fields = fieldDefs.where((f) => f.name.startsWith(marker)).toList();
 
-    // 5) 分类预算（不建总预算：总预算无名称，清理时无法可靠识别）。
+    // 5) 总预算：预算页在「没有总预算」时整页空状态，分类预算也就全都看不到，
+    //    所以必须先补一条。只在账本一条预算都没有时建（有用户自己的预算就不碰），
+    //    这样清理时删掉分类预算后账本里只剩这条哨兵行，删它不会级联误伤用户数据。
+    final existingBudgets = await repo.getAllBudgets(ledgerId);
+    final seedBudgets = existingBudgets.isEmpty;
+    if (seedBudgets) {
+      try {
+        await repo.createBudget(
+          ledgerId: ledgerId,
+          type: 'total',
+          amount: seedTotalBudgetAmount,
+          period: 'monthly',
+          startDay: 1,
+        );
+        created[DevSeedStage.totalBudget] = 1;
+      } catch (e) {
+        failed++;
+        logger.warning('DevSeed', '创建总预算失败: $e');
+      }
+      onProgress?.call(DevSeedStage.totalBudget, 1, 1);
+    } else {
+      logger.info(
+        'DevSeed',
+        '账本 $ledgerId 已有 ${existingBudgets.length} 条预算，跳过预算写入以免覆盖用户配置',
+      );
+    }
+
+    // 6) 分类预算。
     final budgetCats =
         expenseCategories.isNotEmpty ? expenseCategories : <int>[];
     const periods = ['monthly', 'weekly', 'yearly'];
-    for (var i = 0; i < plan.budgets && budgetCats.isNotEmpty; i++) {
+    for (var i = 0;
+        i < plan.budgets && seedBudgets && budgetCats.isNotEmpty;
+        i++) {
       final categoryId = budgetCats[i % budgetCats.length];
       try {
         await repo.createBudget(
@@ -943,7 +1017,49 @@ class DevTestDataSeeder {
     }
     created[DevSeedStage.transactions] = inserted;
 
-    // 10) 额外测试账本（各写若干交易，用于账本切换 / 统计隔离）。
+    // 10) 回收站：先正常入库，再走仓库的软删语义搬进 deleted_transactions
+    //     （标签 / 附件行原地保留，恢复是无损的）。
+    if (plan.trashTransactions > 0) {
+      final trashBatch = <TransactionsCompanion>[];
+      for (var i = 0; i < plan.trashTransactions; i++) {
+        final isIncome = i % 20 == 0;
+        final amount = isIncome ? _money(rnd, 500, 8000) : _money(rnd, 5, 600);
+        trashBatch.add(TransactionsCompanion.insert(
+          ledgerId: ledgerId,
+          type: isIncome ? 'income' : 'expense',
+          amount: amount,
+          categoryId: d.Value(isIncome
+              ? (incomeCategories.isEmpty
+                  ? null
+                  : incomeCategories[i % incomeCategories.length])
+              : (expenseCategories.isEmpty
+                  ? null
+                  : expenseCategories[i % expenseCategories.length])),
+          accountId: d.Value(tradableAccounts[i % tradableAccounts.length]),
+          happenedAt: d.Value(_randomHappenedAt(rnd, now)),
+          note: d.Value('$marker回收站流水 ${(i + 1).toString().padLeft(3, '0')}'),
+          currencyCode: d.Value(base),
+          nativeAmount: d.Value(amount),
+        ));
+      }
+      try {
+        final trashIds = await repo.insertTransactionsBatchWithRelations(
+          transactions: trashBatch,
+        );
+        final moved = await repo.softDeleteTransactions(trashIds);
+        created[DevSeedStage.trash] = moved;
+      } catch (e) {
+        failed += trashBatch.length;
+        logger.warning('DevSeed', '生成回收站流水失败: $e');
+      }
+      onProgress?.call(
+        DevSeedStage.trash,
+        created[DevSeedStage.trash] ?? 0,
+        plan.trashTransactions,
+      );
+    }
+
+    // 11) 额外测试账本（各写交易 + 预算，用于账本切换 / 统计隔离）。
     for (var i = 0; i < plan.extraLedgers; i++) {
       try {
         final extraLedgerId = await repo.createLedger(
@@ -989,6 +1105,37 @@ class DevTestDataSeeder {
         await flushExtra();
         created[DevSeedStage.transactions] =
             (created[DevSeedStage.transactions] ?? 0) + extraInserted;
+
+        // 预算也按账本各来一套：切到测试账本时预算页不该是空状态。
+        // 这些行随 deleteLedger 级联清理，不需要哨兵金额。
+        try {
+          await repo.createBudget(
+            ledgerId: extraLedgerId,
+            type: 'total',
+            amount: _money(rnd, 5000, 50000),
+            period: 'monthly',
+            startDay: 1,
+          );
+          created[DevSeedStage.totalBudget] =
+              (created[DevSeedStage.totalBudget] ?? 0) + 1;
+          for (var b = 0;
+              b < plan.extraLedgerBudgets && expenseCategories.isNotEmpty;
+              b++) {
+            await repo.createBudget(
+              ledgerId: extraLedgerId,
+              type: 'category',
+              categoryId: expenseCategories[b % expenseCategories.length],
+              amount: _money(rnd, 300, 5000),
+              period: periods[b % periods.length],
+              startDay: 1 + rnd.nextInt(28),
+            );
+            created[DevSeedStage.budgets] =
+                (created[DevSeedStage.budgets] ?? 0) + 1;
+          }
+        } catch (e) {
+          failed++;
+          logger.warning('DevSeed', '创建测试账本预算失败(#$i): $e');
+        }
       } catch (e) {
         failed++;
         logger.warning('DevSeed', '创建测试账本失败(#$i): $e');
@@ -1012,6 +1159,27 @@ class DevTestDataSeeder {
   // ==========================================================================
   // 内部工具
   // ==========================================================================
+
+  /// 是否为测试生成的总预算（靠哨兵金额识别，见 [seedTotalBudgetAmount]）。
+  static bool _isSeedTotalBudget(double amount) =>
+      (amount - seedTotalBudgetAmount).abs() < 0.005;
+
+  /// 从回收站行里取出原交易的备注。
+  ///
+  /// `deleted_transactions.payload` 是 `Transaction.toJson()` 的 JSON 字符串
+  /// （Drift 生成，key 为 snake_case），备注 key 正好是 `note`。
+  static String? _noteOfPayload(String payload) {
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is Map<String, dynamic>) {
+        final note = decoded['note'];
+        if (note is String) return note;
+      }
+    } catch (e) {
+      logger.warning('DevSeed', '解析回收站 payload 失败: $e');
+    }
+    return null;
+  }
 
   /// 两位小数的随机金额。
   static double _money(math.Random rnd, double min, double max) {

@@ -118,7 +118,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get devSeedHint =>
-      '안내: 생성 전에 【T】 표시가 붙은 이전 테스트 데이터를 먼저 삭제합니다. 생성되는 모든 행에는 【T】 접두사가 붙어 직접 입력한 데이터와 구분됩니다.';
+      '안내: 생성 전에 이전 테스트 데이터를 먼저 삭제합니다. 거래 / 계정 / 분류 / 태그 / 반복 / 목표 / 보유 / 필드에는 【T】 표시가 붙고, 예산과 휴지통은 테스트 상위 데이터로 식별해 한 번에 정확히 정리할 수 있습니다.';
 
   @override
   String get devSeedEnvironment => '실행 환경';
@@ -175,6 +175,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get devSeedEntityBudgets => '분류 예산';
+
+  @override
+  String get devSeedEntityTotalBudget => '총예산';
+
+  @override
+  String get devSeedEntityTrash => '휴지통';
 
   @override
   String get devSeedEntityRecurring => '반복 청구';
@@ -239,7 +245,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get devSeedCleanupConfirmMessage =>
-      '이 기기의 【T】 표시 테스트 데이터(거래 / 계정 / 분류 / 태그 / 예산 / 반복 / 목표 / 보유 / 필드 / 테스트 장부)만 삭제합니다. 직접 입력한 데이터는 영향받지 않습니다. 되돌릴 수 없습니다.';
+      '이 기기의 모든 테스트 데이터(거래 / 휴지통 / 계정 / 분류 / 태그 / 예산 / 총예산 / 반복 / 목표 / 보유 / 필드 / 테스트 장부)만 삭제합니다. 직접 입력한 데이터는 영향받지 않습니다. 되돌릴 수 없습니다.';
 
   @override
   String get devSeedGenerateConfirmTitle => '테스트 데이터를 생성할까요?';

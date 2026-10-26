@@ -121,7 +121,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get devSeedHint =>
-      'Note: the previous batch of 【T】-marked test rows is removed before generating. Every generated row is prefixed with 【T】 so it stays distinguishable from hand-entered data.';
+      'Note: the previous test batch is removed first. Transactions, accounts, categories, tags, recurring bills, goals, holdings and fields carry the 【T】 mark; budgets and the recycle bin are identified through their test parents, so the whole batch can be cleaned exactly.';
 
   @override
   String get devSeedEnvironment => 'Environment';
@@ -178,6 +178,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get devSeedEntityBudgets => 'Category budgets';
+
+  @override
+  String get devSeedEntityTotalBudget => 'Total budget';
+
+  @override
+  String get devSeedEntityTrash => 'Recycle bin';
 
   @override
   String get devSeedEntityRecurring => 'Recurring bills';
@@ -244,7 +250,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get devSeedCleanupConfirmMessage =>
-      'Removes every 【T】-prefixed test row on this device (transactions, accounts, categories, tags, budgets, recurring bills, goals, holdings, fields, test ledgers). Hand-entered data is untouched. This cannot be undone.';
+      'Removes every test row on this device (transactions, recycle bin, accounts, categories, tags, budgets, total budget, recurring bills, goals, holdings, fields, test ledgers). Hand-entered data is untouched. This cannot be undone.';
 
   @override
   String get devSeedGenerateConfirmTitle => 'Generate test data?';
